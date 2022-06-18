@@ -1,0 +1,5 @@
+{
+    "BAD_CONF": {"code": -1, "message": "Incorrect Configuration."},
+    "OK": {"code": 0, "message": "OK"},
+    "MISSING_FIELD": {"code": "MISSING_FIELD", "message": "Missing required fields."}
+}
