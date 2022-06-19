@@ -26,11 +26,12 @@ from rest_framework_simplejwt import views as jwt_views
 
 # CORE VIEWS
 from core.views.token import TokenObtainPairView, TokenRefreshView
-# from core.views.outer.saldo import SaldoViewSet
+from core.views.user import UserViewSet
 
 # Initalizes Router
 router = routers.DefaultRouter()
 named_view_sets = {
+    r"users": UserViewSet,
 }
 
 [router.register(f"api/{name}", view_set, basename=name) for name, view_set in named_view_sets.items()]

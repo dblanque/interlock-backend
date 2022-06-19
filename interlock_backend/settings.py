@@ -147,10 +147,18 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Adds Customer Exception Handler for error formatting
-# REST_FRAMEWORK = {
-#     'EXCEPTION_HANDLER': 'core.system.exceptionhandler.custom_exception_handler'
-# }
+REST_FRAMEWORK = {
+    "COERCE_DECIMAL_TO_STRING": False,
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        #~~~~ Uncomment to allow authentication "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ),
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "DEFAULT_PERMISSION_CLASSES": [
+        #~~~~"rest_framework.permissions.IsAuthenticated"
+    ],
+    "PAGE_SIZE": 10,
+}
 
 DATE_INPUT_FORMATS = ['%Y-%m-%d']
 

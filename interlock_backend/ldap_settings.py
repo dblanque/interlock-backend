@@ -67,7 +67,6 @@ def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
     GROUP_TO_SEARCH = "CN=admins,OU=Administrators,DC=brconsulting"
     if 'memberOf' in ldap_attributes and GROUP_TO_SEARCH in ldap_attributes['memberOf']:
         # Do staff shit here
-        print("Member of the group")
         user.is_staff = True
         user.is_superuser = True
         user.save()
