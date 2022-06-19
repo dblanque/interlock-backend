@@ -14,6 +14,7 @@ import os
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import gettext_lazy as _
 from datetime import timedelta
+from interlock_backend.ldap_settings import *
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -50,6 +51,7 @@ INSTALLED_APPS = [
     "django_extensions",
     "django.contrib.admin",
     "django.contrib.auth",
+    "django_python3_ldap",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
@@ -93,7 +95,24 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'interlock_backend.wsgi.application'
 
+AUTHENTICATION_BACKENDS = ("django.contrib.auth.backends.ModelBackend","django_python3_ldap.auth.LDAPBackend",)
+# AUTHENTICATION_BACKENDS = ("django_python3_ldap.auth.LDAPBackend",)
 
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "loggers": {
+        "django_python3_ldap": {
+            "handlers": ["console"],
+            "level": "INFO",
+        },
+    },
+}
 
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
@@ -186,13 +205,13 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 # --- Email settings ---
-EMAIL_HOST = "mail.brconsulting.info"
+EMAIL_HOST = ""
 EMAIL_PORT = 587
-EMAIL_HOST_USER = "mepapi@brconsulting.info"
+EMAIL_HOST_USER = ""
 EMAIL_HOST_PASSWORD = "NOUSERYET"
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False #Note that TLS and SSL are mutually exclusive, both can NOT be simultaneously True.
 EMAIL_TIMEOUT = 30
 EMAIL_SSL_KEYFILE = None
 EMAIL_SSL_CERTFILE = None
-PUBLIC_STAFF_EMAIL = "mepapi@brconsulting.info"
+PUBLIC_STAFF_EMAIL = ""
