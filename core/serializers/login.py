@@ -9,5 +9,5 @@ from action_serializer import serializers
 # USED IN: {{BASE_URL}}/api/v1.1/login/authenticate/
 class LoginAuthenticateSerializer(serializers.Serializer):
 
-    Usuario = serializers.CharField(required=True)
-    Clave = serializers.CharField(required=True)
+    User = serializers.CharField(required=True)
+    Password = serializers.CharField(required=True)

@@ -19,12 +19,13 @@ from interlock_backend.ldap_settings import *
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'in2tfy@bhej(5i@h!_04+kes__58rd9mh$=1!o_6ky236d-ue)'
+
+SALT_KEY = 'L4PaMhzmOeNNbS0x3iMl'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -95,8 +96,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'interlock_backend.wsgi.application'
 
-AUTHENTICATION_BACKENDS = ("django.contrib.auth.backends.ModelBackend","django_python3_ldap.auth.LDAPBackend",)
+AUTHENTICATION_BACKENDS = (
+    "django.contrib.auth.backends.ModelBackend",
+    "django_python3_ldap.auth.LDAPBackend",
+    )
 # AUTHENTICATION_BACKENDS = ("django_python3_ldap.auth.LDAPBackend",)
+
+AUTH_USER_MODEL = "core.User"
 
 LOGGING = {
     "version": 1,
@@ -127,7 +133,6 @@ DATABASES = {
         'PORT': '5432',
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators

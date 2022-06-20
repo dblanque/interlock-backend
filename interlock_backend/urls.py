@@ -23,6 +23,7 @@ from django.urls import path, include
 from rest_framework import routers
 from rest_framework import permissions
 from rest_framework_simplejwt import views as jwt_views
+from core.views.domain import DomainViewSet
 
 # CORE VIEWS
 from core.views.token import TokenObtainPairView, TokenRefreshView
@@ -32,6 +33,7 @@ from core.views.user import UserViewSet
 router = routers.DefaultRouter()
 named_view_sets = {
     r"users": UserViewSet,
+    r"domain": DomainViewSet,
 }
 
 [router.register(f"api/{name}", view_set, basename=name) for name, view_set in named_view_sets.items()]

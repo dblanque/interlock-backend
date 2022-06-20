@@ -3,6 +3,12 @@
 # The URL of the LDAP server(s).  List multiple servers for high availability ServerPool connection.
 LDAP_AUTH_URL = ["ldap://10.10.10.13:389"]
 
+# This variable is used by the Interlock back-end to respond the correct domain info to the Front-end
+LDAP_DOMAIN = "brconsulting"
+
+# This is used to list all the domain users
+LDAP_BASE_DN = "dc=brconsulting"
+
 # Initiate TLS on connection.
 LDAP_AUTH_USE_TLS = False
 
@@ -56,8 +62,8 @@ LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN = "BRCONS"
 # The LDAP username and password of a user for querying the LDAP database for user
 # details. If None, then the authenticated user will be used for querying, and
 # the `ldap_sync_users` command will perform an anonymous query.
-LDAP_AUTH_CONNECTION_USERNAME = None
-LDAP_AUTH_CONNECTION_PASSWORD = None
+LDAP_AUTH_CONNECTION_USERNAME = "s-ldapsync"
+LDAP_AUTH_CONNECTION_PASSWORD = "!kDZladKxt-Ed2QI7P2eN5"
 
 # Set connection/receive timeouts (in seconds) on the underlying `ldap3` library.
 LDAP_AUTH_CONNECT_TIMEOUT = 5
