@@ -7,6 +7,10 @@ from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
 from interlock_backend.ldap_connector import open_connection
 from interlock_backend import ldap_settings
+from interlock_backend import ldap_adsi
+
+# def read_ldap_perms(hex_value):
+#     if hex_value
 
 class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
@@ -20,7 +24,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             raise PermissionDenied
         # Open LDAP Connection
         c = open_connection()
-        attributes = [ 'sAMAccountName', 'givenName', 'sn', 'displayName', 'mail', 'distinguishedName' ]
+        attributes = [ 'sAMAccountName', 'givenName', 'sn', 'displayName', 'mail', 'distinguishedName', 'userAccountControl' ]
         # Have to fix what's below to make it more modular
         if ldap_settings.EXCLUDE_COMPUTER_ACCOUNTS == True:
             objectClassFilter = "(&(objectclass=" + ldap_settings.LDAP_AUTH_OBJECT_CLASS + ")(!(objectclass=computer)))"
@@ -37,32 +41,41 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         code = 0
         code_msg = 'ok'
 
-        valid_attributes = [
-            # 'distinguishedName',
-            'sAMAccountName',
-            'givenName',
-            'sn',
-            'mail',
-            'displayName'
-        ]
+        valid_attributes = attributes
+        # Remove attributes to return as table headers
+        remove_attributes = [ 'distinguishedName' ]
+        for attr in remove_attributes:
+            valid_attributes.remove(str(attr))
 
         for user in list:
+            
+            if str(user.sAMAccountName) == 'jblanque':
+                userperm = ldap_adsi.convert_to_bin(user.userAccountControl)
+                i = 0
+                for n in range(0, 32):
+                    i += 1
+                    if userperm[n] == "1":
+                        print(n)
+                        # perm_binary = ldap_adsi.LDAP_PERMS[perm_name]
+                        # print(perm_binary)
             # Uncomment line below to see all attributes in user object
             # print(dir(user))
+            uac_as_int = int(str(user.userAccountControl))
+            uac_as_hex = hex(uac_as_int)
+            disabled = 0
 
             # For each attribute in user object attributes
-            user_array = {}
-            user_identifier = str(getattr(user,ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER))
+            user_dict = {}
             for attr_key in dir(user):
                 if attr_key in valid_attributes:
                     str_key = str(attr_key)
                     str_value = str(getattr(user,attr_key))
                     if str_value == "[]":
-                        user_array[str_key] = ""
+                        user_dict[str_key] = ""
                     else:
-                        user_array[str_key] = str_value
+                        user_dict[str_key] = str_value
                     # print(str_key + " is " + str_value)
-            data.append(user_array)
+            data.append(user_dict)
 
         # print(data)
         c.unbind()
