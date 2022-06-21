@@ -8,13 +8,13 @@
             "name": "Python: Django",
             "type": "python",
             "request": "launch",
-            "pythonPath":"${workspaceRoot}/bin/python",
+            "python":"${workspaceRoot}/bin/python",
             "program": "${workspaceFolder}/manage.py",
             "args": [
                 "runserver"
             ],
             "django": true,
-            "justMyCode": true
+            "justMyCode": false
         }
     ]
 }

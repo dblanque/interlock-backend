@@ -6,9 +6,6 @@ LDAP_AUTH_URL = ["ldap://10.10.10.13:389"]
 # This variable is used by the Interlock back-end to respond the correct domain info to the Front-end
 LDAP_DOMAIN = "brconsulting"
 
-# This is used to list all the domain users
-LDAP_BASE_DN = "dc=brconsulting"
-
 # Initiate TLS on connection.
 LDAP_AUTH_USE_TLS = False
 
@@ -17,10 +14,13 @@ import ssl
 LDAP_AUTH_TLS_VERSION = ssl.PROTOCOL_TLSv1_2
 
 # The LDAP search base for looking up users.
-LDAP_AUTH_SEARCH_BASE = "OU=Administrators,dc=brconsulting"
+LDAP_AUTH_SEARCH_BASE = "dc=brconsulting"
 
 # The LDAP class that represents a user.
 LDAP_AUTH_OBJECT_CLASS = "person"
+
+# Set this to False if you wish to include Computer Accounts in User Listings
+EXCLUDE_COMPUTER_ACCOUNTS = True
 
 # User model fields mapped to the LDAP
 # attributes that represent them.
@@ -30,6 +30,8 @@ LDAP_AUTH_USER_FIELDS = {
     "last_name": "sn",
     "email": "mail"
 }
+
+LDAP_AUTH_USERNAME_IDENTIFIER = LDAP_AUTH_USER_FIELDS["username"]
 
 # A tuple of django model fields used to uniquely identify a user.
 LDAP_AUTH_USER_LOOKUP_FIELDS = ("username",)
@@ -62,7 +64,9 @@ LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN = "BRCONS"
 # The LDAP username and password of a user for querying the LDAP database for user
 # details. If None, then the authenticated user will be used for querying, and
 # the `ldap_sync_users` command will perform an anonymous query.
-LDAP_AUTH_CONNECTION_USERNAME = "s-ldapsync"
+LDAP_AUTH_CONNECTION_USER_DN = "CN=s-ldapsync,OU=Service Accounts,DC=brconsulting"
+
+LDAP_AUTH_CONNECTION_USERNAME = LDAP_AUTH_CONNECTION_USER_DN.split(',')[0].split('CN=')[1]
 LDAP_AUTH_CONNECTION_PASSWORD = "!kDZladKxt-Ed2QI7P2eN5"
 
 # Set connection/receive timeouts (in seconds) on the underlying `ldap3` library.

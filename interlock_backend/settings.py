@@ -117,6 +117,10 @@ LOGGING = {
             "handlers": ["console"],
             "level": "INFO",
         },
+        "interlock_backend.ldap_connector": {
+            "handlers": ["console"],
+            "level": "INFO",
+        },
     },
 }
 
