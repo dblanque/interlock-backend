@@ -169,7 +169,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
              data={
                 'code': code,
                 'code_msg': code_msg,
-                'user': user_dict
+                'data': user_dict
              }
         )
 
