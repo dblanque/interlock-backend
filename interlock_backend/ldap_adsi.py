@@ -1,10 +1,11 @@
 from genericpath import exists
-from interlock_backend.ldap_settings import LDAP_AUTH_USER_FIELDS
+from interlock_backend.ldap_settings import LDAP_AUTH_USER_FIELDS, LDAP_AUTH_USERNAME_IDENTIFIER
 import logging
 
-LDAP_USER_IDENTIFIER = LDAP_AUTH_USER_FIELDS['username']
 logger = logging.getLogger(__name__)
 
+# LDAP Permission Dictionary - all values are converted to binary with a 32 zero padding
+# Items also contain their index position in the 32bit binary string
 LDAP_PERMS = {
     "LDAP_UF_SCRIPT" : { 
         "val_bin" : str(bin(1))[2:].zfill(32),
@@ -125,24 +126,26 @@ def list_perms():
 
 # Lists User permissions (LDAP / AD Servers save them as binary)
 def list_user_perms(user, permissionToSearch=None):
+    # Cast raw integer user permissions as string
     rawUserPerms = bin_as_str(user.userAccountControl)
     UserPerms = []
     i = 0
-    for n in range(0, 32):
+    for n in range(0, 32): # Loop for each bit in 0-32
         i += 1
-        if rawUserPerms[n] == "1":
+        if rawUserPerms[n] == "1": # If permission matches enter for loop to 
+                                   # search which one it is in the dictionary
             for perm_name in LDAP_PERMS:
                 perm_binary = LDAP_PERMS[perm_name]['val_bin']
                 perm_index = LDAP_PERMS[perm_name]['index']
                 if perm_index == n:
-                    logger.debug("User: " + str(user[LDAP_USER_IDENTIFIER]))
+                    logger.debug("User: " + str(user[LDAP_AUTH_USERNAME_IDENTIFIER]))
                     logger.debug("Permission Name: " + perm_name)
                     logger.debug("Permission Index: " + str(perm_index))
                     logger.debug("Permission Index (From User): " + str(n))
                     logger.debug("Permission Binary Value (From Constant): " + perm_binary)
                     logger.debug("Permission Hex Value (From Constant): " + bin_as_hex(perm_binary))
                     UserPerms.append(perm_name)
-    logger.debug("Permission List (" + str(user[LDAP_USER_IDENTIFIER]) + "): ")
+    logger.debug("Permission List (" + str(user[LDAP_AUTH_USERNAME_IDENTIFIER]) + "): ")
     logger.debug(UserPerms)
     if isinstance(permissionToSearch, str):
         return check_perm_in_list(permissionToSearch, UserPerms)
