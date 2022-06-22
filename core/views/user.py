@@ -24,14 +24,14 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         code_msg = 'ok'
         # Open LDAP Connection
         c = open_connection()
-        attributes = [ 
-            'givenName', 
-            'sn', 
-            'displayName', 
-            ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER, 
-            'mail', 
-            'distinguishedName', 
-            'userAccountControl' 
+        attributes = [
+            'givenName',
+            'sn',
+            'displayName',
+            ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER,
+            'mail',
+            'distinguishedName',
+            'userAccountControl'
         ]
         # Have to fix what's below to make it more modular
         if ldap_settings.EXCLUDE_COMPUTER_ACCOUNTS == True:
@@ -121,8 +121,8 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             'c', # Full Country Name
             'wWWHomePage',
             'distinguishedName',
-            'userPrincipalName,'
-            'userAccountControl',
+            'userPrincipalName',
+            'userAccountControl', # Permission ACLs
             'whenCreated',
             'whenChanged',
             'lastLogon',
