@@ -121,6 +121,10 @@ LOGGING = {
             "handlers": ["console"],
             "level": "INFO",
         },
+        "interlock_backend.ldap_adsi": {
+            "handlers": ["console"],
+            "level": "INFO",
+        },
     },
 }
 

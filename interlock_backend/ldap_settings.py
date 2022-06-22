@@ -31,7 +31,10 @@ LDAP_AUTH_USER_FIELDS = {
     "email": "mail"
 }
 
-LDAP_AUTH_USERNAME_IDENTIFIER = LDAP_AUTH_USER_FIELDS["username"]
+if str(LDAP_AUTH_USER_FIELDS["username"]).lower() == 'samaccountname':
+    LDAP_AUTH_USERNAME_IDENTIFIER = "sAMAccountName"
+else:
+    LDAP_AUTH_USERNAME_IDENTIFIER = LDAP_AUTH_USER_FIELDS["username"]
 
 # A tuple of django model fields used to uniquely identify a user.
 LDAP_AUTH_USER_LOOKUP_FIELDS = ("username",)
