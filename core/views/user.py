@@ -75,7 +75,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
                     user_dict['username'] = str_value
 
             # Check if user is disabled
-            if ldap_adsi.list_user_perms(user, "LDAP_UF_ACCOUNT_DISABLE") == True:
+            if ldap_adsi.list_user_perms(user, permissionToSearch="LDAP_UF_ACCOUNT_DISABLE") == True:
                 user_dict['is_enabled'] = False
             else:
                 user_dict['is_enabled'] = True
@@ -162,7 +162,12 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             if attr_key == ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER:
                 user_dict['username'] = str_value
 
-        print(user_dict)
+        # Check if user is disabled
+        if ldap_adsi.list_user_perms(user[0], permissionToSearch="LDAP_UF_ACCOUNT_DISABLE", isObject=False) == True:
+            user_dict['is_enabled'] = False
+        else:
+            user_dict['is_enabled'] = True
+
         # Close / Unbind LDAP Connection
         c.unbind()
         return Response(

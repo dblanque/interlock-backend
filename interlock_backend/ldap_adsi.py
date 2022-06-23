@@ -125,9 +125,12 @@ def list_perms():
         print(perm + " = " + LDAP_PERMS[perm]["val_bin"] + ", " + str(LDAP_PERMS[perm]["index"]))
 
 # Lists User permissions (LDAP / AD Servers save them as binary)
-def list_user_perms(user, permissionToSearch=None):
+def list_user_perms(user, permissionToSearch=None, isObject=True):
     # Cast raw integer user permissions as string
-    rawUserPerms = bin_as_str(user.userAccountControl)
+    if isObject == True:
+        rawUserPerms = bin_as_str(user.userAccountControl)
+    else:
+        rawUserPerms = bin_as_str(user['userAccountControl'])
     UserPerms = []
     i = 0
     for n in range(0, 32): # Loop for each bit in 0-32
