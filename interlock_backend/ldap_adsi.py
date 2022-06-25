@@ -1,4 +1,3 @@
-from genericpath import exists
 from interlock_backend.ldap_settings import LDAP_AUTH_USER_FIELDS, LDAP_AUTH_USERNAME_IDENTIFIER
 import logging
 
