@@ -168,6 +168,10 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         else:
             user_dict['is_enabled'] = True
 
+        # Check if user is disabled
+        userPermissions = ldap_adsi.list_user_perms(user[0], permissionToSearch=None, isObject=False)
+        user_dict['permission_list'] = userPermissions
+
         # Close / Unbind LDAP Connection
         c.unbind()
         return Response(
