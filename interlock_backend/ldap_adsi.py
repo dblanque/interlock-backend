@@ -7,90 +7,112 @@ logger = logging.getLogger(__name__)
 # Items also contain their index position in the 32bit binary string
 LDAP_PERMS = {
     "LDAP_UF_SCRIPT" : { 
+        "value" : 1,
         "val_bin" : str(bin(1))[2:].zfill(32),
         "index": str(bin(1))[2:].zfill(32).find("1")
         },
     "LDAP_UF_ACCOUNT_DISABLE" : { 
+        "value" : 2,
         "val_bin" : str(bin(2))[2:].zfill(32),
         "index": str(bin(2))[2:].zfill(32).find("1")
         },
     "LDAP_UF_HOMEDIR_REQUIRED" : { 
+        "value" : 8,
         "val_bin" : str(bin(8))[2:].zfill(32),
         "index": str(bin(8))[2:].zfill(32).find("1")
         },
     "LDAP_UF_LOCKOUT" : { 
+        "value" : 16,
         "val_bin" : str(bin(16))[2:].zfill(32),
         "index": str(bin(16))[2:].zfill(32).find("1")
         },
     "LDAP_UF_PASSWD_NOTREQD" : { 
+        "value" : 32,
         "val_bin" : str(bin(32))[2:].zfill(32),
         "index": str(bin(32))[2:].zfill(32).find("1")
         },
     "LDAP_UF_PASSWD_CANT_CHANGE" : { 
+        "value" : 64,
         "val_bin" : str(bin(64))[2:].zfill(32),
         "index": str(bin(64))[2:].zfill(32).find("1")
         },
     "LDAP_UF_ENCRYPTED_TEXT_PASSWORD_ALLOWED" : { 
+        "value" : 128,
         "val_bin" : str(bin(128))[2:].zfill(32),
         "index": str(bin(128))[2:].zfill(32).find("1")
         },
     "LDAP_UF_NORMAL_ACCOUNT" : { 
+        "value" : 512,
         "val_bin" : str(bin(512))[2:].zfill(32),
         "index": str(bin(512))[2:].zfill(32).find("1")
         },
     "LDAP_UF_INTERDOMAIN_TRUST_ACCOUNT" : { 
+        "value" : 2048,
         "val_bin" : str(bin(2048))[2:].zfill(32),
         "index": str(bin(2048))[2:].zfill(32).find("1")
         },
     "LDAP_UF_WORKSTATION_TRUST_ACCOUNT" : { 
+        "value" : 4096,
         "val_bin" : str(bin(4096))[2:].zfill(32),
         "index": str(bin(4096))[2:].zfill(32).find("1")
         },
     "LDAP_UF_SERVER_TRUST_ACCOUNT" : { 
+        "value" : 8192,
         "val_bin" : str(bin(8192))[2:].zfill(32),
         "index": str(bin(8192))[2:].zfill(32).find("1")
         },
     "LDAP_UF_DONT_EXPIRE_PASSWD" : { 
+        "value" : 65536,
         "val_bin" : str(bin(65536))[2:].zfill(32),
         "index": str(bin(65536))[2:].zfill(32).find("1")
         },
     "LDAP_UF_MNS_LOGON_ACCOUNT" : { 
+        "value" : 131072,
         "val_bin" : str(bin(131072))[2:].zfill(32),
         "index": str(bin(131072))[2:].zfill(32).find("1")
         },
     "LDAP_UF_SMARTCARD_REQUIRED" : { 
+        "value" : 262144,
         "val_bin" : str(bin(262144))[2:].zfill(32),
         "index": str(bin(262144))[2:].zfill(32).find("1")
         },
     "LDAP_UF_TRUSTED_FOR_DELEGATION" : { 
+        "value" : 524288,
         "val_bin" : str(bin(524288))[2:].zfill(32),
         "index": str(bin(524288))[2:].zfill(32).find("1")
         },
     "LDAP_UF_NOT_DELEGATED" : { 
+        "value" : 1048576,
         "val_bin" : str(bin(1048576))[2:].zfill(32),
         "index": str(bin(1048576))[2:].zfill(32).find("1")
         },
     "LDAP_UF_USE_DES_KEY_ONLY" : { 
+        "value" : 2097152,
         "val_bin" : str(bin(2097152))[2:].zfill(32),
         "index": str(bin(2097152))[2:].zfill(32).find("1")
         },
     "LDAP_UF_DONT_REQUIRE_PREAUTH" : { 
+        "value" : 4194304,
         "val_bin" : str(bin(4194304))[2:].zfill(32),
         "index": str(bin(4194304))[2:].zfill(32).find("1")
         },
     "LDAP_UF_PASSWORD_EXPIRED" : { 
+        "value" : 8388608,
         "val_bin" : str(bin(8388608))[2:].zfill(32),
         "index": str(bin(8388608))[2:].zfill(32).find("1")
         },
     "LDAP_UF_TRUSTED_TO_AUTHENTICATE_FOR_DELEGATION" : { 
+        "value" : 16777216,
         "val_bin" : str(bin(16777216))[2:].zfill(32),
         "index": str(bin(16777216))[2:].zfill(32).find("1")
         },
     "LDAP_UF_NO_AUTH_DATA_REQUIRED" : { 
+        "value" : 33554432,
         "val_bin" : str(bin(33554432))[2:].zfill(32),
         "index": str(bin(33554432))[2:].zfill(32).find("1")
         },
     "LDAP_UF_PARTIAL_SECRETS_ACCOUNT" : { 
+        "value" : 67108864,
         "val_bin" : str(bin(67108864))[2:].zfill(32),
         "index": str(bin(67108864))[2:].zfill(32).find("1")
         },

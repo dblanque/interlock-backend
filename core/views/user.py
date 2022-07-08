@@ -1,13 +1,19 @@
+from inspect import Traceback
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from rest_framework.response import Response
 from .mixins.user import UserViewMixin
 from rest_framework import viewsets
 from rest_framework.exceptions import NotFound
+from core.exceptions.users import UserExists, UserPermissionError, UserPasswordsDontMatch
 from rest_framework.decorators import action
 from interlock_backend.ldap_connector import open_connection
 from interlock_backend import ldap_settings
 from interlock_backend import ldap_adsi
+import traceback
+import logging
+
+logger = logging.getLogger(__name__)
 
 # def read_ldap_perms(hex_value):
 #     if hex_value
@@ -179,6 +185,90 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
                 'code': code,
                 'code_msg': code_msg,
                 'data': user_dict
+             }
+        )
+
+    @action(detail=False,methods=['post'])
+    def insert(self, request):
+        user = request.user
+        # Check user is_staff
+        if user.is_staff == False or not user:
+            raise PermissionDenied
+        code = 0
+        code_msg = 'ok'
+        data = request.data
+
+        if data['password'] != data['passwordConfirm']:
+            raise UserPasswordsDontMatch
+
+        userToSearch = data["username"]
+        # Open LDAP Connection
+        c = open_connection()
+
+        attributes = [
+            ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER,
+            'distinguishedName',
+            'userPrincipalName',
+        ]
+        objectClassFilter = "(objectclass=" + ldap_settings.LDAP_AUTH_OBJECT_CLASS + ")"
+
+        # Exclude Computer Accounts if settings allow it
+        if ldap_settings.EXCLUDE_COMPUTER_ACCOUNTS == True:
+            objectClassFilter = ldap_adsi.add_search_filter(objectClassFilter, "!(objectclass=computer)")
+
+        # Add filter for username
+        objectClassFilter = ldap_adsi.add_search_filter(objectClassFilter, ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER + "=" + userToSearch)
+
+        c.search(
+            ldap_settings.LDAP_AUTH_SEARCH_BASE, 
+            objectClassFilter, 
+            attributes=attributes
+        )
+        user = c.entries
+        userDN = 'cn='+data['username']+',ou=Users,'+ldap_settings.LDAP_AUTH_SEARCH_BASE
+        userPermissions = 0
+
+        # Add permissions selected in user creation
+        for perm in data['permission_list']:
+            permValue = int(ldap_adsi.LDAP_PERMS[perm]['value'])
+            try:
+                userPermissions += permValue
+                logger.debug("Permission Value added (cast to string): " + str(permValue))
+            except Exception as error:
+                # If there's an error unbind the connection and print traceback
+                c.unbind()
+                print(traceback.format_exc())
+                raise UserPermissionError # Return error code to client
+
+        # Add Normal Account permission to list
+        userPermissions += ldap_adsi.LDAP_PERMS['LDAP_UF_NORMAL_ACCOUNT']['value']
+        logger.debug("Final User Permissions Value: " + str(userPermissions))
+
+        # If user exists, return error
+        if user != []:
+            raise UserExists
+        # Else, create the user and set its password
+        else:
+            # TODO - Actually add the user! We still need to be able to fetch OU's from tree view or something
+            print(userDN)
+            # c.add(userDN, ldap_settings.LDAP_AUTH_OBJECT_CLASS, 
+            # {   'givenName': data['givenName'],
+            #     'sn': data['sn'],
+            #     'displayName': data['displayName'],
+            #     'distinguishedName': data['distinguishedName'],
+            #     'initials': data['initials'],
+            #     'mail': data['mail'],
+            #     'wWWHomePage': data['wWWHomePage'],
+            #     'userAccountControl': userPermissions
+            # })
+            # c.extend.microsoft.modify_password(userDN, data['password'])
+        # Unbind the connection
+        c.unbind()
+        return Response(
+             data={
+                'code': code,
+                'code_msg': code_msg,
+                'data': data
              }
         )
 
