@@ -28,12 +28,14 @@ from core.views.domain import DomainViewSet
 # CORE VIEWS
 from core.views.token import TokenObtainPairView, TokenRefreshView
 from core.views.user import UserViewSet
+from core.views.organizational_unit import OrganizationalUnitViewSet
 
 # Initalizes Router
 router = routers.DefaultRouter()
 named_view_sets = {
     r"users": UserViewSet,
     r"domain": DomainViewSet,
+    r"ou": OrganizationalUnitViewSet,
 }
 
 [router.register(f"api/{name}", view_set, basename=name) for name, view_set in named_view_sets.items()]

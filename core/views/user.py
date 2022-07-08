@@ -1,4 +1,3 @@
-from inspect import Traceback
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from rest_framework.response import Response
@@ -149,8 +148,8 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         # Add filter for username
         objectClassFilter = ldap_adsi.add_search_filter(objectClassFilter, ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER + "=" + userToSearch)
         c.search(
-            ldap_settings.LDAP_AUTH_SEARCH_BASE, 
-            objectClassFilter, 
+            ldap_settings.LDAP_AUTH_SEARCH_BASE,
+            objectClassFilter,
             attributes=attributes
         )
         user = c.entries
