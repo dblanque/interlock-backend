@@ -123,7 +123,7 @@ LOGGING = {
         },
         "interlock_backend.ldap_adsi": {
             "handlers": ["console"],
-            "level": "INFO",
+            "level": "DEBUG",
         },
     },
 }

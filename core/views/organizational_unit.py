@@ -1,21 +1,26 @@
+from attr import attributes
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from ldap3 import LEVEL
 from rest_framework.response import Response
 from rest_framework import viewsets
 from .mixins.organizational_unit import OrganizationalUnitMixin
 from rest_framework.exceptions import NotFound
 from core.exceptions.users import UserExists, UserPermissionError, UserPasswordsDontMatch
 from rest_framework.decorators import action
-from interlock_backend.ldap_connector import open_connection
+from interlock_backend.ldap_connector import (
+    open_connection,
+    get_full_directory_tree
+)
 from interlock_backend import ldap_settings
 from interlock_backend import ldap_adsi
 import traceback
 import logging
+import json
 
 class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
     
-    @action(detail=False, methods=['get'])
-    def fetchall(self, request, pk=None):
+    def list(self, request):
         user = request.user
         # Check user is_staff
         if user.is_staff == False or not user:
@@ -23,16 +28,11 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         data = []
         code = 0
         code_msg = 'ok'
+
         # Open LDAP Connection
         c = open_connection()
 
-        # Search for all Organizational Units
-        c.search(search_base=ldap_settings.LDAP_AUTH_SEARCH_BASE,
-                search_filter='(objectClass=OrganizationalUnit)')
-        list = c.entries
-
-        for ou in list:
-            print(ou)
+        list = get_full_directory_tree()
 
         # Close / Unbind LDAP Connection
         c.unbind()

@@ -1,3 +1,6 @@
+from dis import dis
+from unittest import result
+from attr import attributes
 from django_python3_ldap.ldap import Connection
 from django.contrib.auth import get_user_model
 from django_python3_ldap.utils import import_func, format_search_filter
@@ -7,6 +10,8 @@ import interlock_backend.ldap_settings as settings
 import logging
 import ldap3
 from ldap3.core.exceptions import LDAPException
+from .ldap_adsi import add_search_filter
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -59,8 +64,130 @@ def open_connection():
         #     password=settings.LDAP_AUTH_CONNECTION_PASSWORD,
         # )
         # Return the connection.
-        logger.info("LDAP connect succeeded")
+        logger.debug("LDAP connect succeeded")
         return c
     except LDAPException as ex:
         logger.warning("LDAP bind failed: {ex}".format(ex=ex))
         return None
+
+def get_base_level():
+    connection = open_connection()
+    search_filter=""
+    search_filter=add_search_filter(search_filter, 'objectCategory=organizationalUnit')
+    search_filter=add_search_filter(search_filter, 'objectCategory=top', "|")
+    search_filter=add_search_filter(search_filter, 'objectCategory=container', "|")
+    connection.search(
+        search_base=settings.LDAP_AUTH_SEARCH_BASE,
+        search_filter=search_filter,
+        search_scope='LEVEL',
+        attributes=ldap3.ALL_ATTRIBUTES)
+    searchResult = connection.entries
+    connection.unbind()
+    return searchResult
+
+def get_full_directory_tree():
+    base_list = get_base_level()
+    result = []
+    connection = open_connection()
+    currentID = 0
+# TODO This doesnt work properly yet
+    # For each entity in the base level list
+    for entity in base_list:
+        # Set DN from Abstract Entry object (LDAP3)
+        distinguishedName=entity.entry_dn
+        currentEntity = {}
+        # Set ID
+        currentEntity['dn'] = distinguishedName
+        currentEntity['name'] = str(distinguishedName).split(',')[0].split('=')[1]
+        currentEntity['id'] = currentID
+        currentEntity['type'] = str(entity.objectCategory).split(',')[0].split('=')[1]
+        # Get children
+        children = get_children(distinguishedName, connection, recursive=True, getCNs=True, id=currentID)
+        childrenResult = children['results']
+        currentID = children['currentID']
+        # Add children to parent
+        currentEntity['children'] = childrenResult
+        result.append(currentEntity)
+        currentID += 1
+    connection.unbind()
+    # logger.info(json.dumps(result, sort_keys=False, indent=2))
+    return result
+
+def get_children_cn(dn, connection, id=0):
+    search_filter='(objectClass=person)'
+    search_filter=add_search_filter(search_filter, 'objectClass=user', "|")
+    search_filter=add_search_filter(search_filter, 'objectClass=group', "|")
+    search_filter=add_search_filter(search_filter, 'objectClass=organizationalPerson', "|")
+    search_filter=add_search_filter(search_filter, 'objectClass=computer', "|")
+    results = list()
+    cnSearch = connection.extend.standard.paged_search(
+        search_base=dn,
+        search_filter=search_filter,
+        search_scope='LEVEL',
+        attributes=['objectClass', 'objectCategory'])
+    for cnObject in cnSearch:
+        currentEntity = {}
+        if 'dn' in cnObject:
+            if cnObject['dn'] != dn and 'dn' in cnObject:
+                id += 1
+                objectCategory = cnObject['attributes']['objectCategory']
+                currentEntity['dn'] = cnObject['dn']
+                currentEntity['name'] = str(cnObject['dn']).split(',')[0].split('=')[1]
+                currentEntity['id'] = id
+                currentEntity['type'] = str(objectCategory).split(',')[0].split('=')[1]
+                results.append(currentEntity)
+    return({
+        "results": results,
+        "currentID": id
+    })
+
+def get_children_ou(dn, connection, recursive=False, getCNs=False, id=0):
+    results = list()
+    childrenOU = connection.extend.standard.paged_search(
+        search_base=dn,
+        search_filter='(objectCategory=organizationalUnit)',
+        search_scope='LEVEL')
+    for ouChild in childrenOU:
+        if 'dn' in ouChild and ouChild['dn'] != dn:
+            id += 1
+            currentEntity = {}
+            currentEntity['dn'] = ouChild['dn']
+            currentEntity['name'] = str(ouChild['dn']).split(',')[0].split('=')[1]
+            currentEntity['id'] = id
+            currentEntity['type'] = 'Organizational-Unit'
+            if getCNs == True:
+                cn_results = get_children_cn(ouChild['dn'], connection, id)
+                if cn_results and cn_results['results'] != []:
+                    id = cn_results['currentID']
+                    cn_results = cn_results['results']
+                    currentEntity['children'] = cn_results
+            if recursive == True:
+                ou_results = get_children_ou(ouChild['dn'], connection, recursive, getCNs, id)
+                if ou_results and ou_results['results'] != []:
+                    id = ou_results['currentID']
+                    ou_results = ou_results['results']
+                    if not currentEntity['children']:
+                        currentEntity['children'] = ou_results
+                    currentEntity['children'].extend(ou_results)
+            results.append(currentEntity)
+    return({
+        "results": results,
+        "currentID": id
+    })
+
+def get_children(dn, connection, recursive=False, getCNs=False, id=0):
+    results = list()
+    if getCNs == True:
+        cn_results = get_children_cn(dn, connection, id)
+        id = cn_results['currentID']
+        results = cn_results['results']
+    if recursive == True:
+        ou_results = get_children_ou(dn, connection, recursive, getCNs, id=id)
+        id = ou_results['currentID']
+        ou_results = ou_results['results']
+        results.extend(ou_results)
+    return({
+        "results": results,
+        "currentID": id
+    })
+

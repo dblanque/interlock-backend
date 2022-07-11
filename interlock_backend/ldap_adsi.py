@@ -121,8 +121,11 @@ LDAP_PERMS = {
 LDAP_PERM_BIN_BASE = "0"*32
 
 def add_search_filter(original_filter, filter_to_add, operator="&"):
-    if operator != "&" and operator != "|":
+    if operator != "&" and operator != "|" and original_filter != "":
         raise
+    if not original_filter or original_filter == "":
+        new_filter = "(" + filter_to_add + ")"
+        return new_filter
     new_filter = "(" + operator + original_filter + "(" + filter_to_add + "))"
     return new_filter
 
