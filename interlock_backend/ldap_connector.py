@@ -71,6 +71,12 @@ def open_connection():
         return None
 
 def get_base_level():
+    """ Gets all objects in LDAP Server base subtree level.
+
+    No arguments required
+
+    Returns a list/array.
+    """
     connection = open_connection()
     search_filter=""
     search_filter=add_search_filter(search_filter, 'objectCategory=organizationalUnit')
@@ -86,6 +92,12 @@ def get_base_level():
     return searchResult
 
 def get_full_directory_tree():
+    """ Gets a list of the full directory tree in an LDAP Server.
+
+    No arguments required
+
+    Returns a list.
+    """
     base_list = get_base_level()
     result = []
     connection = open_connection()
@@ -114,17 +126,21 @@ def get_full_directory_tree():
     return result
 
 def get_children_cn(dn, connection, id=0):
+    # Add filters
     search_filter='(objectClass=person)'
     search_filter=add_search_filter(search_filter, 'objectClass=user', "|")
     search_filter=add_search_filter(search_filter, 'objectClass=group', "|")
     search_filter=add_search_filter(search_filter, 'objectClass=organizationalPerson', "|")
     search_filter=add_search_filter(search_filter, 'objectClass=computer', "|")
+    # Initialize Variables
     results = list()
+    # Send Query to LDAP Server(s)
     cnSearch = connection.extend.standard.paged_search(
         search_base=dn,
         search_filter=search_filter,
         search_scope='LEVEL',
         attributes=['objectClass', 'objectCategory'])
+    # Loops for every CN Object in the Query Result and adds it to array
     for cnObject in cnSearch:
         currentEntity = {}
         if 'dn' in cnObject:
@@ -142,12 +158,16 @@ def get_children_cn(dn, connection, id=0):
     })
 
 def get_children_ou(dn, connection, recursive=False, getCNs=False, id=0):
+    # Initialize Variables
     results = list()
+    # Send Query to LDAP Server(s)
     childrenOU = connection.extend.standard.paged_search(
         search_base=dn,
         search_filter='(objectCategory=organizationalUnit)',
         search_scope='LEVEL')
+    # Loops for every child Organization Unit
     for ouChild in childrenOU:
+        # If OU Child has a DN and it's not the same as the parent
         if 'dn' in ouChild and ouChild['dn'] != dn:
             id += 1
             currentEntity = {}
@@ -155,12 +175,14 @@ def get_children_ou(dn, connection, recursive=False, getCNs=False, id=0):
             currentEntity['name'] = str(ouChild['dn']).split(',')[0].split('=')[1]
             currentEntity['id'] = id
             currentEntity['type'] = 'Organizational-Unit'
+            # If this is true then it will fetch the children CN Objects
             if getCNs == True:
                 cn_results = get_children_cn(ouChild['dn'], connection, id)
                 if cn_results and cn_results['results'] != []:
                     id = cn_results['currentID']
                     cn_results = cn_results['results']
                     currentEntity['children'] = cn_results
+            # If function is called as recursive it will call itself again
             if recursive == True:
                 ou_results = get_children_ou(ouChild['dn'], connection, recursive, getCNs, id)
                 if ou_results and ou_results['results'] != []:
@@ -175,17 +197,30 @@ def get_children_ou(dn, connection, recursive=False, getCNs=False, id=0):
         "currentID": id
     })
 
-def get_children(dn, connection, recursive=False, getCNs=False, id=0):
+def get_children(dn, connection, recursive=False, getCNs=True, id=0):
+    """ Gets children for dn object in LDAP Server.
+
+    REQUIRED
+    dn: Object DN to query
+    connection: LDAP Connection Object, see function open_connection()
+
+    DEFAULTS
+    Recursive: False (Set this to True to get the entire subtree below)
+    getCNs: True (Set to False to get only children OUs)
+    id: 0 (Use this if you need to return the items with an id to your endpoint)
+    """
+    # Initialize Variables
     results = list()
+    # Get CN Children Objects
     if getCNs == True:
         cn_results = get_children_cn(dn, connection, id)
         id = cn_results['currentID']
         results = cn_results['results']
-    if recursive == True:
-        ou_results = get_children_ou(dn, connection, recursive, getCNs, id=id)
-        id = ou_results['currentID']
-        ou_results = ou_results['results']
-        results.extend(ou_results)
+    # Get OU Children Objects
+    ou_results = get_children_ou(dn, connection, recursive, getCNs, id=id)
+    id = ou_results['currentID']
+    ou_results = ou_results['results']
+    results.extend(ou_results)
     return({
         "results": results,
         "currentID": id
