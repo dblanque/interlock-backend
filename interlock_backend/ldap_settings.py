@@ -76,6 +76,7 @@ LDAP_AUTH_CONNECTION_PASSWORD = "!kDZladKxt-Ed2QI7P2eN5"
 LDAP_AUTH_CONNECT_TIMEOUT = 5
 LDAP_AUTH_RECEIVE_TIMEOUT = 5
 
+# TODO - Add setting to allow builtin Administrator superuser login or not
 def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
     if 'Administrator' in ldap_attributes[LDAP_AUTH_USER_FIELDS["username"]]:
         user.is_staff = True
