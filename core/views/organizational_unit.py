@@ -25,7 +25,32 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         # Check user is_staff
         if user.is_staff == False or not user:
             raise PermissionDenied
-        data = []
+        data = request.data
+        code = 0
+        code_msg = 'ok'
+
+        # Open LDAP Connection
+        c = open_connection()
+
+        list = get_full_directory_tree(getCNs=False)
+
+        # Close / Unbind LDAP Connection
+        c.unbind()
+        return Response(
+                data={
+                'code': code,
+                'code_msg': code_msg,
+                'ou_list': list,
+                }
+        )
+    
+    @action(detail=False,methods=['get'])
+    def dirtree(self, request):
+        user = request.user
+        # Check user is_staff
+        if user.is_staff == False or not user:
+            raise PermissionDenied
+        data = request.data
         code = 0
         code_msg = 'ok'
 
