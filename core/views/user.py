@@ -224,7 +224,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             attributes=attributes
         )
         user = c.entries
-        userDN = 'cn='+data['username']+',ou=Users,'+ldap_settings.LDAP_AUTH_SEARCH_BASE
+        userDN = 'CN='+data['username']+','+data['path'] or 'CN='+data['username']+',OU=Users,'+ldap_settings.LDAP_AUTH_SEARCH_BASE
         userPermissions = 0
 
         # Add permissions selected in user creation
@@ -248,7 +248,6 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             raise UserExists
         # Else, create the user and set its password
         else:
-            # TODO - Actually add the user! We still need to be able to fetch OU's from tree view or something
             print(userDN)
             # c.add(userDN, ldap_settings.LDAP_AUTH_OBJECT_CLASS, 
             # {   'givenName': data['givenName'],
