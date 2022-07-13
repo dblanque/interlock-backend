@@ -91,7 +91,7 @@ def get_base_level():
     connection.unbind()
     return searchResult
 
-def get_full_directory_tree():
+def get_full_directory_tree(getCNs=True):
     """ Gets a list of the full directory tree in an LDAP Server.
 
     No arguments required
@@ -116,7 +116,7 @@ def get_full_directory_tree():
         if currentEntity['name'] in LDAP_BUILTIN_OBJECTS:
             currentEntity['builtin'] = True
         # Get children
-        children = get_children(distinguishedName, connection, recursive=True, getCNs=True, id=currentID)
+        children = get_children(distinguishedName, connection, recursive=True, getCNs=getCNs, id=currentID)
         childrenResult = children['results']
         currentID = children['currentID']
         # Add children to parent
@@ -193,9 +193,10 @@ def get_children_ou(dn, connection, recursive=False, getCNs=False, id=0):
                 if ou_results and ou_results['results'] != []:
                     id = ou_results['currentID']
                     ou_results = ou_results['results']
-                    if not currentEntity['children']:
+                    if 'children' not in currentEntity:
                         currentEntity['children'] = ou_results
-                    currentEntity['children'].extend(ou_results)
+                    else:
+                        currentEntity['children'].extend(ou_results)
             results.append(currentEntity)
     return({
         "results": results,
