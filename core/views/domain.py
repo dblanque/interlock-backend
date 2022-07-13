@@ -44,6 +44,7 @@ class DomainViewSet(viewsets.ViewSet, DomainViewMixin):
         code = 0
         data["realm"] = LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN or ""
         data["name"] = LDAP_DOMAIN or ""
+        data["basedn"] = LDAP_AUTH_SEARCH_BASE or ""
         return Response(
              data={
                 'code': code,
