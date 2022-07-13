@@ -124,7 +124,7 @@ def get_full_directory_tree():
         result.append(currentEntity)
         currentID += 1
     connection.unbind()
-    # logger.info(json.dumps(result, sort_keys=False, indent=2))
+    logger.debug(json.dumps(result, sort_keys=False, indent=2))
     return result
 
 def get_children_cn(dn, connection, id=0):
@@ -141,13 +141,16 @@ def get_children_cn(dn, connection, id=0):
         search_base=dn,
         search_filter=search_filter,
         search_scope='LEVEL',
-        attributes=['objectClass', 'objectCategory'])
+        attributes=['objectClass', 'objectCategory','sAMAccountName'])
     # Loops for every CN Object in the Query Result and adds it to array
     for cnObject in cnSearch:
         currentEntity = {}
         if 'dn' in cnObject:
             if cnObject['dn'] != dn and 'dn' in cnObject:
                 id += 1
+                objectClasses = cnObject['attributes']['objectClass']
+                if 'user' or 'person' in objectClasses:
+                    currentEntity['username'] = str(cnObject['attributes']['sAMAccountName'][0])
                 objectCategory = cnObject['attributes']['objectCategory']
                 currentEntity['dn'] = cnObject['dn']
                 currentEntity['name'] = str(cnObject['dn']).split(',')[0].split('=')[1]
