@@ -120,6 +120,16 @@ LDAP_PERMS = {
 
 LDAP_PERM_BIN_BASE = "0"*32
 
+LDAP_BUILTIN_OBJECTS = [
+    "Domain Controllers",
+    "Computers",
+    "Program Data",
+    "System",
+    "ForeignSecurityPrincipals",
+    "Users",
+    "Managed Service Accounts"
+]
+
 def add_search_filter(original_filter, filter_to_add, operator="&"):
     if operator != "&" and operator != "|" and original_filter != "":
         raise

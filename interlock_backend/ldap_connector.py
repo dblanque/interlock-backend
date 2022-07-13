@@ -10,7 +10,7 @@ import interlock_backend.ldap_settings as settings
 import logging
 import ldap3
 from ldap3.core.exceptions import LDAPException
-from .ldap_adsi import add_search_filter
+from .ldap_adsi import add_search_filter, LDAP_BUILTIN_OBJECTS
 import json
 
 logger = logging.getLogger(__name__)
@@ -102,7 +102,7 @@ def get_full_directory_tree():
     result = []
     connection = open_connection()
     currentID = 0
-# TODO This doesnt work properly yet
+
     # For each entity in the base level list
     for entity in base_list:
         # Set DN from Abstract Entry object (LDAP3)
@@ -113,6 +113,8 @@ def get_full_directory_tree():
         currentEntity['name'] = str(distinguishedName).split(',')[0].split('=')[1]
         currentEntity['id'] = currentID
         currentEntity['type'] = str(entity.objectCategory).split(',')[0].split('=')[1]
+        if currentEntity['name'] in LDAP_BUILTIN_OBJECTS:
+            currentEntity['builtin'] = True
         # Get children
         children = get_children(distinguishedName, connection, recursive=True, getCNs=True, id=currentID)
         childrenResult = children['results']
