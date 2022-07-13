@@ -77,6 +77,11 @@ LDAP_AUTH_CONNECT_TIMEOUT = 5
 LDAP_AUTH_RECEIVE_TIMEOUT = 5
 
 def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
+    if 'Administrator' in ldap_attributes[LDAP_AUTH_USER_FIELDS["username"]]:
+        user.is_staff = True
+        user.is_superuser = True
+        user.save()
+        pass
     GROUP_TO_SEARCH = "CN=admins,OU=Administrators,DC=brconsulting"
     if 'memberOf' in ldap_attributes and GROUP_TO_SEARCH in ldap_attributes['memberOf']:
         # Do staff shit here
