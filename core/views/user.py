@@ -263,6 +263,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         else:
             logger.debug('Creating user in DN Path: ' + userDN)
             c.add(userDN, ldap_settings.LDAP_AUTH_OBJECT_CLASS, attributes=arguments)
+            # TODO - Test if password changes correctly?
             c.extend.microsoft.modify_password(userDN, data['password'])
         # Unbind the connection
         c.unbind()
