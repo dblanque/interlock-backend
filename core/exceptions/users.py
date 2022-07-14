@@ -15,3 +15,8 @@ class UserPasswordsDontMatch(APIException):
     status_code = 522
     default_detail = 'User passwords do not match'
     default_code = 'user_passwords_dont_match'
+
+class UserUpdateError(APIException):
+    status_code = 523
+    default_detail = 'User could not be updated'
+    default_code = 'user_update_error'

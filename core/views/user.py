@@ -1,27 +1,38 @@
+from inspect import trace
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+import ldap3
 from rest_framework.response import Response
 from .mixins.user import UserViewMixin
 from rest_framework import viewsets
 from rest_framework.exceptions import NotFound
-from core.exceptions.users import UserExists, UserPermissionError, UserPasswordsDontMatch
+from core.exceptions.users import (
+    UserExists, 
+    UserPermissionError, 
+    UserPasswordsDontMatch,
+    UserUpdateError
+)
 from rest_framework.decorators import action
 from interlock_backend.ldap_connector import open_connection
 from interlock_backend import ldap_settings
 from interlock_backend import ldap_adsi
+from interlock_backend.ldap_countries import LDAP_COUNTRIES
 from ldap3 import (
-    MODIFY_ADD, 
-    MODIFY_DELETE, 
-    MODIFY_INCREMENT, 
+    MODIFY_ADD,
+    MODIFY_DELETE,
+    MODIFY_INCREMENT,
     MODIFY_REPLACE
 )
 import traceback
 import logging
+from django.core import validators
+from django.forms import (
+    CharField,
+    BooleanField,
+    IntegerField,
+)
 
 logger = logging.getLogger(__name__)
-
-# def read_ldap_perms(hex_value):
-#     if hex_value
 
 class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
@@ -230,6 +241,11 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             attributes=attributes
         )
         user = c.entries
+
+        # If user exists, return error
+        if user != []:
+            raise UserExists
+
         userDN = 'CN='+data['username']+','+data['path'] or 'CN='+data['username']+',OU=Users,'+ldap_settings.LDAP_AUTH_SEARCH_BASE
         userPermissions = 0
 
@@ -252,7 +268,14 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         arguments = dict()
         arguments['userAccountControl'] = userPermissions
 
-        excludeKeys = ['password', 'passwordConfirm', 'path', 'permission_list', 'distinguishedName', 'username']
+        excludeKeys = [
+            'password', 
+            'passwordConfirm',
+            'path',
+            'permission_list', # This array is parsed and calculated later
+            'distinguishedName', # We don't want the front-end generated DN
+            'username' # LDAP Uses sAMAccountName
+        ]
         for key in data:
             if key not in excludeKeys:
                 arguments[key] = data[key]
@@ -262,27 +285,23 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         arguments['sAMAccountName'] = str(arguments['sAMAccountName']).lower()
         arguments['objectClass'] = ['top', 'person', 'organizationalPerson', 'user']
         arguments['userPrincipalName'] = data['username'] + '@' + ldap_settings.LDAP_DOMAIN
-        # If user exists, return error
-        if user != []:
-            raise UserExists
-        # Else, create the user and set its password
-        else:
-            logger.debug('Creating user in DN Path: ' + userDN)
-            c.add(userDN, ldap_settings.LDAP_AUTH_OBJECT_CLASS, attributes=arguments)
-            # TODO - Test if password changes correctly?
-            c.extend.microsoft.modify_password(userDN, data['password'])
+        
+        logger.debug('Creating user in DN Path: ' + userDN)
+        c.add(userDN, ldap_settings.LDAP_AUTH_OBJECT_CLASS, attributes=arguments)
+        # TODO - Test if password changes correctly?
+        c.extend.microsoft.modify_password(userDN, data['password'])
+
         # Unbind the connection
         c.unbind()
         return Response(
              data={
                 'code': code,
-                'code_msg': code_msg
+                'code_msg': code_msg,
+                'data': data['username']
              }
         )
 
-    # TODO
-    @action(detail=False,methods=['post'])
-    def edit(self, request):
+    def update(self, request, pk=None):
         user = request.user
         # Check user is_staff
         if user.is_staff == False or not user:
@@ -291,16 +310,121 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         code_msg = 'ok'
         data = request.data
 
-        userToEdit = data['username']
+        excludeKeys = [
+            'password', 
+            'passwordConfirm',
+            'path',
+            'permission_list', # This array is parsed and calculated later
+            'distinguishedName', # We don't want the front-end generated DN
+            'username', # LDAP Uses sAMAccountName
+            'whenChanged',
+            'whenCreated',
+            'lastLogon',
+            'badPwdCount',
+            'pwdLastSet',
+            'is_enabled',
+            'sAMAccountType',
+            'objectCategory',
+            'primaryGroupID'
+        ]
+
+        userToUpdate = data['username']
+        permList = data['permission_list']
+        for key in excludeKeys:
+            if key in data:
+                del data[key]
+
         # Open LDAP Connection
         c = open_connection()
+
+        # Get basic attributes for this user from AD to compare query and get dn
+        attributes = [
+            ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER,
+            'distinguishedName',
+            'userPrincipalName',
+            'userAccountControl',
+        ]
+        objectClassFilter = "(objectclass=" + ldap_settings.LDAP_AUTH_OBJECT_CLASS + ")"
+
+        # Exclude Computer Accounts if settings allow it
+        if ldap_settings.EXCLUDE_COMPUTER_ACCOUNTS == True:
+            objectClassFilter = ldap_adsi.add_search_filter(objectClassFilter, "!(objectclass=computer)")
+
+        # Add filter for username
+        objectClassFilter = ldap_adsi.add_search_filter(
+            objectClassFilter, 
+            ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER + "=" + userToUpdate
+            )
+
+        # Fetch current existing user object from server
+        c.search(
+            ldap_settings.LDAP_AUTH_SEARCH_BASE, 
+            objectClassFilter, 
+            attributes=ldap3.ALL_ATTRIBUTES
+        )
+
+        user = c.entries
+        dn = str(user[0].distinguishedName)
+
+        if 'LDAP_UF_LOCKOUT' in permList:
+            # Default is 30 Minutes
+            data['lockoutTime'] = 30 
+
+        try:
+            newPermINT = ldap_adsi.calc_permissions(permList)
+        except:
+            print(traceback.format_exc())
+            raise UserPermissionError
+
+        logger.debug("New Permission Integer (cast to String):" + str(newPermINT))
+        data['userAccountControl'] = newPermINT
+
+        if data['co'] != "":
+            # Set numeric country code (DCC Standard)
+            data['countryCode'] = LDAP_COUNTRIES[data['co']]['dccCode']
+            # Set ISO Country Code
+            data['c'] = LDAP_COUNTRIES[data['co']]['isoCode']
+
+        arguments = dict()
+        for key in data:
+                try:
+                    if key in user[0].entry_attributes and data[key] == "":
+                        operation = MODIFY_DELETE
+                        c.modify(
+                            dn,
+                            {key: [( operation ), []]},
+                        )
+                    elif data[key] != "":
+                        operation = MODIFY_REPLACE
+                        if isinstance(data[key], list):
+                            c.modify(
+                                dn,
+                                {key: [( operation, data[key])]},
+                            )
+                        else:
+                            c.modify(
+                                dn,
+                                {key: [( operation, [ data[key] ])]},
+                            )
+                    else:
+                        logger.info("No suitable operation for attribute " + key)
+                        pass
+                except:
+                    print(traceback.format_exc())
+                    logger.warn("Unable to update user '" + userToUpdate + "' with attribute '" + key + "'")
+                    logger.warn("Attribute Value:" + data[key])
+                    logger.warn("Operation Type: " + operation)
+                    raise UserUpdateError
+
+        logger.debug(c.result)
 
         # Unbind the connection
         c.unbind()
         return Response(
              data={
                 'code': code,
-                'code_msg': code_msg
+                'code_msg': code_msg,
+                'data': data
              }
         )
 
@@ -345,7 +469,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         user = c.entries
         dn = str(user[0].distinguishedName)
         permList = ldap_adsi.list_user_perms(user[0], isObject=False)
-        
+
         try:
             newPermINT = ldap_adsi.calc_permissions(permList, addPerm='LDAP_UF_ACCOUNT_DISABLE')
         except:
@@ -443,8 +567,8 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
     def retrieve(self, request, pk=None):
         raise NotFound
 
-    def update(self, request, pk=None):
-        raise NotFound
+    # def update(self, request, pk=None):
+    #     raise NotFound
 
     def partial_update(self, request, pk=None):
         raise NotFound

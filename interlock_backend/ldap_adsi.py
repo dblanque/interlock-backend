@@ -212,7 +212,7 @@ def calc_permissions(permissionArray, addPerm='', removePerm=''):
 
     ARGUMENTS
 
-    :permissionArray: RAW userAccountControl Integer
+    :permissionArray: Permission List (Array/List)
 
     :addPerm: (String || List) -- Contains permission(s) to add to calculated result
 
