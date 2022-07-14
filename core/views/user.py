@@ -9,6 +9,12 @@ from rest_framework.decorators import action
 from interlock_backend.ldap_connector import open_connection
 from interlock_backend import ldap_settings
 from interlock_backend import ldap_adsi
+from ldap3 import (
+    MODIFY_ADD, 
+    MODIFY_DELETE, 
+    MODIFY_INCREMENT, 
+    MODIFY_REPLACE
+)
 import traceback
 import logging
 
@@ -265,6 +271,157 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             c.add(userDN, ldap_settings.LDAP_AUTH_OBJECT_CLASS, attributes=arguments)
             # TODO - Test if password changes correctly?
             c.extend.microsoft.modify_password(userDN, data['password'])
+        # Unbind the connection
+        c.unbind()
+        return Response(
+             data={
+                'code': code,
+                'code_msg': code_msg
+             }
+        )
+
+    # TODO
+    @action(detail=False,methods=['post'])
+    def edit(self, request):
+        user = request.user
+        # Check user is_staff
+        if user.is_staff == False or not user:
+            raise PermissionDenied
+        code = 0
+        code_msg = 'ok'
+        data = request.data
+
+        userToEdit = data['username']
+        # Open LDAP Connection
+        c = open_connection()
+
+        # Unbind the connection
+        c.unbind()
+        return Response(
+             data={
+                'code': code,
+                'code_msg': code_msg
+             }
+        )
+
+    @action(detail=False,methods=['post'])
+    def disable(self, request):
+        user = request.user
+        # Check user is_staff
+        if user.is_staff == False or not user:
+            raise PermissionDenied
+        code = 0
+        code_msg = 'ok'
+        data = request.data
+
+        userToEnable = data['username']
+        # Open LDAP Connection
+        c = open_connection()
+
+        attributes = [
+            ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER,
+            'distinguishedName',
+            'userPrincipalName',
+            'userAccountControl',
+        ]
+        objectClassFilter = "(objectclass=" + ldap_settings.LDAP_AUTH_OBJECT_CLASS + ")"
+
+        # Exclude Computer Accounts if settings allow it
+        if ldap_settings.EXCLUDE_COMPUTER_ACCOUNTS == True:
+            objectClassFilter = ldap_adsi.add_search_filter(objectClassFilter, "!(objectclass=computer)")
+
+        # Add filter for username
+        objectClassFilter = ldap_adsi.add_search_filter(
+            objectClassFilter, 
+            ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER + "=" + userToEnable
+            )
+
+        c.search(
+            ldap_settings.LDAP_AUTH_SEARCH_BASE, 
+            objectClassFilter, 
+            attributes=attributes
+        )
+
+        user = c.entries
+        dn = str(user[0].distinguishedName)
+        permList = ldap_adsi.list_user_perms(user[0], isObject=False)
+        
+        try:
+            newPermINT = ldap_adsi.calc_permissions(permList, addPerm='LDAP_UF_ACCOUNT_DISABLE')
+        except:
+            print(traceback.format_exc())
+            raise UserPermissionError
+
+        c.modify(dn,
+            {'userAccountControl':[(MODIFY_REPLACE, [ newPermINT ])]}
+        )
+
+        logger.debug(c.result)
+
+        # Unbind the connection
+        c.unbind()
+        return Response(
+             data={
+                'code': code,
+                'code_msg': code_msg
+             }
+        )
+
+    @action(detail=False,methods=['post'])
+    def enable(self, request):
+        user = request.user
+        # Check user is_staff
+        if user.is_staff == False or not user:
+            raise PermissionDenied
+        code = 0
+        code_msg = 'ok'
+        data = request.data
+
+        userToEnable = data['username']
+        # Open LDAP Connection
+        c = open_connection()
+
+        attributes = [
+            ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER,
+            'distinguishedName',
+            'userPrincipalName',
+            'userAccountControl'
+        ]
+        objectClassFilter = "(objectclass=" + ldap_settings.LDAP_AUTH_OBJECT_CLASS + ")"
+
+        # Exclude Computer Accounts if settings allow it
+        if ldap_settings.EXCLUDE_COMPUTER_ACCOUNTS == True:
+            objectClassFilter = ldap_adsi.add_search_filter(objectClassFilter, "!(objectclass=computer)")
+
+        # Add filter for username
+        objectClassFilter = ldap_adsi.add_search_filter(
+            objectClassFilter, 
+            ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER + "=" + userToEnable
+            )
+
+        c.search(
+            ldap_settings.LDAP_AUTH_SEARCH_BASE, 
+            objectClassFilter, 
+            attributes=attributes
+        )
+
+        user = c.entries
+        dn = str(user[0].distinguishedName)
+        print(dn)
+        permList = ldap_adsi.list_user_perms(user[0], isObject=False)
+        
+        try:
+            newPermINT = ldap_adsi.calc_permissions(permList, removePerm='LDAP_UF_ACCOUNT_DISABLE')
+        except:
+            print(traceback.format_exc())
+            raise UserPermissionError
+
+        c.modify(dn,
+            {'userAccountControl':[(MODIFY_REPLACE, [ newPermINT ])]}
+        )
+        
+        logger.debug(c.result)
+
         # Unbind the connection
         c.unbind()
         return Response(

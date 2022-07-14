@@ -82,6 +82,7 @@ def get_base_level():
     search_filter=add_search_filter(search_filter, 'objectCategory=organizationalUnit')
     search_filter=add_search_filter(search_filter, 'objectCategory=top', "|")
     search_filter=add_search_filter(search_filter, 'objectCategory=container', "|")
+    search_filter=add_search_filter(search_filter, 'objectCategory=builtinDomain', "|")
     connection.search(
         search_base=settings.LDAP_AUTH_SEARCH_BASE,
         search_filter=search_filter,
@@ -113,7 +114,7 @@ def get_full_directory_tree(getCNs=True):
         currentEntity['name'] = str(distinguishedName).split(',')[0].split('=')[1]
         currentEntity['id'] = currentID
         currentEntity['type'] = str(entity.objectCategory).split(',')[0].split('=')[1]
-        if currentEntity['name'] in LDAP_BUILTIN_OBJECTS:
+        if currentEntity['name'] in LDAP_BUILTIN_OBJECTS or 'builtinDomain' in entity.objectClass:
             currentEntity['builtin'] = True
         # Get children
         children = get_children(distinguishedName, connection, recursive=True, getCNs=getCNs, id=currentID)
@@ -151,6 +152,8 @@ def get_children_cn(dn, connection, id=0):
                 objectClasses = cnObject['attributes']['objectClass']
                 if 'user' or 'person' in objectClasses:
                     currentEntity['username'] = str(cnObject['attributes']['sAMAccountName'][0])
+                if 'builtinDomain' in objectClasses:
+                    currentEntity['builtin'] = True
                 objectCategory = cnObject['attributes']['objectCategory']
                 currentEntity['dn'] = cnObject['dn']
                 currentEntity['name'] = str(cnObject['dn']).split(',')[0].split('=')[1]
@@ -231,4 +234,3 @@ def get_children(dn, connection, recursive=False, getCNs=True, id=0):
         "results": results,
         "currentID": id
     })
-

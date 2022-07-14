@@ -125,12 +125,27 @@ LDAP_BUILTIN_OBJECTS = [
     "Computers",
     "Program Data",
     "System",
+    "Builtin",
     "ForeignSecurityPrincipals",
     "Users",
     "Managed Service Accounts"
 ]
 
 def add_search_filter(original_filter, filter_to_add, operator="&"):
+    """ Adds search filter to LDAP Filter string
+
+    ARGUMENTS
+    original_filter: The filter you wish to modify, if empty the function will create a filter
+    filter_to_add: The filter string to add
+    operator (default is &): The operator (and|or), supports string or literal operator value
+
+    Returns a string.
+    """
+    if operator == 'or':
+        operator = '|'
+    if operator == 'and':
+        operator = '&'
+
     if operator != "&" and operator != "|" and original_filter != "":
         raise
     if not original_filter or original_filter == "":
@@ -155,6 +170,10 @@ def check_perm_in_list(permission, list):
         return False
 
 def list_perms():
+    """ List all the permissions in the LDAP_PERMS constant array/list
+
+    Prints to console.
+    """
     for perm in LDAP_PERMS:
         print(perm + " = " + LDAP_PERMS[perm]["val_bin"] + ", " + str(LDAP_PERMS[perm]["index"]))
 
@@ -187,3 +206,52 @@ def list_user_perms(user, permissionToSearch=None, isObject=True):
     if isinstance(permissionToSearch, str):
         return check_perm_in_list(permissionToSearch, UserPerms)
     return UserPerms
+
+def calc_permissions(permissionArray, addPerm='', removePerm=''):
+    """ Calculates permissions INT based on a desired array of Permission String Keys
+
+    ARGUMENTS
+
+    :permissionArray: RAW userAccountControl Integer
+
+    :addPerm: (String || List) -- Contains permission(s) to add to calculated result
+
+    :removePerm: (String || List) -- Contains permission(s) to remove from calculated result
+
+    Returns an integer.
+    """
+    # TODO Check that this works properly when permission_list is in object/list
+    userPermissions = 0
+
+    # Add permissions selected in user creation
+    for perm in permissionArray:
+        permValue = int(LDAP_PERMS[perm]['value'])
+        userPermissions += permValue
+        logger.debug("Permission Value added (cast to string): " + perm + " = " + str(permValue))
+
+    # Add Permissions to list
+    if addPerm and isinstance(addPerm, list):
+        for perm in addPerm:
+            permValue = int(LDAP_PERMS[perm]['value'])
+            userPermissions += permValue
+            logger.debug("Permission Value added (cast to string): " + perm + " = " + str(permValue))
+    elif addPerm:
+        permValue = int(LDAP_PERMS[addPerm]['value'])
+        userPermissions += permValue
+        logger.debug("Permission Value added (cast to string): " + addPerm + " = " + str(permValue))
+
+    # Remove permissions from list
+    if removePerm and isinstance(removePerm, list):
+        for perm in removePerm:
+            permValue = int(LDAP_PERMS[perm]['value'])
+            userPermissions -= permValue
+            logger.debug("Permission Value removed (cast to string): " + perm + " = " + str(permValue))
+    elif removePerm:
+        permValue = int(LDAP_PERMS[removePerm]['value'])
+        userPermissions -= permValue
+        logger.debug("Permission Value removed (cast to string): " + removePerm + " = " + str(permValue))
+
+    # Final Result Log
+    logger.debug("add_permission - Final User Permissions Value: " + str(userPermissions))
+
+    return int(userPermissions)
