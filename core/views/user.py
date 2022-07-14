@@ -243,30 +243,33 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         userPermissions += ldap_adsi.LDAP_PERMS['LDAP_UF_NORMAL_ACCOUNT']['value']
         logger.debug("Final User Permissions Value: " + str(userPermissions))
 
+        arguments = dict()
+        arguments['userAccountControl'] = userPermissions
+
+        excludeKeys = ['password', 'passwordConfirm', 'path', 'permission_list', 'distinguishedName', 'username']
+        for key in data:
+            if key not in excludeKeys:
+                arguments[key] = data[key]
+                print(key)
+                print(data[key])
+
+        arguments['sAMAccountName'] = str(arguments['sAMAccountName']).lower()
+        arguments['objectClass'] = ['top', 'person', 'organizationalPerson', 'user']
+        arguments['userPrincipalName'] = data['username'] + '@' + ldap_settings.LDAP_DOMAIN
         # If user exists, return error
         if user != []:
             raise UserExists
         # Else, create the user and set its password
         else:
-            print(userDN)
-            # c.add(userDN, ldap_settings.LDAP_AUTH_OBJECT_CLASS, 
-            # {   'givenName': data['givenName'],
-            #     'sn': data['sn'],
-            #     'displayName': data['displayName'],
-            #     'distinguishedName': data['distinguishedName'],
-            #     'initials': data['initials'],
-            #     'mail': data['mail'],
-            #     'wWWHomePage': data['wWWHomePage'],
-            #     'userAccountControl': userPermissions
-            # })
-            # c.extend.microsoft.modify_password(userDN, data['password'])
+            logger.debug('Creating user in DN Path: ' + userDN)
+            c.add(userDN, ldap_settings.LDAP_AUTH_OBJECT_CLASS, attributes=arguments)
+            c.extend.microsoft.modify_password(userDN, data['password'])
         # Unbind the connection
         c.unbind()
         return Response(
              data={
                 'code': code,
-                'code_msg': code_msg,
-                'data': data
+                'code_msg': code_msg
              }
         )
 
