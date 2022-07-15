@@ -1,3 +1,11 @@
+# ldap_connector.py
+###############################################################################
+# Contains:
+# - Bind User connector for Administrative Privilege Operations
+# - Recursive directory listing functions
+###############################################################################
+# Originally Created by Dylan Blanqué and BR Consulting S.R.L. (2022)
+
 from dis import dis
 from unittest import result
 from attr import attributes

@@ -1,4 +1,19 @@
-from interlock_backend.ldap_settings import LDAP_AUTH_USER_FIELDS, LDAP_AUTH_USERNAME_IDENTIFIER
+# ldap_adsi.py
+###############################################################################
+# Contains:
+# - LDAP Permission Dictionary
+# - LDAP Manual Built-In Object Dictionary
+# - Important LDAP Query Functions
+###############################################################################
+# Originally Created by Dylan Blanqué and BR Consulting S.R.L. (2022)
+
+from interlock_backend.ldap_settings import (
+    LDAP_AUTH_USER_FIELDS,
+    LDAP_AUTH_USERNAME_IDENTIFIER,
+    LDAP_AUTH_SEARCH_BASE,
+    LDAP_AUTH_OBJECT_CLASS,
+    EXCLUDE_COMPUTER_ACCOUNTS
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -255,3 +270,47 @@ def calc_permissions(permissionArray, addPerm='', removePerm=''):
     logger.debug("add_permission - Final User Permissions Value: " + str(userPermissions))
 
     return int(userPermissions)
+
+def getUserObjectFilter(username):
+    objectClassFilter = "(objectclass=" + LDAP_AUTH_OBJECT_CLASS + ")"
+
+    # Exclude Computer Accounts if settings allow it
+    if EXCLUDE_COMPUTER_ACCOUNTS == True:
+        objectClassFilter = add_search_filter(objectClassFilter, "!(objectclass=computer)")
+
+    # Add filter for username
+    objectClassFilter = add_search_filter(
+        objectClassFilter,
+        LDAP_AUTH_USERNAME_IDENTIFIER + "=" + username
+        )
+    return objectClassFilter
+
+def getUserObject(connection, username, attributes=[LDAP_AUTH_USERNAME_IDENTIFIER, 'distinguishedName'], objectClassFilter=None):
+    """ Default: Search for the dn from a Username string param.
+    
+    Can also be used to fetch entire object from that username string or filtered attributes.
+
+    ARGUMENTS
+
+    :connection: LDAP Connection Object
+
+    :username: (String) -- User to be searched
+
+    :attributes: (String || List) -- Attributes to return in entry, default are DN and Username Identifier
+
+    e.g.: sAMAccountName
+
+    :objectClassFilter: (String) -- Default is obtained from settings
+
+    Returns the connection.
+    """
+    if objectClassFilter == None:
+        objectClassFilter = getUserObjectFilter(username)
+
+    connection.search(
+        LDAP_AUTH_SEARCH_BASE, 
+        objectClassFilter, 
+        attributes=attributes
+    )
+
+    return connection

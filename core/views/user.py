@@ -10,7 +10,8 @@ from core.exceptions.users import (
     UserExists, 
     UserPermissionError, 
     UserPasswordsDontMatch,
-    UserUpdateError
+    UserUpdateError,
+    UserDoesNotExist
 )
 from rest_framework.decorators import action
 from interlock_backend.ldap_connector import open_connection
@@ -95,6 +96,9 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
                         user_dict[str_key] = str_value
                 if attr_key == ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER:
                     user_dict['username'] = str_value
+
+            # Add entry DN to response dictionary
+            user_dict['dn'] = user.entry_dn
 
             # Check if user is disabled
             if ldap_adsi.list_user_perms(user, permissionToSearch="LDAP_UF_ACCOUNT_DISABLE") == True:
@@ -221,25 +225,13 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         # Open LDAP Connection
         c = open_connection()
 
+        # Send LDAP Query for user being created to see if it exists
         attributes = [
             ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER,
             'distinguishedName',
             'userPrincipalName',
         ]
-        objectClassFilter = "(objectclass=" + ldap_settings.LDAP_AUTH_OBJECT_CLASS + ")"
-
-        # Exclude Computer Accounts if settings allow it
-        if ldap_settings.EXCLUDE_COMPUTER_ACCOUNTS == True:
-            objectClassFilter = ldap_adsi.add_search_filter(objectClassFilter, "!(objectclass=computer)")
-
-        # Add filter for username
-        objectClassFilter = ldap_adsi.add_search_filter(objectClassFilter, ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER + "=" + userToSearch)
-
-        c.search(
-            ldap_settings.LDAP_AUTH_SEARCH_BASE, 
-            objectClassFilter, 
-            attributes=attributes
-        )
+        c = ldap_adsi.getUserObject(c, userToSearch, attributes=attributes)
         user = c.entries
 
         # If user exists, return error
@@ -278,9 +270,9 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         ]
         for key in data:
             if key not in excludeKeys:
+                logger.debug("Key in data: " + key)
+                logger.debug("Value for key above: " + data[key])
                 arguments[key] = data[key]
-                print(key)
-                print(data[key])
 
         arguments['sAMAccountName'] = str(arguments['sAMAccountName']).lower()
         arguments['objectClass'] = ['top', 'person', 'organizationalPerson', 'user']
@@ -344,24 +336,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             'userPrincipalName',
             'userAccountControl',
         ]
-        objectClassFilter = "(objectclass=" + ldap_settings.LDAP_AUTH_OBJECT_CLASS + ")"
-
-        # Exclude Computer Accounts if settings allow it
-        if ldap_settings.EXCLUDE_COMPUTER_ACCOUNTS == True:
-            objectClassFilter = ldap_adsi.add_search_filter(objectClassFilter, "!(objectclass=computer)")
-
-        # Add filter for username
-        objectClassFilter = ldap_adsi.add_search_filter(
-            objectClassFilter, 
-            ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER + "=" + userToUpdate
-            )
-
-        # Fetch current existing user object from server
-        c.search(
-            ldap_settings.LDAP_AUTH_SEARCH_BASE, 
-            objectClassFilter, 
-            attributes=ldap3.ALL_ATTRIBUTES
-        )
+        c = ldap_adsi.getUserObject(c, userToUpdate, attributes=ldap3.ALL_ATTRIBUTES)
 
         user = c.entries
         dn = str(user[0].distinguishedName)
@@ -588,6 +563,74 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         # Open LDAP Connection
         c = open_connection()
+
+        # If data request for deletion has user DN
+        if 'dn' in data.keys() and data['dn'] != "":
+            logger.debug('Deleting with dn obtained from front-end')
+            logger.debug(data['dn'])
+            dn = data['dn']
+            if not dn or dn == "":
+                raise UserDoesNotExist
+            c.delete(dn)
+        # Else, search for username dn
+        else:
+            logger.debug('Deleting with user dn search method')
+            userToDelete = data['username']
+            c = ldap_adsi.getUserObject(c, userToDelete)
+            
+            user = c.entries
+            dn = str(user[0].distinguishedName)
+            logger.debug(dn)
+
+            if not dn or dn == "":
+                raise UserDoesNotExist
+            c.delete(dn)
+
+        # Unbind the connection
+        c.unbind()
+        return Response(
+             data={
+                'code': code,
+                'code_msg': code_msg,
+                'data': data
+             }
+        )
+
+    @action(detail=False, methods=['post'])
+    def changePassword(self, request, pk=None):
+        user = request.user
+        # Check user is_staff
+        if user.is_staff == False or not user:
+            raise PermissionDenied
+        code = 0
+        code_msg = 'ok'
+        data = request.data
+
+        # Open LDAP Connection
+        c = open_connection()
+
+        # If data request for deletion has user DN
+        if 'dn' in data.keys() and data['dn'] != "":
+            logger.debug('Updating with dn obtained from front-end')
+            logger.debug(data['dn'])
+            dn = data['dn']
+        # Else, search for username dn
+        else:
+            logger.debug('Updating with user dn search method')
+            userToUpdate = data['username']
+            c = ldap_adsi.getUserObject(c, userToUpdate)
+            
+            user = c.entries
+            dn = str(user[0].distinguishedName)
+            logger.debug(dn)
+
+        if not dn or dn == "":
+            raise UserDoesNotExist
+
+        if data['password'] != data['passwordConfirm']:
+            raise UserPasswordsDontMatch
+
+        c.extend.microsoft.modify_password(dn, data['password'])
 
         # Unbind the connection
         c.unbind()
