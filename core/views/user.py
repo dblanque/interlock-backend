@@ -576,8 +576,28 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
     def destroy(self, request, pk=None):
         raise NotFound
 
+    @action(detail=False, methods=['post'])
     def delete(self, request, pk=None):
-        raise NotFound
+        user = request.user
+        # Check user is_staff
+        if user.is_staff == False or not user:
+            raise PermissionDenied
+        code = 0
+        code_msg = 'ok'
+        data = request.data
+
+        # Open LDAP Connection
+        c = open_connection()
+
+        # Unbind the connection
+        c.unbind()
+        return Response(
+             data={
+                'code': code,
+                'code_msg': code_msg,
+                'data': data
+             }
+        )
 
     @action(detail=False, methods=['get'])
     @transaction.atomic
