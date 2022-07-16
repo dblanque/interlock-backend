@@ -15,6 +15,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import gettext_lazy as _
 from datetime import timedelta
 from interlock_backend.ldap_settings import *
+from interlock_backend.local_settings import *
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -32,7 +33,7 @@ DEBUG = True
 
 # Allows requests from all origins.
 # If this is used then `CORS_ORIGIN_WHITELIST` will not have any effect
-CORS_ORIGIN_ALLOW_ALL = True 
+CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
 
 # If this is used, then not need to use `CORS_ORIGIN_ALLOW_ALL = True`
@@ -97,10 +98,9 @@ TEMPLATES = [
 WSGI_APPLICATION = 'interlock_backend.wsgi.application'
 
 AUTHENTICATION_BACKENDS = (
-    "django.contrib.auth.backends.ModelBackend",
+    "django.contrib.auth.backends.ModelBackend", # Comment if you wish to use LDAP Auth Only
     "django_python3_ldap.auth.LDAPBackend",
     )
-# AUTHENTICATION_BACKENDS = ("django_python3_ldap.auth.LDAPBackend",)
 
 AUTH_USER_MODEL = "core.User"
 
@@ -131,16 +131,17 @@ LOGGING = {
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'interlockdb',
-        'USER': 'interlockadmin',
-        'PASSWORD': 'Clave1234',
-        'HOST': '127.0.0.1',  # Or an IP Address that your DB is hosted on
-        'PORT': '5432',
+if not DATABASES:
+    DATABASES = {
+        "default": {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'interlockdb',
+            'USER': 'interlockadmin',
+            'PASSWORD': 'Clave1234', # Change this password
+            'HOST': '127.0.0.1',  # Or an IP Address that your DB is hosted on
+            'PORT': '5432',
+        }
     }
-}
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
@@ -176,7 +177,7 @@ REST_FRAMEWORK = {
 DATE_INPUT_FORMATS = ['%Y-%m-%d']
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15), #Change for development (default was minutes=5)
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15), # Change for development (default was minutes=5)
     'REFRESH_TOKEN_LIFETIME': timedelta(hours=1),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
