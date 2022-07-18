@@ -13,6 +13,8 @@ LDAP_AUTH_USE_TLS = False
 import ssl
 LDAP_AUTH_TLS_VERSION = ssl.PROTOCOL_TLSv1_2
 
+TEST = "test"
+
 # The LDAP search base for looking up users.
 LDAP_AUTH_SEARCH_BASE = "dc=brconsulting"
 
