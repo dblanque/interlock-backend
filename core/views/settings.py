@@ -28,23 +28,41 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
 
         validSettings = ldap_settings.SETTINGS_WITH_ALLOWABLE_OVERRIDE
 
+        # Loop for each constant in the ldap_settings.py file
         for c in ldap_settings.__dict__:
+            # If the constant is in the validSettings array
             if c in validSettings:
                 # Init Object/Dict
                 data[c] = {}
-                # If an override exists in the DB
                 querySet = Setting.objects.filter(id = c).exclude(deleted=True)
+                # If an override exists in the DB do the following
                 if querySet.count() > 0:
                     logger.debug(c + "was fetched from DB")
                     settingObject = querySet.get(id = c)
                     value = settingObject.value
                     value = settingObject.type
                     data[c]['value'] = value
-                    data[c]['type'] = value
+                    
+                    # Set the Type for the Front-end
+                    if 'type' in ldap_settings.SETTINGS_WITH_ALLOWABLE_OVERRIDE[c]:
+                        data[c]['type'] = ldap_settings.SETTINGS_WITH_ALLOWABLE_OVERRIDE[c]['type']
+                    else:
+                        data[c]['type'] = 'string'
+                    # data[c]['type'] = value
+
+                    # TODO - Put this into a normalizer function cause this is some shit repeated code
+                    if c == "LDAP_AUTH_URL":
+                        data[c]['value'] = copy.deepcopy(ldap_settings.__dict__[c])
+                        for key, value in enumerate(data[c]['value']):
+                            data[c]['value'][key] = str(value)
+                    if c == "LDAP_AUTH_TLS_VERSION":
+                        data[c]['value'] = copy.deepcopy(str(ldap_settings.__dict__[c]).split('.')[-1])
+                # If no override exists use the manually setup constant
                 else:
                     logger.debug(c + "was fetched from Constants File")
-                    # If not then check the manually configured Constants
                     data[c]['value'] = ldap_settings.__dict__[c]
+
+                    # Set the Type for the Front-end
                     if 'type' in ldap_settings.SETTINGS_WITH_ALLOWABLE_OVERRIDE[c]:
                         data[c]['type'] = ldap_settings.SETTINGS_WITH_ALLOWABLE_OVERRIDE[c]['type']
                     else:
