@@ -8,7 +8,8 @@ class BaseManager(Manager.from_queryset(QuerySet)):
     use_in_migrations = False
 
     def get_queryset(self):
-        return super().get_queryset().all().exclude(deleted=True)
+        # return super().get_queryset().all().exclude(deleted=True)
+        return super().get_queryset().all()
 
 class BaseModel(models.Model):
 

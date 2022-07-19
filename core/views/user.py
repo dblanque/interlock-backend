@@ -13,6 +13,7 @@ from core.exceptions.users import (
     UserUpdateError,
     UserDoesNotExist
 )
+from core.models import User
 from rest_framework.decorators import action
 from interlock_backend.ldap_connector import open_connection
 from interlock_backend import ldap_settings
@@ -36,6 +37,7 @@ from django.forms import (
 logger = logging.getLogger(__name__)
 
 class UserViewSet(viewsets.ViewSet, UserViewMixin):
+    queryset = User.objects.all()
 
     def list(self, request):
         user = request.user

@@ -39,7 +39,9 @@ else:
     LDAP_AUTH_USERNAME_IDENTIFIER = LDAP_AUTH_USER_FIELDS["username"]
 
 # A tuple of django model fields used to uniquely identify a user.
-LDAP_AUTH_USER_LOOKUP_FIELDS = ("username",)
+LDAP_AUTH_USER_LOOKUP_FIELDS = (
+    "username",
+)
 
 # Path to a callable that takes a dict of {model_field_name: value},
 # returning a dict of clean model data.
@@ -94,3 +96,22 @@ def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
     pass
 
 LDAP_AUTH_SYNC_USER_RELATIONS = sync_user_relations
+
+SETTINGS_WITH_ALLOWABLE_OVERRIDE = [
+    "LDAP_AUTH_URL",
+    "LDAP_DOMAIN",
+    "LDAP_AUTH_USE_TLS",
+    "LDAP_AUTH_TLS_VERSION",
+    "LDAP_AUTH_SEARCH_BASE",
+    "LDAP_AUTH_OBJECT_CLASS",
+    "EXCLUDE_COMPUTER_ACCOUNTS",
+    "LDAP_AUTH_USER_FIELDS",
+    "LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN",
+    "LDAP_AUTH_CONNECTION_USER_DN",
+    "LDAP_AUTH_CONNECTION_USERNAME",
+    "LDAP_AUTH_CONNECTION_PASSWORD",
+    "LDAP_AUTH_CONNECT_TIMEOUT",
+    "LDAP_AUTH_RECEIVE_TIMEOUT",
+    "ADMIN_GROUP_TO_SEARCH",
+    "LDAP_AUTH_USER_LOOKUP_FIELDS"
+]
