@@ -13,8 +13,6 @@ LDAP_AUTH_USE_TLS = False
 import ssl
 LDAP_AUTH_TLS_VERSION = ssl.PROTOCOL_TLSv1_2
 
-TEST = "test"
-
 # The LDAP search base for looking up users.
 LDAP_AUTH_SEARCH_BASE = "dc=brconsulting"
 
@@ -97,21 +95,58 @@ def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
 
 LDAP_AUTH_SYNC_USER_RELATIONS = sync_user_relations
 
-SETTINGS_WITH_ALLOWABLE_OVERRIDE = [
-    "LDAP_AUTH_URL",
-    "LDAP_DOMAIN",
-    "LDAP_AUTH_USE_TLS",
-    "LDAP_AUTH_TLS_VERSION",
-    "LDAP_AUTH_SEARCH_BASE",
-    "LDAP_AUTH_OBJECT_CLASS",
-    "EXCLUDE_COMPUTER_ACCOUNTS",
-    "LDAP_AUTH_USER_FIELDS",
-    "LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN",
-    "LDAP_AUTH_CONNECTION_USER_DN",
-    "LDAP_AUTH_CONNECTION_USERNAME",
-    "LDAP_AUTH_CONNECTION_PASSWORD",
-    "LDAP_AUTH_CONNECT_TIMEOUT",
-    "LDAP_AUTH_RECEIVE_TIMEOUT",
-    "ADMIN_GROUP_TO_SEARCH",
-    "LDAP_AUTH_USER_LOOKUP_FIELDS"
-]
+SETTINGS_WITH_ALLOWABLE_OVERRIDE = {
+    "LDAP_AUTH_URL":{ 
+        "type": "ldap_uri", 
+        "value": "" 
+    },
+    "LDAP_DOMAIN":{
+        "value": "" 
+    },
+    "LDAP_AUTH_USE_TLS":{ 
+        "type": "boolean", 
+        "value": "" 
+    },
+    "LDAP_AUTH_TLS_VERSION":{
+        "value": "" ,
+        "type": "select"
+    },
+    "LDAP_AUTH_SEARCH_BASE":{
+        "value": "" 
+    },
+    "LDAP_AUTH_OBJECT_CLASS":{ 
+        "value": "" 
+    },
+    "EXCLUDE_COMPUTER_ACCOUNTS":{ 
+        "type": "boolean", 
+        "value": "" 
+    },
+    "LDAP_AUTH_USER_FIELDS":{ 
+        "type": "object", 
+        "value": "" 
+    },
+    "LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN":{ 
+        "value": "" 
+    },
+    "LDAP_AUTH_CONNECTION_USER_DN":{ 
+        "value": ""
+    },
+    "LDAP_AUTH_CONNECTION_USERNAME":{ 
+        "value": ""
+    },
+    "LDAP_AUTH_CONNECTION_PASSWORD":{ 
+        "type": "password",
+        "value": ""
+    },
+    "LDAP_AUTH_CONNECT_TIMEOUT":{ 
+        "type": "integer", 
+        "value": ""
+    },
+    "LDAP_AUTH_RECEIVE_TIMEOUT":{ 
+        "type": "integer", 
+        "value": ""
+    },
+    "ADMIN_GROUP_TO_SEARCH":{
+        "value": ""
+    }
+}

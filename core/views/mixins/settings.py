@@ -11,10 +11,12 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
             # print(itemKey)
             # print(data)
 
-            if data['type'] == 'checkbox':
+            if data['type'] == 'checkbox' or data['type'] == 'bool':
                 data['type'] = 'boolean'
             if data['type'] == 'array':
                 data['type'] = 'list'
+            if data['type'] == 'select':
+                data['type'] = 'string'
 
             try:
                 querySet = Setting.objects.filter(id = itemKey)
@@ -37,6 +39,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
             elif data['value'] == "" and querySet.count() > 0:
                 try:
                     settingObject = querySet.get(id = itemKey)
+                    settingObject.value(None)
                     settingObject.delete(self)
                 except Exception as e:
                     print("Couldn't delete setting: " + itemKey)
