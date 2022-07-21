@@ -11,6 +11,7 @@ from django.db import models
 from django.utils.crypto import salted_hmac
 from django.utils.translation import gettext_lazy as _
 from .base import BaseModel
+from interlock_backend.settings import DJANGO_SUPERUSER_USERNAME, DJANGO_SUPERUSER_PASSWORD
 
 class BaseUserManager(DjangoBaseUserManager):
     use_in_migrations = True
@@ -46,6 +47,17 @@ class BaseUserManager(DjangoBaseUserManager):
 
         return self._create_user(username, password, **extra_fields)
 
+    def create_default_superuser(self, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
+
+        return self._create_user(DJANGO_SUPERUSER_USERNAME, DJANGO_SUPERUSER_PASSWORD, **extra_fields)
+
 class BaseUser(BaseModel, PermissionsMixin):
     USERNAME_FIELD = "username"
     REQUIRED_FIELDS = []
@@ -54,8 +66,9 @@ class BaseUser(BaseModel, PermissionsMixin):
     id = models.BigAutoField(primary_key=True)
     username = models.CharField(_("username"), max_length=128, unique=True)
     password = models.CharField(_("password"), max_length=128)
+    encryptedPassword = models.CharField(_("encryptedPassword"), max_length=256, null=True)
     last_login = models.DateTimeField(_("last login"), blank=True, null=True)
-    email = models.EmailField(_("email address"), unique=True, db_index=True)
+    email = models.EmailField(_("email address"), unique=True, db_index=True, null=True)
     is_staff = models.BooleanField(
         _("staff status"),
         default=False,

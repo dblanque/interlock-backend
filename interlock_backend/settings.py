@@ -16,6 +16,7 @@ from django.utils.translation import gettext_lazy as _
 from datetime import timedelta
 from interlock_backend.ldap_settings import *
 from interlock_backend.local_settings import *
+import base64
 
 # A little easter egg for you :)
 # from this import d
@@ -29,7 +30,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'in2tfy@bhej(5i@h!_04+kes__58rd9mh$=1!o_6ky236d-ue)'
 
-SALT_KEY = 'L4PaMhzmOeNNbS0x3iMl'
+# Dynamic Encrypt / Decrypt KEY, changes when the app is restarted
+# ALL users will loose their sessions when this happens.
+FERNET_KEY = base64.urlsafe_b64encode(os.urandom(32))
+
+DJANGO_SUPERUSER_USERNAME = 'admin'
+DJANGO_SUPERUSER_PASSWORD = 'interlock'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -102,7 +108,8 @@ WSGI_APPLICATION = 'interlock_backend.wsgi.application'
 
 AUTHENTICATION_BACKENDS = (
     "django.contrib.auth.backends.ModelBackend", # Comment if you wish to use LDAP Auth Only
-    "django_python3_ldap.auth.LDAPBackend",
+    "interlock_backend.ldap_auth.LDAPBackend",
+    # "django_python3_ldap.auth.LDAPBackend",
     )
 
 AUTH_USER_MODEL = "core.User"
