@@ -78,6 +78,8 @@ LDAP_AUTH_CONNECTION_PASSWORD = "!kDZladKxt-Ed2QI7P2eN5"
 LDAP_AUTH_CONNECT_TIMEOUT = 5
 LDAP_AUTH_RECEIVE_TIMEOUT = 5
 
+ADMIN_GROUP_TO_SEARCH = "CN=admins,OU=Administrators,DC=brconsulting"
+
 # TODO - Add setting to allow builtin Administrator superuser login or not
 def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
     if 'Administrator' in ldap_attributes[LDAP_AUTH_USER_FIELDS["username"]]:
@@ -85,7 +87,7 @@ def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
         user.is_superuser = True
         user.save()
         pass
-    GROUP_TO_SEARCH = "CN=admins,OU=Administrators,DC=brconsulting"
+    GROUP_TO_SEARCH = ADMIN_GROUP_TO_SEARCH
     if 'memberOf' in ldap_attributes and GROUP_TO_SEARCH in ldap_attributes['memberOf']:
         # Do staff shit here
         user.is_staff = True
@@ -94,6 +96,11 @@ def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
     pass
 
 LDAP_AUTH_SYNC_USER_RELATIONS = sync_user_relations
+
+# LazySetting(
+#     name="LDAP_AUTH_CONNECTION_USERNAME",
+#     default=None,
+# )
 
 SETTINGS_WITH_ALLOWABLE_OVERRIDE = {
     "LDAP_AUTH_URL":{ 

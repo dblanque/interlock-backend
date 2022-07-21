@@ -17,6 +17,9 @@ from datetime import timedelta
 from interlock_backend.ldap_settings import *
 from interlock_backend.local_settings import *
 
+# A little easter egg for you :)
+# from this import d
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
