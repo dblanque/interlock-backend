@@ -9,6 +9,23 @@ from interlock_backend.ldap_encrypt import validateUser
 
 class DomainViewSet(viewsets.ViewSet, DomainViewMixin):
 
+    @action(detail=False, methods=['get'])
+    def details(self, request):
+        user = request.user
+        validateUser(request=request, requestUser=user)
+        data = {}
+        code = 0
+        data["realm"] = LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN or ""
+        data["name"] = LDAP_DOMAIN or ""
+        data["basedn"] = LDAP_AUTH_SEARCH_BASE or ""
+        return Response(
+             data={
+                'code': code,
+                'code_msg': 'ok',
+                'details': data
+             }
+        )
+
     def list(self, request, pk=None):
         raise NotFound
 
@@ -35,20 +52,3 @@ class DomainViewSet(viewsets.ViewSet, DomainViewMixin):
 
     def delete(self, request, pk=None):
         raise NotFound
-
-    @action(detail=False, methods=['post'])
-    def details(self, request):
-        user = request.user
-        validateUser(request=request, requestUser=user)
-        data = {}
-        code = 0
-        data["realm"] = LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN or ""
-        data["name"] = LDAP_DOMAIN or ""
-        data["basedn"] = LDAP_AUTH_SEARCH_BASE or ""
-        return Response(
-             data={
-                'code': code,
-                'code_msg': 'ok',
-                'details': data
-             }
-        )

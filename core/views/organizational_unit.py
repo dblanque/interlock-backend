@@ -19,9 +19,8 @@ import logging
 import json
 
 class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
-    
-    @action(detail=False,methods=['post'])
-    def all(self, request):
+
+    def list(self, request):
         user = request.user
         validateUser(request=request, requestUser=user)
         data = request.data
@@ -43,7 +42,7 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
                 }
         )
     
-    @action(detail=False,methods=['post'])
+    @action(detail=False,methods=['get'])
     def dirtree(self, request):
         user = request.user
         validateUser(request=request, requestUser=user)
@@ -66,8 +65,8 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
                 }
         )
 
-    def list(self, request, pk=None):
-        raise NotFound
+    # def list(self, request, pk=None):
+    #     raise NotFound
 
     def create(self, request, pk=None):
         raise NotFound

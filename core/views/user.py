@@ -40,8 +40,7 @@ logger = logging.getLogger(__name__)
 class UserViewSet(viewsets.ViewSet, UserViewMixin):
     queryset = User.objects.all()
 
-    @action(detail=False, methods=['post'])
-    def all(self, request):
+    def list(self, request):
         user = request.user
         validateUser(request=request, requestUser=user)
         data = []
@@ -522,30 +521,6 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
              }
         )
 
-    def list(self, request, pk=None):
-        raise NotFound
-
-    def create(self, request, pk=None):
-        raise NotFound
-
-    def put(self, request, pk=None):
-        raise NotFound
-
-    def patch(self, request, pk=None):
-        raise NotFound
-        
-    def retrieve(self, request, pk=None):
-        raise NotFound
-
-    # def update(self, request, pk=None):
-    #     raise NotFound
-
-    def partial_update(self, request, pk=None):
-        raise NotFound
-
-    def destroy(self, request, pk=None):
-        raise NotFound
-
     @action(detail=False, methods=['post'])
     def delete(self, request, pk=None):
         user = request.user
@@ -633,7 +608,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
              }
         )
 
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['get'])
     def me(self, request):
         user = request.user
         validateUser(request=request, requestUser=user)
@@ -650,3 +625,27 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
                 'user': data
              }
         )
+
+    # def list(self, request, pk=None):
+    #     raise NotFound
+
+    def create(self, request, pk=None):
+        raise NotFound
+
+    def put(self, request, pk=None):
+        raise NotFound
+
+    def patch(self, request, pk=None):
+        raise NotFound
+        
+    def retrieve(self, request, pk=None):
+        raise NotFound
+
+    # def update(self, request, pk=None):
+    #     raise NotFound
+
+    def partial_update(self, request, pk=None):
+        raise NotFound
+
+    def destroy(self, request, pk=None):
+        raise NotFound

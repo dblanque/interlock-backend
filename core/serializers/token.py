@@ -10,7 +10,6 @@ class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
         data["first_name"] = self.user.first_name or ""
         data["email"] = self.user.email or ""
         data["last_name"] = self.user.last_name or ""
-        data["encPwd"] = self.user.encryptedPassword or ""
         return data
 
 

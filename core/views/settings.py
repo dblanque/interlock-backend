@@ -16,8 +16,7 @@ logger = logging.getLogger(__name__)
 class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
     queryset = Setting.objects.all()
 
-    @action(detail=False, methods=['post'])
-    def all(self, request, pk=None):
+    def list(self, request, pk=None):
         user = request.user
         validateUser(request=request, requestUser=user)
         data = {}
@@ -66,7 +65,7 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
              }
         )
 
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['get'])
     def reset(self, request, pk=None):
         user = request.user
         validateUser(request=request, requestUser=user)
@@ -85,8 +84,8 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
              }
         )
 
-    def list(self, request, pk=None):
-        raise NotFound
+    # def list(self, request, pk=None):
+    #     raise NotFound
 
     def create(self, request, pk=None):
         raise NotFound
