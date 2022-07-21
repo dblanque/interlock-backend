@@ -15,11 +15,6 @@ from core.exceptions.users import (
 )
 from core.models import User
 from rest_framework.decorators import action
-from interlock_backend.ldap_connector import open_connection
-from interlock_backend import ldap_settings
-from interlock_backend import ldap_adsi
-from interlock_backend.ldap_countries import LDAP_COUNTRIES
-from interlock_backend.ldap_encrypt import validateUser
 from ldap3 import (
     MODIFY_ADD,
     MODIFY_DELETE,
@@ -34,6 +29,10 @@ from django.forms import (
     BooleanField,
     IntegerField,
 )
+from interlock_backend.ldap.connector import open_connection, getSetting
+from interlock_backend.ldap import adsi as ldap_adsi
+from interlock_backend.ldap.countries import LDAP_COUNTRIES
+from interlock_backend.ldap.encrypt import validateUser
 
 logger = logging.getLogger(__name__)
 
@@ -46,24 +45,34 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         data = []
         code = 0
         code_msg = 'ok'
+
+        ######################## Get Latest Settings ###########################
+        authUsernameIdentifier = getSetting('LDAP_AUTH_USERNAME_IDENTIFIER')
+        authObjectClass = getSetting('LDAP_AUTH_OBJECT_CLASS')
+        authSearchBase = getSetting('LDAP_AUTH_SEARCH_BASE')
+        excludeComputerAccounts = getSetting('EXCLUDE_COMPUTER_ACCOUNTS')
+        ########################################################################
+
         # Open LDAP Connection
         c = open_connection()
         attributes = [
             'givenName',
             'sn',
             'displayName',
-            ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER,
+            authUsernameIdentifier,
             'mail',
             'distinguishedName',
             'userAccountControl'
         ]
-        # Have to fix what's below to make it more modular
-        if ldap_settings.EXCLUDE_COMPUTER_ACCOUNTS == True:
-            objectClassFilter = "(&(objectclass=" + ldap_settings.LDAP_AUTH_OBJECT_CLASS + ")(!(objectclass=computer)))"
-        else:
-            objectClassFilter = "(objectclass=" + ldap_settings.LDAP_AUTH_OBJECT_CLASS + ")"   
+        
+        objectClassFilter = "(objectclass=" + authObjectClass + ")"
+
+        # Exclude Computer Accounts if settings allow it
+        if excludeComputerAccounts == True:
+            objectClassFilter = ldap_adsi.add_search_filter(objectClassFilter, "!(objectclass=computer)")
+
         c.search(
-            ldap_settings.LDAP_AUTH_SEARCH_BASE, 
+            authSearchBase, 
             objectClassFilter, 
             attributes=attributes
         )
@@ -95,7 +104,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
                         user_dict[str_key] = ""
                     else:
                         user_dict[str_key] = str_value
-                if attr_key == ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER:
+                if attr_key == authUsernameIdentifier:
                     user_dict['username'] = str_value
 
             # Add entry DN to response dictionary
@@ -128,13 +137,21 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         code_msg = 'ok'
         data = request.data
         userToSearch = data["username"]
+
+        ######################## Get Latest Settings ###########################
+        authUsernameIdentifier = getSetting('LDAP_AUTH_USERNAME_IDENTIFIER')
+        authObjectClass = getSetting('LDAP_AUTH_OBJECT_CLASS')
+        authSearchBase = getSetting('LDAP_AUTH_SEARCH_BASE')
+        excludeComputerAccounts = getSetting('EXCLUDE_COMPUTER_ACCOUNTS')
+        ########################################################################
+
         # Open LDAP Connection
         c = open_connection()
         attributes = [ 
             'givenName', 
             'sn', 
             'displayName', 
-            ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER, 
+            authUsernameIdentifier, 
             'mail',
             'telephoneNumber',
             'streetAddress',
@@ -159,16 +176,16 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             'sAMAccountType',
         ]
 
-        objectClassFilter = "(objectclass=" + ldap_settings.LDAP_AUTH_OBJECT_CLASS + ")"
+        objectClassFilter = "(objectclass=" + authObjectClass + ")"
 
         # Exclude Computer Accounts if settings allow it
-        if ldap_settings.EXCLUDE_COMPUTER_ACCOUNTS == True:
+        if excludeComputerAccounts == True:
             objectClassFilter = ldap_adsi.add_search_filter(objectClassFilter, "!(objectclass=computer)")
         
         # Add filter for username
-        objectClassFilter = ldap_adsi.add_search_filter(objectClassFilter, ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER + "=" + userToSearch)
+        objectClassFilter = ldap_adsi.add_search_filter(objectClassFilter, authUsernameIdentifier + "=" + userToSearch)
         c.search(
-            ldap_settings.LDAP_AUTH_SEARCH_BASE,
+            authSearchBase,
             objectClassFilter,
             attributes=attributes
         )
@@ -184,7 +201,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
                     user_dict[str_key] = ""
                 else:
                     user_dict[str_key] = str_value
-            if attr_key == ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER:
+            if attr_key == authUsernameIdentifier:
                 user_dict['username'] = str_value
 
         # Check if user is disabled
@@ -219,12 +236,20 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             raise UserPasswordsDontMatch
 
         userToSearch = data["username"]
+
+        ######################## Get Latest Settings ###########################
+        authUsernameIdentifier = getSetting('LDAP_AUTH_USERNAME_IDENTIFIER')
+        authObjectClass = getSetting('LDAP_AUTH_OBJECT_CLASS')
+        authDomain = getSetting('LDAP_DOMAIN')
+        authSearchBase = getSetting('LDAP_AUTH_SEARCH_BASE')
+        ########################################################################
+
         # Open LDAP Connection
         c = open_connection()
 
         # Send LDAP Query for user being created to see if it exists
         attributes = [
-            ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER,
+            authUsernameIdentifier,
             'distinguishedName',
             'userPrincipalName',
         ]
@@ -235,7 +260,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         if user != []:
             raise UserExists
 
-        userDN = 'CN='+data['username']+','+data['path'] or 'CN='+data['username']+',OU=Users,'+ldap_settings.LDAP_AUTH_SEARCH_BASE
+        userDN = 'CN='+data['username']+','+data['path'] or 'CN='+data['username']+',OU=Users,'+authSearchBase
         userPermissions = 0
 
         # Add permissions selected in user creation
@@ -273,10 +298,10 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         arguments['sAMAccountName'] = str(arguments['sAMAccountName']).lower()
         arguments['objectClass'] = ['top', 'person', 'organizationalPerson', 'user']
-        arguments['userPrincipalName'] = data['username'] + '@' + ldap_settings.LDAP_DOMAIN
+        arguments['userPrincipalName'] = data['username'] + '@' + authDomain
         
         logger.debug('Creating user in DN Path: ' + userDN)
-        c.add(userDN, ldap_settings.LDAP_AUTH_OBJECT_CLASS, attributes=arguments)
+        c.add(userDN, authObjectClass, attributes=arguments)
         # TODO - Test if password changes correctly?
         c.extend.microsoft.modify_password(userDN, data['password'])
 
@@ -296,6 +321,10 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         code = 0
         code_msg = 'ok'
         data = request.data
+
+        ######################## Get Latest Settings ###########################
+        authUsernameIdentifier = getSetting('LDAP_AUTH_USERNAME_IDENTIFIER')
+        ########################################################################
 
         excludeKeys = [
             'password', 
@@ -326,7 +355,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         # Get basic attributes for this user from AD to compare query and get dn
         attributes = [
-            ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER,
+            authUsernameIdentifier,
             'distinguishedName',
             'userPrincipalName',
             'userAccountControl',
@@ -406,30 +435,37 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         code_msg = 'ok'
         data = request.data
 
+        ######################## Get Latest Settings ###########################
+        authSearchBase = getSetting('LDAP_AUTH_SEARCH_BASE')
+        authUsernameIdentifier = getSetting('LDAP_AUTH_USERNAME_IDENTIFIER')
+        authObjectClass = getSetting('LDAP_AUTH_OBJECT_CLASS')
+        excludeComputerAccounts = getSetting('EXCLUDE_COMPUTER_ACCOUNTS')
+        ########################################################################
+
         userToEnable = data['username']
         # Open LDAP Connection
         c = open_connection()
 
         attributes = [
-            ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER,
+            authUsernameIdentifier,
             'distinguishedName',
             'userPrincipalName',
             'userAccountControl',
         ]
-        objectClassFilter = "(objectclass=" + ldap_settings.LDAP_AUTH_OBJECT_CLASS + ")"
+        objectClassFilter = "(objectclass=" + authObjectClass + ")"
 
         # Exclude Computer Accounts if settings allow it
-        if ldap_settings.EXCLUDE_COMPUTER_ACCOUNTS == True:
+        if excludeComputerAccounts == True:
             objectClassFilter = ldap_adsi.add_search_filter(objectClassFilter, "!(objectclass=computer)")
 
         # Add filter for username
         objectClassFilter = ldap_adsi.add_search_filter(
             objectClassFilter, 
-            ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER + "=" + userToEnable
+            authUsernameIdentifier + "=" + userToEnable
             )
 
         c.search(
-            ldap_settings.LDAP_AUTH_SEARCH_BASE, 
+            authSearchBase, 
             objectClassFilter, 
             attributes=attributes
         )
@@ -467,30 +503,37 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         code_msg = 'ok'
         data = request.data
 
+        ######################## Get Latest Settings ###########################
+        authSearchBase = getSetting('LDAP_AUTH_SEARCH_BASE')
+        authUsernameIdentifier = getSetting('LDAP_AUTH_USERNAME_IDENTIFIER')
+        authObjectClass = getSetting('LDAP_AUTH_OBJECT_CLASS')
+        excludeComputerAccounts = getSetting('EXCLUDE_COMPUTER_ACCOUNTS')
+        ########################################################################
+
         userToEnable = data['username']
         # Open LDAP Connection
         c = open_connection()
 
         attributes = [
-            ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER,
+            authUsernameIdentifier,
             'distinguishedName',
             'userPrincipalName',
             'userAccountControl'
         ]
-        objectClassFilter = "(objectclass=" + ldap_settings.LDAP_AUTH_OBJECT_CLASS + ")"
+        objectClassFilter = "(objectclass=" + authObjectClass + ")"
 
         # Exclude Computer Accounts if settings allow it
-        if ldap_settings.EXCLUDE_COMPUTER_ACCOUNTS == True:
+        if excludeComputerAccounts == True:
             objectClassFilter = ldap_adsi.add_search_filter(objectClassFilter, "!(objectclass=computer)")
 
         # Add filter for username
         objectClassFilter = ldap_adsi.add_search_filter(
             objectClassFilter, 
-            ldap_settings.LDAP_AUTH_USERNAME_IDENTIFIER + "=" + userToEnable
+            authUsernameIdentifier + "=" + userToEnable
             )
 
         c.search(
-            ldap_settings.LDAP_AUTH_SEARCH_BASE, 
+            authSearchBase, 
             objectClassFilter, 
             attributes=attributes
         )

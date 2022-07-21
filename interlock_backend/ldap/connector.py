@@ -6,32 +6,25 @@
 ###############################################################################
 # Originally Created by Dylan Blanqué and BR Consulting S.R.L. (2022)
 
+from asyncio import constants
+import imp
 from django_python3_ldap.ldap import connection as orig_connection
 from django_python3_ldap.utils import import_func
 from django_python3_ldap.conf import settings
-from interlock_backend.ldap_adsi import add_search_filter, LDAP_BUILTIN_OBJECTS
-import interlock_backend.ldap_settings as settings
-from interlock_backend.ldap_encrypt import (
+from interlock_backend.ldap.encrypt import (
     decrypt,
     encrypt
 )
 import ldap3
 from ldap3.core.exceptions import LDAPException
-from core.models.settings import Setting
 import ssl
 import logging
-import json
+import time
+from interlock_backend.ldap.adsi import add_search_filter, LDAP_BUILTIN_OBJECTS
+from interlock_backend.ldap.constants import *
+from interlock_backend.ldap.settings import *
 
 logger = logging.getLogger(__name__)
-
-def getSetting(settingKey):
-    querySet = Setting.objects.filter().exclude(deleted=True)
-    if querySet.count() != 0:
-        setting = querySet.get(id = settingKey)
-        value = setting.value
-        return setting
-    else:
-        return settings.__dict__[settingKey]
 
 def authenticate(*args, **kwargs):
     """
@@ -42,7 +35,7 @@ def authenticate(*args, **kwargs):
     in settings.LDAP_AUTH_USER_LOOKUP_FIELDS, plus a `password` argument.
     """
     password = kwargs.pop("password", None)
-    auth_user_lookup_fields = frozenset(getSetting('LDAP_AUTH_USER_LOOKUP_FIELDS'))
+    auth_user_lookup_fields = frozenset(LDAP_AUTH_USER_LOOKUP_FIELDS)
     ldap_kwargs = {
         key: value for (key, value) in kwargs.items()
         if key in auth_user_lookup_fields
@@ -63,13 +56,13 @@ def authenticate(*args, **kwargs):
         user.save()
         return user
 
-def open_connection(username=getSetting('LDAP_AUTH_CONNECTION_USER_DN'), 
-                    password=getSetting('LDAP_AUTH_CONNECTION_PASSWORD')):
-    format_username = import_func(getSetting('LDAP_AUTH_FORMAT_USERNAME'))
+def open_connection(username=LDAP_AUTH_CONNECTION_USER_DN, 
+                    password=LDAP_AUTH_CONNECTION_PASSWORD):
+    format_username = import_func(LDAP_AUTH_FORMAT_USERNAME)
 
     # Build server pool
     server_pool = ldap3.ServerPool(None, ldap3.RANDOM, active=True, exhaust=5)
-    auth_url = getSetting('LDAP_AUTH_URL')
+    auth_url = LDAP_AUTH_URL
     if not isinstance(auth_url, list):
         auth_url = [auth_url]
     for u in auth_url:
@@ -78,7 +71,7 @@ def open_connection(username=getSetting('LDAP_AUTH_CONNECTION_USER_DN'),
                 u,
                 allowed_referral_hosts=[("*", True)],
                 get_info=ldap3.NONE,
-                connect_timeout=getSetting('LDAP_AUTH_CONNECT_TIMEOUT'),
+                connect_timeout=LDAP_AUTH_CONNECT_TIMEOUT,
             )
         )
     # Connect.
@@ -89,12 +82,12 @@ def open_connection(username=getSetting('LDAP_AUTH_CONNECTION_USER_DN'),
             "password": password,
             "auto_bind": True,
             "raise_exceptions": True,
-            "receive_timeout": getSetting('LDAP_AUTH_RECEIVE_TIMEOUT'),
+            "receive_timeout": LDAP_AUTH_RECEIVE_TIMEOUT,
         }
-        if settings.LDAP_AUTH_USE_TLS:
+        if LDAP_AUTH_USE_TLS:
             connection_args["tls"] = ldap3.Tls(
                 ciphers='ALL',
-                version=getattr(ssl, getSetting('LDAP_AUTH_TLS_VERSION')),
+                version=LDAP_AUTH_TLS_VERSION,
             )
         c = ldap3.Connection(
             server_pool,
@@ -110,7 +103,7 @@ def open_connection(username=getSetting('LDAP_AUTH_CONNECTION_USER_DN'),
         # Rebind as specified settings username and password for querying.
         # c.rebind(
         #     user=format_username({settings.LDAP_AUTH_CONNECTION_USERNAME}),
-        #     password=getSetting('LDAP_AUTH_CONNECTION_PASSWORD'),
+        #     password=LDAP_AUTH_CONNECTION_PASSWORD,
         # )
         # Return the connection.
         logger.debug("LDAP connect succeeded")
@@ -133,7 +126,7 @@ def get_base_level():
     search_filter=add_search_filter(search_filter, 'objectCategory=container', "|")
     search_filter=add_search_filter(search_filter, 'objectCategory=builtinDomain', "|")
     connection.search(
-        search_base=getSetting('LDAP_AUTH_SEARCH_BASE'),
+        search_base=LDAP_AUTH_SEARCH_BASE,
         search_filter=search_filter,
         search_scope='LEVEL',
         attributes=ldap3.ALL_ATTRIBUTES)
@@ -174,7 +167,7 @@ def get_full_directory_tree(getCNs=True):
         result.append(currentEntity)
         currentID += 1
     connection.unbind()
-    logger.debug(json.dumps(result, sort_keys=False, indent=2))
+    # logger.debug(json.dumps(result, sort_keys=False, indent=2))
     return result
 
 def get_children_cn(dn, connection, id=0):

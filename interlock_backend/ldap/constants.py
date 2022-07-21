@@ -97,11 +97,6 @@ def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
 
 LDAP_AUTH_SYNC_USER_RELATIONS = sync_user_relations
 
-# LazySetting(
-#     name="LDAP_AUTH_CONNECTION_USERNAME",
-#     default=None,
-# )
-
 SETTINGS_WITH_ALLOWABLE_OVERRIDE = {
     "LDAP_AUTH_URL":{ 
         "type": "ldap_uri", 

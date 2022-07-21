@@ -19,6 +19,9 @@ class BaseUserManager(DjangoBaseUserManager):
     def get_queryset(self):
         return super().get_queryset().exclude(deleted=True)
 
+    def get_full_queryset(self):
+        return super().get_queryset()
+
     def _create_user(self, username, password, **extra_fields):
         """
         Create and save a user with the given username and password.

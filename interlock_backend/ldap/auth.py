@@ -3,7 +3,7 @@ Django authentication backend.
 """
 
 from django.contrib.auth.backends import ModelBackend
-import interlock_backend.ldap_connector as ldap
+import interlock_backend.ldap.connector as ldap
 
 class LDAPBackend(ModelBackend):
 

@@ -2,7 +2,7 @@ from django.contrib.auth.models import PermissionsMixin
 from django.utils.translation import gettext_lazy as _
 from django.db import models
 from .base import BaseModel
-from interlock_backend.ldap_settings import SETTINGS_WITH_ALLOWABLE_OVERRIDE
+from interlock_backend.ldap.constants import SETTINGS_WITH_ALLOWABLE_OVERRIDE
 
 class Setting(BaseModel):
     use_in_migrations = True

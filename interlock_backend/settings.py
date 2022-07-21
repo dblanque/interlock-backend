@@ -14,8 +14,8 @@ import os
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import gettext_lazy as _
 from datetime import timedelta
-from interlock_backend.ldap_settings import *
-from interlock_backend.local_settings import *
+from interlock_backend.ldap.constants import *
+from interlock_backend.local_django_settings import *
 import base64
 
 # A little easter egg for you :)
@@ -108,7 +108,7 @@ WSGI_APPLICATION = 'interlock_backend.wsgi.application'
 
 AUTHENTICATION_BACKENDS = (
     "django.contrib.auth.backends.ModelBackend", # Comment if you wish to use LDAP Auth Only
-    "interlock_backend.ldap_auth.LDAPBackend",
+    "interlock_backend.ldap.auth.LDAPBackend",
     # "django_python3_ldap.auth.LDAPBackend",
     )
 

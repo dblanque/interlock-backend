@@ -7,13 +7,11 @@ from .mixins.organizational_unit import OrganizationalUnitMixin
 from rest_framework.exceptions import NotFound
 from core.exceptions.users import UserExists, UserPermissionError, UserPasswordsDontMatch
 from rest_framework.decorators import action
-from interlock_backend.ldap_connector import (
+from interlock_backend.ldap.connector import (
     open_connection,
     get_full_directory_tree
 )
-from interlock_backend import ldap_settings
-from interlock_backend import ldap_adsi
-from interlock_backend.ldap_encrypt import validateUser
+from interlock_backend.ldap.encrypt import validateUser
 import traceback
 import logging
 import json

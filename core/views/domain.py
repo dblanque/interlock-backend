@@ -4,8 +4,8 @@ from .mixins.domain import DomainViewMixin
 from rest_framework import viewsets
 from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
-from interlock_backend.ldap_settings import *
-from interlock_backend.ldap_encrypt import validateUser
+from interlock_backend.ldap.settings import *
+from interlock_backend.ldap.encrypt import validateUser
 
 class DomainViewSet(viewsets.ViewSet, DomainViewMixin):
 

@@ -1,89 +1,38 @@
-from django.conf import Settings
 from rest_framework import viewsets
 from core.models.settings import Setting
 from core.models.user import User
 from django.db import transaction
-from interlock_backend import ldap_settings
-import copy
+from interlock_backend.ldap.connector import open_connection
 import logging
+import re
+import json
 
 logger = logging.getLogger(__name__)
 
 class SettingsViewMixin(viewsets.ViewSetMixin):
 
-    def normalizeSaveValues(self, settingKey, settingObject):
-
-        # Set the Type for the Front-end
-        if 'type' in ldap_settings.SETTINGS_WITH_ALLOWABLE_OVERRIDE[settingKey]:
-            settingObject['type'] = ldap_settings.SETTINGS_WITH_ALLOWABLE_OVERRIDE[settingKey]['type']
-        else:
-            settingObject['type'] = 'string'
-
-        if settingKey == "LDAP_AUTH_URL":
-            settingObject['value'] = copy.deepcopy(ldap_settings.__dict__[settingKey])
-            for key, value in enumerate(settingObject['value']):
-                settingObject['value'][key] = str(value)
-        if settingKey == "LDAP_AUTH_TLS_VERSION":
-            settingObject['value'] = copy.deepcopy(str(ldap_settings.__dict__[settingKey]).split('.')[-1])
-        return settingObject
-
-    def getSettingsList(self, settingList=ldap_settings.SETTINGS_WITH_ALLOWABLE_OVERRIDE):
-        data = {}
-        
-        userQuerySet = User.objects.filter(username = 'admin')
-        if userQuerySet.count() > 0:
-            defaultAdmin = userQuerySet.get(username = 'admin')
-            data['DEFAULT_ADMIN'] = not defaultAdmin.deleted
-        else:
-            data['DEFAULT_ADMIN'] = False
-
-        # Loop for each constant in the ldap_settings.py file
-        for c in ldap_settings.__dict__:
-            # If the constant is in the settingList array
-            if c in settingList:
-                # Init Object/Dict
-                data[c] = {}
-                querySet = Setting.objects.filter(id = c).exclude(deleted=True)
-                # If an override exists in the DB do the following
-                if querySet.count() > 0:
-                    logger.debug(c + "was fetched from DB")
-                    settingObject = querySet.get(id = c)
-                    value = settingObject.value
-                    value = settingObject.type
-                    data[c]['value'] = value
-
-                    data[c] = self.normalizeSaveValues(settingKey=c, settingObject=data[c])
-                # If no override exists use the manually setup constant
-                else:
-                    logger.debug(c + "was fetched from Constants File")
-                    data[c]['value'] = ldap_settings.__dict__[c]
-                    
-                    data[c] = self.normalizeSaveValues(settingKey=c, settingObject=data[c])
-                    logger.debug(c)
-                    logger.debug(ldap_settings.__dict__[c])
-                    logger.debug(data[c])
-
-        return data
-
     def getAdminStatus(self):
         userQuerySet = User.objects.filter(username = 'admin')
         if userQuerySet.count() > 0:
-            return userQuerySet.get(username = 'admin').deleted
+            status = userQuerySet.get(username = 'admin').deleted
+            return not status
         else:
             return False
 
     @transaction.atomic
     def setAdminStatus(self, status, password=None):
-        userQuerySet = User.objects.filter(username = 'admin')
+        userQuerySet = User.objects.get_full_queryset().filter(username = 'admin')
+        if status == True and userQuerySet.count() == 0:
+            defaultAdmin = User.objects.create_default_superuser()
+
         if userQuerySet.count() > 0:
             defaultAdmin = userQuerySet.get(username = 'admin')
             defaultAdmin.deleted = not status
-        else:
-            defaultAdmin.deleted = False
-        
-        if password:
+            defaultAdmin.save()
+
+        if password and password != "":
             defaultAdmin.set_password(password)
-        defaultAdmin.save()
+            defaultAdmin.save()
 
     @transaction.atomic
     def resetSettings(self):
@@ -91,8 +40,38 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
         [setting.delete_permanently() for setting in Setting.objects.all()]
         return True
 
+    def testSettings(self, user=None):
+        if user == None:
+            c = open_connection()
+        else:
+            c = open_connection(user.username)
+
+        result = c.result
+        c.unbind()
+        return result
+
     @transaction.atomic
-    def update_or_create_setting(self, itemKey, data):
+    def delete_setting(self, itemKey, data, forceDelete=False):
+        try:
+            querySet = Setting.objects.filter(id = itemKey)
+        except:
+            code = "GET_OBJECT_QUERYSET_ERROR"
+            return code
+
+        # If the value is empty and there's an override, then delete from DB
+        if querySet.count() > 0:
+            try:
+                settingObject = querySet.get(id = itemKey)
+                settingObject.delete_permanently()
+            except Exception as e:
+                print("Couldn't delete setting: " + itemKey)
+                print(data)
+                print(e)
+                code = "DELETE_TRANSACTION_ERROR"
+                return code
+
+    @transaction.atomic
+    def update_or_create_setting(self, itemKey, data, forceDelete=False):
         # if itemKey == 'LDAP_AUTH_CONNECT_TIMEOUT':
         # print(self)
         # print(itemKey)
@@ -108,12 +87,26 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
         try:
             querySet = Setting.objects.filter(id = itemKey)
         except:
-            code = "UPDATE_GET_OBJECT_ERROR"
+            code = "GET_OBJECT_QUERYSET_ERROR"
             return code
 
+        # If override value does not exist in DB create it
         if querySet.exclude(deleted=True).count() == 0:
             try:
-                Setting.objects.update_or_create(id = itemKey, **data)
+                Setting.objects.create(id = itemKey, **data)
+                settingObject = querySet.get(id = itemKey)
+                settingObject.deleted = False
+                settingObject.save()
+            except Exception as e:
+                print("Couldn't save setting: " + itemKey)
+                print(data)
+                print(e)
+                code = "CREATE_TRANSACTION_ERROR"
+                return code
+        # If override value exists in DB, update it
+        else:
+            try:
+                Setting.objects.update(id = itemKey, **data)
                 settingObject = querySet.get(id = itemKey)
                 settingObject.deleted = False
                 settingObject.save()
@@ -123,15 +116,5 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
                 print(e)
                 code = "UPDATE_TRANSACTION_ERROR"
                 return code
-        elif data['value'] == "" and querySet.count() > 0:
-            try:
-                settingObject = querySet.get(id = itemKey)
-                settingObject.value(None)
-                settingObject.delete(self)
-            except Exception as e:
-                print("Couldn't delete setting: " + itemKey)
-                print(data)
-                print(e)
-                code = "UPDATE_TRANSACTION_ERROR"
-                return code
+
     pass
