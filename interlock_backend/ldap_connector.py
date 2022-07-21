@@ -60,9 +60,11 @@ def authenticate(*args, **kwargs):
             return None
         user = c.get_user(**ldap_kwargs)
         user.encryptedPassword = encryptedPass
+        user.save()
         return user
 
-def open_connection():
+def open_connection(username=getSetting('LDAP_AUTH_CONNECTION_USER_DN'), 
+                    password=getSetting('LDAP_AUTH_CONNECTION_PASSWORD')):
     format_username = import_func(getSetting('LDAP_AUTH_FORMAT_USERNAME'))
 
     # Build server pool
@@ -83,8 +85,8 @@ def open_connection():
     try:
         # Include SSL / TLS, if requested.
         connection_args = {
-            "user": getSetting('LDAP_AUTH_CONNECTION_USER_DN'),
-            "password": getSetting('LDAP_AUTH_CONNECTION_PASSWORD'),
+            "user": username,
+            "password": password,
             "auto_bind": True,
             "raise_exceptions": True,
             "receive_timeout": getSetting('LDAP_AUTH_RECEIVE_TIMEOUT'),

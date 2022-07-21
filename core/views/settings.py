@@ -7,6 +7,7 @@ from rest_framework import viewsets
 from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
 from interlock_backend import ldap_settings
+from interlock_backend.ldap_encrypt import validateUser
 import logging
 import ssl
 
@@ -15,14 +16,15 @@ logger = logging.getLogger(__name__)
 class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
     queryset = Setting.objects.all()
 
-    def list(self, request, pk=None):
+    @action(detail=False, methods=['post'])
+    def all(self, request, pk=None):
         user = request.user
-        if user.is_staff == False or not user:
-            raise PermissionDenied
+        validateUser(request=request, requestUser=user)
         data = {}
         code = 0
 
         data = self.getSettingsList()
+        data['DEFAULT_ADMIN_ENABLED'] = self.getAdminStatus()
 
         # TODO - Convert Tuple for LDAP_AUTH_USER_LOOKUP_FIELDS to ARRAY for Front-End
 
@@ -37,8 +39,7 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
     @action(detail=False, methods=['post'])
     def save(self, request, pk=None):
         user = request.user
-        if user.is_staff == False or not user:
-            raise PermissionDenied
+        validateUser(request=request, requestUser=user)
         data = request.data
         code = 0
 
@@ -65,13 +66,14 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
              }
         )
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['post'])
     def reset(self, request, pk=None):
         user = request.user
-        if user.is_staff == False or not user:
-            raise PermissionDenied
+        validateUser(request=request, requestUser=user)
         data = request.data
         code = 0
+
+        self.setAdminStatus(status=data.pop('DEFAULT_ADMIN_ENABLED'), password=data.pop('DEFAULT_ADMIN_PWD'))
 
         data = self.resetSettings()
 
@@ -82,6 +84,9 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
                 'settings': data
              }
         )
+
+    def list(self, request, pk=None):
+        raise NotFound
 
     def create(self, request, pk=None):
         raise NotFound

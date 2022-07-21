@@ -19,6 +19,7 @@ from interlock_backend.ldap_connector import open_connection
 from interlock_backend import ldap_settings
 from interlock_backend import ldap_adsi
 from interlock_backend.ldap_countries import LDAP_COUNTRIES
+from interlock_backend.ldap_encrypt import validateUser
 from ldap3 import (
     MODIFY_ADD,
     MODIFY_DELETE,
@@ -39,11 +40,10 @@ logger = logging.getLogger(__name__)
 class UserViewSet(viewsets.ViewSet, UserViewMixin):
     queryset = User.objects.all()
 
-    def list(self, request):
+    @action(detail=False, methods=['post'])
+    def all(self, request):
         user = request.user
-        # Check user is_staff
-        if user.is_staff == False or not user:
-            raise PermissionDenied
+        validateUser(request=request, requestUser=user)
         data = []
         code = 0
         code_msg = 'ok'
@@ -124,9 +124,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
     @action(detail=False,methods=['post'])
     def fetch(self, request):
         user = request.user
-        # Check user is_staff
-        if user.is_staff == False or not user:
-            raise PermissionDenied
+        validateUser(request=request, requestUser=user)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -213,9 +211,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
     @action(detail=False,methods=['post'])
     def insert(self, request):
         user = request.user
-        # Check user is_staff
-        if user.is_staff == False or not user:
-            raise PermissionDenied
+        validateUser(request=request, requestUser=user)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -297,9 +293,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
     def update(self, request, pk=None):
         user = request.user
-        # Check user is_staff
-        if user.is_staff == False or not user:
-            raise PermissionDenied
+        validateUser(request=request, requestUser=user)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -408,9 +402,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
     @action(detail=False,methods=['post'])
     def disable(self, request):
         user = request.user
-        # Check user is_staff
-        if user.is_staff == False or not user:
-            raise PermissionDenied
+        validateUser(request=request, requestUser=user)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -471,9 +463,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
     @action(detail=False,methods=['post'])
     def enable(self, request):
         user = request.user
-        # Check user is_staff
-        if user.is_staff == False or not user:
-            raise PermissionDenied
+        validateUser(request=request, requestUser=user)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -532,6 +522,9 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
              }
         )
 
+    def list(self, request, pk=None):
+        raise NotFound
+
     def create(self, request, pk=None):
         raise NotFound
 
@@ -556,9 +549,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
     @action(detail=False, methods=['post'])
     def delete(self, request, pk=None):
         user = request.user
-        # Check user is_staff
-        if user.is_staff == False or not user:
-            raise PermissionDenied
+        validateUser(request=request, requestUser=user)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -601,9 +592,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
     @action(detail=False, methods=['post'])
     def changePassword(self, request, pk=None):
         user = request.user
-        # Check user is_staff
-        if user.is_staff == False or not user:
-            raise PermissionDenied
+        validateUser(request=request, requestUser=user)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -644,12 +633,10 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
              }
         )
 
-    @action(detail=False, methods=['get'])
-    @transaction.atomic
+    @action(detail=False, methods=['post'])
     def me(self, request):
         user = request.user
-        if user.is_staff == False or not user:
-            raise PermissionDenied
+        validateUser(request=request, requestUser=user)
         data = {}
         code = 0
         data["username"] = request.user.username or ""

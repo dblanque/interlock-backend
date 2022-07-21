@@ -5,6 +5,7 @@ from rest_framework import viewsets
 from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
 from interlock_backend.ldap_settings import *
+from interlock_backend.ldap_encrypt import validateUser
 
 class DomainViewSet(viewsets.ViewSet, DomainViewMixin):
 
@@ -35,11 +36,10 @@ class DomainViewSet(viewsets.ViewSet, DomainViewMixin):
     def delete(self, request, pk=None):
         raise NotFound
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['post'])
     def details(self, request):
         user = request.user
-        if user.is_staff == False or not user:
-            raise PermissionDenied
+        validateUser(request=request, requestUser=user)
         data = {}
         code = 0
         data["realm"] = LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN or ""

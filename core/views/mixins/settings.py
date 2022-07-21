@@ -1,6 +1,7 @@
 from django.conf import Settings
 from rest_framework import viewsets
 from core.models.settings import Setting
+from core.models.user import User
 from django.db import transaction
 from interlock_backend import ldap_settings
 import copy
@@ -29,6 +30,13 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
     def getSettingsList(self, settingList=ldap_settings.SETTINGS_WITH_ALLOWABLE_OVERRIDE):
         data = {}
         
+        userQuerySet = User.objects.filter(username = 'admin')
+        if userQuerySet.count() > 0:
+            defaultAdmin = userQuerySet.get(username = 'admin')
+            data['DEFAULT_ADMIN'] = not defaultAdmin.deleted
+        else:
+            data['DEFAULT_ADMIN'] = False
+
         # Loop for each constant in the ldap_settings.py file
         for c in ldap_settings.__dict__:
             # If the constant is in the settingList array
@@ -57,11 +65,33 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 
         return data
 
+    def getAdminStatus(self):
+        userQuerySet = User.objects.filter(username = 'admin')
+        if userQuerySet.count() > 0:
+            return userQuerySet.get(username = 'admin').deleted
+        else:
+            return False
+
+    @transaction.atomic
+    def setAdminStatus(self, status, password=None):
+        userQuerySet = User.objects.filter(username = 'admin')
+        if userQuerySet.count() > 0:
+            defaultAdmin = userQuerySet.get(username = 'admin')
+            defaultAdmin.deleted = not status
+        else:
+            defaultAdmin.deleted = False
+        
+        if password:
+            defaultAdmin.set_password(password)
+        defaultAdmin.save()
+
+    @transaction.atomic
     def resetSettings(self):
         # Deletes all setting overrides in DB
         [setting.delete_permanently() for setting in Setting.objects.all()]
         return True
 
+    @transaction.atomic
     def update_or_create_setting(self, itemKey, data):
         # if itemKey == 'LDAP_AUTH_CONNECT_TIMEOUT':
         # print(self)
