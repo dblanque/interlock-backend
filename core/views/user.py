@@ -29,7 +29,8 @@ from django.forms import (
     BooleanField,
     IntegerField,
 )
-from interlock_backend.ldap.connector import open_connection, getSetting
+from interlock_backend.ldap.connector import open_connection
+from interlock_backend.ldap.settings import *
 from interlock_backend.ldap import adsi as ldap_adsi
 from interlock_backend.ldap.countries import LDAP_COUNTRIES
 from interlock_backend.ldap.encrypt import validateUser
