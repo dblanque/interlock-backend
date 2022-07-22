@@ -139,7 +139,7 @@ LOGGING = {
         },
         "core.views.mixins.settings": {
             "handlers": ["console"],
-            "level": "DEBUG",
+            "level": "INFO",
         },
     },
 }
