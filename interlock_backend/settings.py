@@ -32,7 +32,9 @@ SECRET_KEY = 'in2tfy@bhej(5i@h!_04+kes__58rd9mh$=1!o_6ky236d-ue)'
 
 # Dynamic Encrypt / Decrypt KEY, changes when the app is restarted
 # ALL users will loose their sessions when this happens.
-FERNET_KEY = base64.urlsafe_b64encode(os.urandom(32))
+# ! MAKE IT DYNAMIC WHEN IN PRODUCTION
+# FERNET_KEY = base64.urlsafe_b64encode(os.urandom(32))
+FERNET_KEY = b'7HWX7ZH2k-7KrdPkCtaAC8lAjZ8gaz0HrJTeWTthm24='
 
 DJANGO_SUPERUSER_USERNAME = 'admin'
 DJANGO_SUPERUSER_PASSWORD = 'interlock'
@@ -127,11 +129,15 @@ LOGGING = {
             "handlers": ["console"],
             "level": "INFO",
         },
-        "interlock_backend.ldap_connector": {
+        "interlock_backend.ldap.settings": {
             "handlers": ["console"],
             "level": "INFO",
         },
-        "interlock_backend.ldap_adsi": {
+        "interlock_backend.ldap.connector": {
+            "handlers": ["console"],
+            "level": "INFO",
+        },
+        "core.views.mixins.settings": {
             "handlers": ["console"],
             "level": "INFO",
         },

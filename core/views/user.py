@@ -13,6 +13,7 @@ from core.exceptions.users import (
     UserUpdateError,
     UserDoesNotExist
 )
+from core.exceptions.ldap import CouldNotOpenConnection
 from core.models import User
 from rest_framework.decorators import action
 from ldap3 import (
@@ -55,7 +56,11 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         ########################################################################
 
         # Open LDAP Connection
-        c = open_connection()
+        try:
+            c = open_connection(user.dn, user.encryptedPassword)
+        except Exception as e:
+            print(e)
+            raise CouldNotOpenConnection
         attributes = [
             'givenName',
             'sn',
@@ -147,7 +152,11 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         ########################################################################
 
         # Open LDAP Connection
-        c = open_connection()
+        try:
+            c = open_connection(user.dn, user.encryptedPassword)
+        except Exception as e:
+            print(e)
+            raise CouldNotOpenConnection
         attributes = [ 
             'givenName', 
             'sn', 
@@ -246,7 +255,11 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         ########################################################################
 
         # Open LDAP Connection
-        c = open_connection()
+        try:
+            c = open_connection(user.dn, user.encryptedPassword)
+        except Exception as e:
+            print(e)
+            raise CouldNotOpenConnection
 
         # Send LDAP Query for user being created to see if it exists
         attributes = [
@@ -352,7 +365,11 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
                 del data[key]
 
         # Open LDAP Connection
-        c = open_connection()
+        try:
+            c = open_connection(user.dn, user.encryptedPassword)
+        except Exception as e:
+            print(e)
+            raise CouldNotOpenConnection
 
         # Get basic attributes for this user from AD to compare query and get dn
         attributes = [
@@ -445,7 +462,11 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         userToEnable = data['username']
         # Open LDAP Connection
-        c = open_connection()
+        try:
+            c = open_connection(user.dn, user.encryptedPassword)
+        except Exception as e:
+            print(e)
+            raise CouldNotOpenConnection
 
         attributes = [
             authUsernameIdentifier,
@@ -513,7 +534,11 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         userToEnable = data['username']
         # Open LDAP Connection
-        c = open_connection()
+        try:
+            c = open_connection(user.dn, user.encryptedPassword)
+        except Exception as e:
+            print(e)
+            raise CouldNotOpenConnection
 
         attributes = [
             authUsernameIdentifier,
@@ -574,7 +599,11 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         data = request.data
 
         # Open LDAP Connection
-        c = open_connection()
+        try:
+            c = open_connection(user.dn, user.encryptedPassword)
+        except Exception as e:
+            print(e)
+            raise CouldNotOpenConnection
 
         # If data request for deletion has user DN
         if 'dn' in data.keys() and data['dn'] != "":
@@ -617,7 +646,11 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         data = request.data
 
         # Open LDAP Connection
-        c = open_connection()
+        try:
+            c = open_connection(user.dn, user.encryptedPassword)
+        except Exception as e:
+            print(e)
+            raise CouldNotOpenConnection
 
         # If data request for deletion has user DN
         if 'dn' in data.keys() and data['dn'] != "":

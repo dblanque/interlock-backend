@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import viewsets
 from .mixins.organizational_unit import OrganizationalUnitMixin
 from rest_framework.exceptions import NotFound
-from core.exceptions.users import UserExists, UserPermissionError, UserPasswordsDontMatch
+from core.exceptions.ldap import CouldNotOpenConnection
 from rest_framework.decorators import action
 from interlock_backend.ldap.connector import (
     open_connection,
@@ -26,7 +26,11 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         code_msg = 'ok'
 
         # Open LDAP Connection
-        c = open_connection()
+        try:
+            c = open_connection(user.dn, user.encryptedPassword)
+        except Exception as e:
+            print(e)
+            raise CouldNotOpenConnection
 
         list = get_full_directory_tree(getCNs=False)
 
@@ -49,7 +53,11 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         code_msg = 'ok'
 
         # Open LDAP Connection
-        c = open_connection()
+        try:
+            c = open_connection(user.dn, user.encryptedPassword)
+        except Exception as e:
+            print(e)
+            raise CouldNotOpenConnection
 
         list = get_full_directory_tree()
 

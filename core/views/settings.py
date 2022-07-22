@@ -1,5 +1,3 @@
-from django.conf import Settings
-from django.core.exceptions import PermissionDenied
 from rest_framework.response import Response
 from core.models.settings import Setting
 from .mixins.settings import SettingsViewMixin
@@ -8,6 +6,7 @@ from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
 from interlock_backend.ldap import settings as ldap_settings
 from interlock_backend.ldap.encrypt import validateUser
+from core.exceptions.ldap import ConnectionTestFailed
 import logging
 import ssl
 
@@ -80,8 +79,6 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
         data = request.data
         code = 0
 
-        self.setAdminStatus(status=data.pop('DEFAULT_ADMIN_ENABLED'), password=data.pop('DEFAULT_ADMIN_PWD'))
-
         data = self.resetSettings()
 
         return Response(
@@ -92,14 +89,17 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
              }
         )
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['post'])
     def test(self, request, pk=None):
         user = request.user
         validateUser(request=request, requestUser=user)
         data = request.data
         code = 0
 
-        data = self.testSettings()
+        data = self.testSettings(user, data)
+
+        if not data:
+            raise ConnectionTestFailed
 
         return Response(
              data={

@@ -21,8 +21,7 @@ import ssl
 import logging
 import time
 from interlock_backend.ldap.adsi import add_search_filter, LDAP_BUILTIN_OBJECTS
-from interlock_backend.ldap.constants import *
-from interlock_backend.ldap.settings import *
+from interlock_backend.ldap.settings import getSetting, getSettingType
 
 logger = logging.getLogger(__name__)
 
@@ -35,13 +34,14 @@ def authenticate(*args, **kwargs):
     in settings.LDAP_AUTH_USER_LOOKUP_FIELDS, plus a `password` argument.
     """
     password = kwargs.pop("password", None)
-    auth_user_lookup_fields = frozenset(LDAP_AUTH_USER_LOOKUP_FIELDS)
+    auth_user_lookup_fields = frozenset(getSetting('LDAP_AUTH_USER_LOOKUP_FIELDS'))
     ldap_kwargs = {
         key: value for (key, value) in kwargs.items()
         if key in auth_user_lookup_fields
     }
 
     encryptedPass = encrypt(password)
+    encryptedPass = str(encryptedPass).strip("b'").rstrip("'")
 
     # Check that this is valid login data.
     if not password or frozenset(ldap_kwargs.keys()) != auth_user_lookup_fields:
@@ -56,13 +56,19 @@ def authenticate(*args, **kwargs):
         user.save()
         return user
 
-def open_connection(username=LDAP_AUTH_CONNECTION_USER_DN, 
-                    password=LDAP_AUTH_CONNECTION_PASSWORD):
-    format_username = import_func(LDAP_AUTH_FORMAT_USERNAME)
+def open_connection(
+        username=getSetting('LDAP_AUTH_CONNECTION_USER_DN'), 
+        password=getSetting('LDAP_AUTH_CONNECTION_PASSWORD')
+    ):
+
+    format_username = import_func(getSetting('LDAP_AUTH_FORMAT_USERNAME'))
+
+    if password != getSetting('LDAP_AUTH_CONNECTION_PASSWORD'):
+        password = str(decrypt(password))
 
     # Build server pool
     server_pool = ldap3.ServerPool(None, ldap3.RANDOM, active=True, exhaust=5)
-    auth_url = LDAP_AUTH_URL
+    auth_url = getSetting('LDAP_AUTH_URL')
     if not isinstance(auth_url, list):
         auth_url = [auth_url]
     for u in auth_url:
@@ -71,7 +77,7 @@ def open_connection(username=LDAP_AUTH_CONNECTION_USER_DN,
                 u,
                 allowed_referral_hosts=[("*", True)],
                 get_info=ldap3.NONE,
-                connect_timeout=LDAP_AUTH_CONNECT_TIMEOUT,
+                connect_timeout=getSetting('LDAP_AUTH_CONNECT_TIMEOUT'),
             )
         )
     # Connect.
@@ -82,12 +88,87 @@ def open_connection(username=LDAP_AUTH_CONNECTION_USER_DN,
             "password": password,
             "auto_bind": True,
             "raise_exceptions": True,
-            "receive_timeout": LDAP_AUTH_RECEIVE_TIMEOUT,
+            "receive_timeout": getSetting('LDAP_AUTH_RECEIVE_TIMEOUT'),
         }
-        if LDAP_AUTH_USE_TLS:
+        if getSetting('LDAP_AUTH_USE_TLS'):
             connection_args["tls"] = ldap3.Tls(
                 ciphers='ALL',
-                version=LDAP_AUTH_TLS_VERSION,
+                version=getSetting('LDAP_AUTH_TLS_VERSION'),
+            )
+        c = ldap3.Connection(
+            server_pool,
+            **connection_args,
+        )
+    except LDAPException as ex:
+        logger.warning("LDAP connect failed: {ex}".format(ex=ex))
+        return None
+
+    # ! Unset Password ! #
+    password = ""
+    # Configure.
+    try:
+        c.bind(read_server_info=True)
+        # Perform initial authentication bind.
+        # Rebind as specified settings username and password for querying.
+        # c.rebind(
+        #     user=format_username({username}),
+        #     password=password,
+        # )
+        # Return the connection.
+        logger.debug("LDAP connect for user " + username + " succeeded")
+        return c
+    except LDAPException as ex:
+        logger.warning("LDAP bind failed: {ex}".format(ex=ex))
+        return None
+
+def test_connection(
+        username,
+        user_dn, # Actually this is user_dn
+        password,
+        ldapAuthConnectionUser,
+        ldapAuthConnectionPassword,
+        ldapAuthURL,
+        ldapAuthConnectTimeout,
+        ldapAuthReceiveTimeout,
+        ldapAuthUseTLS,
+        ldapAuthTLSVersion
+    ):
+    format_username = import_func(getSetting('LDAP_AUTH_FORMAT_USERNAME'))
+
+    if password != ldapAuthConnectionPassword and username != 'admin':
+        password = str(decrypt(password))
+    elif username == 'admin':
+        user_dn = ldapAuthConnectionUser
+        password = ldapAuthConnectionPassword
+
+    # Build server pool
+    server_pool = ldap3.ServerPool(None, ldap3.RANDOM, active=True, exhaust=5)
+    auth_url = ldapAuthURL
+    if not isinstance(auth_url, list):
+        auth_url = [auth_url]
+    for u in auth_url:
+        server_pool.add(
+            ldap3.Server(
+                u,
+                allowed_referral_hosts=[("*", True)],
+                get_info=ldap3.NONE,
+                connect_timeout=ldapAuthConnectTimeout,
+            )
+        )
+    # Connect.
+    try:
+        # Include SSL / TLS, if requested.
+        connection_args = {
+            "user": user_dn,
+            "password": password,
+            "auto_bind": True,
+            "raise_exceptions": True,
+            "receive_timeout": ldapAuthReceiveTimeout,
+        }
+        if ldapAuthUseTLS:
+            connection_args["tls"] = ldap3.Tls(
+                ciphers='ALL',
+                version=getattr(ssl, ldapAuthTLSVersion),
             )
         c = ldap3.Connection(
             server_pool,
@@ -96,17 +177,20 @@ def open_connection(username=LDAP_AUTH_CONNECTION_USER_DN,
     except LDAPException as ex:
         logger.warning("LDAP connect failed: {ex}".format(ex=ex))
         return None    
+
+    # ! Unset Password ! #
+    password = ""
     # Configure.
     try:
         c.bind(read_server_info=True)
         # Perform initial authentication bind.
         # Rebind as specified settings username and password for querying.
         # c.rebind(
-        #     user=format_username({settings.LDAP_AUTH_CONNECTION_USERNAME}),
-        #     password=LDAP_AUTH_CONNECTION_PASSWORD,
+        #     user=format_username({username}),
+        #     password=password,
         # )
         # Return the connection.
-        logger.debug("LDAP connect succeeded")
+        logger.debug("LDAP connect for user " + user_dn + " succeeded")
         return c
     except LDAPException as ex:
         logger.warning("LDAP bind failed: {ex}".format(ex=ex))
@@ -126,7 +210,7 @@ def get_base_level():
     search_filter=add_search_filter(search_filter, 'objectCategory=container', "|")
     search_filter=add_search_filter(search_filter, 'objectCategory=builtinDomain', "|")
     connection.search(
-        search_base=LDAP_AUTH_SEARCH_BASE,
+        search_base=getSetting('LDAP_AUTH_SEARCH_BASE'),
         search_filter=search_filter,
         search_scope='LEVEL',
         attributes=ldap3.ALL_ATTRIBUTES)

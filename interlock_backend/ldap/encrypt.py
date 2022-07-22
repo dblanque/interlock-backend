@@ -15,6 +15,7 @@ def encrypt(stringToEncrypt):
     return encMessage
     
 def decrypt(stringToDecrypt):
+    stringToDecrypt = bytes(stringToDecrypt, encoding='utf-8')
     fernet = Fernet(key)
 
     decMessage = fernet.decrypt(stringToDecrypt).decode()

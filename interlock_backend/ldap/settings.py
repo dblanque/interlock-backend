@@ -3,8 +3,10 @@ from core.models.settings import Setting
 from core.models.user import User
 
 # Interlock Imports
-from interlock_backend.ldap import constants as ldap_constants
-
+from interlock_backend.ldap.constants import (
+    SETTINGS_WITH_ALLOWABLE_OVERRIDE,
+    __dict__ as constantDictionary
+)
 # Full imports
 import logging
 import ssl
@@ -26,11 +28,7 @@ def normalizeValues(settingKey, settingDict):
     :settingDict: (The dict to normalize)
     """
 
-    # Set the Type for the Front-end based on Types in List
-    if 'type' in ldap_constants.SETTINGS_WITH_ALLOWABLE_OVERRIDE[settingKey]:
-        settingDict['type'] = ldap_constants.SETTINGS_WITH_ALLOWABLE_OVERRIDE[settingKey]['type']
-    else:
-        settingDict['type'] = 'string'
+    settingDict['type'] = getSettingType(settingKey)
 
     # INT
     if settingDict['type'] == 'integer' and not isinstance(settingDict['value'], int):
@@ -50,6 +48,10 @@ def normalizeValues(settingKey, settingDict):
     # BOOLEAN
     elif settingDict['type'] == 'boolean' and not isinstance(settingDict['value'], bool):
         settingDict['value'] = re.sub('[^a-zA-Z]+', '', settingDict['value'])
+        if settingDict['value'] == 'True' or settingDict['value'] == 'true':
+            settingDict['value'] = True
+        else:
+            settingDict['value'] = False
     # OBJECT
     elif settingDict['type'] == 'object' and not isinstance(settingDict['value'], object):
         settingDict['value'] = json.load(settingDict['value'])
@@ -64,7 +66,7 @@ def normalizeValues(settingKey, settingDict):
         settingDict['value'] = str(settingDict['value']).split('.')[-1]
     return settingDict
 
-def getSettingsList(settingList=ldap_constants.SETTINGS_WITH_ALLOWABLE_OVERRIDE):
+def getSettingsList(settingList=SETTINGS_WITH_ALLOWABLE_OVERRIDE):
     data = {}
     
     userQuerySet = User.objects.filter(username = 'admin')
@@ -75,33 +77,20 @@ def getSettingsList(settingList=ldap_constants.SETTINGS_WITH_ALLOWABLE_OVERRIDE)
         data['DEFAULT_ADMIN'] = False
 
     # Loop for each constant in the ldap_constants.py file
-    for c in ldap_constants.__dict__:
+    for c in constantDictionary:
         # If the constant is in the settingList array
         if c in settingList:
             # Init Object/Dict
             data[c] = {}
-            querySet = Setting.objects.filter(id = c).exclude(deleted=True)
-            # If an override exists in the DB do the following
-            if querySet.count() > 0:
-                logger.debug(c + "was fetched from DB")
-                settingObject = querySet.get(id = c)
-                value = settingObject.value
-                type = settingObject.type
-                data[c]['value'] = value
 
-                data[c] = normalizeValues(c, data[c])
-            # If no override exists use the manually setup constant
-            else:
-                logger.debug(c + "was fetched from Constants File")
-                # Set Value
-                data[c]['value'] = ldap_constants.__dict__[c]
-                # Type is set inside normalizeValues
+            data[c]['type'] = getSettingType(c)
+            data[c]['value'] = getSetting(c)
 
-                data[c] = normalizeValues(c, data[c])
-                logger.debug(c)
-                logger.debug(ldap_constants.__dict__[c])
-                logger.debug(data[c])
+            if c == 'LDAP_AUTH_TLS_VERSION':
+                data[c]['value'] = str(data[c]['value'])
+                data[c]['value'] = data[c]['value'].split('.')[-1]
 
+    # print(data)
     return data
 
 def getSetting(settingKey):
@@ -125,21 +114,12 @@ def getSetting(settingKey):
             print(e)
     else:
         logger.debug("Fetching value for "+ settingKey +' from Constants')
-        return ldap_constants.__dict__[settingKey]
+        return constantDictionary[settingKey]
 
-LDAP_AUTH_URL = getSetting('LDAP_AUTH_URL')
-LDAP_DOMAIN = getSetting('LDAP_DOMAIN')
-LDAP_AUTH_USE_TLS = getSetting('LDAP_AUTH_USE_TLS')
-LDAP_AUTH_TLS_VERSION = getSetting('LDAP_AUTH_TLS_VERSION')
-LDAP_AUTH_SEARCH_BASE = getSetting('LDAP_AUTH_SEARCH_BASE')
-LDAP_AUTH_OBJECT_CLASS = getSetting('LDAP_AUTH_OBJECT_CLASS')
-EXCLUDE_COMPUTER_ACCOUNTS = getSetting('EXCLUDE_COMPUTER_ACCOUNTS')
-LDAP_AUTH_USER_FIELDS = getSetting('LDAP_AUTH_USER_FIELDS')
-LDAP_AUTH_USERNAME_IDENTIFIER = getSetting('LDAP_AUTH_USERNAME_IDENTIFIER')
-LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN = getSetting('LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN')
-LDAP_AUTH_CONNECTION_USER_DN = getSetting('LDAP_AUTH_CONNECTION_USER_DN')
-LDAP_AUTH_CONNECTION_USERNAME = getSetting('LDAP_AUTH_CONNECTION_USERNAME')
-LDAP_AUTH_CONNECTION_PASSWORD = getSetting('LDAP_AUTH_CONNECTION_PASSWORD')
-LDAP_AUTH_CONNECT_TIMEOUT = getSetting('LDAP_AUTH_CONNECT_TIMEOUT')
-LDAP_AUTH_RECEIVE_TIMEOUT = getSetting('LDAP_AUTH_RECEIVE_TIMEOUT')
-ADMIN_GROUP_TO_SEARCH = getSetting('ADMIN_GROUP_TO_SEARCH')
+def getSettingType(settingKey):
+    # Set the Type for the Front-end based on Types in List
+    if 'type' in SETTINGS_WITH_ALLOWABLE_OVERRIDE[settingKey]:
+        type = SETTINGS_WITH_ALLOWABLE_OVERRIDE[settingKey]['type']
+    else:
+        type = 'string'
+    return type

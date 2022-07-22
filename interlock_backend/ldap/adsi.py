@@ -7,12 +7,7 @@
 ###############################################################################
 # Originally Created by Dylan Blanqué and BR Consulting S.R.L. (2022)
 
-from interlock_backend.ldap.settings import (
-    LDAP_AUTH_USERNAME_IDENTIFIER,
-    LDAP_AUTH_SEARCH_BASE,
-    LDAP_AUTH_OBJECT_CLASS,
-    EXCLUDE_COMPUTER_ACCOUNTS
-)
+from interlock_backend.ldap.settings import getSetting
 import logging
 
 logger = logging.getLogger(__name__)
@@ -200,6 +195,7 @@ def list_user_perms(user, permissionToSearch=None, isObject=True):
         rawUserPerms = bin_as_str(user['userAccountControl'])
     UserPerms = []
     i = 0
+    authUsernameIdentifier = getSetting('LDAP_AUTH_USERNAME_IDENTIFIER')
     for n in range(0, 32): # Loop for each bit in 0-32
         i += 1
         if rawUserPerms[n] == "1": # If permission matches enter for loop to 
@@ -208,14 +204,14 @@ def list_user_perms(user, permissionToSearch=None, isObject=True):
                 perm_binary = LDAP_PERMS[perm_name]['val_bin']
                 perm_index = LDAP_PERMS[perm_name]['index']
                 if perm_index == n:
-                    logger.debug("User: " + str(user[LDAP_AUTH_USERNAME_IDENTIFIER]))
+                    logger.debug("User: " + str(user[authUsernameIdentifier]))
                     logger.debug("Permission Name: " + perm_name)
                     logger.debug("Permission Index: " + str(perm_index))
                     logger.debug("Permission Index (From User): " + str(n))
                     logger.debug("Permission Binary Value (From Constant): " + perm_binary)
                     logger.debug("Permission Hex Value (From Constant): " + bin_as_hex(perm_binary))
                     UserPerms.append(perm_name)
-    logger.debug("Permission List (" + str(user[LDAP_AUTH_USERNAME_IDENTIFIER]) + "): ")
+    logger.debug("Permission List (" + str(user[authUsernameIdentifier]) + "): ")
     logger.debug(UserPerms)
     if isinstance(permissionToSearch, str):
         return check_perm_in_list(permissionToSearch, UserPerms)
@@ -271,20 +267,24 @@ def calc_permissions(permissionArray, addPerm='', removePerm=''):
     return int(userPermissions)
 
 def getUserObjectFilter(username):
-    objectClassFilter = "(objectclass=" + LDAP_AUTH_OBJECT_CLASS + ")"
+    authUsernameIdentifier = getSetting('LDAP_AUTH_USERNAME_IDENTIFIER')
+    authObjectClass = getSetting('LDAP_AUTH_OBJECT_CLASS')
+    excludeComputerAccounts = getSetting('EXCLUDE_COMPUTER_ACCOUNTS')
+
+    objectClassFilter = "(objectclass=" + authObjectClass + ")"
 
     # Exclude Computer Accounts if settings allow it
-    if EXCLUDE_COMPUTER_ACCOUNTS == True:
+    if excludeComputerAccounts == True:
         objectClassFilter = add_search_filter(objectClassFilter, "!(objectclass=computer)")
 
     # Add filter for username
     objectClassFilter = add_search_filter(
         objectClassFilter,
-        LDAP_AUTH_USERNAME_IDENTIFIER + "=" + username
+        authUsernameIdentifier + "=" + username
         )
     return objectClassFilter
 
-def getUserObject(connection, username, attributes=[LDAP_AUTH_USERNAME_IDENTIFIER, 'distinguishedName'], objectClassFilter=None):
+def getUserObject(connection, username, attributes=[getSetting('LDAP_AUTH_USERNAME_IDENTIFIER'), 'distinguishedName'], objectClassFilter=None):
     """ Default: Search for the dn from a Username string param.
     
     Can also be used to fetch entire object from that username string or filtered attributes.
@@ -307,7 +307,7 @@ def getUserObject(connection, username, attributes=[LDAP_AUTH_USERNAME_IDENTIFIE
         objectClassFilter = getUserObjectFilter(username)
 
     connection.search(
-        LDAP_AUTH_SEARCH_BASE, 
+        getSetting('LDAP_AUTH_SEARCH_BASE'), 
         objectClassFilter, 
         attributes=attributes
     )

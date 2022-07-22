@@ -2,7 +2,10 @@ from rest_framework import viewsets
 from core.models.settings import Setting
 from core.models.user import User
 from django.db import transaction
-from interlock_backend.ldap.connector import open_connection
+from interlock_backend.ldap.connector import open_connection, test_connection
+from interlock_backend.ldap.settings import normalizeValues
+from core.exceptions.ldap import CouldNotOpenConnection
+from core.exceptions.users import UserPermissionError
 import logging
 import re
 import json
@@ -40,14 +43,61 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
         [setting.delete_permanently() for setting in Setting.objects.all()]
         return True
 
-    def testSettings(self, user=None):
+    def testSettings(self, user, data):
         if user == None:
-            c = open_connection()
+            raise UserPermissionError
+
+        ldapAuthConnectionUser = data['LDAP_AUTH_CONNECTION_USER_DN']['value']
+        ldapAuthConnectionPassword = data['LDAP_AUTH_CONNECTION_PASSWORD']['value']
+        ldapAuthURL = data['LDAP_AUTH_URL']['value']
+        ldapAuthConnectTimeout = int(data['LDAP_AUTH_CONNECT_TIMEOUT']['value'])
+        ldapAuthReceiveTimeout = int(data['LDAP_AUTH_RECEIVE_TIMEOUT']['value'])
+        ldapAuthUseTLS = data['LDAP_AUTH_USE_TLS']['value']
+        ldapAuthTLSVersion = data['LDAP_AUTH_TLS_VERSION']['value']
+
+        username = user.username
+        if username == "admin":
+            user_dn = ldapAuthConnectionUser
         else:
-            c = open_connection(user.username)
+            user_dn = user.dn
+
+        logger.debug("Test Connection Endpoint Parameters: ")
+        logger.debug(username)
+        logger.debug(user_dn)
+        logger.debug(user.encryptedPassword)
+        logger.debug(ldapAuthConnectionUser)
+        logger.debug(ldapAuthConnectionPassword)
+        logger.debug(ldapAuthURL)
+        logger.debug(ldapAuthConnectTimeout)
+        logger.debug(ldapAuthReceiveTimeout)
+        logger.debug(ldapAuthUseTLS)
+        logger.debug(ldapAuthTLSVersion)
+
+        # Open LDAP Connection
+        try:
+            c = test_connection(
+                username = username,
+                user_dn = user_dn,
+                password = user.encryptedPassword,
+                ldapAuthConnectionUser = ldapAuthConnectionUser,
+                ldapAuthConnectionPassword = ldapAuthConnectionPassword,
+                ldapAuthURL = ldapAuthURL,
+                ldapAuthConnectTimeout = ldapAuthConnectTimeout,
+                ldapAuthReceiveTimeout = ldapAuthReceiveTimeout,
+                ldapAuthUseTLS = ldapAuthUseTLS,
+                ldapAuthTLSVersion = ldapAuthTLSVersion,
+                )
+        except Exception as e:
+            print(e)
+            raise CouldNotOpenConnection
 
         result = c.result
         c.unbind()
+
+        result['user_used'] = username
+        result['user_dn_used'] = user_dn
+        logger.debug("Test Connection Endpoint Result: ")
+        logger.debug(result)
         return result
 
     @transaction.atomic
@@ -60,6 +110,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 
         # If the value is empty and there's an override, then delete from DB
         if querySet.count() > 0:
+            logger.info("Deleting setting override: " + itemKey)
             try:
                 settingObject = querySet.get(id = itemKey)
                 settingObject.delete_permanently()
@@ -92,6 +143,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 
         # If override value does not exist in DB create it
         if querySet.exclude(deleted=True).count() == 0:
+            logger.info("Creating setting override: " + itemKey)
             try:
                 Setting.objects.create(id = itemKey, **data)
                 settingObject = querySet.get(id = itemKey)
@@ -105,6 +157,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
                 return code
         # If override value exists in DB, update it
         else:
+            logger.info("Updating setting override: " + itemKey)
             try:
                 Setting.objects.update(id = itemKey, **data)
                 settingObject = querySet.get(id = itemKey)

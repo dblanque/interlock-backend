@@ -85,6 +85,7 @@ def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
     if 'Administrator' in ldap_attributes[LDAP_AUTH_USER_FIELDS["username"]]:
         user.is_staff = True
         user.is_superuser = True
+        user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
         user.save()
         pass
     GROUP_TO_SEARCH = ADMIN_GROUP_TO_SEARCH
@@ -92,6 +93,8 @@ def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
         # Do staff shit here
         user.is_staff = True
         user.is_superuser = True
+        user.email = str(ldap_attributes['mail']).lstrip("['").rstrip("']") or ""
+        user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
         user.save()
     pass
 

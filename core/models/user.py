@@ -176,4 +176,5 @@ class User(BaseUser):
         verbose_name_plural = _('Users')
     first_name = models.CharField(_("First name"), max_length=255, null=True, blank=True)
     last_name = models.CharField(_("Last name"), max_length=255, null=True, blank=True)
-    organization = models.CharField("Organization", max_length=255, null=True, blank=True)
+    email = models.EmailField(_("Email"), null=True, blank=True)
+    dn = models.CharField(_("distinguishedName"), max_length=128, null=True, blank=True)
