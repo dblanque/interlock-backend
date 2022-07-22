@@ -57,18 +57,41 @@ def authenticate(*args, **kwargs):
         return user
 
 def open_connection(
-        username=getSetting('LDAP_AUTH_CONNECTION_USER_DN'), 
-        password=getSetting('LDAP_AUTH_CONNECTION_PASSWORD')
+        user_dn=getSetting('LDAP_AUTH_CONNECTION_USER_DN'), 
+        password=getSetting('LDAP_AUTH_CONNECTION_PASSWORD'),
+        username=None,
     ):
+
+    ldapAuthURL = getSetting('LDAP_AUTH_URL')
+    ldapAuthConnectionPassword = getSetting('LDAP_AUTH_CONNECTION_PASSWORD')
+    ldapAuthConnectTimeout = getSetting('LDAP_AUTH_CONNECT_TIMEOUT')
+    ldapAuthReceiveTimeout = getSetting('LDAP_AUTH_RECEIVE_TIMEOUT')
+    ldapAuthUseTLS = getSetting('LDAP_AUTH_USE_TLS')
+    ldapAuthTLSVersion = getSetting('LDAP_AUTH_TLS_VERSION')
+
+    if username == 'admin':
+        user_dn = getSetting('LDAP_AUTH_CONNECTION_USER_DN')
+        password = ldapAuthConnectionPassword
 
     format_username = import_func(getSetting('LDAP_AUTH_FORMAT_USERNAME'))
 
-    if password != getSetting('LDAP_AUTH_CONNECTION_PASSWORD'):
+    logger.debug("Test Connection Endpoint Parameters: ")
+    logger.debug(username)
+    logger.debug(user_dn)
+    logger.debug(password)
+    logger.debug(ldapAuthConnectionPassword)
+    logger.debug(ldapAuthURL)
+    logger.debug(ldapAuthConnectTimeout)
+    logger.debug(ldapAuthReceiveTimeout)
+    logger.debug(ldapAuthUseTLS)
+    logger.debug(ldapAuthTLSVersion)
+
+    if password != ldapAuthConnectionPassword:
         password = str(decrypt(password))
 
     # Build server pool
     server_pool = ldap3.ServerPool(None, ldap3.RANDOM, active=True, exhaust=5)
-    auth_url = getSetting('LDAP_AUTH_URL')
+    auth_url = ldapAuthURL
     if not isinstance(auth_url, list):
         auth_url = [auth_url]
     for u in auth_url:
@@ -77,23 +100,23 @@ def open_connection(
                 u,
                 allowed_referral_hosts=[("*", True)],
                 get_info=ldap3.NONE,
-                connect_timeout=getSetting('LDAP_AUTH_CONNECT_TIMEOUT'),
+                connect_timeout=ldapAuthConnectTimeout,
             )
         )
     # Connect.
     try:
         # Include SSL / TLS, if requested.
         connection_args = {
-            "user": username,
+            "user": user_dn,
             "password": password,
             "auto_bind": True,
             "raise_exceptions": True,
-            "receive_timeout": getSetting('LDAP_AUTH_RECEIVE_TIMEOUT'),
+            "receive_timeout": ldapAuthReceiveTimeout,
         }
-        if getSetting('LDAP_AUTH_USE_TLS'):
+        if ldapAuthUseTLS:
             connection_args["tls"] = ldap3.Tls(
                 ciphers='ALL',
-                version=getSetting('LDAP_AUTH_TLS_VERSION'),
+                version=ldapAuthTLSVersion,
             )
         c = ldap3.Connection(
             server_pool,
@@ -115,7 +138,7 @@ def open_connection(
         #     password=password,
         # )
         # Return the connection.
-        logger.debug("LDAP connect for user " + username + " succeeded")
+        logger.debug("LDAP connect for user " + user_dn + " succeeded")
         return c
     except LDAPException as ex:
         logger.warning("LDAP bind failed: {ex}".format(ex=ex))

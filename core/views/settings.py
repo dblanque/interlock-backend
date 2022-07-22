@@ -4,7 +4,11 @@ from .mixins.settings import SettingsViewMixin
 from rest_framework import viewsets
 from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
-from interlock_backend.ldap import settings as ldap_settings
+from interlock_backend.ldap.constants import (
+    __dict__ as constantDictionary
+)
+from interlock_backend.ldap import constants as ldap_constants
+from interlock_backend.ldap.settings import getSettingsList, normalizeValues
 from interlock_backend.ldap.encrypt import validateUser
 from core.exceptions.ldap import ConnectionTestFailed
 import logging
@@ -21,7 +25,7 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
         data = {}
         code = 0
 
-        data = ldap_settings.getSettingsList()
+        data = getSettingsList()
         data['DEFAULT_ADMIN_ENABLED'] = self.getAdminStatus()
 
         # TODO - Convert Tuple for LDAP_AUTH_USER_LOOKUP_FIELDS to ARRAY for Front-End
@@ -46,12 +50,13 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
         self.setAdminStatus(status=adminEnabled, password=adminPassword)
 
         for setting in data:
-            data[setting] = ldap_settings.normalizeValues(setting, data[setting])
+            data[setting] = normalizeValues(setting, data[setting])
             if setting == 'LDAP_AUTH_TLS_VERSION':
                 data[setting]['value'] = getattr(ssl, data[setting]['value'])
-            if setting in ldap_settings.__dict__:
-                dictValue = getattr(ldap_settings, setting)
+            if setting in constantDictionary:
+                dictValue = getattr(ldap_constants, setting)
                 if data[setting]['value'] != dictValue:
+                    print(setting)
                     logger.debug('Value in data for ' + setting)
                     logger.debug(data[setting]['value'])
                     logger.debug('Type in data for ' + setting)
