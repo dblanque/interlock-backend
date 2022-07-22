@@ -199,7 +199,7 @@ def test_connection(
         )
     except LDAPException as ex:
         logger.warning("LDAP connect failed: {ex}".format(ex=ex))
-        return None    
+        return None
 
     # ! Unset Password ! #
     password = ""
