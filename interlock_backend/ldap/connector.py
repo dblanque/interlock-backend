@@ -79,7 +79,7 @@ def open_connection(
     logger.debug(username)
     logger.debug(user_dn)
     logger.debug(password)
-    logger.debug(ldapAuthConnectionPassword)
+    # logger.debug(ldapAuthConnectionPassword)
     logger.debug(ldapAuthURL)
     logger.debug(ldapAuthConnectTimeout)
     logger.debug(ldapAuthReceiveTimeout)
