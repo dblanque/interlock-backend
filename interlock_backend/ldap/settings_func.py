@@ -76,7 +76,7 @@ def normalizeValues(settingKey, settingDict):
         settingDict['value'] = str(settingDict['value']).split('.')[-1]
     return settingDict
 
-def getSettingsList(settingList=SETTINGS_WITH_ALLOWABLE_OVERRIDE, listFormat='backend'):
+def getSettingsList(settingList=SETTINGS_WITH_ALLOWABLE_OVERRIDE):
     """Returns a Dictionary with the current setting values in the system
 
         Arguments:
@@ -88,15 +88,6 @@ def getSettingsList(settingList=SETTINGS_WITH_ALLOWABLE_OVERRIDE, listFormat='ba
         BACKEND - Returns Object
         FRONTEND - Returns Dict with values and types
     """
-
-    if listFormat.lower() == 'backend' or listFormat is None:
-        data = SettingsList()
-        for c in constantDictionary:
-            if c in settingList:
-                setattr(data, c, getSetting(c))
-            else:
-                setattr(data, c, constantDictionary[c])
-        return data
 
     data = {}
     userQuerySet = User.objects.filter(username = 'admin')

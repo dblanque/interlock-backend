@@ -25,7 +25,7 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
         data = {}
         code = 0
 
-        data = getSettingsList(listFormat="frontend")
+        data = getSettingsList()
         data['DEFAULT_ADMIN_ENABLED'] = self.getAdminStatus()
 
         # TODO - Convert Tuple for LDAP_AUTH_USER_LOOKUP_FIELDS to ARRAY for Front-End
