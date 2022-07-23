@@ -90,7 +90,7 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
              data={
                 'code': code,
                 'code_msg': 'ok',
-                'settings': data
+                'data': data
              }
         )
 
@@ -110,7 +110,7 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
              data={
                 'code': code,
                 'code_msg': 'ok',
-                'settings': data
+                'data': data
              }
         )
 
