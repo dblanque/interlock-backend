@@ -164,6 +164,13 @@ def test_connection(
         user_dn = ldapAuthConnectionUser
         password = ldapAuthConnectionPassword
 
+    if not isinstance(ldapAuthConnectTimeout, int):
+        logger.info('ldapAuthConnectTimeout is not an int, using default')
+        ldapAuthConnectTimeout = 5
+    if not isinstance(ldapAuthReceiveTimeout, int):
+        logger.info('ldapAuthReceiveTimeout is not an int, using default')
+        ldapAuthReceiveTimeout = 5
+
     # Build server pool
     server_pool = ldap3.ServerPool(None, ldap3.RANDOM, active=True, exhaust=5)
     auth_url = ldapAuthURL

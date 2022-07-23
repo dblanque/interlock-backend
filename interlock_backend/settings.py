@@ -179,6 +179,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 REST_FRAMEWORK = {
     "COERCE_DECIMAL_TO_STRING": False,
+    "EXCEPTION_HANDLER": 'core.system.exceptionhandler.custom_exception_handler',
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
         #~~~~ Uncomment to allow authentication "rest_framework_simplejwt.authentication.JWTAuthentication",

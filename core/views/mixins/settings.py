@@ -4,8 +4,9 @@ from core.models.user import User
 from django.db import transaction
 from interlock_backend.ldap.connector import open_connection, test_connection
 from interlock_backend.ldap.settings import normalizeValues
-from core.exceptions.ldap import CouldNotOpenConnection
-from core.exceptions.users import UserPermissionError
+from core.exceptions import ldap as ldap_exceptions
+from core.exceptions import users as user_exceptions
+from core.views.mixins.utils import testPort
 import logging
 import re
 import json
@@ -45,7 +46,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 
     def testSettings(self, user, data):
         if user == None:
-            raise UserPermissionError
+            raise user_exceptions.UserPermissionError
 
         ldapAuthConnectionUser = data['LDAP_AUTH_CONNECTION_USER_DN']['value']
         ldapAuthConnectionPassword = data['LDAP_AUTH_CONNECTION_PASSWORD']['value']
@@ -54,6 +55,25 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
         ldapAuthReceiveTimeout = int(data['LDAP_AUTH_RECEIVE_TIMEOUT']['value'])
         ldapAuthUseTLS = data['LDAP_AUTH_USE_TLS']['value']
         ldapAuthTLSVersion = data['LDAP_AUTH_TLS_VERSION']['value']
+
+        logger.debug("LDAP Socket Testing")
+        for server in ldapAuthURL:
+            ip = server.split(":")[1][2:]
+            port = server.split(":")[2]
+            logger.debug("IP to Test: " + ip)
+            logger.debug("Port to Test: " + port)
+            if not testPort(ip, port, ldapAuthConnectTimeout):
+                exception = ldap_exceptions.PortUnreachable
+                data = {
+                    "data" : {
+                        "code": "ldap_port_err",
+                        "ipAddress": ip,
+                        "port": port,
+                    }
+                }
+                exception.setDetail(exception, data)
+                raise exception
+            logger.debug("Test successful")
 
         username = user.username
         if username == "admin":
@@ -89,7 +109,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
                 )
         except Exception as e:
             print(e)
-            raise CouldNotOpenConnection
+            raise ldap_exceptions.CouldNotOpenConnection
 
         result = c.result
         c.unbind()

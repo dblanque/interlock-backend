@@ -1,13 +1,16 @@
-from rest_framework.exceptions import APIException
+from core.exceptions.base import BaseException
 
 # LDAP Custom Exceptions
 
-class CouldNotOpenConnection(APIException):
-    status_code = 550
+class CouldNotOpenConnection(BaseException):
+    status_code = 504
     default_detail = 'Could not bind to LDAP Server'
     default_code = 'ldap_bind_err'
-
-class ConnectionTestFailed(APIException):
-    status_code = 551
+class PortUnreachable(BaseException):
+    status_code = 504
+    default_detail = 'LDAP Server Port unreachable'
+    default_code = 'ldap_port_err'
+class ConnectionTestFailed(BaseException):
+    status_code = 400
     default_detail = 'Bind Connection Failed'
     default_code = 'ldap_bind_test_failed'
