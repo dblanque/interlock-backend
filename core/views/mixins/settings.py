@@ -86,7 +86,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
         logger.debug(user_dn)
         logger.debug(user.encryptedPassword)
         logger.debug(ldapAuthConnectionUser)
-        logger.debug(ldapAuthConnectionPassword)
+        # logger.debug(ldapAuthConnectionPassword)
         logger.debug(ldapAuthURL)
         logger.debug(ldapAuthConnectTimeout)
         logger.debug(ldapAuthReceiveTimeout)
