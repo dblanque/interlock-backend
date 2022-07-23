@@ -1,4 +1,5 @@
 from inspect import trace
+from django.conf import Settings
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 import ldap3
@@ -27,7 +28,7 @@ from django.forms import (
     IntegerField,
 )
 from interlock_backend.ldap.connector import open_connection
-from interlock_backend.ldap.settings import *
+from interlock_backend.ldap.settings_func import SettingsList
 from interlock_backend.ldap import adsi as ldap_adsi
 from interlock_backend.ldap.countries import LDAP_COUNTRIES
 from interlock_backend.ldap.encrypt import validateUser
@@ -45,10 +46,11 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         code_msg = 'ok'
 
         ######################## Get Latest Settings ###########################
-        authUsernameIdentifier = getSetting('LDAP_AUTH_USERNAME_IDENTIFIER')
-        authObjectClass = getSetting('LDAP_AUTH_OBJECT_CLASS')
-        authSearchBase = getSetting('LDAP_AUTH_SEARCH_BASE')
-        excludeComputerAccounts = getSetting('EXCLUDE_COMPUTER_ACCOUNTS')
+        ldap_settings_list = SettingsList()
+        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
+        authObjectClass = ldap_settings_list.LDAP_AUTH_OBJECT_CLASS
+        authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+        excludeComputerAccounts = ldap_settings_list.EXCLUDE_COMPUTER_ACCOUNTS
         ########################################################################
 
         # Open LDAP Connection
@@ -141,10 +143,11 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         userToSearch = data["username"]
 
         ######################## Get Latest Settings ###########################
-        authUsernameIdentifier = getSetting('LDAP_AUTH_USERNAME_IDENTIFIER')
-        authObjectClass = getSetting('LDAP_AUTH_OBJECT_CLASS')
-        authSearchBase = getSetting('LDAP_AUTH_SEARCH_BASE')
-        excludeComputerAccounts = getSetting('EXCLUDE_COMPUTER_ACCOUNTS')
+        ldap_settings_list = SettingsList()
+        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
+        authObjectClass = ldap_settings_list.LDAP_AUTH_OBJECT_CLASS
+        authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+        excludeComputerAccounts = ldap_settings_list.EXCLUDE_COMPUTER_ACCOUNTS
         ########################################################################
 
         # Open LDAP Connection
@@ -244,10 +247,11 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         userToSearch = data["username"]
 
         ######################## Get Latest Settings ###########################
-        authUsernameIdentifier = getSetting('LDAP_AUTH_USERNAME_IDENTIFIER')
-        authObjectClass = getSetting('LDAP_AUTH_OBJECT_CLASS')
-        authDomain = getSetting('LDAP_DOMAIN')
-        authSearchBase = getSetting('LDAP_AUTH_SEARCH_BASE')
+        ldap_settings_list = SettingsList()
+        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
+        authObjectClass = ldap_settings_list.LDAP_AUTH_OBJECT_CLASS
+        authDomain = ldap_settings_list.LDAP_DOMAIN
+        authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
         ########################################################################
 
         # Open LDAP Connection
@@ -333,7 +337,8 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         data = request.data
 
         ######################## Get Latest Settings ###########################
-        authUsernameIdentifier = getSetting('LDAP_AUTH_USERNAME_IDENTIFIER')
+        ldap_settings_list = SettingsList()
+        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
         ########################################################################
 
         excludeKeys = [
@@ -450,10 +455,11 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         data = request.data
 
         ######################## Get Latest Settings ###########################
-        authSearchBase = getSetting('LDAP_AUTH_SEARCH_BASE')
-        authUsernameIdentifier = getSetting('LDAP_AUTH_USERNAME_IDENTIFIER')
-        authObjectClass = getSetting('LDAP_AUTH_OBJECT_CLASS')
-        excludeComputerAccounts = getSetting('EXCLUDE_COMPUTER_ACCOUNTS')
+        ldap_settings_list = SettingsList()
+        authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
+        authObjectClass = ldap_settings_list.LDAP_AUTH_OBJECT_CLASS
+        excludeComputerAccounts = ldap_settings_list.EXCLUDE_COMPUTER_ACCOUNTS
         ########################################################################
 
         userToEnable = data['username']
@@ -522,10 +528,11 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         data = request.data
 
         ######################## Get Latest Settings ###########################
-        authSearchBase = getSetting('LDAP_AUTH_SEARCH_BASE')
-        authUsernameIdentifier = getSetting('LDAP_AUTH_USERNAME_IDENTIFIER')
-        authObjectClass = getSetting('LDAP_AUTH_OBJECT_CLASS')
-        excludeComputerAccounts = getSetting('EXCLUDE_COMPUTER_ACCOUNTS')
+        ldap_settings_list = SettingsList()
+        authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
+        authObjectClass = ldap_settings_list.LDAP_AUTH_OBJECT_CLASS
+        excludeComputerAccounts = ldap_settings_list.EXCLUDE_COMPUTER_ACCOUNTS
         ########################################################################
 
         userToEnable = data['username']

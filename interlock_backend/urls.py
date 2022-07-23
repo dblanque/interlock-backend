@@ -29,7 +29,7 @@ from core.views.domain import DomainViewSet
 from core.views.token import TokenObtainPairView, TokenRefreshView
 from core.views.user import UserViewSet
 from core.views.organizational_unit import OrganizationalUnitViewSet
-from core.views.settings import SettingsViewSet
+from core.views.settings_view import SettingsViewSet
 
 # Initalizes Router
 router = routers.DefaultRouter()

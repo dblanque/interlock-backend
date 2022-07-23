@@ -4,9 +4,8 @@ from .mixins.domain import DomainViewMixin
 from rest_framework import viewsets
 from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
-from interlock_backend.ldap.settings import getSetting
 from interlock_backend.ldap.encrypt import validateUser
-
+from interlock_backend.ldap.settings_func import SettingsList
 class DomainViewSet(viewsets.ViewSet, DomainViewMixin):
 
     @action(detail=False, methods=['get'])
@@ -15,9 +14,10 @@ class DomainViewSet(viewsets.ViewSet, DomainViewMixin):
         validateUser(request=request, requestUser=user)
         data = {}
         code = 0
-        data["realm"] = getSetting('LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN') or ""
-        data["name"] = getSetting('LDAP_DOMAIN') or ""
-        data["basedn"] = getSetting('LDAP_AUTH_SEARCH_BASE') or ""
+        ldap_settings_list = SettingsList()
+        data["realm"] = ldap_settings_list.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN or ""
+        data["name"] = ldap_settings_list.LDAP_DOMAIN or ""
+        data["basedn"] = ldap_settings_list.LDAP_AUTH_SEARCH_BASE or ""
         return Response(
              data={
                 'code': code,

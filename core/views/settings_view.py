@@ -1,6 +1,6 @@
 from rest_framework.response import Response
-from core.models.settings import Setting
-from .mixins.settings import SettingsViewMixin
+from core.models.settings_model import Setting
+from .mixins.settings_mixin import SettingsViewMixin
 from rest_framework import viewsets
 from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
@@ -8,7 +8,7 @@ from interlock_backend.ldap.constants import (
     __dict__ as constantDictionary
 )
 from interlock_backend.ldap import constants as ldap_constants
-from interlock_backend.ldap.settings import getSettingsList, normalizeValues
+from interlock_backend.ldap.settings_func import getSettingsList, normalizeValues
 from interlock_backend.ldap.encrypt import validateUser
 from core.exceptions.ldap import ConnectionTestFailed
 import logging
@@ -25,7 +25,7 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
         data = {}
         code = 0
 
-        data = getSettingsList()
+        data = getSettingsList(listFormat="frontend")
         data['DEFAULT_ADMIN_ENABLED'] = self.getAdminStatus()
 
         # TODO - Convert Tuple for LDAP_AUTH_USER_LOOKUP_FIELDS to ARRAY for Front-End

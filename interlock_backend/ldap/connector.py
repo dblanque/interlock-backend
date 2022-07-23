@@ -21,7 +21,7 @@ import ssl
 import logging
 import time
 from interlock_backend.ldap.adsi import add_search_filter, LDAP_BUILTIN_OBJECTS
-from interlock_backend.ldap.settings import getSetting, getSettingType
+from interlock_backend.ldap.settings_func import SettingsList, getSetting
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +33,9 @@ def authenticate(*args, **kwargs):
     The user identifier should be keyword arguments matching the fields
     in settings.LDAP_AUTH_USER_LOOKUP_FIELDS, plus a `password` argument.
     """
+    ldap_settings_list = SettingsList()
     password = kwargs.pop("password", None)
-    auth_user_lookup_fields = frozenset(getSetting('LDAP_AUTH_USER_LOOKUP_FIELDS'))
+    auth_user_lookup_fields = frozenset(ldap_settings_list.LDAP_AUTH_USER_LOOKUP_FIELDS)
     ldap_kwargs = {
         key: value for (key, value) in kwargs.items()
         if key in auth_user_lookup_fields
@@ -62,18 +63,19 @@ def open_connection(
         username=None,
     ):
 
-    ldapAuthURL = getSetting('LDAP_AUTH_URL')
-    ldapAuthConnectionPassword = getSetting('LDAP_AUTH_CONNECTION_PASSWORD')
-    ldapAuthConnectTimeout = getSetting('LDAP_AUTH_CONNECT_TIMEOUT')
-    ldapAuthReceiveTimeout = getSetting('LDAP_AUTH_RECEIVE_TIMEOUT')
-    ldapAuthUseTLS = getSetting('LDAP_AUTH_USE_TLS')
-    ldapAuthTLSVersion = getSetting('LDAP_AUTH_TLS_VERSION')
+    ldap_settings_list = SettingsList()
+    ldapAuthURL = ldap_settings_list.LDAP_AUTH_URL
+    ldapAuthConnectionPassword = ldap_settings_list.LDAP_AUTH_CONNECTION_PASSWORD
+    ldapAuthConnectTimeout = ldap_settings_list.LDAP_AUTH_CONNECT_TIMEOUT
+    ldapAuthReceiveTimeout = ldap_settings_list.LDAP_AUTH_RECEIVE_TIMEOUT
+    ldapAuthUseTLS = ldap_settings_list.LDAP_AUTH_USE_TLS
+    ldapAuthTLSVersion = ldap_settings_list.LDAP_AUTH_TLS_VERSION
 
     if username == 'admin':
-        user_dn = getSetting('LDAP_AUTH_CONNECTION_USER_DN')
+        user_dn = ldap_settings_list.LDAP_AUTH_CONNECTION_USER_DN
         password = ldapAuthConnectionPassword
 
-    format_username = import_func(getSetting('LDAP_AUTH_FORMAT_USERNAME'))
+    format_username = import_func(ldap_settings_list.LDAP_AUTH_FORMAT_USERNAME)
 
     logger.debug("Test Connection Endpoint Parameters: ")
     logger.debug(username)
@@ -156,7 +158,8 @@ def test_connection(
         ldapAuthUseTLS,
         ldapAuthTLSVersion
     ):
-    format_username = import_func(getSetting('LDAP_AUTH_FORMAT_USERNAME'))
+    ldap_settings_list = SettingsList()
+    format_username = import_func(ldap_settings_list.LDAP_AUTH_FORMAT_USERNAME)
 
     if password != ldapAuthConnectionPassword and username != 'admin':
         password = str(decrypt(password))
@@ -233,6 +236,8 @@ def get_base_level():
 
     Returns a list/array.
     """
+    ldap_settings_list = SettingsList()
+
     connection = open_connection()
     search_filter=""
     search_filter=add_search_filter(search_filter, 'objectCategory=organizationalUnit')
@@ -240,7 +245,7 @@ def get_base_level():
     search_filter=add_search_filter(search_filter, 'objectCategory=container', "|")
     search_filter=add_search_filter(search_filter, 'objectCategory=builtinDomain', "|")
     connection.search(
-        search_base=getSetting('LDAP_AUTH_SEARCH_BASE'),
+        search_base=ldap_settings_list.LDAP_AUTH_SEARCH_BASE,
         search_filter=search_filter,
         search_scope='LEVEL',
         attributes=ldap3.ALL_ATTRIBUTES)

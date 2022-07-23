@@ -1,5 +1,5 @@
 # Core Imports
-from core.models.settings import Setting
+from core.models.settings_model import Setting
 from core.models.user import User
 
 # Interlock Imports
@@ -14,6 +14,16 @@ import re
 import json
 
 logger = logging.getLogger(__name__)
+
+class SettingsList():
+    def __init__(self,**kwargs):
+        super(SettingsList, self).__init__()
+        self.name = 'SettingsList'
+        for c in constantDictionary:
+            if c in SETTINGS_WITH_ALLOWABLE_OVERRIDE:
+                setattr(self, c, getSetting(c))
+            else:
+                setattr(self, c, constantDictionary[c])
 
 def normalizeValues(settingKey, settingDict):
     """
@@ -66,9 +76,29 @@ def normalizeValues(settingKey, settingDict):
         settingDict['value'] = str(settingDict['value']).split('.')[-1]
     return settingDict
 
-def getSettingsList(settingList=SETTINGS_WITH_ALLOWABLE_OVERRIDE):
+def getSettingsList(settingList=SETTINGS_WITH_ALLOWABLE_OVERRIDE, listFormat='backend'):
+    """Returns a Dictionary with the current setting values in the system
+
+        Arguments:
+
+        settingList (STRING) - Default is SETTINGS_WITH_ALLOWABLE_OVERRIDE
+
+        listFormat (STRING) - frontend or backend
+
+        BACKEND - Returns Object
+        FRONTEND - Returns Dict with values and types
+    """
+
+    if listFormat.lower() == 'backend' or listFormat is None:
+        data = SettingsList()
+        for c in constantDictionary:
+            if c in settingList:
+                setattr(data, c, getSetting(c))
+            else:
+                setattr(data, c, constantDictionary[c])
+        return data
+
     data = {}
-    
     userQuerySet = User.objects.filter(username = 'admin')
     if userQuerySet.count() > 0:
         defaultAdmin = userQuerySet.get(username = 'admin')

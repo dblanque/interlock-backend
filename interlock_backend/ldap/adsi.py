@@ -7,7 +7,7 @@
 ###############################################################################
 # Originally Created by Dylan Blanqué and BR Consulting S.R.L. (2022)
 
-from interlock_backend.ldap.settings import getSetting
+from interlock_backend.ldap.settings_func import SettingsList
 import logging
 
 logger = logging.getLogger(__name__)
@@ -195,7 +195,9 @@ def list_user_perms(user, permissionToSearch=None, isObject=True):
         rawUserPerms = bin_as_str(user['userAccountControl'])
     UserPerms = []
     i = 0
-    authUsernameIdentifier = getSetting('LDAP_AUTH_USERNAME_IDENTIFIER')
+    ldap_settings_list = SettingsList()
+
+    authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
     for n in range(0, 32): # Loop for each bit in 0-32
         i += 1
         if rawUserPerms[n] == "1": # If permission matches enter for loop to 
@@ -267,9 +269,10 @@ def calc_permissions(permissionArray, addPerm='', removePerm=''):
     return int(userPermissions)
 
 def getUserObjectFilter(username):
-    authUsernameIdentifier = getSetting('LDAP_AUTH_USERNAME_IDENTIFIER')
-    authObjectClass = getSetting('LDAP_AUTH_OBJECT_CLASS')
-    excludeComputerAccounts = getSetting('EXCLUDE_COMPUTER_ACCOUNTS')
+    ldap_settings_list = SettingsList()
+    authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
+    authObjectClass = ldap_settings_list.LDAP_AUTH_OBJECT_CLASS
+    excludeComputerAccounts = ldap_settings_list.EXCLUDE_COMPUTER_ACCOUNTS
 
     objectClassFilter = "(objectclass=" + authObjectClass + ")"
 
@@ -284,7 +287,7 @@ def getUserObjectFilter(username):
         )
     return objectClassFilter
 
-def getUserObject(connection, username, attributes=[getSetting('LDAP_AUTH_USERNAME_IDENTIFIER'), 'distinguishedName'], objectClassFilter=None):
+def getUserObject(connection, username, attributes=[SettingsList().LDAP_AUTH_USERNAME_IDENTIFIER, 'distinguishedName'], objectClassFilter=None):
     """ Default: Search for the dn from a Username string param.
     
     Can also be used to fetch entire object from that username string or filtered attributes.
@@ -303,11 +306,12 @@ def getUserObject(connection, username, attributes=[getSetting('LDAP_AUTH_USERNA
 
     Returns the connection.
     """
+    ldap_settings_list = SettingsList()
     if objectClassFilter == None:
         objectClassFilter = getUserObjectFilter(username)
 
     connection.search(
-        getSetting('LDAP_AUTH_SEARCH_BASE'), 
+        ldap_settings_list.LDAP_AUTH_SEARCH_BASE, 
         objectClassFilter, 
         attributes=attributes
     )

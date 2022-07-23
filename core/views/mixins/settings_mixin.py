@@ -1,9 +1,9 @@
 from rest_framework import viewsets
-from core.models.settings import Setting
+from core.models.settings_model import Setting
 from core.models.user import User
 from django.db import transaction
 from interlock_backend.ldap.connector import open_connection, test_connection
-from interlock_backend.ldap.settings import normalizeValues
+from interlock_backend.ldap.settings_func import normalizeValues
 from core.exceptions import ldap as ldap_exceptions
 from core.exceptions import users as user_exceptions
 from core.views.mixins.utils import testPort
