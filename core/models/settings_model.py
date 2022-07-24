@@ -1,4 +1,5 @@
 from django.contrib.auth.models import PermissionsMixin
+from django.forms import JSONField
 from django.utils.translation import gettext_lazy as _
 from django.db import models
 from .base import BaseModel
@@ -28,5 +29,9 @@ class Setting(BaseModel):
     ]
 
     id = models.CharField(primary_key=True, unique=True, max_length=64)
-    value = models.CharField(_("value"), max_length=256)
+    value = models.CharField(_("value"), max_length=256, null=True)
+    value_bool = models.BooleanField(null=True)
+    value_json = models.JSONField(null=True)
+    value_int = models.IntegerField(null=True)
+    value_float = models.FloatField(null=True)
     type = models.CharField(choices=TYPE_CHOICES, max_length=256)

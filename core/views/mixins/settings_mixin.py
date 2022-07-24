@@ -143,17 +143,28 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 
     @transaction.atomic
     def update_or_create_setting(self, itemKey, data, forceDelete=False):
-        # if itemKey == 'LDAP_AUTH_CONNECT_TIMEOUT':
-        # print(self)
-        # print(itemKey)
-        # print(data)
-
-        if data['type'] == 'checkbox' or data['type'] == 'bool':
-            data['type'] = 'boolean'
-        if data['type'] == 'array':
-            data['type'] = 'list'
+        # Normalize Select Types to String
         if data['type'] == 'select':
             data['type'] = 'string'
+        # Normalize Array Types
+        if data['type'] == 'array' or data['type'] == 'ldap_uri':
+            data['type'] = 'list'
+
+        # Set Values to correct field by type
+        if data['type'] == 'boolean':
+            data['value_bool'] = data['value']
+            del data['value']
+
+        listTypes = [ 'list', 'object', 'ldap_uri', 'array' ]
+        if data['type'] in listTypes:
+            data['value_json'] = data['value']
+            del data['value']
+        if data['type'] == 'integer':
+            data['value_int'] = data['value']
+            del data['value']
+        if data['type'] == 'float':
+            data['value_float'] = data['value']
+            del data['value']
 
         try:
             querySet = Setting.objects.filter(id = itemKey)

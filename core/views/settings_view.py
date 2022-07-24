@@ -49,14 +49,21 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
         adminPassword = data.pop('DEFAULT_ADMIN_PWD')
         self.setAdminStatus(status=adminEnabled, password=adminPassword)
 
+        valueFields = [
+            'value',
+            'value_bool',
+            'value_json',
+            'value_int',
+            'value_float'
+        ]
+
         for setting in data:
             data[setting] = normalizeValues(setting, data[setting])
             if setting == 'LDAP_AUTH_TLS_VERSION':
                 data[setting]['value'] = getattr(ssl, data[setting]['value'])
             if setting in constantDictionary:
                 dictValue = getattr(ldap_constants, setting)
-                if data[setting]['value'] != dictValue:
-                    print(setting)
+                if dictValue not in data[setting].values():
                     logger.debug('Value in data for ' + setting)
                     logger.debug(data[setting]['value'])
                     logger.debug('Type in data for ' + setting)
@@ -66,8 +73,11 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
                     logger.debug('Type in constants dict for ' + setting)
                     logger.debug(type(dictValue))
                     code = self.update_or_create_setting(setting, data[setting])
-                if data[setting]['value'] == dictValue or data[setting]['value'] == "":
-                    code = self.delete_setting(setting, data[setting])
+                else:
+                    for field in valueFields:
+                        if field in data[setting]:
+                            if dictValue == data[setting][field]:
+                                code = self.delete_setting(setting, data[setting])
 
         return Response(
              data={

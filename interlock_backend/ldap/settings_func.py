@@ -39,38 +39,23 @@ def normalizeValues(settingKey, settingDict):
     """
 
     settingDict['type'] = getSettingType(settingKey)
+    listTypes = [ 'list', 'object', 'ldap_uri', 'array', 'tuple' ]
 
     # INT
-    if settingDict['type'] == 'integer' and not isinstance(settingDict['value'], int):
-        settingDict['value'] = re.sub('\D', '', settingDict['value'])
-        settingDict['value'] = int(settingDict['value'])
+    if settingDict['type'] == 'integer':
+        settingDict['value_int'] = settingDict['value']
     # FLOAT
-    elif settingDict['type'] == 'float' and not isinstance(settingDict['value'], float):
-        settingDict['value'] = re.sub('\D.,', '', settingDict['value'])
-        settingDict['value'] = float(settingDict['value'])
-    # LIST/ARRAY
-    elif (settingDict['type'] == 'list' or settingDict['type'] == 'ldap_uri') and not isinstance(settingDict['value'], list):
-        if isinstance(settingDict['value'], str):
-            settingDict['value'] = settingDict['value'].replace("'", '"')
-            settingDict['value'] = json.loads(settingDict['value'])
-        else:
-            print(settingKey + ' is not a string or a list, type may be mis-represented in DB')
+    elif settingDict['type'] == 'float':
+        settingDict['value_float'] = settingDict['value']
+    # LIST/ARRAY OR OBJECT
+    elif (settingDict['type'] in listTypes):
+        settingDict['value_json'] = settingDict['value']
     # BOOLEAN
-    elif settingDict['type'] == 'boolean' and not isinstance(settingDict['value'], bool):
-        settingDict['value'] = re.sub('[^a-zA-Z]+', '', settingDict['value'])
-        if settingDict['value'] == 'True' or settingDict['value'] == 'true':
-            settingDict['value'] = True
-        else:
-            settingDict['value'] = False
-    # OBJECT
-    elif settingDict['type'] == 'object' and not isinstance(settingDict['value'], object):
-        settingDict['value'] = json.load(settingDict['value'])
+    elif settingDict['type'] == 'boolean':
+        settingDict['value_bool'] = settingDict['value']
     # TODO - TUPLE
     # elif settingDict['type'] == 'tuple':
     #     print(settingDict)
-
-        if settingKey == 'EXCLUDE_COMPUTER_ACCOUNTS':
-            print(settingDict['value'])
 
     if settingKey == "LDAP_AUTH_TLS_VERSION":
         settingDict['value'] = str(settingDict['value']).split('.')[-1]
@@ -115,6 +100,14 @@ def getSettingsList(settingList=SETTINGS_WITH_ALLOWABLE_OVERRIDE):
     return data
 
 def getSetting(settingKey):
+    valueFields = [
+        'value',
+        'value_bool',
+        'value_json',
+        'value_int',
+        'value_float'
+    ]
+
     try:
         querySet = Setting.objects.filter(id = settingKey).exclude(deleted=True)
     except Exception as e:
@@ -124,12 +117,15 @@ def getSetting(settingKey):
         logger.debug("Fetching value for "+ settingKey+' from DB')
         try:
             setting = querySet[0]
-            setting = normalizeValues(settingKey, setting.__dict__)
+            # setting = normalizeValues(settingKey, setting.__dict__)
 
             if settingKey == 'LDAP_AUTH_TLS_VERSION':
-                return getattr(ssl, setting['value'])
+                return getattr(ssl, setting.value)
             else:
-                return setting['value']
+                for field in valueFields:
+                    fieldValue = getattr(setting, field)
+                    if fieldValue is not None and fieldValue != "":
+                        return fieldValue
         except Exception as e:
             print("EXCEPTION FOR DB FETCH:" + settingKey)
             print(e)
