@@ -31,6 +31,7 @@ from interlock_backend.ldap.connector import open_connection
 from interlock_backend.ldap.settings_func import SettingsList
 from interlock_backend.ldap import adsi as ldap_adsi
 from interlock_backend.ldap.countries import LDAP_COUNTRIES
+from interlock_backend.ldap.accountTypes import LDAP_ACCOUNT_TYPES
 from interlock_backend.ldap.encrypt import validateUser
 
 logger = logging.getLogger(__name__)
@@ -68,7 +69,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             'distinguishedName',
             'userAccountControl'
         ]
-        
+
         objectClassFilter = "(objectclass=" + authObjectClass + ")"
 
         # Exclude Computer Accounts if settings allow it
@@ -222,6 +223,13 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         # Check if user is disabled
         userPermissions = ldap_adsi.list_user_perms(user[0], permissionToSearch=None, isObject=False)
         user_dict['permission_list'] = userPermissions
+
+        # Replace sAMAccountType Value with String Corresponding
+        userAccountType = int(user_dict['sAMAccountType'])
+        for accountType in LDAP_ACCOUNT_TYPES:
+            accountTypeValue = LDAP_ACCOUNT_TYPES[accountType]
+            if accountTypeValue == userAccountType:
+                user_dict['sAMAccountType'] = accountType
 
         # Close / Unbind LDAP Connection
         c.unbind()
