@@ -322,6 +322,9 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         arguments['objectClass'] = ['top', 'person', 'organizationalPerson', 'user']
         arguments['userPrincipalName'] = data['username'] + '@' + authDomain
         
+        arguments['givenName'] = arguments['givenName'].capitalize()
+        arguments['sn'] = arguments['sn'].capitalize()
+
         logger.debug('Creating user in DN Path: ' + userDN)
         c.add(userDN, authObjectClass, attributes=arguments)
         # TODO - Test if password changes correctly?

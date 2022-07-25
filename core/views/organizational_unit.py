@@ -32,7 +32,7 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
             print(e)
             raise CouldNotOpenConnection
 
-        list = get_full_directory_tree(getCNs=False)
+        dirList = get_full_directory_tree(getCNs=False)
 
         # Close / Unbind LDAP Connection
         c.unbind()
@@ -40,12 +40,43 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
                 data={
                 'code': code,
                 'code_msg': code_msg,
-                'ou_list': list,
+                'ou_list': dirList,
                 }
         )
-    
-    @action(detail=False,methods=['get'])
+
+    @action(detail=False,methods=['post'])
     def dirtree(self, request):
+        user = request.user
+        validateUser(request=request, requestUser=user)
+        data = request.data
+        code = 0
+        code_msg = 'ok'
+
+        objectFilters = data['filter']
+
+        print(objectFilters)
+
+        # Open LDAP Connection
+        try:
+            c = open_connection(user.dn, user.encryptedPassword)
+        except Exception as e:
+            print(e)
+            raise CouldNotOpenConnection
+
+        dirList = get_full_directory_tree()
+
+        # Close / Unbind LDAP Connection
+        c.unbind()
+        return Response(
+                data={
+                'code': code,
+                'code_msg': code_msg,
+                'ou_list': dirList,
+                }
+        )
+
+    @action(detail=False,methods=['post'])
+    def move(self, request):
         user = request.user
         validateUser(request=request, requestUser=user)
         data = request.data
@@ -59,15 +90,13 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
             print(e)
             raise CouldNotOpenConnection
 
-        list = get_full_directory_tree()
-
         # Close / Unbind LDAP Connection
         c.unbind()
         return Response(
                 data={
                 'code': code,
                 'code_msg': code_msg,
-                'ou_list': list,
+                # 'user': username,
                 }
         )
 
