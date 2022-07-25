@@ -253,7 +253,7 @@ def get_base_level():
     connection.unbind()
     return searchResult
 
-def get_full_directory_tree(getCNs=True):
+def get_full_directory_tree(getCNs=True, filterObjects=None, filterTypes=None):
     """ Gets a list of the full directory tree in an LDAP Server.
 
     No arguments required
