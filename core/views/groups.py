@@ -4,7 +4,7 @@ from core.exceptions import ldap as ldap_exceptions
 from rest_framework.response import Response
 from interlock_backend.ldap import adsi as ldap_adsi
 from interlock_backend.ldap.encrypt import validateUser
-from interlock_backend.ldap.connector import open_connection
+from interlock_backend.ldap.connector import openLDAPConnection
 from interlock_backend.ldap.settings_func import SettingsList
 from ldap3 import ALL_ATTRIBUTES
 
@@ -26,7 +26,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
         # Open LDAP Connection
         try:
-            c = open_connection(group.dn, group.encryptedPassword)
+            c = openLDAPConnection(group.dn, group.encryptedPassword)
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection

@@ -8,13 +8,11 @@ from rest_framework.exceptions import NotFound
 from core.exceptions.ldap import CouldNotOpenConnection
 from rest_framework.decorators import action
 from interlock_backend.ldap.connector import (
-    open_connection,
-    get_full_directory_tree
+    openLDAPConnection,
+    getFullDirectoryTree,
+    buildFilterFromDict
 )
 from interlock_backend.ldap.encrypt import validateUser
-import traceback
-import logging
-import json
 
 class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
 
@@ -27,12 +25,12 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
 
         # Open LDAP Connection
         try:
-            c = open_connection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword)
         except Exception as e:
             print(e)
             raise CouldNotOpenConnection
 
-        dirList = get_full_directory_tree(getCNs=False)
+        dirList = getFullDirectoryTree(getCNs=False)
 
         # Close / Unbind LDAP Connection
         c.unbind()
@@ -52,18 +50,18 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         code = 0
         code_msg = 'ok'
 
-        objectFilters = data['filter']
-
-        print(objectFilters)
+        # objectFilters = data['filter']
+        # if objectFilters != {} and objectFilters is not None:
+        #     queryFilter = buildFilterFromDict(objectFilters)
 
         # Open LDAP Connection
         try:
-            c = open_connection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword)
         except Exception as e:
             print(e)
             raise CouldNotOpenConnection
 
-        dirList = get_full_directory_tree()
+        dirList = getFullDirectoryTree()
 
         # Close / Unbind LDAP Connection
         c.unbind()
@@ -85,7 +83,7 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
 
         # Open LDAP Connection
         try:
-            c = open_connection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword)
         except Exception as e:
             print(e)
             raise CouldNotOpenConnection

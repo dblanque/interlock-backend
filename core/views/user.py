@@ -27,7 +27,7 @@ from django.forms import (
     BooleanField,
     IntegerField,
 )
-from interlock_backend.ldap.connector import open_connection
+from interlock_backend.ldap.connector import openLDAPConnection
 from interlock_backend.ldap.settings_func import SettingsList
 from interlock_backend.ldap import adsi as ldap_adsi
 from interlock_backend.ldap.countries import LDAP_COUNTRIES
@@ -56,7 +56,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = open_connection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword)
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -153,7 +153,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = open_connection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword)
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -264,7 +264,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = open_connection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword)
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -378,7 +378,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = open_connection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword)
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -476,7 +476,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         userToEnable = data['username']
         # Open LDAP Connection
         try:
-            c = open_connection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword)
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -549,7 +549,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         userToEnable = data['username']
         # Open LDAP Connection
         try:
-            c = open_connection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword)
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -614,7 +614,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = open_connection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword)
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -661,7 +661,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = open_connection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword)
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection

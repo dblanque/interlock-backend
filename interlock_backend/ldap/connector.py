@@ -6,8 +6,6 @@
 ###############################################################################
 # Originally Created by Dylan Blanqué and BR Consulting S.R.L. (2022)
 
-from asyncio import constants
-import imp
 from django_python3_ldap.ldap import connection as orig_connection
 from django_python3_ldap.utils import import_func
 from django_python3_ldap.conf import settings
@@ -19,7 +17,6 @@ import ldap3
 from ldap3.core.exceptions import LDAPException
 import ssl
 import logging
-import time
 from interlock_backend.ldap.adsi import add_search_filter, LDAP_BUILTIN_OBJECTS
 from interlock_backend.ldap.settings_func import SettingsList, getSetting
 
@@ -57,7 +54,7 @@ def authenticate(*args, **kwargs):
         user.save()
         return user
 
-def open_connection(
+def openLDAPConnection(
         user_dn=getSetting('LDAP_AUTH_CONNECTION_USER_DN'), 
         password=getSetting('LDAP_AUTH_CONNECTION_PASSWORD'),
         username=None,
@@ -146,7 +143,7 @@ def open_connection(
         logger.warning("LDAP bind failed: {ex}".format(ex=ex))
         return None
 
-def test_connection(
+def testLDAPConnection(
         username,
         user_dn, # Actually this is user_dn
         password,
@@ -229,7 +226,13 @@ def test_connection(
         logger.warning("LDAP bind failed: {ex}".format(ex=ex))
         return None
 
-def get_base_level():
+def buildFilterFromDict(dictArray, operator="|"):
+    search_filter = ""
+    for key, objectType in dictArray.items():
+        search_filter = add_search_filter(search_filter, objectType + "=" + key, operator)
+    return search_filter
+
+def getBaseLevelDirectoryTree(queryFilter=None):
     """ Gets all objects in LDAP Server base subtree level.
 
     No arguments required
@@ -238,7 +241,8 @@ def get_base_level():
     """
     ldap_settings_list = SettingsList()
 
-    connection = open_connection()
+    connection = openLDAPConnection()
+
     search_filter=""
     search_filter=add_search_filter(search_filter, 'objectCategory=organizationalUnit')
     search_filter=add_search_filter(search_filter, 'objectCategory=top', "|")
@@ -253,16 +257,16 @@ def get_base_level():
     connection.unbind()
     return searchResult
 
-def get_full_directory_tree(getCNs=True, filterObjects=None, filterTypes=None):
+def getFullDirectoryTree(getCNs=True, filterObjects=None, filterTypes=None):
     """ Gets a list of the full directory tree in an LDAP Server.
 
     No arguments required
 
     Returns a list.
     """
-    base_list = get_base_level()
+    base_list = getBaseLevelDirectoryTree()
     result = []
-    connection = open_connection()
+    connection = openLDAPConnection()
     currentID = 0
 
     # For each entity in the base level list
@@ -372,7 +376,7 @@ def get_children(dn, connection, recursive=False, getCNs=True, id=0):
 
     REQUIRED
     dn: Object DN to query
-    connection: LDAP Connection Object, see function open_connection()
+    connection: LDAP Connection Object, see function openLDAPConnection()
 
     DEFAULTS
     Recursive: False (Set this to True to get the entire subtree below)
