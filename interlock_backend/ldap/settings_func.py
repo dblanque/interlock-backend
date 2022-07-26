@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 class SettingsList():
     def __init__(self,**kwargs):
-        super(SettingsList, self).__init__()
         self.name = 'SettingsList'
         for c in constantDictionary:
             if c in SETTINGS_WITH_ALLOWABLE_OVERRIDE:
