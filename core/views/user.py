@@ -74,7 +74,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         # Exclude Computer Accounts if settings allow it
         if excludeComputerAccounts == True:
-            objectClassFilter = ldap_adsi.add_search_filter(objectClassFilter, "!(objectclass=computer)")
+            objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "!(objectclass=computer)")
 
         c.search(
             authSearchBase, 
@@ -190,10 +190,10 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         # Exclude Computer Accounts if settings allow it
         if excludeComputerAccounts == True:
-            objectClassFilter = ldap_adsi.add_search_filter(objectClassFilter, "!(objectclass=computer)")
+            objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "!(objectclass=computer)")
         
         # Add filter for username
-        objectClassFilter = ldap_adsi.add_search_filter(objectClassFilter, authUsernameIdentifier + "=" + userToSearch)
+        objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, authUsernameIdentifier + "=" + userToSearch)
         c.search(
             authSearchBase,
             objectClassFilter,
@@ -491,10 +491,10 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         # Exclude Computer Accounts if settings allow it
         if excludeComputerAccounts == True:
-            objectClassFilter = ldap_adsi.add_search_filter(objectClassFilter, "!(objectclass=computer)")
+            objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "!(objectclass=computer)")
 
         # Add filter for username
-        objectClassFilter = ldap_adsi.add_search_filter(
+        objectClassFilter = ldap_adsi.addSearchFilter(
             objectClassFilter, 
             authUsernameIdentifier + "=" + userToEnable
             )
@@ -564,10 +564,10 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         # Exclude Computer Accounts if settings allow it
         if excludeComputerAccounts == True:
-            objectClassFilter = ldap_adsi.add_search_filter(objectClassFilter, "!(objectclass=computer)")
+            objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "!(objectclass=computer)")
 
         # Add filter for username
-        objectClassFilter = ldap_adsi.add_search_filter(
+        objectClassFilter = ldap_adsi.addSearchFilter(
             objectClassFilter, 
             authUsernameIdentifier + "=" + userToEnable
             )
