@@ -7,11 +7,9 @@ from .mixins.organizational_unit import OrganizationalUnitMixin
 from rest_framework.exceptions import NotFound
 from core.exceptions.ldap import CouldNotOpenConnection, CouldNotFetchDirtree
 from rest_framework.decorators import action
-from interlock_backend.ldap.connector import (
-    openLDAPConnection,
-    getFullDirectoryTree,
-    addSearchFilter,
-)
+from interlock_backend.ldap.connector import openLDAPConnection
+from interlock_backend.ldap.adsi import addSearchFilter
+from interlock_backend.ldap.dirtree import getFullDirectoryTree
 from interlock_backend.ldap.encrypt import validateUser
 
 class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):

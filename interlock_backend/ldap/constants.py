@@ -151,6 +151,10 @@ SETTINGS_WITH_ALLOWABLE_OVERRIDE = {
         "type": "integer", 
         "value": ""
     },
+    "LDAP_AUTH_RECEIVE_TIMEOUT":{ 
+        "type": "integer", 
+        "value": ""
+    },
     "ADMIN_GROUP_TO_SEARCH":{
         "value": ""
     }
