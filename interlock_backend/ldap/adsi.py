@@ -140,12 +140,12 @@ LDAP_BUILTIN_OBJECTS = [
     "Managed Service Accounts"
 ]
 
-def add_search_filter(original_filter, filter_to_add, operator="&"):
+def addSearchFilter(originalFilter, filterToAdd, operator="&", negate=False):
     """ Adds search filter to LDAP Filter string
 
     ARGUMENTS
-    original_filter: The filter you wish to modify, if empty the function will create a filter
-    filter_to_add: The filter string to add
+    originalFilter: The filter you wish to modify, if empty the function will create a filter
+    filterToAdd: The filter string to add
     operator (default is &): The operator (and|or), supports string or literal operator value
 
     Returns a string.
@@ -155,13 +155,55 @@ def add_search_filter(original_filter, filter_to_add, operator="&"):
     if operator == 'and':
         operator = '&'
 
-    if operator != "&" and operator != "|" and original_filter != "":
-        raise
-    if not original_filter or original_filter == "":
-        new_filter = "(" + filter_to_add + ")"
-        return new_filter
-    new_filter = "(" + operator + original_filter + "(" + filter_to_add + "))"
-    return new_filter
+    if operator == '|' and originalFilter.startswith('(!('):
+        logger.warn(filterToAdd)
+        logger.warn('Changed operator to & since you are comparing to a negation with an or')
+        operator = '&'
+
+    if negate == True:
+        filterPrefix = "(!("
+        filterSuffix = "))"
+    else:
+        filterPrefix = "("
+        filterSuffix = ")"
+
+    if operator != "&" and operator != "|" and originalFilter != "":
+        raise Exception
+    if not originalFilter or originalFilter == "":
+        newFilter = filterPrefix + filterToAdd + filterSuffix
+        return newFilter
+    newFilter = "(" + operator + originalFilter + filterPrefix + filterToAdd + filterSuffix + ")"
+    return newFilter
+
+def buildFilterFromDict(dictArray, operator="|"):
+    search_filter = ""
+    for key, objectType in dictArray.items():
+        search_filter = addSearchFilter(search_filter, objectType + "=" + key, operator)
+    return search_filter
+
+def getDefaultFilterFor(type='OU'):
+    """
+    Valid Types:
+    OU - Organizational Unit
+    CN - Common Name
+    """
+    if type.upper() == 'OU':
+        defaults = {
+            "organizationalUnit" : "objectCategory",
+            "top" : "objectCategory",
+            "container" : "objectCategory",
+            "builtinDomain" : "objectCategory"
+        }
+    else:
+        defaults = {
+            "user" : "objectClass",
+            "person" : "objectClass",
+            "group" : "objectClass",
+            "organizationalPerson" : "objectClass",
+            "computer" : "objectClass"
+        }
+    result = buildFilterFromDict(defaults)
+    return result
 
 def bin_as_str(value):
     casted_int = int(str(value))
@@ -278,10 +320,10 @@ def getUserObjectFilter(username):
 
     # Exclude Computer Accounts if settings allow it
     if excludeComputerAccounts == True:
-        objectClassFilter = add_search_filter(objectClassFilter, "!(objectclass=computer)")
+        objectClassFilter = addSearchFilter(objectClassFilter, "!(objectclass=computer)")
 
     # Add filter for username
-    objectClassFilter = add_search_filter(
+    objectClassFilter = addSearchFilter(
         objectClassFilter,
         authUsernameIdentifier + "=" + username
         )

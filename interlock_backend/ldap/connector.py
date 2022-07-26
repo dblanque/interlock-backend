@@ -17,7 +17,7 @@ import ldap3
 from ldap3.core.exceptions import LDAPException
 import ssl
 import logging
-from interlock_backend.ldap.adsi import add_search_filter, LDAP_BUILTIN_OBJECTS
+from interlock_backend.ldap.adsi import addSearchFilter, LDAP_BUILTIN_OBJECTS, getDefaultFilterFor
 from interlock_backend.ldap.settings_func import SettingsList, getSetting
 
 logger = logging.getLogger(__name__)
@@ -229,7 +229,7 @@ def testLDAPConnection(
 def buildFilterFromDict(dictArray, operator="|"):
     search_filter = ""
     for key, objectType in dictArray.items():
-        search_filter = add_search_filter(search_filter, objectType + "=" + key, operator)
+        search_filter = addSearchFilter(search_filter, objectType + "=" + key, operator)
     return search_filter
 
 def getBaseLevelDirectoryTree(queryFilter=None):
@@ -244,10 +244,10 @@ def getBaseLevelDirectoryTree(queryFilter=None):
     connection = openLDAPConnection()
 
     search_filter=""
-    search_filter=add_search_filter(search_filter, 'objectCategory=organizationalUnit')
-    search_filter=add_search_filter(search_filter, 'objectCategory=top', "|")
-    search_filter=add_search_filter(search_filter, 'objectCategory=container', "|")
-    search_filter=add_search_filter(search_filter, 'objectCategory=builtinDomain', "|")
+    search_filter=addSearchFilter(search_filter, 'objectCategory=organizationalUnit')
+    search_filter=addSearchFilter(search_filter, 'objectCategory=top', "|")
+    search_filter=addSearchFilter(search_filter, 'objectCategory=container', "|")
+    search_filter=addSearchFilter(search_filter, 'objectCategory=builtinDomain', "|")
     connection.search(
         search_base=ldap_settings_list.LDAP_AUTH_SEARCH_BASE,
         search_filter=search_filter,
@@ -257,7 +257,7 @@ def getBaseLevelDirectoryTree(queryFilter=None):
     connection.unbind()
     return searchResult
 
-def getFullDirectoryTree(getCNs=True, filterObjects=None, filterTypes=None):
+def getFullDirectoryTree(getCNs=True, queryFilter=None):
     """ Gets a list of the full directory tree in an LDAP Server.
 
     No arguments required
@@ -268,6 +268,9 @@ def getFullDirectoryTree(getCNs=True, filterObjects=None, filterTypes=None):
     result = []
     connection = openLDAPConnection()
     currentID = 0
+
+    # TODO Join the base directory tree fetch onto the same function as the others
+    # Why separate it?
 
     # For each entity in the base level list
     for entity in base_list:
@@ -293,13 +296,38 @@ def getFullDirectoryTree(getCNs=True, filterObjects=None, filterTypes=None):
     # logger.debug(json.dumps(result, sort_keys=False, indent=2))
     return result
 
+def get_children(dn, connection, recursive=False, getCNs=True, id=0):
+    """ Gets children for dn object in LDAP Server.
+
+    REQUIRED
+    dn: Object DN to query
+    connection: LDAP Connection Object, see function openLDAPConnection()
+
+    DEFAULTS
+    Recursive: False (Set this to True to get the entire subtree below)
+    getCNs: True (Set to False to get only children OUs)
+    id: 0 (Use this if you need to return the items with an id to your endpoint)
+    """
+    # Initialize Variables
+    results = list()
+    # Get CN Children Objects
+    if getCNs == True:
+        cn_results = get_children_cn(dn, connection, id)
+        id = cn_results['currentID']
+        results = cn_results['results']
+    # Get OU Children Objects
+    ou_results = get_children_ou(dn, connection, recursive, getCNs, id=id)
+    id = ou_results['currentID']
+    ou_results = ou_results['results']
+    results.extend(ou_results)
+    return({
+        "results": results,
+        "currentID": id
+    })
+
 def get_children_cn(dn, connection, id=0):
     # Add filters
-    search_filter='(objectClass=person)'
-    search_filter=add_search_filter(search_filter, 'objectClass=user', "|")
-    search_filter=add_search_filter(search_filter, 'objectClass=group', "|")
-    search_filter=add_search_filter(search_filter, 'objectClass=organizationalPerson', "|")
-    search_filter=add_search_filter(search_filter, 'objectClass=computer', "|")
+    search_filter = getDefaultFilterFor("cn")
     # Initialize Variables
     results = list()
     # Send Query to LDAP Server(s)
@@ -333,6 +361,7 @@ def get_children_cn(dn, connection, id=0):
 def get_children_ou(dn, connection, recursive=False, getCNs=False, id=0):
     # Initialize Variables
     results = list()
+    search_filter = getDefaultFilterFor("cn")
     # Send Query to LDAP Server(s)
     childrenOU = connection.extend.standard.paged_search(
         search_base=dn,
@@ -366,35 +395,6 @@ def get_children_ou(dn, connection, recursive=False, getCNs=False, id=0):
                     else:
                         currentEntity['children'].extend(ou_results)
             results.append(currentEntity)
-    return({
-        "results": results,
-        "currentID": id
-    })
-
-def get_children(dn, connection, recursive=False, getCNs=True, id=0):
-    """ Gets children for dn object in LDAP Server.
-
-    REQUIRED
-    dn: Object DN to query
-    connection: LDAP Connection Object, see function openLDAPConnection()
-
-    DEFAULTS
-    Recursive: False (Set this to True to get the entire subtree below)
-    getCNs: True (Set to False to get only children OUs)
-    id: 0 (Use this if you need to return the items with an id to your endpoint)
-    """
-    # Initialize Variables
-    results = list()
-    # Get CN Children Objects
-    if getCNs == True:
-        cn_results = get_children_cn(dn, connection, id)
-        id = cn_results['currentID']
-        results = cn_results['results']
-    # Get OU Children Objects
-    ou_results = get_children_ou(dn, connection, recursive, getCNs, id=id)
-    id = ou_results['currentID']
-    ou_results = ou_results['results']
-    results.extend(ou_results)
     return({
         "results": results,
         "currentID": id

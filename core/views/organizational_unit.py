@@ -5,12 +5,12 @@ from rest_framework.response import Response
 from rest_framework import viewsets
 from .mixins.organizational_unit import OrganizationalUnitMixin
 from rest_framework.exceptions import NotFound
-from core.exceptions.ldap import CouldNotOpenConnection
+from core.exceptions.ldap import CouldNotOpenConnection, CouldNotFetchDirtree
 from rest_framework.decorators import action
 from interlock_backend.ldap.connector import (
     openLDAPConnection,
     getFullDirectoryTree,
-    buildFilterFromDict
+    addSearchFilter,
 )
 from interlock_backend.ldap.encrypt import validateUser
 
@@ -50,9 +50,43 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         code = 0
         code_msg = 'ok'
 
-        # objectFilters = data['filter']
-        # if objectFilters != {} and objectFilters is not None:
-        #     queryFilter = buildFilterFromDict(objectFilters)
+        objectFilters = data['filter']
+        defaultOUFilters = {
+            "organizationalUnit" : "objectCategory",
+            "top" : "objectCategory",
+            "container" : "objectCategory",
+            "builtinDomain" : "objectCategory"
+        }
+        defaultCNFilters = {
+            "user" : "objectClass",
+            "person" : "objectClass",
+            "group" : "objectClass",
+            "organizationalPerson" : "objectClass",
+            "computer" : "objectClass"
+        }
+        searchFilterOU = ""
+        searchFilterCN = ""
+
+        # For Filter, Filter Type in...
+        # ( F-Type in this case is Filter Type, not a Jaguar :D )
+        for f, fType in defaultOUFilters.items():
+            if f not in objectFilters:
+                searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '|')
+        
+        # Build Negations in defaultOUFilters (They have to be in the outer part of the string)
+        for f, fType in defaultOUFilters.items():
+            if f in objectFilters:
+                searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '&', negate=True)
+
+        # Same but for CN Filters
+        for f, fType in defaultCNFilters.items():
+            if f not in objectFilters:
+                searchFilterCN = addSearchFilter(searchFilterCN, fType + "=" + f, '|')
+
+        # Build Negations in defaultCNFilters
+        for f, fType in defaultCNFilters.items():
+            if f in objectFilters:
+                searchFilterCN = addSearchFilter(searchFilterCN, fType + "=" + f, '&', negate=True)
 
         # Open LDAP Connection
         try:
@@ -61,7 +95,14 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
             print(e)
             raise CouldNotOpenConnection
 
-        dirList = getFullDirectoryTree()
+        # Should have:
+        # Filter by Object DN
+        # Filter by Attribute
+        try:
+            dirList = getFullDirectoryTree()
+        except Exception as e:
+            print(e)
+            raise CouldNotFetchDirtree
 
         # Close / Unbind LDAP Connection
         c.unbind()
