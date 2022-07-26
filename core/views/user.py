@@ -91,7 +91,8 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             'displayName' 
         ]
         for attr in remove_attributes:
-            valid_attributes.remove(str(attr))
+            if attr in valid_attributes:
+                valid_attributes.remove(str(attr))
 
         valid_attributes.append('is_enabled')
 

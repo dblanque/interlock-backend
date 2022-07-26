@@ -50,15 +50,14 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
         # Remove attributes to return as table headers
         valid_attributes = attributes
-        remove_attributes = [ 
-            'distinguishedName', 
-            'userAccountControl', 
-            'displayName' 
+        remove_attributes = [
+            'distinguishedName',
+            'displayName',
+            'member'
         ]
         for attr in remove_attributes:
-            valid_attributes.remove(str(attr))
-
-        valid_attributes.append('is_enabled')
+            if attr in valid_attributes:
+                valid_attributes.remove(str(attr))
 
         for group in list:
             # For each attribute in user object attributes
@@ -71,17 +70,9 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                         group_dict[str_key] = ""
                     else:
                         group_dict[str_key] = str_value
-                if attr_key == authUsernameIdentifier:
-                    group_dict['username'] = str_value
 
             # Add entry DN to response dictionary
             group_dict['dn'] = group.entry_dn
-
-            # Check if user is disabled
-            if ldap_adsi.list_user_perms(group, permissionToSearch="LDAP_UF_ACCOUNT_DISABLE") == True:
-                group_dict['is_enabled'] = False
-            else:
-                group_dict['is_enabled'] = True
 
             data.append(group_dict)
 
