@@ -580,7 +580,6 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         user = c.entries
         dn = str(user[0].distinguishedName)
-        print(dn)
         permList = ldap_adsi.list_user_perms(user[0], isObject=False)
         
         try:
