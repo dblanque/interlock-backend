@@ -6,6 +6,10 @@ class CouldNotOpenConnection(BaseException):
     status_code = 504
     default_detail = 'Could not bind to LDAP Server'
     default_code = 'ldap_bind_err'
+class CouldNotFetchDirtree(BaseException):
+    status_code = 504
+    default_detail = 'Could fetch Directory Tree from LDAP Server'
+    default_code = 'ldap_tree_err'
 class PortUnreachable(BaseException):
     status_code = 504
     default_detail = 'LDAP Server Port unreachable'
