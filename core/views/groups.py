@@ -66,10 +66,11 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
             # For each attribute in user object attributes
             group_dict = {}
             for attr_key in dir(group):
-                # TODO - Debug this
+                # Parse Group Type
                 if attr_key == 'groupType':
                     groupVal = int(str(getattr(group, attr_key)))
                     group_dict[attr_key] = self.getGroupType(groupTypeInt=groupVal)
+                # Do the standard for every other key
                 elif attr_key in valid_attributes:
                     str_key = str(attr_key)
                     str_value = str(getattr(group, attr_key))
@@ -154,6 +155,11 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                 str_value = str(getattr(group[0],attr_key))
                 if str_value == "[]":
                     group_dict[str_key] = ""
+                # Parse Group Type
+                elif str_key == 'groupType':
+                    groupVal = int(str(getattr(group[0], str_key)))
+                    group_dict[str_key] = self.getGroupType(groupTypeInt=groupVal)
+                # Do the standard for every other key
                 else:
                     group_dict[str_key] = str_value
 
