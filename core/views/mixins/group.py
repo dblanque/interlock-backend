@@ -6,32 +6,55 @@ import logging
 logger = logging.getLogger(__name__)
 class GroupViewMixin(viewsets.ViewSetMixin):
 
-    def getGroupType(self, groupTypeInt=None, groupTypeIntAsBin=None):
-        i = 0
+    def getGroupType(self, groupTypeInt=None, debug=False):
+        sum = 0
         groupTypes = []
-        if groupTypeInt is None and groupTypeIntAsBin is None:
+        groupTypeLastInt = int(str(groupTypeInt)[-1])
+        if groupTypeInt != 0 and groupTypeInt is None:
             raise Exception
-        if groupTypeIntAsBin is None:
-            groupTypeInt = str(groupTypeInt)
-            groupTypeInt = int(groupTypeInt)
-            groupTypeIntAsBin = str(bin(groupTypeInt))[3:].zfill(32)
+        if groupTypeInt < -1:
+            sum -= LDAP_GROUP_TYPES['GROUP_SECURITY']
+            groupTypes.append('GROUP_SECURITY')
 
-        groupTypeIntAsBin = str(groupTypeIntAsBin)
-        for n in range(0, 32): # Loop for each bit in 0-32
-            i += 1
-            if groupTypeIntAsBin[n] == "1": # If permission matches enter for loop to 
-                                        # search which one it is in the dictionary
-                for perm_name in LDAP_GROUP_TYPES:
-                    perm_binary = LDAP_GROUP_TYPES[perm_name]['val_bin']
-                    perm_index = LDAP_GROUP_TYPES[perm_name]['index']
-                    if perm_index == n:
-                        logger.debug("Group Int: " + groupTypeIntAsBin)
-                        logger.debug("Permission Name: " + perm_name)
-                        logger.debug("Permission Index: " + str(perm_index))
-                        logger.debug("Permission Index (From User): " + str(n))
-                        logger.debug("Permission Binary Value (From Constant): " + perm_binary)
-                        logger.debug("Permission Hex Value (From Constant): " + bin_as_hex(perm_binary))
-                        groupTypes.append(perm_name)
-        return groupTypes
+            if (groupTypeLastInt % 2) != 0:
+                sum += LDAP_GROUP_TYPES['GROUP_SYSTEM']
+                groupTypes.append('GROUP_SYSTEM')
+            if groupTypeInt == (sum + 2):
+                sum += LDAP_GROUP_TYPES['GROUP_GLOBAL']
+                groupTypes.append('GROUP_GLOBAL')
+            if groupTypeInt == (sum + 4):
+                sum += LDAP_GROUP_TYPES['GROUP_DOMAIN_LOCAL']
+                groupTypes.append('GROUP_DOMAIN_LOCAL')
+            if groupTypeInt == (sum + 8):
+                sum += LDAP_GROUP_TYPES['GROUP_UNIVERSAL']
+                groupTypes.append('GROUP_UNIVERSAL')
+        else:
+            groupTypes.append('GROUP_DISTRIBUTION')
+
+            if (groupTypeLastInt % 2) != 0:
+                sum += LDAP_GROUP_TYPES['GROUP_SYSTEM']
+                groupTypes.append('GROUP_SYSTEM')
+            if groupTypeInt == (sum + 2):
+                sum += LDAP_GROUP_TYPES['GROUP_GLOBAL']
+                groupTypes.append('GROUP_GLOBAL')
+            if groupTypeInt == (sum + 4):
+                sum += LDAP_GROUP_TYPES['GROUP_DOMAIN_LOCAL']
+                groupTypes.append('GROUP_DOMAIN_LOCAL')
+            if groupTypeInt == (sum + 8):
+                sum += LDAP_GROUP_TYPES['GROUP_UNIVERSAL']
+                groupTypes.append('GROUP_UNIVERSAL')
+
+        if sum != groupTypeInt:
+            return Exception
+        
+        for k, v in enumerate(groupTypes):
+            if v == 'GROUP_SYSTEM':
+                groupTypes.pop(k)
+                groupTypes.append(v)
+
+        if debug == True:
+            return [ groupTypes, groupTypeInt ]
+        else:
+            return groupTypes
 
     pass

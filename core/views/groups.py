@@ -69,7 +69,6 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                 # TODO - Debug this
                 if attr_key == 'groupType':
                     groupVal = int(str(getattr(group, attr_key)))
-                    groupValBin = str(bin(groupVal))[3:].zfill(32)
                     group_dict[attr_key] = self.getGroupType(groupTypeInt=groupVal)
                 elif attr_key in valid_attributes:
                     str_key = str(attr_key)
