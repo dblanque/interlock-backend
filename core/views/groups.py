@@ -1,3 +1,4 @@
+from email.headerregistry import Group
 from .base import BaseViewSet
 from .mixins.group import GroupViewMixin
 from core.exceptions import ldap as ldap_exceptions
@@ -22,7 +23,6 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
         ######################## Get Latest Settings ###########################
         ldap_settings_list = SettingsList()
-        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
         groupObjectClass = 'group'
         authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
         ########################################################################
@@ -35,11 +35,10 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
             raise ldap_exceptions.CouldNotOpenConnection
         attributes = [
             'cn',
-            'displayName',
-            authUsernameIdentifier,
             'mail',
             'member',
-            'distinguishedName'
+            'distinguishedName',
+            'groupType'
         ]
 
         objectClassFilter = ""
@@ -67,9 +66,14 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
             # For each attribute in user object attributes
             group_dict = {}
             for attr_key in dir(group):
-                if attr_key in valid_attributes:
+                # TODO - Debug this
+                if attr_key == 'groupType':
+                    groupVal = int(str(getattr(group, attr_key)))
+                    groupValBin = str(bin(groupVal))[3:].zfill(32)
+                    group_dict[attr_key] = self.getGroupType(groupTypeInt=groupVal)
+                elif attr_key in valid_attributes:
                     str_key = str(attr_key)
-                    str_value = str(getattr(group,attr_key))
+                    str_value = str(getattr(group, attr_key))
                     if str_value == "[]":
                         group_dict[str_key] = ""
                     else:
@@ -103,7 +107,6 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
         ######################## Get Latest Settings ###########################
         ldap_settings_list = SettingsList()
-        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
         groupObjectClass = 'group'
         authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
         ########################################################################
@@ -116,8 +119,6 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
             raise ldap_exceptions.CouldNotOpenConnection
         attributes = [
             'cn',
-            'displayName',
-            authUsernameIdentifier,
             'mail',
             'member',
             'distinguishedName',
