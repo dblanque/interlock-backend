@@ -36,7 +36,8 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         attributes = [
             'cn',
             'distinguishedName',
-            'groupType'
+            'groupType',
+            'member'
         ]
 
         objectClassFilter = ""
@@ -52,7 +53,8 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         # Remove attributes to return as table headers
         valid_attributes = attributes
         remove_attributes = [
-            'distinguishedName'
+            'distinguishedName',
+            'member'
         ]
 
         for attr in remove_attributes:
@@ -76,11 +78,18 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                     else:
                         group_dict[str_key] = str_value
 
+            # Check if group has Members
+            if str(getattr(group, 'member')) == "[]" or getattr(group, 'member') is None:
+                group_dict['hasMembers'] = False
+            else:
+                group_dict['hasMembers'] = True
+
             # Add entry DN to response dictionary
             group_dict['dn'] = group.entry_dn
 
             data.append(group_dict)
 
+        valid_attributes.append('hasMembers')
         # Close / Unbind LDAP Connection
         c.unbind()
         return Response(
