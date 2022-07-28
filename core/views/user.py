@@ -276,7 +276,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             'distinguishedName',
             'userPrincipalName',
         ]
-        c = ldap_adsi.getUserObject(c, userToSearch, attributes=attributes)
+        c = ldap_adsi.getLDAPObject(c, userToSearch, attributes=attributes)
         user = c.entries
 
         # If user exists, return error
@@ -391,7 +391,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             'userPrincipalName',
             'userAccountControl',
         ]
-        c = ldap_adsi.getUserObject(c, userToUpdate, attributes=ldap3.ALL_ATTRIBUTES)
+        c = ldap_adsi.getLDAPObject(c, userToUpdate, attributes=ldap3.ALL_ATTRIBUTES)
 
         user = c.entries
         dn = str(user[0].distinguishedName)
@@ -631,7 +631,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         else:
             logger.debug('Deleting with user dn search method')
             userToDelete = data['username']
-            c = ldap_adsi.getUserObject(c, userToDelete)
+            c = ldap_adsi.getLDAPObject(c, userToDelete)
             
             user = c.entries
             dn = str(user[0].distinguishedName)
@@ -675,7 +675,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         else:
             logger.debug('Updating with user dn search method')
             userToUpdate = data['username']
-            c = ldap_adsi.getUserObject(c, userToUpdate)
+            c = ldap_adsi.getLDAPObject(c, userToUpdate)
             
             user = c.entries
             dn = str(user[0].distinguishedName)

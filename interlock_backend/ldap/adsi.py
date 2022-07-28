@@ -310,7 +310,7 @@ def calc_permissions(permissionArray, addPerm='', removePerm=''):
 
     return int(userPermissions)
 
-def getUserObjectFilter(username):
+def getLDAPObjectFilter(username):
     ldap_settings_list = SettingsList()
     authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
     authObjectClass = ldap_settings_list.LDAP_AUTH_OBJECT_CLASS
@@ -329,7 +329,7 @@ def getUserObjectFilter(username):
         )
     return objectClassFilter
 
-def getUserObject(connection, username, attributes=[SettingsList().LDAP_AUTH_USERNAME_IDENTIFIER, 'distinguishedName'], objectClassFilter=None):
+def getLDAPObject(connection, username, attributes=[SettingsList().LDAP_AUTH_USERNAME_IDENTIFIER, 'distinguishedName'], objectClassFilter=None):
     """ Default: Search for the dn from a Username string param.
     
     Can also be used to fetch entire object from that username string or filtered attributes.
@@ -350,7 +350,7 @@ def getUserObject(connection, username, attributes=[SettingsList().LDAP_AUTH_USE
     """
     ldap_settings_list = SettingsList()
     if objectClassFilter == None:
-        objectClassFilter = getUserObjectFilter(username)
+        objectClassFilter = getLDAPObjectFilter(username)
 
     connection.search(
         ldap_settings_list.LDAP_AUTH_SEARCH_BASE, 

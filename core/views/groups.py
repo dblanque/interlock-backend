@@ -7,7 +7,7 @@ from rest_framework.decorators import action
 from interlock_backend.ldap import adsi as ldap_adsi
 from interlock_backend.ldap.encrypt import validateUser
 from interlock_backend.ldap.connector import openLDAPConnection
-from interlock_backend.ldap.adsi import addSearchFilter
+from interlock_backend.ldap.adsi import addSearchFilter, getLDAPObject
 from interlock_backend.ldap.settings_func import SettingsList
 from interlock_backend.ldap.groupTypes import LDAP_GROUP_TYPES
 from ldap3 import ALL_ATTRIBUTES
@@ -35,8 +35,6 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
             raise ldap_exceptions.CouldNotOpenConnection
         attributes = [
             'cn',
-            'mail',
-            'member',
             'distinguishedName',
             'groupType'
         ]
@@ -54,8 +52,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         # Remove attributes to return as table headers
         valid_attributes = attributes
         remove_attributes = [
-            'distinguishedName',
-            'member'
+            'distinguishedName'
         ]
 
         for attr in remove_attributes:
@@ -109,6 +106,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         ldap_settings_list = SettingsList()
         groupObjectClass = 'group'
         authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
         ########################################################################
 
         # Open LDAP Connection
@@ -159,6 +157,34 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                 elif str_key == 'groupType':
                     groupVal = int(str(getattr(group[0], str_key)))
                     group_dict[str_key] = self.getGroupType(groupTypeInt=groupVal)
+                elif str_key == 'member':
+                    memberArray = []
+                    memberAttributes = [
+                        'cn',
+                        'distinguishedName',
+                        authUsernameIdentifier,
+                        'givenName',
+                        'sn',
+                        'objectCategory'
+                    ]
+                    for u in getattr(group[0], str_key):
+                        c = ldap_adsi.getLDAPObject(c, u, attributes=memberAttributes, objectClassFilter=addSearchFilter("", "distinguishedName="+u))
+                        result = c.entries
+                        memberObject = {}
+                        for attr in memberAttributes:
+                            if attr in result[0]:
+                                attrValue = str(result[0][attr])
+                                print(attrValue)
+                                if attr == 'objectCategory':
+                                    memberObject[attr] = attrValue.split(',')[0].split('=')[-1].lower()
+                                elif attr == authUsernameIdentifier:
+                                    memberObject['username'] = attrValue.split(',')[0].split('=')[-1].lower()
+                                elif attrValue == "[]":
+                                    memberObject[attr] = ""
+                                else:
+                                    memberObject[attr] = attrValue
+                        memberArray.append(memberObject)
+                    group_dict[str_key] = memberArray
                 # Do the standard for every other key
                 else:
                     group_dict[str_key] = str_value
