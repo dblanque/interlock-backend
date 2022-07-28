@@ -304,6 +304,9 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         arguments = dict()
         arguments['userAccountControl'] = userPermissions
+        arguments[authUsernameIdentifier] = str(data['username']).lower()
+        arguments['objectClass'] = ['top', 'person', 'organizationalPerson', 'user']
+        arguments['userPrincipalName'] = data['username'] + '@' + authDomain
 
         excludeKeys = [
             'password', 
@@ -319,10 +322,6 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
                 logger.debug("Value for key above: " + data[key])
                 arguments[key] = data[key]
 
-        arguments['sAMAccountName'] = str(arguments['sAMAccountName']).lower()
-        arguments['objectClass'] = ['top', 'person', 'organizationalPerson', 'user']
-        arguments['userPrincipalName'] = data['username'] + '@' + authDomain
-        
         arguments['givenName'] = arguments['givenName'].capitalize()
         arguments['sn'] = arguments['sn'].capitalize()
 
