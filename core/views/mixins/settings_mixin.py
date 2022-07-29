@@ -65,11 +65,9 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
             if not testPort(ip, port, ldapAuthConnectTimeout):
                 exception = ldap_exceptions.PortUnreachable
                 data = {
-                    "data" : {
-                        "code": "ldap_port_err",
-                        "ipAddress": ip,
-                        "port": port,
-                    }
+                    "code": "ldap_port_err",
+                    "ipAddress": ip,
+                    "port": port,
                 }
                 exception.setDetail(exception, data)
                 raise exception
