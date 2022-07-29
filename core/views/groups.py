@@ -92,14 +92,15 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
         valid_attributes.append('hasMembers')
 
-        # Log this action to DB
-        logAction = Log(
-            user_id=request.user.id,
-            actionType="READ",
-            objectClass="GROUP",
-            affectedObject="ALL"
-        )
-        logAction.save()
+        if ldap_settings_list.LDAP_LOG_READ == True:
+            # Log this action to DB
+            logAction = Log(
+                user_id=request.user.id,
+                actionType="READ",
+                objectClass="GROUP",
+                affectedObject="ALL"
+            )
+            logAction.save()
 
         # Close / Unbind LDAP Connection
         c.unbind()
@@ -211,14 +212,15 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
             # Add entry DN to response dictionary
             group_dict['dn'] = group[0].entry_dn
 
-        # Log this action to DB
-        logAction = Log(
-            user_id=request.user.id,
-            actionType="READ",
-            objectClass="GROUP",
-            affectedObject=group_dict['cn']
-        )
-        logAction.save()
+        if ldap_settings_list.LDAP_LOG_READ == True:
+            # Log this action to DB
+            logAction = Log(
+                user_id=request.user.id,
+                actionType="READ",
+                objectClass="GROUP",
+                affectedObject=group_dict['cn']
+            )
+            logAction.save()
 
         # Close / Unbind LDAP Connection
         c.unbind()

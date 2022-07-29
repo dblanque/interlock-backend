@@ -12,6 +12,7 @@ from interlock_backend.ldap.connector import openLDAPConnection
 from interlock_backend.ldap.adsi import addSearchFilter
 from interlock_backend.ldap.dirtree import getFullDirectoryTree
 from interlock_backend.ldap.encrypt import validateUser
+from interlock_backend.ldap.settings_func import SettingsList
 
 class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
 
@@ -22,6 +23,8 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         code = 0
         code_msg = 'ok'
 
+        ldap_settings_list = SettingsList()
+
         # Open LDAP Connection
         try:
             c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
@@ -31,14 +34,15 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
 
         dirList = getFullDirectoryTree(getCNs=False)
 
-        # Log this action to DB
-        logAction = Log(
-            user_id=request.user.id,
-            actionType="READ",
-            objectClass="OU",
-            affectedObject="ALL"
-        )
-        logAction.save()
+        if ldap_settings_list.LDAP_LOG_READ == True:
+            # Log this action to DB
+            logAction = Log(
+                user_id=request.user.id,
+                actionType="READ",
+                objectClass="OU",
+                affectedObject="ALL"
+            )
+            logAction.save()
 
         # Close / Unbind LDAP Connection
         c.unbind()
@@ -57,6 +61,8 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         data = request.data
         code = 0
         code_msg = 'ok'
+
+        ldap_settings_list = SettingsList()
 
         objectFilters = data['filter']
         defaultOUFilters = {
@@ -112,14 +118,15 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
             print(e)
             raise CouldNotFetchDirtree
 
-        # Log this action to DB
-        logAction = Log(
-            user_id=request.user.id,
-            actionType="READ",
-            objectClass="LDAP",
-            affectedObject="ALL"
-        )
-        logAction.save()
+        if ldap_settings_list.LDAP_LOG_READ == True:
+            # Log this action to DB
+            logAction = Log(
+                user_id=request.user.id,
+                actionType="READ",
+                objectClass="LDAP",
+                affectedObject="ALL"
+            )
+            logAction.save()
 
         # Close / Unbind LDAP Connection
         c.unbind()
