@@ -312,7 +312,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             'password', 
             'passwordConfirm',
             'path',
-            'permission_list', # This array is parsed and calculated later
+            'permission_list', # This array was parsed and calculated, then changed to userAccountControl
             'distinguishedName', # We don't want the front-end generated DN
             'username' # LDAP Uses sAMAccountName
         ]
@@ -701,18 +701,99 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
     @action(detail=False, methods=['get'])
     def me(self, request):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request, requestUser=user, requireAdmin=False)
         data = {}
         code = 0
         data["username"] = request.user.username or ""
         data["first_name"] = request.user.first_name or ""
         data["last_name"] = request.user.last_name or ""
         data["email"] = request.user.email or ""
+        data["admin_allowed"] = request.user.is_superuser or False
         return Response(
              data={
                 'code': code,
                 'code_msg': 'ok',
                 'user': data
+             }
+        )
+
+    @action(detail=False,methods=['post'])
+    def fetchme(self, request):
+        user = request.user
+        validateUser(request=request, requestUser=user, requireAdmin=False)
+        code = 0
+        code_msg = 'ok'
+        data = request.data
+        userToSearch = user.username
+
+        ######################## Get Latest Settings ###########################
+        ldap_settings_list = SettingsList()
+        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
+        authObjectClass = ldap_settings_list.LDAP_AUTH_OBJECT_CLASS
+        authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+        ########################################################################
+
+        # Open LDAP Connection
+        try:
+            c = openLDAPConnection(user.dn, user.encryptedPassword)
+        except Exception as e:
+            print(e)
+            raise ldap_exceptions.CouldNotOpenConnection
+        attributes = [ 
+            'givenName', 
+            'sn', 
+            'displayName', 
+            authUsernameIdentifier, 
+            'mail',
+            'telephoneNumber',
+            'streetAddress',
+            'postalCode',
+            'l', # Local / City
+            'st', # State/Province
+            'countryCode', # INT
+            'co', # 2 Letter Code for Country
+            'c', # Full Country Name
+            'wWWHomePage',
+            'distinguishedName',
+            'userPrincipalName',
+            'whenCreated',
+            'whenChanged',
+            'lastLogon',
+            'badPwdCount',
+            'pwdLastSet'
+        ]
+
+        objectClassFilter = "(objectclass=" + authObjectClass + ")"
+
+        # Add filter for username
+        objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, authUsernameIdentifier + "=" + userToSearch)
+        c.search(
+            authSearchBase,
+            objectClassFilter,
+            attributes=attributes
+        )
+        user = c.entries
+
+        # For each attribute in user object attributes
+        user_dict = {}
+        for attr_key in attributes:
+            if attr_key in attributes:
+                str_key = str(attr_key)
+                str_value = str(getattr(user[0],attr_key))
+                if str_value == "[]":
+                    user_dict[str_key] = ""
+                else:
+                    user_dict[str_key] = str_value
+            if attr_key == authUsernameIdentifier:
+                user_dict['username'] = str_value
+
+        # Close / Unbind LDAP Connection
+        c.unbind()
+        return Response(
+             data={
+                'code': code,
+                'code_msg': code_msg,
+                'data': user_dict
              }
         )
 

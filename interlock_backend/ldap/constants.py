@@ -82,18 +82,26 @@ ADMIN_GROUP_TO_SEARCH = "CN=admins,OU=Administrators,DC=brconsulting"
 
 # TODO - Add setting to allow builtin Administrator superuser login or not
 def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
+    GROUP_TO_SEARCH = ADMIN_GROUP_TO_SEARCH
     if 'Administrator' in ldap_attributes[LDAP_AUTH_USER_FIELDS["username"]]:
         user.is_staff = True
         user.is_superuser = True
         user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
         user.save()
         pass
-    GROUP_TO_SEARCH = ADMIN_GROUP_TO_SEARCH
-    if 'memberOf' in ldap_attributes and GROUP_TO_SEARCH in ldap_attributes['memberOf']:
+    elif 'memberOf' in ldap_attributes and GROUP_TO_SEARCH in ldap_attributes['memberOf']:
         # Do staff shit here
         user.is_staff = True
         user.is_superuser = True
-        user.email = str(ldap_attributes['mail']).lstrip("['").rstrip("']") or ""
+        if user.email is not None:
+            user.email = str(ldap_attributes['mail']).lstrip("['").rstrip("']") or ""
+        user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
+        user.save()
+    else:
+        user.is_staff = True
+        user.is_superuser = False
+        if user.email is not None:
+            user.email = str(ldap_attributes['mail']).lstrip("['").rstrip("']") or ""
         user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
         user.save()
     pass

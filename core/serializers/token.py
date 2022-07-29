@@ -8,8 +8,9 @@ class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
         data = super().validate(attrs)
         """ self.user is set in super().validate() which also calls super().validate() """
         data["first_name"] = self.user.first_name or ""
-        data["email"] = self.user.email or ""
         data["last_name"] = self.user.last_name or ""
+        data["email"] = self.user.email or ""
+        data["admin_allowed"] = self.user.is_superuser or False
         return data
 
 

@@ -21,10 +21,13 @@ def decrypt(stringToDecrypt):
     decMessage = fernet.decrypt(stringToDecrypt).decode()
     return decMessage
 
-def validateUser(request, requestUser):
+def validateUser(request, requestUser, requireAdmin=True):
     user = requestUser
-    # Check user is_staff for any user that is not local default admin
-    if user.username != 'admin' and (user.is_staff == False or not user):
+    if requireAdmin == True or requireAdmin is None:
+        # Check user is_staff for any user that is not local default admin
+        if user.username != 'admin' and (user.is_superuser == False or not user):
+            raise PermissionDenied
+    elif user.is_staff != True:
         raise PermissionDenied
     # Check if Local Default Super-admin is deleted/disabled
     elif user.deleted == True:

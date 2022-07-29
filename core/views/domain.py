@@ -11,7 +11,7 @@ class DomainViewSet(viewsets.ViewSet, DomainViewMixin):
     @action(detail=False, methods=['get'])
     def details(self, request):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request, requestUser=user, requireAdmin=False)
         data = {}
         code = 0
         ldap_settings_list = SettingsList()
