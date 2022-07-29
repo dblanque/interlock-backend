@@ -108,6 +108,13 @@ def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
 
 LDAP_AUTH_SYNC_USER_RELATIONS = sync_user_relations
 
+LDAP_LOG_READ = False
+LDAP_LOG_CREATE = True
+LDAP_LOG_UPDATE = True
+LDAP_LOG_DELETE = True
+LDAP_LOG_OPEN_CONNECTION = False
+LDAP_LOG_CLOSE_CONNECTION = False
+
 SETTINGS_WITH_ALLOWABLE_OVERRIDE = {
     "LDAP_AUTH_URL":{ 
         "type": "ldap_uri", 
@@ -115,6 +122,24 @@ SETTINGS_WITH_ALLOWABLE_OVERRIDE = {
     },
     "LDAP_DOMAIN":{
         "value": "" 
+    },
+    "LDAP_LOG_READ":{
+        "type": "boolean",
+    },
+    "LDAP_LOG_CREATE":{
+        "type": "boolean",
+    },
+    "LDAP_LOG_UPDATE":{
+        "type": "boolean",
+    },
+    "LDAP_LOG_DELETE":{
+        "type": "boolean",
+    },
+    "LDAP_LOG_OPEN_CONNECTION":{
+        "type": "boolean",
+    },
+    "LDAP_LOG_CLOSE_CONNECTION":{
+        "type": "boolean",
     },
     "LDAP_AUTH_USE_TLS":{ 
         "type": "boolean", 
