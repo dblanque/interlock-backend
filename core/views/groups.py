@@ -183,7 +183,6 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                         for attr in memberAttributes:
                             if attr in result[0]:
                                 attrValue = str(result[0][attr])
-                                print(attrValue)
                                 if attr == 'objectCategory':
                                     memberObject[attr] = attrValue.split(',')[0].split('=')[-1].lower()
                                 elif attr == authUsernameIdentifier:

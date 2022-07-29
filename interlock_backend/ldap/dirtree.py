@@ -4,7 +4,7 @@ from interlock_backend.ldap.adsi import (
     LDAP_BUILTIN_OBJECTS,
     getDefaultFilterFor
 )
-from interlock_backend.ldap.settings_func import SettingsList
+from interlock_backend.ldap.settings_func import SettingsList, getSetting
 from interlock_backend.ldap.connector import openLDAPConnection
 import ldap3
 
@@ -108,6 +108,9 @@ def get_children(dn, connection, recursive=False, getCNs=True, id=0):
     })
 
 def get_children_cn(dn, connection, id=0):
+    ######################## Get Latest Settings ###########################
+    authUsernameIdentifier = getSetting('LDAP_AUTH_USERNAME_IDENTIFIER')
+    ########################################################################
     # Add filters
     search_filter = getDefaultFilterFor("cn")
     # Initialize Variables
@@ -117,7 +120,13 @@ def get_children_cn(dn, connection, id=0):
         search_base=dn,
         search_filter=search_filter,
         search_scope='LEVEL',
-        attributes=['objectClass', 'objectCategory','sAMAccountName'])
+        attributes=[
+            'objectClass', 
+            'objectCategory',
+            authUsernameIdentifier,
+            'cn'
+        ]
+    )
     # Loops for every CN Object in the Query Result and adds it to array
     for cnObject in cnSearch:
         currentEntity = {}
@@ -125,8 +134,11 @@ def get_children_cn(dn, connection, id=0):
             if cnObject['dn'] != dn and 'dn' in cnObject:
                 id += 1
                 objectClasses = cnObject['attributes']['objectClass']
-                if 'user' or 'person' in objectClasses:
-                    currentEntity['username'] = str(cnObject['attributes']['sAMAccountName'][0])
+                objectCategory = str(cnObject['attributes']['objectCategory']).split(',')[0].split('=')[-1].lower()
+                if objectCategory == 'user' or objectCategory == 'person':
+                    currentEntity['username'] = str(cnObject['attributes'][authUsernameIdentifier][0])
+                elif objectCategory == 'group':
+                    currentEntity['cn'] = str(cnObject['attributes']['cn'][0])
                 if 'builtinDomain' in objectClasses:
                     currentEntity['builtin'] = True
                 objectCategory = cnObject['attributes']['objectCategory']
