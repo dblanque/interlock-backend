@@ -271,7 +271,13 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         data = request.data
 
         if data['password'] != data['passwordConfirm']:
-            raise user_exceptions.UserPasswordsDontMatch
+            exception = user_exceptions.UserPasswordsDontMatch
+            data = {
+                "code": "user_passwords_dont_match",
+                "user": data['username']
+            }
+            exception.setDetail(exception, data)
+            raise exception
 
         userToSearch = data["username"]
 
@@ -301,7 +307,13 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         # If user exists, return error
         if user != []:
-            raise user_exceptions.UserExists
+            exception = user_exceptions.UserExists
+            data = {
+                "code": "user_exists",
+                "user": data['username']
+            }
+            exception.setDetail(exception, data)
+            raise exception
 
         userDN = 'CN='+data['username']+','+data['path'] or 'CN='+data['username']+',OU=Users,'+authSearchBase
         userPermissions = 0
