@@ -18,6 +18,7 @@ from interlock_backend.ldap.settings_func import (
 )
 import ldap3
 from ldap3.core.exceptions import LDAPException
+from core.models import Log, User
 import ssl
 import logging
 
@@ -52,13 +53,14 @@ def authenticate(*args, **kwargs):
             return None
         user = c.get_user(**ldap_kwargs)
         user.encryptedPassword = encryptedPass
+        user.is_local = False
         user.save()
         return user
 
 def openLDAPConnection(
         user_dn=getSetting('LDAP_AUTH_CONNECTION_USER_DN'), 
         password=getSetting('LDAP_AUTH_CONNECTION_PASSWORD'),
-        username=None,
+        user=None
     ):
 
     ldap_settings_list = SettingsList()
@@ -69,14 +71,15 @@ def openLDAPConnection(
     ldapAuthUseTLS = ldap_settings_list.LDAP_AUTH_USE_TLS
     ldapAuthTLSVersion = ldap_settings_list.LDAP_AUTH_TLS_VERSION
 
-    if username == 'admin':
-        user_dn = ldap_settings_list.LDAP_AUTH_CONNECTION_USER_DN
-        password = ldapAuthConnectionPassword
+    if user is not None:
+        if user.username == 'admin' and user.is_local == True:
+            user_dn = ldap_settings_list.LDAP_AUTH_CONNECTION_USER_DN
+            password = ldapAuthConnectionPassword
 
     format_username = import_func(ldap_settings_list.LDAP_AUTH_FORMAT_USERNAME)
 
     logger.debug("Test Connection Endpoint Parameters: ")
-    logger.debug(username)
+    logger.debug(user)
     logger.debug(user_dn)
     logger.debug(password)
     # logger.debug(ldapAuthConnectionPassword)
@@ -105,6 +108,14 @@ def openLDAPConnection(
         )
     # Connect.
     try:
+        # Uncomment below who opens connections log to database
+        # if user is not None:
+        #     logAction = Log(
+        #         user_id=user.id,
+        #         actionType="OPEN",
+        #         objectClass="CONN"
+        #     )
+        #     logAction.save()
         # Include SSL / TLS, if requested.
         connection_args = {
             "user": user_dn,

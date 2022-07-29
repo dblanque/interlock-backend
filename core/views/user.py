@@ -11,7 +11,7 @@ from core.exceptions import (
     users as user_exceptions, 
     ldap as ldap_exceptions
 )
-from core.models import User
+from core.models import Log, User
 from rest_framework.decorators import action
 from ldap3 import (
     MODIFY_ADD,
@@ -56,7 +56,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -82,6 +82,15 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             attributes=attributes
         )
         list = c.entries
+
+        # Log this action to DB
+        logAction = Log(
+            user_id=request.user.id,
+            actionType="READ",
+            objectClass="USER",
+            affectedObject="ALL"
+        )
+        logAction.save()
 
         # Remove attributes to return as table headers
         valid_attributes = attributes
@@ -154,7 +163,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -192,7 +201,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         # Exclude Computer Accounts if settings allow it
         if excludeComputerAccounts == True:
             objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "!(objectclass=computer)")
-        
+
         # Add filter for username
         objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, authUsernameIdentifier + "=" + userToSearch)
         c.search(
@@ -201,6 +210,15 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             attributes=attributes
         )
         user = c.entries
+
+        # Log this action to DB
+        logAction = Log(
+            user_id=request.user.id,
+            actionType="READ",
+            objectClass="USER",
+            affectedObject=data['username']
+        )
+        logAction.save()
 
         # For each attribute in user object attributes
         user_dict = {}
@@ -265,7 +283,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -330,6 +348,15 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         # TODO - Test if password changes correctly?
         c.extend.microsoft.modify_password(userDN, data['password'])
 
+        # Log this action to DB
+        logAction = Log(
+            user_id=request.user.id,
+            actionType="CREATE",
+            objectClass="USER",
+            affectedObject=data['username']
+        )
+        logAction.save()
+
         # Unbind the connection
         c.unbind()
         return Response(
@@ -378,7 +405,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -447,6 +474,15 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         logger.debug(c.result)
 
+        # Log this action to DB
+        logAction = Log(
+            user_id=request.user.id,
+            actionType="UPDATE",
+            objectClass="USER",
+            affectedObject=data['username']
+        )
+        logAction.save()
+
         # Unbind the connection
         c.unbind()
         return Response(
@@ -473,10 +509,10 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         excludeComputerAccounts = ldap_settings_list.EXCLUDE_COMPUTER_ACCOUNTS
         ########################################################################
 
-        userToEnable = data['username']
+        userToDisable = data['username']
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -496,7 +532,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         # Add filter for username
         objectClassFilter = ldap_adsi.addSearchFilter(
             objectClassFilter, 
-            authUsernameIdentifier + "=" + userToEnable
+            authUsernameIdentifier + "=" + userToDisable
             )
 
         c.search(
@@ -514,6 +550,16 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         except:
             print(traceback.format_exc())
             raise user_exceptions.user_exceptions.UserPermissionError
+
+        # Log this action to DB
+        logAction = Log(
+            user_id=request.user.id,
+            actionType="UPDATE",
+            objectClass="USER",
+            affectedObject=userToDisable,
+            extraMessage="DISABLE"
+        )
+        logAction.save()
 
         c.modify(dn,
             {'userAccountControl':[(MODIFY_REPLACE, [ newPermINT ])]}
@@ -549,7 +595,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         userToEnable = data['username']
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -588,6 +634,16 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             print(traceback.format_exc())
             raise user_exceptions.UserPermissionError
 
+        # Log this action to DB
+        logAction = Log(
+            user_id=request.user.id,
+            actionType="UPDATE",
+            objectClass="USER",
+            affectedObject=userToEnable,
+            extraMessage="ENABLE"
+        )
+        logAction.save()
+
         c.modify(dn,
             {'userAccountControl':[(MODIFY_REPLACE, [ newPermINT ])]}
         )
@@ -613,7 +669,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -640,6 +696,15 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
                 raise user_exceptions.UserDoesNotExist
             c.delete(dn)
 
+        # Log this action to DB
+        logAction = Log(
+            user_id=request.user.id,
+            actionType="DELETE",
+            objectClass="USER",
+            affectedObject=data['username']
+        )
+        logAction.save()
+
         # Unbind the connection
         c.unbind()
         return Response(
@@ -660,7 +725,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -686,7 +751,197 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         if data['password'] != data['passwordConfirm']:
             raise user_exceptions.UserPasswordsDontMatch
 
+        # Log this action to DB
+        logAction = Log(
+            user_id=request.user.id,
+            actionType="UPDATE",
+            objectClass="USER",
+            affectedObject=data['username'],
+            extraMessage="CHANGED_PASSWORD"
+        )
+        logAction.save()
+
         c.extend.microsoft.modify_password(dn, data['password'])
+
+        # Unbind the connection
+        c.unbind()
+        return Response(
+             data={
+                'code': code,
+                'code_msg': code_msg,
+                'data': data
+             }
+        )
+
+    @action(detail=False, methods=['post'])
+    def changePasswordSelf(self, request, pk=None):
+        user = request.user
+        validateUser(request=request, requestUser=user, requireAdmin=False)
+        code = 0
+        code_msg = 'ok'
+        data = request.data
+
+        if data['username'] != user.username:
+            raise PermissionDenied
+
+        # Open LDAP Connection
+        try:
+            c = openLDAPConnection()
+        except Exception as e:
+            print(e)
+            raise ldap_exceptions.CouldNotOpenConnection
+
+        # If data request for deletion has user DN
+        if 'dn' in data.keys() and data['dn'] != "":
+            logger.debug('Updating with dn obtained from front-end')
+            logger.debug(data['dn'])
+            dn = data['dn']
+        # Else, search for username dn
+        else:
+            logger.debug('Updating with user dn search method')
+            userToUpdate = user.username
+            c = ldap_adsi.getLDAPObject(c, userToUpdate)
+            
+            user = c.entries
+            dn = str(user[0].distinguishedName)
+            logger.debug(dn)
+
+        if not dn or dn == "":
+            raise user_exceptions.UserDoesNotExist
+
+        if data['password'] != data['passwordConfirm']:
+            raise user_exceptions.UserPasswordsDontMatch
+
+        c.extend.microsoft.modify_password(dn, data['password'])
+
+        # Log this action to DB
+        logAction = Log(
+            user_id=request.user.id,
+            actionType="UPDATE",
+            objectClass="USER",
+            affectedObject=data['username'],
+            extraMessage="CHANGED_PASSWORD"
+        )
+        logAction.save()
+
+        # Unbind the connection
+        c.unbind()
+        return Response(
+             data={
+                'code': code,
+                'code_msg': code_msg,
+                'data': data
+             }
+        )
+
+    @action(detail=False, methods=['put', 'post'])
+    def updateSelf(self, request, pk=None):
+        user = request.user
+        validateUser(request=request, requestUser=user, requireAdmin=False)
+        code = 0
+        code_msg = 'ok'
+        data = request.data
+
+        if data['username'] != user.username:
+            raise PermissionDenied
+
+        ######################## Get Latest Settings ###########################
+        ldap_settings_list = SettingsList()
+        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
+        ########################################################################
+
+        excludeKeys = [
+            'password', 
+            'passwordConfirm',
+            'path',
+            'permission_list', # This array is parsed and calculated later
+            'distinguishedName', # We don't want the front-end generated DN
+            'username', # LDAP Uses sAMAccountName
+            'whenChanged',
+            'whenCreated',
+            'lastLogon',
+            'badPwdCount',
+            'pwdLastSet',
+            'is_enabled',
+            'sAMAccountType',
+            'objectCategory',
+            'userAccountControl',
+            'objectClass',
+            'primaryGroupID'
+        ]
+
+        userToUpdate = data['username']
+        for key in excludeKeys:
+            if key in data:
+                del data[key]
+
+        # Open LDAP Connection
+        try:
+            c = openLDAPConnection()
+        except Exception as e:
+            print(e)
+            raise ldap_exceptions.CouldNotOpenConnection
+
+        # Get basic attributes for this user from AD to compare query and get dn
+        attributes = [
+            authUsernameIdentifier,
+            'distinguishedName',
+            'userPrincipalName',
+            'userAccountControl',
+        ]
+        c = ldap_adsi.getLDAPObject(c, userToUpdate, attributes=ldap3.ALL_ATTRIBUTES)
+
+        user = c.entries
+        dn = str(user[0].distinguishedName)
+
+        if data['co'] != "":
+            # Set numeric country code (DCC Standard)
+            data['countryCode'] = LDAP_COUNTRIES[data['co']]['dccCode']
+            # Set ISO Country Code
+            data['c'] = LDAP_COUNTRIES[data['co']]['isoCode']
+
+        arguments = dict()
+        for key in data:
+                try:
+                    if key in user[0].entry_attributes and data[key] == "":
+                        operation = MODIFY_DELETE
+                        c.modify(
+                            dn,
+                            {key: [( operation ), []]},
+                        )
+                    elif data[key] != "":
+                        operation = MODIFY_REPLACE
+                        if isinstance(data[key], list):
+                            c.modify(
+                                dn,
+                                {key: [( operation, data[key])]},
+                            )
+                        else:
+                            c.modify(
+                                dn,
+                                {key: [( operation, [ data[key] ])]},
+                            )
+                    else:
+                        logger.info("No suitable operation for attribute " + key)
+                        pass
+                except:
+                    print(traceback.format_exc())
+                    logger.warn("Unable to update user '" + userToUpdate + "' with attribute '" + key + "'")
+                    logger.warn("Attribute Value:" + data[key])
+                    logger.warn("Operation Type: " + operation)
+                    raise user_exceptions.UserUpdateError
+
+        logger.debug(c.result)
+
+        # Log this action to DB
+        logAction = Log(
+            user_id=request.user.id,
+            actionType="UPDATE",
+            objectClass="USER",
+            affectedObject=data['username'],
+            extraMessage="END_USER_UPDATED"
+        )
+        logAction.save()
 
         # Unbind the connection
         c.unbind()
@@ -735,7 +990,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection

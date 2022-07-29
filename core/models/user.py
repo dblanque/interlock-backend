@@ -178,3 +178,4 @@ class User(BaseUser):
     last_name = models.CharField(_("Last name"), max_length=255, null=True, blank=True)
     email = models.EmailField(_("Email"), null=True, blank=True)
     dn = models.CharField(_("distinguishedName"), max_length=128, null=True, blank=True)
+    is_local = models.BooleanField(null=False, default=True)

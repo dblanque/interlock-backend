@@ -4,6 +4,7 @@ from ldap3 import LEVEL
 from rest_framework.response import Response
 from rest_framework import viewsets
 from .mixins.organizational_unit import OrganizationalUnitMixin
+from core.models import Log
 from rest_framework.exceptions import NotFound
 from core.exceptions.ldap import CouldNotOpenConnection, CouldNotFetchDirtree
 from rest_framework.decorators import action
@@ -23,12 +24,21 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
         except Exception as e:
             print(e)
             raise CouldNotOpenConnection
 
         dirList = getFullDirectoryTree(getCNs=False)
+
+        # Log this action to DB
+        logAction = Log(
+            user_id=request.user.id,
+            actionType="READ",
+            objectClass="OU",
+            affectedObject="ALL"
+        )
+        logAction.save()
 
         # Close / Unbind LDAP Connection
         c.unbind()
@@ -88,7 +98,7 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
         except Exception as e:
             print(e)
             raise CouldNotOpenConnection
@@ -101,6 +111,15 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         except Exception as e:
             print(e)
             raise CouldNotFetchDirtree
+
+        # Log this action to DB
+        logAction = Log(
+            user_id=request.user.id,
+            actionType="READ",
+            objectClass="LDAP",
+            affectedObject="ALL"
+        )
+        logAction.save()
 
         # Close / Unbind LDAP Connection
         c.unbind()
@@ -122,7 +141,7 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
         except Exception as e:
             print(e)
             raise CouldNotOpenConnection

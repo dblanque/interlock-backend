@@ -2,6 +2,7 @@ from email.headerregistry import Group
 from .base import BaseViewSet
 from .mixins.group import GroupViewMixin
 from core.exceptions import ldap as ldap_exceptions
+from core.models import Log
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from interlock_backend.ldap import adsi as ldap_adsi
@@ -15,8 +16,8 @@ from ldap3 import ALL_ATTRIBUTES
 class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
     def list(self, request):
-        group = request.user
-        validateUser(request=request, requestUser=group)
+        user = request.user
+        validateUser(request=request, requestUser=user)
         data = []
         code = 0
         code_msg = 'ok'
@@ -29,7 +30,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(group.dn, group.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -62,7 +63,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                 valid_attributes.remove(str(attr))
 
         for group in list:
-            # For each attribute in user object attributes
+            # For each attribute in group object attributes
             group_dict = {}
             for attr_key in dir(group):
                 # Parse Group Type
@@ -90,6 +91,16 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
             data.append(group_dict)
 
         valid_attributes.append('hasMembers')
+
+        # Log this action to DB
+        logAction = Log(
+            user_id=request.user.id,
+            actionType="READ",
+            objectClass="GROUP",
+            affectedObject="ALL"
+        )
+        logAction.save()
+
         # Close / Unbind LDAP Connection
         c.unbind()
         return Response(
@@ -103,8 +114,8 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
     @action(detail=False,methods=['post'])
     def fetch(self, request):
-        group = request.user
-        validateUser(request=request, requestUser=group)
+        user = request.user
+        validateUser(request=request, requestUser=user)
         data = []
         code = 0
         code_msg = 'ok'
@@ -120,7 +131,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(group.dn, group.encryptedPassword)
+            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -154,7 +165,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
             if attr in valid_attributes:
                 valid_attributes.remove(str(attr))
 
-        # For each attribute in user object attributes
+        # For each attribute in group object attributes
         group_dict = {}
         for attr_key in dir(group[0]):
             if attr_key in valid_attributes:
@@ -199,6 +210,15 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
             # Add entry DN to response dictionary
             group_dict['dn'] = group[0].entry_dn
+
+        # Log this action to DB
+        logAction = Log(
+            user_id=request.user.id,
+            actionType="READ",
+            objectClass="GROUP",
+            affectedObject=group_dict['cn']
+        )
+        logAction.save()
 
         # Close / Unbind LDAP Connection
         c.unbind()
