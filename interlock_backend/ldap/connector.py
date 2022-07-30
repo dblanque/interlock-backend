@@ -32,7 +32,9 @@ def authenticate(*args, **kwargs):
     The user identifier should be keyword arguments matching the fields
     in settings.LDAP_AUTH_USER_LOOKUP_FIELDS, plus a `password` argument.
     """
-    ldap_settings_list = SettingsList()
+    ldap_settings_list = SettingsList(**{"search":{
+        'LDAP_AUTH_USER_LOOKUP_FIELDS',
+    }})
     password = kwargs.pop("password", None)
     auth_user_lookup_fields = frozenset(ldap_settings_list.LDAP_AUTH_USER_LOOKUP_FIELDS)
     ldap_kwargs = {
@@ -63,7 +65,17 @@ def openLDAPConnection(
         user=None
     ):
 
-    ldap_settings_list = SettingsList()
+    ldap_settings_list = SettingsList(**{"search":{
+        'LDAP_AUTH_URL',
+        'LDAP_AUTH_CONNECTION_USER_DN',
+        'LDAP_AUTH_CONNECTION_PASSWORD',
+        'LDAP_AUTH_CONNECT_TIMEOUT',
+        'LDAP_AUTH_RECEIVE_TIMEOUT',
+        'LDAP_AUTH_USE_TLS',
+        'LDAP_AUTH_TLS_VERSION',
+        'LDAP_AUTH_FORMAT_USERNAME',
+        'LDAP_LOG_OPEN_CONNECTION'
+    }})
     ldapAuthURL = ldap_settings_list.LDAP_AUTH_URL
     ldapAuthConnectionPassword = ldap_settings_list.LDAP_AUTH_CONNECTION_PASSWORD
     ldapAuthConnectTimeout = ldap_settings_list.LDAP_AUTH_CONNECT_TIMEOUT
@@ -108,14 +120,14 @@ def openLDAPConnection(
         )
     # Connect.
     try:
-        # Uncomment below who opens connections log to database
-        # if user is not None:
-        #     logAction = Log(
-        #         user_id=user.id,
-        #         actionType="OPEN",
-        #         objectClass="CONN"
-        #     )
-        #     logAction.save()
+        # LOG Open Connection Events
+        if user is not None and ldap_settings_list.LDAP_LOG_OPEN_CONNECTION == True:
+            logAction = Log(
+                user_id=user.id,
+                actionType="OPEN",
+                objectClass="CONN"
+            )
+            logAction.save()
         # Include SSL / TLS, if requested.
         connection_args = {
             "user": user_dn,
@@ -167,7 +179,9 @@ def testLDAPConnection(
         ldapAuthUseTLS,
         ldapAuthTLSVersion
     ):
-    ldap_settings_list = SettingsList()
+    ldap_settings_list = SettingsList(**{"search":{
+        'LDAP_AUTH_FORMAT_USERNAME'
+    }})
     format_username = import_func(ldap_settings_list.LDAP_AUTH_FORMAT_USERNAME)
 
     if password != ldapAuthConnectionPassword and username != 'admin':

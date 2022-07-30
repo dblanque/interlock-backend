@@ -25,6 +25,7 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
         data = {}
         code = 0
 
+        # Gets front-end parsed settings
         data = getSettingsList()
         data['DEFAULT_ADMIN_ENABLED'] = self.getAdminStatus()
 

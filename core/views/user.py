@@ -47,7 +47,13 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         code_msg = 'ok'
 
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList()
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_AUTH_USERNAME_IDENTIFIER',
+            'LDAP_AUTH_OBJECT_CLASS',
+            'LDAP_AUTH_SEARCH_BASE',
+            'EXCLUDE_COMPUTER_ACCOUNTS',
+            'LDAP_LOG_READ'
+        }})
         authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
         authObjectClass = ldap_settings_list.LDAP_AUTH_OBJECT_CLASS
         authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
@@ -155,7 +161,13 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         userToSearch = data["username"]
 
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList()
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_AUTH_USERNAME_IDENTIFIER',
+            'LDAP_AUTH_OBJECT_CLASS',
+            'LDAP_AUTH_SEARCH_BASE',
+            'EXCLUDE_COMPUTER_ACCOUNTS',
+            'LDAP_LOG_READ'
+        }})
         authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
         authObjectClass = ldap_settings_list.LDAP_AUTH_OBJECT_CLASS
         authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
@@ -282,7 +294,13 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         userToSearch = data["username"]
 
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList()
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_AUTH_USERNAME_IDENTIFIER',
+            'LDAP_AUTH_OBJECT_CLASS',
+            'LDAP_DOMAIN',
+            'LDAP_AUTH_SEARCH_BASE',
+            'LDAP_LOG_CREATE'
+        }})
         authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
         authObjectClass = ldap_settings_list.LDAP_AUTH_OBJECT_CLASS
         authDomain = ldap_settings_list.LDAP_DOMAIN
@@ -390,7 +408,10 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         data = request.data
 
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList()
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_AUTH_USERNAME_IDENTIFIER',
+            'LDAP_LOG_UPDATE'
+        }})
         authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
         ########################################################################
 
@@ -518,7 +539,13 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         data = request.data
 
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList()
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_AUTH_SEARCH_BASE',
+            'LDAP_AUTH_USERNAME_IDENTIFIER',
+            'LDAP_AUTH_OBJECT_CLASS',
+            'EXCLUDE_COMPUTER_ACCOUNTS',
+            'LDAP_LOG_UPDATE'
+        }})
         authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
         authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
         authObjectClass = ldap_settings_list.LDAP_AUTH_OBJECT_CLASS
@@ -602,7 +629,13 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         data = request.data
 
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList()
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_AUTH_SEARCH_BASE',
+            'LDAP_AUTH_USERNAME_IDENTIFIER',
+            'LDAP_AUTH_OBJECT_CLASS',
+            'EXCLUDE_COMPUTER_ACCOUNTS',
+            'LDAP_LOG_UPDATE'
+        }})
         authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
         authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
         authObjectClass = ldap_settings_list.LDAP_AUTH_OBJECT_CLASS
@@ -685,7 +718,9 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         code_msg = 'ok'
         data = request.data
 
-        ldap_settings_list = SettingsList()
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_LOG_DELETE'
+        }})
 
         # Open LDAP Connection
         try:
@@ -744,7 +779,9 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         code_msg = 'ok'
         data = request.data
 
-        ldap_settings_list = SettingsList()
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_LOG_UPDATE'
+        }})
 
         # Open LDAP Connection
         try:
@@ -805,7 +842,9 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         code_msg = 'ok'
         data = request.data
 
-        ldap_settings_list = SettingsList()
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_LOG_UPDATE'
+        }})
 
         if data['username'] != user.username:
             raise PermissionDenied
@@ -873,7 +912,10 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             raise PermissionDenied
 
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList()
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_AUTH_USERNAME_IDENTIFIER',
+            'LDAP_LOG_UPDATE'
+        }})
         authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
         ########################################################################
 
@@ -927,6 +969,8 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             # Set ISO Country Code
             data['c'] = LDAP_COUNTRIES[data['co']]['isoCode']
 
+        # We need to check if the attributes exist in the LDAP Object already
+        # To know what operation to apply. This is VERY important.
         arguments = dict()
         for key in data:
                 try:
@@ -1010,7 +1054,11 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         userToSearch = user.username
 
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList()
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_AUTH_USERNAME_IDENTIFIER',
+            'LDAP_AUTH_OBJECT_CLASS',
+            'LDAP_AUTH_SEARCH_BASE'
+        }})
         authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
         authObjectClass = ldap_settings_list.LDAP_AUTH_OBJECT_CLASS
         authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE

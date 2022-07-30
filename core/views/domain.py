@@ -14,7 +14,7 @@ class DomainViewSet(viewsets.ViewSet, DomainViewMixin):
         validateUser(request=request, requestUser=user, requireAdmin=False)
         data = {}
         code = 0
-        ldap_settings_list = SettingsList()
+        ldap_settings_list = SettingsList(**{"search":{'LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN', 'LDAP_DOMAIN', 'LDAP_AUTH_SEARCH_BASE'}})
         data["realm"] = ldap_settings_list.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN or ""
         data["name"] = ldap_settings_list.LDAP_DOMAIN or ""
         data["basedn"] = ldap_settings_list.LDAP_AUTH_SEARCH_BASE or ""

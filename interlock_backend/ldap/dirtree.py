@@ -21,7 +21,9 @@ def getBaseLevelDirectoryTree(queryFilter=None):
 
     Returns a list/array.
     """
-    ldap_settings_list = SettingsList()
+    ldap_settings_list = SettingsList(**{"search":{
+        'LDAP_AUTH_SEARCH_BASE'
+    }})
 
     connection = openLDAPConnection()
 

@@ -23,7 +23,10 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         code_msg = 'ok'
 
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList()
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_AUTH_SEARCH_BASE',
+            'LDAP_LOG_READ'
+        }})
         groupObjectClass = 'group'
         authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
         ########################################################################
@@ -124,7 +127,11 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         groupDnSearch = request.data['group']
 
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList()
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_AUTH_SEARCH_BASE',
+            'LDAP_AUTH_USERNAME_IDENTIFIER',
+            'LDAP_LOG_READ'
+        }})
         groupObjectClass = 'group'
         authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
         authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER

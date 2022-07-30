@@ -23,7 +23,7 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         code = 0
         code_msg = 'ok'
 
-        ldap_settings_list = SettingsList()
+        ldap_settings_list = SettingsList(**{"search":{'LDAP_LOG_READ'}})
 
         # Open LDAP Connection
         try:
@@ -62,7 +62,7 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         code = 0
         code_msg = 'ok'
 
-        ldap_settings_list = SettingsList()
+        ldap_settings_list = SettingsList(**{"search":{'LDAP_LOG_READ'}})
 
         objectFilters = data['filter']
         defaultOUFilters = {

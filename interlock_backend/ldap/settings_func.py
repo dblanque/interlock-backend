@@ -18,11 +18,19 @@ logger = logging.getLogger(__name__)
 class SettingsList():
     def __init__(self,**kwargs):
         self.name = 'SettingsList'
-        for c in constantDictionary:
-            if c in SETTINGS_WITH_ALLOWABLE_OVERRIDE:
-                setattr(self, c, getSetting(c))
-            else:
-                setattr(self, c, constantDictionary[c])
+        if 'search' in kwargs:
+            for arg in kwargs['search']:
+                if arg in SETTINGS_WITH_ALLOWABLE_OVERRIDE:
+                    setattr(self, arg, getSetting(arg))
+                else:
+                    setattr(self, arg, constantDictionary[arg])
+        else:
+            for setting in constantDictionary:
+                if setting in SETTINGS_WITH_ALLOWABLE_OVERRIDE:
+                    setattr(self, setting, getSetting(setting))
+                else:
+                    setattr(self, setting, constantDictionary[setting])
+
 
 def normalizeValues(settingKey, settingDict):
     """
