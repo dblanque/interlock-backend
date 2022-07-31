@@ -2,7 +2,7 @@ from email.headerregistry import Group
 from .base import BaseViewSet
 from .mixins.group import GroupViewMixin
 from core.exceptions import ldap as ldap_exceptions
-from core.models import Log
+from core.models.log import logToDB
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from interlock_backend.ldap import adsi as ldap_adsi
@@ -97,13 +97,12 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
         if ldap_settings_list.LDAP_LOG_READ == True:
             # Log this action to DB
-            logAction = Log(
+            logToDB(
                 user_id=request.user.id,
                 actionType="READ",
                 objectClass="GROUP",
                 affectedObject="ALL"
             )
-            logAction.save()
 
         # Close / Unbind LDAP Connection
         c.unbind()
@@ -221,13 +220,12 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
         if ldap_settings_list.LDAP_LOG_READ == True:
             # Log this action to DB
-            logAction = Log(
+            logToDB(
                 user_id=request.user.id,
                 actionType="READ",
                 objectClass="GROUP",
                 affectedObject=group_dict['cn']
             )
-            logAction.save()
 
         # Close / Unbind LDAP Connection
         c.unbind()

@@ -122,12 +122,11 @@ def openLDAPConnection(
     try:
         # LOG Open Connection Events
         if user is not None and ldap_settings_list.LDAP_LOG_OPEN_CONNECTION == True:
-            logAction = Log(
+            logToDB(
                 user_id=user.id,
                 actionType="OPEN",
                 objectClass="CONN"
             )
-            logAction.save()
         # Include SSL / TLS, if requested.
         connection_args = {
             "user": user_dn,
@@ -235,7 +234,7 @@ def testLDAPConnection(
         return None
 
     # ! Unset Password ! #
-    password = ""
+    del password
     # Configure.
     try:
         c.bind(read_server_info=True)

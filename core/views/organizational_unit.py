@@ -4,7 +4,7 @@ from ldap3 import LEVEL
 from rest_framework.response import Response
 from rest_framework import viewsets
 from .mixins.organizational_unit import OrganizationalUnitMixin
-from core.models import Log
+from core.models.log import logToDB
 from rest_framework.exceptions import NotFound
 from core.exceptions.ldap import CouldNotOpenConnection, CouldNotFetchDirtree
 from rest_framework.decorators import action
@@ -36,13 +36,12 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
 
         if ldap_settings_list.LDAP_LOG_READ == True:
             # Log this action to DB
-            logAction = Log(
+            logToDB(
                 user_id=request.user.id,
                 actionType="READ",
                 objectClass="OU",
                 affectedObject="ALL"
             )
-            logAction.save()
 
         # Close / Unbind LDAP Connection
         c.unbind()
@@ -120,13 +119,12 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
 
         if ldap_settings_list.LDAP_LOG_READ == True:
             # Log this action to DB
-            logAction = Log(
+            logToDB(
                 user_id=request.user.id,
                 actionType="READ",
                 objectClass="LDAP",
-                affectedObject="ALL"
+                affectedObject="ALL - Full Dirtree Query"
             )
-            logAction.save()
 
         # Close / Unbind LDAP Connection
         c.unbind()

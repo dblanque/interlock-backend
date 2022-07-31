@@ -8,7 +8,12 @@ from interlock_backend.ldap.constants import (
     __dict__ as constantDictionary
 )
 from interlock_backend.ldap import constants as ldap_constants
-from interlock_backend.ldap.settings_func import getSettingsList, normalizeValues
+from interlock_backend.ldap.settings_func import (
+    SettingsList,
+    getSettingsList,
+    normalizeValues
+)
+from core.models.log import logToDB
 from interlock_backend.ldap.encrypt import validateUser
 from core.exceptions.ldap import ConnectionTestFailed
 import logging
@@ -25,10 +30,22 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
         data = {}
         code = 0
 
+        ######################## Get Latest Settings ###########################
+        ldap_settings_list = SettingsList(**{"search":{ 'LDAP_LOG_READ' }})
+        ########################################################################
+
         # Gets front-end parsed settings
         data = getSettingsList()
         data['DEFAULT_ADMIN_ENABLED'] = self.getAdminStatus()
 
+        if ldap_settings_list.LDAP_LOG_READ == True:
+            # Log this action to DB
+            logToDB(
+                user_id=request.user.id,
+                actionType="READ",
+                objectClass="SET",
+                affectedObject="ALL"
+            )
         # TODO - Convert Tuple for LDAP_AUTH_USER_LOOKUP_FIELDS to ARRAY for Front-End
 
         return Response(

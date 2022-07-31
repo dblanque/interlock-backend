@@ -11,7 +11,8 @@ from core.exceptions import (
     users as user_exceptions, 
     ldap as ldap_exceptions
 )
-from core.models import Log, User
+from core.models import User
+from core.models.log import logToDB
 from rest_framework.decorators import action
 from ldap3 import (
     MODIFY_ADD,
@@ -91,13 +92,12 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         if ldap_settings_list.LDAP_LOG_READ == True:
             # Log this action to DB
-            logAction = Log(
+            logToDB(
                 user_id=request.user.id,
                 actionType="READ",
                 objectClass="USER",
                 affectedObject="ALL"
             )
-            logAction.save()
 
         # Remove attributes to return as table headers
         valid_attributes = attributes
@@ -226,13 +226,12 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         if ldap_settings_list.LDAP_LOG_READ == True:
             # Log this action to DB
-            logAction = Log(
+            logToDB(
                 user_id=request.user.id,
                 actionType="READ",
                 objectClass="USER",
                 affectedObject=data['username']
             )
-            logAction.save()
 
         # For each attribute in user object attributes
         user_dict = {}
@@ -382,13 +381,12 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         if ldap_settings_list.LDAP_LOG_CREATE == True:
             # Log this action to DB
-            logAction = Log(
+            logToDB(
                 user_id=request.user.id,
                 actionType="CREATE",
                 objectClass="USER",
                 affectedObject=data['username']
             )
-            logAction.save()
 
         # Unbind the connection
         c.unbind()
@@ -512,13 +510,12 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         if ldap_settings_list.LDAP_LOG_UPDATE == True:
             # Log this action to DB
-            logAction = Log(
+            logToDB(
                 user_id=request.user.id,
                 actionType="UPDATE",
                 objectClass="USER",
                 affectedObject=data['username']
             )
-            logAction.save()
 
         # Unbind the connection
         c.unbind()
@@ -596,14 +593,13 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         if ldap_settings_list.LDAP_LOG_UPDATE == True:
             # Log this action to DB
-            logAction = Log(
+            logToDB(
                 user_id=request.user.id,
                 actionType="UPDATE",
                 objectClass="USER",
                 affectedObject=userToDisable,
                 extraMessage="DISABLE"
             )
-            logAction.save()
 
         c.modify(dn,
             {'userAccountControl':[(MODIFY_REPLACE, [ newPermINT ])]}
@@ -686,14 +682,13 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         if ldap_settings_list.LDAP_LOG_UPDATE == True:
             # Log this action to DB
-            logAction = Log(
+            logToDB(
                 user_id=request.user.id,
                 actionType="UPDATE",
                 objectClass="USER",
                 affectedObject=userToEnable,
                 extraMessage="ENABLE"
             )
-            logAction.save()
 
         c.modify(dn,
             {'userAccountControl':[(MODIFY_REPLACE, [ newPermINT ])]}
@@ -753,13 +748,12 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         if ldap_settings_list.LDAP_LOG_DELETE == True:
             # Log this action to DB
-            logAction = Log(
+            logToDB(
                 user_id=request.user.id,
                 actionType="DELETE",
                 objectClass="USER",
                 affectedObject=data['username']
             )
-            logAction.save()
 
         # Unbind the connection
         c.unbind()
@@ -813,14 +807,13 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         if ldap_settings_list.LDAP_LOG_UPDATE == True:
             # Log this action to DB
-            logAction = Log(
+            logToDB(
                 user_id=request.user.id,
                 actionType="UPDATE",
                 objectClass="USER",
                 affectedObject=data['username'],
                 extraMessage="CHANGED_PASSWORD"
             )
-            logAction.save()
 
         c.extend.microsoft.modify_password(dn, data['password'])
 
@@ -881,14 +874,13 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         if ldap_settings_list.LDAP_LOG_UPDATE == True:
             # Log this action to DB
-            logAction = Log(
+            logToDB(
                 user_id=request.user.id,
                 actionType="UPDATE",
                 objectClass="USER",
                 affectedObject=data['username'],
                 extraMessage="CHANGED_PASSWORD"
             )
-            logAction.save()
 
         # Unbind the connection
         c.unbind()
@@ -1006,14 +998,13 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         if ldap_settings_list.LDAP_LOG_UPDATE == True:
             # Log this action to DB
-            logAction = Log(
+            logToDB(
                 user_id=request.user.id,
                 actionType="UPDATE",
                 objectClass="USER",
                 affectedObject=data['username'],
                 extraMessage="END_USER_UPDATED"
             )
-            logAction.save()
 
         # Unbind the connection
         c.unbind()
