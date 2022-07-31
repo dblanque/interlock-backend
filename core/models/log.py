@@ -80,23 +80,3 @@ def logToDB(**kwargs):
         logAction.save()
 
     return logAction.id
-
-# class Log():
-#     def __init__(self,**kwargs):
-#         now = datetime.now()
-#         # self.name = 'Log Object'
-#         self.date = now.strftime("%Y-%m-%d %H:%M:%S")
-#         for kwarg in kwargs.items():
-#             argName = kwarg[0]
-#             argVal = kwarg[1]
-#             setattr(self, argName, argVal)
-
-#     def save(self):
-#         line = ""
-#         # log_file = open(LDAP_LOG_FILE, 'a+')
-#         for attr in self.__dict__:
-#             line = line + "," + str(getattr(self, attr))
-#             # print(attr)
-#         print(line)
-#         # log_file.write()
-#     pass
