@@ -16,7 +16,6 @@ from django.utils.translation import gettext_lazy as _
 from datetime import timedelta
 from interlock_backend.ldap.constants import *
 from interlock_backend.local_django_settings import *
-from pathlib import Path
 import base64
 
 # A little easter egg for you :)
@@ -24,11 +23,6 @@ import base64
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# Create the ldap log file if it doesn't exist
-
-LDAP_LOG_FILE = Path(BASE_DIR + '/logs/ldap.log')
-LDAP_LOG_FILE.touch(exist_ok=True)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
@@ -143,7 +137,7 @@ LOGGING = {
             "handlers": ["console"],
             "level": "INFO",
         },
-        "core.views.mixins.group": {
+        "core.views.mixins.settings": {
             "handlers": ["console"],
             "level": "DEBUG",
         },

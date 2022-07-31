@@ -4,7 +4,6 @@ from django.db.models.manager import BaseManager as Manager
 from .base import BaseManager
 from django.db import models
 from django.utils import timezone as tz
-from interlock_backend.settings import LDAP_LOG_FILE
 from interlock_backend.ldap.settings_func import SettingsList
 from .choices.log import ACTION_CHOICES, CLASS_CHOICES
 
@@ -41,11 +40,11 @@ class BaseLogModel(models.Model):
         abstract = True
 class Log(BaseLogModel):
 
-    id = models.BigAutoField(primary_key=True)
+    id = models.BigIntegerField(primary_key=True)
     user = models.ForeignKey('User', on_delete=models.CASCADE)
     actionType = models.CharField(_("actionType"), choices=ACTION_CHOICES, max_length=256, null=False, blank=False)
     objectClass = models.CharField(_("objectClass"), choices=CLASS_CHOICES, max_length=256, null=False, blank=False)
-    affectedObject = models.CharField(_("affectedObject"), max_length=256, null=True, blank=True)
+    affectedObject = models.JSONField(_("affectedObject"), null=True, blank=True)
     extraMessage = models.CharField(_("extraMessage"), max_length=256, null=True, blank=True)
 
 def logToDB(**kwargs):
@@ -54,16 +53,18 @@ def logToDB(**kwargs):
     logLimit = ldap_settings_list.LDAP_LOG_MAX
 
     # Truncate Logs if necessary
-    if Log.objects.count() > 0:
-        Log.objects.filter(id__gte=logLimit).delete()
+    if Log.objects.count() > logLimit:
+        Log.objects.filter(id__gt=logLimit).delete()
 
     unrotatedLogCount = Log.objects.filter(rotated=False).count()
     lastUnrotatedLog = Log.objects.filter(rotated=False).last()
-    if lastUnrotatedLog is not None:
-        lastUnrotatedLogId = lastUnrotatedLog.id
-    else:
+    # If there's no last unrotated log, set to 0 to avoid conditional issues
+    if lastUnrotatedLog is None:
         lastUnrotatedLogId = 0
+    else:
+        lastUnrotatedLogId = lastUnrotatedLog.id
 
+    # If there are no unrotated logs or the range is exceeded, restart sequence
     if unrotatedLogCount < 1 or lastUnrotatedLogId >= logLimit:
         Log.objects.all().update(rotated=True)
         logId = 1

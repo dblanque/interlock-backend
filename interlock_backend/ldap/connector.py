@@ -18,7 +18,7 @@ from interlock_backend.ldap.settings_func import (
 )
 import ldap3
 from ldap3.core.exceptions import LDAPException
-from core.models import Log, User
+from core.models.log import logToDB
 import ssl
 import logging
 

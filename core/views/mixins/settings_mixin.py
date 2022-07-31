@@ -132,6 +132,8 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
             try:
                 settingObject = querySet.get(id = itemKey)
                 settingObject.delete_permanently()
+                code = "DELETE_SUCCESS"
+                return code
             except Exception as e:
                 print("Couldn't delete setting: " + itemKey)
                 print(data)
@@ -141,6 +143,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 
     @transaction.atomic
     def update_or_create_setting(self, itemKey, data, forceDelete=False):
+        code = "NO_OPERATION"
         # Normalize Select Types to String
         if data['type'] == 'select':
             data['type'] = 'string'
@@ -150,18 +153,22 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 
         # Set Values to correct field by type
         if data['type'] == 'boolean':
-            data['value_bool'] = data['value']
+            valueField = 'value_bool'
+            data[valueField] = data['value']
             del data['value']
 
         listTypes = [ 'list', 'object', 'ldap_uri', 'array' ]
         if data['type'] in listTypes:
-            data['value_json'] = data['value']
+            valueField = 'value_json'
+            data[valueField] = data['value']
             del data['value']
         if data['type'] == 'integer':
-            data['value_int'] = data['value']
+            valueField = 'value_int'
+            data[valueField] = data['value']
             del data['value']
         if data['type'] == 'float':
-            data['value_float'] = data['value']
+            valueField = 'value_float'
+            data[valueField] = data['value']
             del data['value']
 
         try:
@@ -178,6 +185,8 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
                 settingObject = querySet.get(id = itemKey)
                 settingObject.deleted = False
                 settingObject.save()
+                code = "CREATE_SUCCESS"
+                return code
             except Exception as e:
                 print("Couldn't save setting: " + itemKey)
                 print(data)
@@ -188,10 +197,14 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
         else:
             logger.info("Updating setting override: " + itemKey)
             try:
-                Setting.objects.update(id = itemKey, **data)
                 settingObject = querySet.get(id = itemKey)
-                settingObject.deleted = False
-                settingObject.save()
+                if getattr(settingObject, valueField) != data[valueField]:
+                    for attr in data:
+                        setattr(settingObject, attr, data[attr])
+                    settingObject.deleted = False
+                    settingObject.save()
+                    code = "UPDATE_SUCCESS"
+                    return code
             except Exception as e:
                 print("Couldn't save setting: " + itemKey)
                 print(data)

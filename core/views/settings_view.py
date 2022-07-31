@@ -63,6 +63,10 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
         data = request.data
         code = 0
 
+        ######################## Get Latest Settings ###########################
+        ldap_settings_list = SettingsList(**{"search":{ 'LDAP_LOG_UPDATE' }})
+        ########################################################################
+
         adminEnabled = data.pop('DEFAULT_ADMIN_ENABLED')
         adminPassword = data.pop('DEFAULT_ADMIN_PWD')
         self.setAdminStatus(status=adminEnabled, password=adminPassword)
@@ -74,6 +78,8 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
             'value_int',
             'value_float'
         ]
+
+        affectedObjects = list()
 
         for setting in data:
             data[setting] = normalizeValues(setting, data[setting])
@@ -91,11 +97,27 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
                     logger.debug('Type in constants dict for ' + setting)
                     logger.debug(type(dictValue))
                     code = self.update_or_create_setting(setting, data[setting])
+                    if code == "UPDATE_SUCCESS" or code == "CREATE_SUCCESS":
+                        affectedObjects.append({
+                            'name': setting,
+                            'objectInstance': data[setting]
+                        })
                 else:
                     for field in valueFields:
                         if field in data[setting]:
                             if dictValue == data[setting][field]:
                                 code = self.delete_setting(setting, data[setting])
+                                if code == "DELETE_SUCCESS":
+                                    affectedObjects.append( setting )
+
+        if ldap_settings_list.LDAP_LOG_UPDATE == True:
+            # Log this action to DB
+            logToDB(
+                user_id=request.user.id,
+                actionType="UPDATE",
+                objectClass="SET",
+                affectedObject=affectedObjects
+            )
 
         return Response(
              data={
