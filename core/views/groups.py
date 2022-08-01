@@ -11,6 +11,7 @@ from interlock_backend.ldap.connector import openLDAPConnection
 from interlock_backend.ldap.adsi import addSearchFilter, getLDAPObject
 from interlock_backend.ldap.settings_func import SettingsList
 from interlock_backend.ldap.groupTypes import LDAP_GROUP_TYPES
+from core.utils.securityIdentifier import SID
 from ldap3 import ALL_ATTRIBUTES
 
 class GroupsViewSet(BaseViewSet, GroupViewMixin):
@@ -147,7 +148,8 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
             'mail',
             'member',
             'distinguishedName',
-            'groupType'
+            'groupType',
+            'objectSid'
         ]
 
         objectClassFilter = ""
@@ -177,7 +179,8 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         for attr_key in dir(group[0]):
             if attr_key in valid_attributes:
                 str_key = str(attr_key)
-                str_value = str(getattr(group[0],attr_key))
+                realValue = getattr(group[0],attr_key)
+                str_value = str(realValue)
                 if str_value == "[]":
                     group_dict[str_key] = ""
                 # Parse Group Type
@@ -212,6 +215,12 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                         memberArray.append(memberObject)
                     group_dict[str_key] = memberArray
                 # Do the standard for every other key
+                elif str_key == 'objectSid':
+                    sid = SID(realValue)
+                    sid = sid.__str__()
+                    rid = sid.split("-")[-1]
+                    group_dict[str_key] = sid
+                    group_dict['rid'] = rid
                 else:
                     group_dict[str_key] = str_value
 
