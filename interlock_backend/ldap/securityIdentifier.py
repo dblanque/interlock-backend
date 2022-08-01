@@ -82,12 +82,9 @@ class SID(object):
 
         :return: SID string in standard format
         """
-        logger.info("SID Revision Level")
-        logger.info(self.revision_level)
-        logger.info("SID Identifier Authority")
-        logger.info(self.identifier_authority)
-        logger.info("SID Subauthorities")
-        logger.info(self.subauthorities)
+        logger.info("SID Revision Level: " + str(self.revision_level))
+        logger.info("SID Identifier Authority: " + str(self.identifier_authority))
+        logger.info("SID Subauthorities: " + str(self.subauthorities))
         sid = "S-{0}-{1}".format(self.revision_level, self.subauthority_count)
         for rid in self.subauthorities:
             sid += "-{0}".format(str(rid))

@@ -137,10 +137,6 @@ LOGGING = {
             "handlers": ["console"],
             "level": "INFO",
         },
-        "interlock_backend.ldap.securityIdentifier": {
-            "handlers": ["console"],
-            "level": "INFO",
-        },
         "core.views.organizational_unit": {
             "handlers": ["console"],
             "level": "DEBUG",
