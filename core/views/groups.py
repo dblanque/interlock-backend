@@ -220,7 +220,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                     sid = sid.__str__()
                     rid = sid.split("-")[-1]
                     group_dict[str_key] = sid
-                    group_dict['rid'] = rid
+                    group_dict['objectRid'] = rid
                 else:
                     group_dict[str_key] = str_value
 
