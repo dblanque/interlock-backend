@@ -49,7 +49,7 @@ class Log(BaseLogModel):
 
 def logToDB(**kwargs):
     # This function rotates logs based on a Maximum Limit Setting
-    ldap_settings_list = SettingsList(**{"search":{'LDAP_LOG_MAX'}})
+    ldap_settings_list = SettingsList(**{"search":{ 'LDAP_LOG_MAX' }})
     logLimit = ldap_settings_list.LDAP_LOG_MAX
 
     # Truncate Logs if necessary

@@ -80,7 +80,6 @@ LDAP_AUTH_RECEIVE_TIMEOUT = 5
 
 ADMIN_GROUP_TO_SEARCH = "CN=admins,OU=Administrators,DC=brconsulting"
 
-# TODO - Add setting to allow builtin Administrator superuser login or not
 def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
     GROUP_TO_SEARCH = ADMIN_GROUP_TO_SEARCH
     if 'Administrator' in ldap_attributes[LDAP_AUTH_USER_FIELDS["username"]]:
@@ -106,9 +105,26 @@ def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
         user.save()
     pass
 
+
+
 LDAP_AUTH_SYNC_USER_RELATIONS = sync_user_relations
 
-# Logging
+LDAP_DIRTREE_OU_FILTER = {
+    "organizationalUnit" : "objectCategory",
+    "top" : "objectCategory",
+    "container" : "objectCategory",
+    "builtinDomain" : "objectClass"
+}
+
+LDAP_DIRTREE_CN_FILTER = {
+    "user" : "objectClass",
+    "person" : "objectClass",
+    "group" : "objectClass",
+    "organizationalPerson" : "objectClass",
+    "computer" : "objectClass"
+}
+
+################################## Logging #####################################
 LDAP_LOG_READ = False
 LDAP_LOG_CREATE = True
 LDAP_LOG_UPDATE = True
@@ -168,8 +184,14 @@ SETTINGS_WITH_ALLOWABLE_OVERRIDE = {
         "type": "object", 
         "value": "" 
     },
+    "LDAP_DIRTREE_OU_FILTER":{ 
+        "type": "object"
+    },
+    "LDAP_DIRTREE_CN_FILTER":{ 
+        "type": "object"
+    },
     "LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN":{ 
-        "value": "" 
+        "value": ""
     },
     "LDAP_AUTH_CONNECTION_USER_DN":{ 
         "value": ""

@@ -129,7 +129,7 @@ LOGGING = {
             "handlers": ["console"],
             "level": "INFO",
         },
-        "interlock_backend.ldap.settings": {
+        "interlock_backend.ldap.dirtree": {
             "handlers": ["console"],
             "level": "INFO",
         },
@@ -137,7 +137,7 @@ LOGGING = {
             "handlers": ["console"],
             "level": "INFO",
         },
-        "core.views.mixins.settings": {
+        "core.views.organizational_unit": {
             "handlers": ["console"],
             "level": "DEBUG",
         },

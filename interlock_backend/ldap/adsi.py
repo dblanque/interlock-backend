@@ -187,22 +187,15 @@ def getDefaultFilterFor(type='OU'):
     OU - Organizational Unit
     CN - Common Name
     """
+    ldap_settings_list = SettingsList(**{"search":{
+        'LDAP_DIRTREE_OU_FILTER',
+        'LDAP_DIRTREE_CN_FILTER'
+    }})
     if type.upper() == 'OU':
-        defaults = {
-            "organizationalUnit" : "objectCategory",
-            "top" : "objectCategory",
-            "container" : "objectCategory",
-            "builtinDomain" : "objectCategory"
-        }
+        filter = ldap_settings_list.LDAP_DIRTREE_OU_FILTER
     else:
-        defaults = {
-            "user" : "objectClass",
-            "person" : "objectClass",
-            "group" : "objectClass",
-            "organizationalPerson" : "objectClass",
-            "computer" : "objectClass"
-        }
-    result = buildFilterFromDict(defaults)
+        filter = ldap_settings_list.LDAP_DIRTREE_CN_FILTER
+    result = buildFilterFromDict(filter)
     return result
 
 def bin_as_str(value):

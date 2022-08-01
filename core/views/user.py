@@ -1,7 +1,4 @@
-from inspect import trace
-from django.conf import Settings
 from django.core.exceptions import PermissionDenied
-from django.db import transaction
 import ldap3
 from rest_framework.response import Response
 from .mixins.user import UserViewMixin
@@ -22,12 +19,6 @@ from ldap3 import (
 )
 import traceback
 import logging
-from django.core import validators
-from django.forms import (
-    CharField,
-    BooleanField,
-    IntegerField,
-)
 from interlock_backend.ldap.connector import openLDAPConnection
 from interlock_backend.ldap.settings_func import SettingsList
 from interlock_backend.ldap import adsi as ldap_adsi

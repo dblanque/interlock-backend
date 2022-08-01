@@ -1,5 +1,6 @@
+from time import perf_counter
 from django.core.exceptions import PermissionDenied
-from django.db import transaction
+from django.db import connection, transaction
 from ldap3 import LEVEL
 from rest_framework.response import Response
 from rest_framework import viewsets
@@ -9,10 +10,13 @@ from rest_framework.exceptions import NotFound
 from core.exceptions.ldap import CouldNotOpenConnection, CouldNotFetchDirtree
 from rest_framework.decorators import action
 from interlock_backend.ldap.connector import openLDAPConnection
-from interlock_backend.ldap.adsi import addSearchFilter
+from interlock_backend.ldap.adsi import addSearchFilter, buildFilterFromDict
 from interlock_backend.ldap.dirtree import getFullDirectoryTree
 from interlock_backend.ldap.encrypt import validateUser
 from interlock_backend.ldap.settings_func import SettingsList
+import logging
+
+logger = logging.getLogger(__name__)
 
 class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
 
@@ -32,7 +36,93 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
             print(e)
             raise CouldNotOpenConnection
 
-        dirList = getFullDirectoryTree(getCNs=False)
+        debugTimerStart = perf_counter()
+        result = getFullDirectoryTree(connection=c, getCNs=False)
+        debugTimerEnd = perf_counter()
+        logger.debug("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
+        dirList = result[0]
+        c = result[1]
+
+        if ldap_settings_list.LDAP_LOG_READ == True:
+            # Log this action to DB
+            logToDB(
+                user_id=request.user.id,
+                actionType="READ",
+                objectClass="OU",
+                affectedObject="ALL"
+            )
+
+        # Close / Unbind LDAP Connection
+        c.unbind()
+        return Response(
+                data={
+                'code': code,
+                'code_msg': code_msg,
+                'ou_list': dirList,
+                }
+        )
+
+    @action(detail=False,methods=['post'])
+    def filter(self, request):
+        user = request.user
+        validateUser(request=request, requestUser=user)
+        data = request.data
+        code = 0
+        code_msg = 'ok'
+
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_LOG_READ'
+        }})
+
+        # Check if iexact filter is in data json
+        if 'iexact' in data:
+            exactFilter = data['iexact']
+        else:
+            exactFilter = {}
+
+        # Check if standard dirtree filter is in data json
+        if 'filter' in data:
+            objectFilters = data['filter']
+        else:
+            objectFilters = {}
+
+        # Get defaults and initialize vars
+        defaultOUFilters = ldap_settings_list.LDAP_DIRTREE_OU_FILTER
+        searchFilterOU = ""
+
+        # If objectFilters is not empty use iexact or defaults
+        if not bool(objectFilters):
+            if not bool(exactFilter) and 'ouFilter' in exactFilter:
+                searchFilterOU = buildFilterFromDict(exactFilter['ouFilter'])
+            else:
+                searchFilterOU = buildFilterFromDict(defaultOUFilters)
+        else:
+            # For Filter, Filter Type in...
+            # ( F-Type in this case is Filter Type, not a Jaguar :D )
+            for f, fType in defaultOUFilters.items():
+                if f not in objectFilters:
+                    searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '|')
+
+            # Build Negations in defaultOUFilters (They have to be in the outer part of the string)
+            for f, fType in defaultOUFilters.items():
+                if f in objectFilters:
+                    searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '&', negate=True)
+
+        logger.debug("OU Object Search Filter: " + searchFilterOU)
+
+        # Open LDAP Connection
+        try:
+            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
+        except Exception as e:
+            print(e)
+            raise CouldNotOpenConnection
+
+        debugTimerStart = perf_counter()
+        result = getFullDirectoryTree(connection=c, getCNs=False)
+        debugTimerEnd = perf_counter()
+        logger.debug("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
+        dirList = result[0]
+        c = result[1]
 
         if ldap_settings_list.LDAP_LOG_READ == True:
             # Log this action to DB
@@ -61,45 +151,75 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         code = 0
         code_msg = 'ok'
 
-        ldap_settings_list = SettingsList(**{"search":{'LDAP_LOG_READ'}})
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_LOG_READ',
+            'LDAP_DIRTREE_OU_FILTER',
+            'LDAP_DIRTREE_CN_FILTER'
+        }})
 
-        objectFilters = data['filter']
-        defaultOUFilters = {
-            "organizationalUnit" : "objectCategory",
-            "top" : "objectCategory",
-            "container" : "objectCategory",
-            "builtinDomain" : "objectCategory"
-        }
-        defaultCNFilters = {
-            "user" : "objectClass",
-            "person" : "objectClass",
-            "group" : "objectClass",
-            "organizationalPerson" : "objectClass",
-            "computer" : "objectClass"
-        }
+        # Check if iexact filter is in data json
+        if 'iexact' in data:
+            exactFilter = data['iexact']
+        else:
+            exactFilter = {}
+
+        # Check if standard dirtree filter is in data json
+        if 'filter' in data:
+            objectFilters = data['filter']
+        else:
+            objectFilters = {}
+
+        # Get defaults and initialize vars
+        defaultOUFilters = ldap_settings_list.LDAP_DIRTREE_OU_FILTER
+        defaultCNFilters = ldap_settings_list.LDAP_DIRTREE_CN_FILTER
         searchFilterOU = ""
         searchFilterCN = ""
 
-        # For Filter, Filter Type in...
-        # ( F-Type in this case is Filter Type, not a Jaguar :D )
-        for f, fType in defaultOUFilters.items():
-            if f not in objectFilters:
-                searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '|')
-        
-        # Build Negations in defaultOUFilters (They have to be in the outer part of the string)
-        for f, fType in defaultOUFilters.items():
-            if f in objectFilters:
-                searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '&', negate=True)
+        # If objectFilters is not empty use iexact or defaults
+        if not bool(objectFilters):
+            if not bool(exactFilter) and 'ouFilter' in exactFilter:
+                searchFilterOU = buildFilterFromDict(exactFilter['ouFilter'])
+            else:
+                searchFilterOU = buildFilterFromDict(defaultOUFilters)
 
-        # Same but for CN Filters
-        for f, fType in defaultCNFilters.items():
-            if f not in objectFilters:
-                searchFilterCN = addSearchFilter(searchFilterCN, fType + "=" + f, '|')
+            if not bool(exactFilter) and 'cnFilter' in exactFilter:
+                searchFilterCN = buildFilterFromDict(exactFilter['cnFilter'])
+            else:
+                searchFilterCN = buildFilterFromDict(defaultCNFilters)
+        else:
+            # For Filter, Filter Type in...
+            # ( F-Type in this case is Filter Type, not a Jaguar :D )
+            for f, fType in defaultOUFilters.items():
+                if f not in objectFilters:
+                    searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '|')
 
-        # Build Negations in defaultCNFilters
-        for f, fType in defaultCNFilters.items():
-            if f in objectFilters:
-                searchFilterCN = addSearchFilter(searchFilterCN, fType + "=" + f, '&', negate=True)
+            # Build Negations in defaultOUFilters (They have to be in the outer part of the string)
+            for f, fType in defaultOUFilters.items():
+                if f in objectFilters:
+                    searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '&', negate=True)
+
+            # Same but for CN Filters
+            for f, fType in defaultCNFilters.items():
+                if f not in objectFilters:
+                    searchFilterCN = addSearchFilter(searchFilterCN, fType + "=" + f, '|')
+
+            # Build Negations in defaultCNFilters
+            for f, fType in defaultCNFilters.items():
+                if f in objectFilters:
+                    searchFilterCN = addSearchFilter(searchFilterCN, fType + "=" + f, '&', negate=True)
+
+        if 'builtinDomain' in objectFilters:
+            disableBuiltIn = True
+        else:
+            disableBuiltIn = False
+
+        if 'organizationalUnit' in objectFilters:
+            enableOuFilter = True
+        else:
+            enableOuFilter = False
+
+        logger.debug("OU Object Search Filter: " + searchFilterOU)
+        logger.debug("CN Object Search Filter: " + searchFilterCN)
 
         # Open LDAP Connection
         try:
@@ -112,7 +232,18 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         # Filter by Object DN
         # Filter by Attribute
         try:
-            dirList = getFullDirectoryTree()
+            debugTimerStart = perf_counter()
+            result = getFullDirectoryTree(
+                connection=c,
+                ouFilter=searchFilterOU,
+                cnFilter=searchFilterCN,
+                disableBuiltIn=disableBuiltIn,
+                getOUs=enableOuFilter
+            )
+            debugTimerEnd = perf_counter()
+            logger.debug("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
+            dirList = result[0]
+            c = result[1]
         except Exception as e:
             print(e)
             raise CouldNotFetchDirtree
