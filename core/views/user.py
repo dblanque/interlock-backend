@@ -310,7 +310,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             'distinguishedName',
             'userPrincipalName',
         ]
-        c = ldap_adsi.getLDAPObject(c, userToSearch, attributes=attributes)
+        c = self.getUserObject(c, userToSearch, attributes=attributes)
         user = c.entries
 
         # If user exists, return error
@@ -443,7 +443,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             'userPrincipalName',
             'userAccountControl',
         ]
-        c = ldap_adsi.getLDAPObject(c, userToUpdate, attributes=ldap3.ALL_ATTRIBUTES)
+        c = self.getUserObject(c, userToUpdate, attributes=ldap3.ALL_ATTRIBUTES)
 
         user = c.entries
         dn = str(user[0].distinguishedName)
@@ -730,8 +730,8 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         else:
             logger.debug('Deleting with user dn search method')
             userToDelete = data['username']
-            c = ldap_adsi.getLDAPObject(c, userToDelete)
-            
+            c = self.getUserObject(c, userToDelete)
+
             user = c.entries
             dn = str(user[0].distinguishedName)
             logger.debug(dn)
@@ -787,7 +787,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         else:
             logger.debug('Updating with user dn search method')
             userToUpdate = data['username']
-            c = ldap_adsi.getLDAPObject(c, userToUpdate)
+            c = self.getUserObject(c, userToUpdate)
             
             user = c.entries
             dn = str(user[0].distinguishedName)
@@ -852,7 +852,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         else:
             logger.debug('Updating with user dn search method')
             userToUpdate = user.username
-            c = ldap_adsi.getLDAPObject(c, userToUpdate)
+            c = self.getUserObject(c, userToUpdate)
             
             user = c.entries
             dn = str(user[0].distinguishedName)
@@ -944,7 +944,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             'userPrincipalName',
             'userAccountControl',
         ]
-        c = ldap_adsi.getLDAPObject(c, userToUpdate, attributes=ldap3.ALL_ATTRIBUTES)
+        c = self.getUserObject(c, userToUpdate, attributes=ldap3.ALL_ATTRIBUTES)
 
         user = c.entries
         dn = str(user[0].distinguishedName)

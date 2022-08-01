@@ -8,7 +8,8 @@ from rest_framework.decorators import action
 from interlock_backend.ldap import adsi as ldap_adsi
 from interlock_backend.ldap.encrypt import validateUser
 from interlock_backend.ldap.connector import openLDAPConnection
-from interlock_backend.ldap.adsi import addSearchFilter, getLDAPObject
+from interlock_backend.ldap.adsi import addSearchFilter
+from core.views.mixins.user import UserViewMixin
 from interlock_backend.ldap.settings_func import SettingsList
 from interlock_backend.ldap.groupTypes import LDAP_GROUP_TYPES
 from interlock_backend.ldap.securityIdentifier import SID
@@ -198,7 +199,13 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                         'objectCategory'
                     ]
                     for u in getattr(group[0], str_key):
-                        c = ldap_adsi.getLDAPObject(c, u, attributes=memberAttributes, objectClassFilter=addSearchFilter("", "distinguishedName="+u))
+                        c = UserViewMixin.getUserObject(
+                            UserViewMixin,
+                            connection=c,
+                            username=u,
+                            attributes=memberAttributes,
+                            objectClassFilter=addSearchFilter("", "distinguishedName="+u)
+                        )
                         result = c.entries
                         memberObject = {}
                         for attr in memberAttributes:
