@@ -56,12 +56,12 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
         ldapAuthUseTLS = data['LDAP_AUTH_USE_TLS']['value']
         ldapAuthTLSVersion = data['LDAP_AUTH_TLS_VERSION']['value']
 
-        logger.debug("LDAP Socket Testing")
+        logger.info("LDAP Socket Testing")
         for server in ldapAuthURL:
             ip = server.split(":")[1][2:]
             port = server.split(":")[2]
-            logger.debug("IP to Test: " + ip)
-            logger.debug("Port to Test: " + port)
+            logger.info("IP to Test: " + ip)
+            logger.info("Port to Test: " + port)
             if not testPort(ip, port, ldapAuthConnectTimeout):
                 exception = ldap_exceptions.PortUnreachable
                 data = {
@@ -71,7 +71,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
                 }
                 exception.setDetail(exception, data)
                 raise exception
-            logger.debug("Test successful")
+            logger.info("Test successful")
 
         username = user.username
         if username == "admin":
@@ -79,17 +79,17 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
         else:
             user_dn = user.dn
 
-        logger.debug("Test Connection Endpoint Parameters: ")
-        logger.debug(username)
-        logger.debug(user_dn)
-        logger.debug(user.encryptedPassword)
-        logger.debug(ldapAuthConnectionUser)
-        # logger.debug(ldapAuthConnectionPassword)
-        logger.debug(ldapAuthURL)
-        logger.debug(ldapAuthConnectTimeout)
-        logger.debug(ldapAuthReceiveTimeout)
-        logger.debug(ldapAuthUseTLS)
-        logger.debug(ldapAuthTLSVersion)
+        logger.info("Test Connection Endpoint Parameters: ")
+        logger.info(username)
+        logger.info(user_dn)
+        logger.info(user.encryptedPassword)
+        logger.info(ldapAuthConnectionUser)
+        # logger.info(ldapAuthConnectionPassword)
+        logger.info(ldapAuthURL)
+        logger.info(ldapAuthConnectTimeout)
+        logger.info(ldapAuthReceiveTimeout)
+        logger.info(ldapAuthUseTLS)
+        logger.info(ldapAuthTLSVersion)
 
         # Open LDAP Connection
         try:
@@ -114,8 +114,8 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 
         result['user_used'] = username
         result['user_dn_used'] = user_dn
-        logger.debug("Test Connection Endpoint Result: ")
-        logger.debug(result)
+        logger.info("Test Connection Endpoint Result: ")
+        logger.info(result)
         return result
 
     @transaction.atomic

@@ -26,6 +26,7 @@ class SID(object):
     def __init__(self, sid_byte_array):
         sid_byte_array = sid_byte_array.raw_values[0]
 
+        logger.debug("Class SID() in: "+__name__)
         logger.info("SID Byte Array")
         logger.debug(type(sid_byte_array))
         logger.info(sid_byte_array)

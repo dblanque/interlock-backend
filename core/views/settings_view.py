@@ -88,6 +88,7 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
             if setting in constantDictionary:
                 dictValue = getattr(ldap_constants, setting)
                 if dictValue not in data[setting].values():
+                    logger.debug("Located in: "+__name__+'.save')
                     logger.debug('Value in data for ' + setting)
                     logger.debug(data[setting]['value'])
                     logger.debug('Type in data for ' + setting)

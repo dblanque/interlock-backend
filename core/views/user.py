@@ -331,6 +331,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             permValue = int(ldap_adsi.LDAP_PERMS[perm]['value'])
             try:
                 userPermissions += permValue
+                logger.debug("Located in: "+__name__+".insert")
                 logger.debug("Permission Value added (cast to string): " + str(permValue))
             except Exception as error:
                 # If there's an error unbind the connection and print traceback
@@ -457,6 +458,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             print(traceback.format_exc())
             raise user_exceptions.user_exceptions.UserPermissionError
 
+        logger.debug("Located in: "+__name__+".update")
         logger.debug("New Permission Integer (cast to String):" + str(newPermINT))
         data['userAccountControl'] = newPermINT
 
@@ -596,6 +598,7 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             {'userAccountControl':[(MODIFY_REPLACE, [ newPermINT ])]}
         )
 
+        logger.debug("Located in: "+__name__+".disable")
         logger.debug(c.result)
 
         # Unbind the connection
