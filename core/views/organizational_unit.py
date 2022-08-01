@@ -11,7 +11,7 @@ from core.exceptions.ldap import CouldNotOpenConnection, CouldNotFetchDirtree
 from rest_framework.decorators import action
 from interlock_backend.ldap.connector import openLDAPConnection
 from interlock_backend.ldap.adsi import addSearchFilter, buildFilterFromDict
-from interlock_backend.ldap.dirtree import getFullDirectoryTree
+from interlock_backend.ldap.dirtree import getFullDirectoryTree, get_children_ou
 from interlock_backend.ldap.encrypt import validateUser
 from interlock_backend.ldap.settings_func import SettingsList
 import logging
@@ -40,8 +40,8 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         result = getFullDirectoryTree(connection=c, getCNs=False)
         debugTimerEnd = perf_counter()
         logger.debug("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
-        dirList = result[0]
-        c = result[1]
+        dirList = result['results']
+        c = result['connection']
 
         if ldap_settings_list.LDAP_LOG_READ == True:
             # Log this action to DB
@@ -71,7 +71,10 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         code_msg = 'ok'
 
         ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_LOG_READ'
+            'LDAP_LOG_READ',
+            'LDAP_DIRTREE_OU_FILTER',
+            'LDAP_AUTH_SEARCH_BASE',
+            'LDAP_AUTH_USERNAME_IDENTIFIER'
         }})
 
         # Check if iexact filter is in data json
@@ -91,22 +94,27 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         searchFilterOU = ""
 
         # If objectFilters is not empty use iexact or defaults
-        if not bool(objectFilters):
-            if not bool(exactFilter) and 'ouFilter' in exactFilter:
-                searchFilterOU = buildFilterFromDict(exactFilter['ouFilter'])
-            else:
-                searchFilterOU = buildFilterFromDict(defaultOUFilters)
+        if not bool(objectFilters) and not bool(exactFilter):
+            searchFilterOU = buildFilterFromDict(defaultOUFilters)
         else:
-            # For Filter, Filter Type in...
-            # ( F-Type in this case is Filter Type, not a Jaguar :D )
-            for f, fType in defaultOUFilters.items():
-                if f not in objectFilters:
-                    searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '|')
+            if bool(objectFilters):
+                # For Filter, Filter Type in...
+                # ( F-Type in this case is Filter Type, not a Jaguar :D )
+                for f, fType in defaultOUFilters.items():
+                    if f not in objectFilters:
+                        searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '|')
 
-            # Build Negations in defaultOUFilters (They have to be in the outer part of the string)
-            for f, fType in defaultOUFilters.items():
-                if f in objectFilters:
-                    searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '&', negate=True)
+                # Build Negations in defaultOUFilters (They have to be in the outer part of the string)
+                for f, fType in defaultOUFilters.items():
+                    if f in objectFilters:
+                        searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '&', negate=True)
+            if bool(exactFilter):
+                # Build Negations in defaultOUFilters (They have to be in the outer part of the string)
+                for f, fType in exactFilter.items():
+                    if isinstance(fType, dict):
+                        searchFilterOU = addSearchFilter(searchFilterOU, fType['attr'] + "=" + f, '&', negate=fType['exclude'])
+                    else:
+                        searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '&')
 
         logger.debug("OU Object Search Filter: " + searchFilterOU)
 
@@ -117,12 +125,18 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
             print(e)
             raise CouldNotOpenConnection
 
+        print(searchFilterOU)
+
         debugTimerStart = perf_counter()
-        result = getFullDirectoryTree(connection=c, getCNs=False)
+        result = getFullDirectoryTree(
+            connection=c,
+            getCNs=False,
+            ouFilter=searchFilterOU
+        )
         debugTimerEnd = perf_counter()
         logger.debug("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
-        dirList = result[0]
-        c = result[1]
+        dirList = result['results']
+        c = result['connection']
 
         if ldap_settings_list.LDAP_LOG_READ == True:
             # Log this action to DB
@@ -176,37 +190,42 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         searchFilterCN = ""
 
         # If objectFilters is not empty use iexact or defaults
-        if not bool(objectFilters):
-            if not bool(exactFilter) and 'ouFilter' in exactFilter:
-                searchFilterOU = buildFilterFromDict(exactFilter['ouFilter'])
-            else:
-                searchFilterOU = buildFilterFromDict(defaultOUFilters)
-
-            if not bool(exactFilter) and 'cnFilter' in exactFilter:
-                searchFilterCN = buildFilterFromDict(exactFilter['cnFilter'])
-            else:
-                searchFilterCN = buildFilterFromDict(defaultCNFilters)
+        if not bool(objectFilters) and not bool(exactFilter):
+            searchFilterOU = buildFilterFromDict(defaultOUFilters)
+            searchFilterCN = buildFilterFromDict(defaultCNFilters)
         else:
-            # For Filter, Filter Type in...
-            # ( F-Type in this case is Filter Type, not a Jaguar :D )
-            for f, fType in defaultOUFilters.items():
-                if f not in objectFilters:
-                    searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '|')
+            if bool(objectFilters):
+                # For Filter, Filter Type in...
+                # ( F-Type in this case is Filter Type, not a Jaguar :D )
+                for f, fType in defaultOUFilters.items():
+                    if f not in objectFilters:
+                        searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '|')
 
-            # Build Negations in defaultOUFilters (They have to be in the outer part of the string)
-            for f, fType in defaultOUFilters.items():
-                if f in objectFilters:
-                    searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '&', negate=True)
+                # Build Negations in defaultOUFilters (They have to be in the outer part of the string)
+                for f, fType in defaultOUFilters.items():
+                    if f in objectFilters:
+                        searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '&', negate=True)
 
-            # Same but for CN Filters
-            for f, fType in defaultCNFilters.items():
-                if f not in objectFilters:
-                    searchFilterCN = addSearchFilter(searchFilterCN, fType + "=" + f, '|')
+                # Same but for CN Filters
+                for f, fType in defaultCNFilters.items():
+                    if f not in objectFilters:
+                        searchFilterCN = addSearchFilter(searchFilterCN, fType + "=" + f, '|')
 
-            # Build Negations in defaultCNFilters
-            for f, fType in defaultCNFilters.items():
-                if f in objectFilters:
-                    searchFilterCN = addSearchFilter(searchFilterCN, fType + "=" + f, '&', negate=True)
+                # Build Negations in defaultCNFilters
+                for f, fType in defaultCNFilters.items():
+                    if f in objectFilters:
+                        searchFilterCN = addSearchFilter(searchFilterCN, fType + "=" + f, '&', negate=True)
+            if bool(exactFilter):
+                # Build Negations in defaultOUFilters (They have to be in the outer part of the string)
+                for f, fType in exactFilter.items():
+                    if isinstance(fType, dict):
+                        if fType['attr'] == 'ou':
+                            searchFilterOU = addSearchFilter(searchFilterOU, fType['attr'] + "=" + f, '&', negate=fType['exclude'])
+                        if fType['attr'] == 'cn':
+                            searchFilterCN = addSearchFilter(searchFilterCN, fType['attr'] + "=" + f, '&', negate=fType['exclude'])
+                    else:
+                        searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '&')
+                        searchFilterCN = addSearchFilter(searchFilterCN, fType + "=" + f, '&')
 
         if 'builtinDomain' in objectFilters:
             disableBuiltIn = True
@@ -242,8 +261,8 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
             )
             debugTimerEnd = perf_counter()
             logger.debug("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
-            dirList = result[0]
-            c = result[1]
+            dirList = result['results']
+            c = result['connection']
         except Exception as e:
             print(e)
             raise CouldNotFetchDirtree
@@ -274,6 +293,14 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         data = request.data
         code = 0
         code_msg = 'ok'
+
+        # Full DN to Move
+        # Target DN
+
+        # Relative DN cannot be same as Full DN
+
+        # If relative DN changes, CN cannot change
+        # Else
 
         # Open LDAP Connection
         try:

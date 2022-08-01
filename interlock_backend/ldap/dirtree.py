@@ -94,7 +94,10 @@ def getFullDirectoryTree(connection=None, getCNs=True, ouFilter=None, cnFilter=N
             currentID += 1
     connection.unbind()
     # logger.debug(json.dumps(result, sort_keys=False, indent=2))
-    return [ result, connection ]
+    return({
+        "results": result,
+        "connection": connection
+    })
 
 def get_children(dn, connection, recursive=False, getCNs=True, getOUs=True, id=0, ouFilter=None, cnFilter=None):
     """ Gets children for dn object in LDAP Server.
@@ -196,7 +199,8 @@ def get_children_cn(dn, connection, id=0, queryFilter=None, authUsernameIdentifi
                 results.append(currentEntity)
     return({
         "results": results,
-        "currentID": id
+        "currentID": id,
+        "connection": connection
     })
 
 def get_children_ou(dn, connection, recursive=False, getCNs=False, id=0, ouFilter=None, cnFilter=None, authUsernameIdentifier=None):
@@ -206,11 +210,11 @@ def get_children_ou(dn, connection, recursive=False, getCNs=False, id=0, ouFilte
     """
     # Initialize Variables
     results = list()
-    if authUsernameIdentifier is None:
-        raise Exception("authUsernameIdentifier cannot be None")
     if ouFilter is None:
         ouFilter = "(objectClass=organizationalUnit)"
-    if cnFilter is None:
+    if getCNs == True and authUsernameIdentifier is None:
+        raise Exception("authUsernameIdentifier cannot be None")
+    if getCNs == True and cnFilter is None:
         raise Exception("cnFilter cannot be None")
 
     # Send Query to LDAP Server(s)
@@ -262,5 +266,6 @@ def get_children_ou(dn, connection, recursive=False, getCNs=False, id=0, ouFilte
             results.append(currentEntity)
     return({
         "results": results,
-        "currentID": id
+        "currentID": id,
+        "connection": connection
     })
