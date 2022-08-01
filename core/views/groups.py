@@ -11,7 +11,7 @@ from interlock_backend.ldap.connector import openLDAPConnection
 from interlock_backend.ldap.adsi import addSearchFilter, getLDAPObject
 from interlock_backend.ldap.settings_func import SettingsList
 from interlock_backend.ldap.groupTypes import LDAP_GROUP_TYPES
-from core.utils.securityIdentifier import SID
+from interlock_backend.ldap.securityIdentifier import SID
 from ldap3 import ALL_ATTRIBUTES
 
 class GroupsViewSet(BaseViewSet, GroupViewMixin):
