@@ -125,8 +125,6 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
             print(e)
             raise CouldNotOpenConnection
 
-        print(searchFilterOU)
-
         debugTimerStart = perf_counter()
         result = getFullDirectoryTree(
             connection=c,
