@@ -10,7 +10,6 @@ from .choices.log import ACTION_CHOICES, CLASS_CHOICES
 class BaseLogModel(models.Model):
 
     logged_at = models.DateTimeField(_("logged at"), auto_now_add=True)
-    rotated_at = models.DateTimeField(_("rotated at"), null=True, blank=True)
     rotated = models.BooleanField(_("rotated"), default=False)
 
     notes = models.TextField(blank=True, null=True)
