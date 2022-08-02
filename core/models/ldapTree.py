@@ -1,3 +1,5 @@
+import json
+from django.db import connection
 from django.utils.translation import gettext_lazy as _
 from interlock_backend.ldap.settings_func import SettingsList
 from interlock_backend.ldap.adsi import (
@@ -49,13 +51,24 @@ class LDAPTree():
             'objectClass'
         ]
         self.excludedLdapAttributes = [
-            'objectGUID'
+            'objectGUID',
+            'objectSid'
+        ]
+
+        self.containerTypes = [
+            'container',
+            'organizational-unit'
         ]
 
         if 'recursive' in kwargs:
             self.recursive = kwargs.pop('recursive')
         else:
             self.recursive = False
+
+        if 'testFetch' in kwargs:
+            self.testFetch = kwargs.pop('testFetch')
+        else:
+            self.testFetch = False
 
         if 'ldapFilter' in kwargs:
             self.ldapFilter = kwargs.pop('ldapFilter')
@@ -65,8 +78,9 @@ class LDAPTree():
         if 'ldapAttributes' in kwargs:
             self.ldapAttributes = kwargs.pop('ldapAttributes')
         else:
-            self.ldapAttributes = ldap3.ALL_ATTRIBUTES
+            self.ldapAttributes = ldap_settings_list.LDAP_DIRTREE_ATTRIBUTES
 
+        # Set required attributes, these are unremovable from the tree searches
         for attr in self.requiredLdapAttributes:
             if attr not in self.ldapAttributes:
                 self.ldapAttributes.append(attr)
@@ -76,6 +90,7 @@ class LDAPTree():
         else:
             self.childrenObjectType = 'array'
         self.children = self.__getLdapTree__()
+
 
     def __getLdapTree__(self):
         self.connection.search(
@@ -90,35 +105,37 @@ class LDAPTree():
         else:
             children = dict()
 
+        if self.testFetch == True:
+            baseLevelList = [ baseLevelList[0] ]
+
         # For each entity in the base level list
         for entity in baseLevelList:
             # Set DN from Abstract Entry object (LDAP3)
             distinguishedName=entity.entry_dn
             # Set entity attributes
-            if distinguishedName == 'OU=Dolibarr,DC=brconsulting':
-                currentEntity = {}
-                currentEntity['name'] = str(distinguishedName).split(',')[0].split('=')[1]
-                currentEntity['id'] = self.subobjectId
-                currentEntity['dn'] = distinguishedName
-                currentEntity['type'] = str(entity.objectCategory).split(',')[0].split('=')[1]
-                if currentEntity['name'] in LDAP_BUILTIN_OBJECTS or 'builtinDomain' in entity.objectClass:
-                    currentEntity['builtin'] = True
-                
-                ##################################
-                # Recursive Children Search Here #
-                ##################################
-                if self.recursive == True:
-                    currentEntity['children'] = self.__getObjectChildren__(currentEntity['dn'])
+            currentEntity = {}
+            currentEntity['name'] = str(distinguishedName).split(',')[0].split('=')[1]
+            currentEntity['id'] = self.subobjectId
+            currentEntity['dn'] = distinguishedName
+            currentEntity['type'] = str(entity.objectCategory).split(',')[0].split('=')[1]
+            if currentEntity['name'] in LDAP_BUILTIN_OBJECTS or 'builtinDomain' in entity.objectClass:
+                currentEntity['builtin'] = True
 
-                # If children object type should be Array
-                if self.childrenObjectType == 'array':
-                    children.append(currentEntity)
-                else:
-                    children['dict'][currentEntity['dn']] = currentEntity
-                    children['dict'][currentEntity['dn']].pop('dn')
+            ##################################
+            # Recursive Children Search Here #
+            ##################################
+            if self.recursive == True:
+                currentEntity['children'] = self.__getObjectChildren__(currentEntity['dn'])
 
-                ###### Increase subobjectId ######
-                self.subobjectId += 1
+            # If children object type should be Array
+            if self.childrenObjectType == 'array':
+                children.append(currentEntity)
+            else:
+                children['dict'][currentEntity['dn']] = currentEntity
+                children['dict'][currentEntity['dn']].pop('dn')
+
+            ###### Increase subobjectId ######
+            self.subobjectId += 1
         return children
 
     def __getTreeCount__(self):
@@ -141,6 +158,10 @@ class LDAPTree():
         return count
 
     def __getObjectChildren__(self, dn):
+        """
+        Function to recursively get Object Children
+        Returns JSON Dict
+        """
         if dn is None:
             raise Exception("LDAPTree.__getObjectChildren__() - ERROR: Distinguished Name is None")
 
@@ -150,7 +171,6 @@ class LDAPTree():
         else:
             result = dict()
 
-        currentObject = {}
         # Send Query to LDAP Server(s)
         ldapSearch = self.connection.extend.standard.paged_search(
             search_base=dn,
@@ -158,48 +178,80 @@ class LDAPTree():
             search_scope='LEVEL',
             attributes=self.ldapAttributes
         )
+
         for entry in ldapSearch:
-            print("Parent")
-            print(dn)
-            print("Child")
-            print(entry['dn'])
+            currentObject = dict()
+            # Set sub-object main attributes
+            self.subobjectId += 1
             currentObject['id'] = self.subobjectId
             currentObject['name'] = str(entry['dn']).split(',')[0].split('=')[1]
+            currentObject['type'] = str(entry['attributes']['objectCategory']).split(',')[0].split('=')[1]
+            if currentObject['name'] in LDAP_BUILTIN_OBJECTS or 'builtinDomain' in entry['attributes']['objectClass']:
+                currentObject['builtin'] = True
+
+            # Set the sub-object children
+            if self.childrenObjectType == 'array' and 'children' not in currentObject:
+                currentObject['children'] = list()
+            elif 'children' not in currentObject:
+                currentObject['children'] = dict()
+
+            # Set all other attributes
             for attr in entry['attributes']:
                 if attr in self.ldapAttributes or self.ldapAttributes == "*":
-                    if attr == self.usernameIdentifier and self.usernameIdentifier in entry['attributes']:
-                        value = entry['attributes'][attr]
+                    if attr == self.usernameIdentifier and self.usernameIdentifier in entry['attributes'] and ('user' in entry['attributes']['objectClass'] or 'person' in entry['attributes']['objectClass']):
+                        value = entry['attributes'][attr][0]
                         currentObject['username'] = value
+                    elif attr == 'cn' and 'group' in entry['attributes']['objectClass']:
+                        value = entry['attributes'][attr]
+                        currentObject['groupname'] = value
                     elif attr == 'objectCategory':
                         value = self.__getCN__(entry['attributes'][attr])
                         currentObject['type'] = value
-                    elif attr == 'objectSid':
-                        sid = SID(entry['attributes'][attr])
-                        sid = sid.__str__()
-                        rid = sid.split("-")[-1]
-                        value = sid
-                        currentObject['objectRid'] = rid
+                    elif attr == 'dn':
+                        value = entry['dn']
+                    elif attr == 'objectSid' and 'group' in entry['attributes']['objectClass'] and self.__getCN__(dn).lower() != "builtin":
+                        try:
+                            sid = SID(entry['attributes'][attr])
+                            sid = sid.__str__()
+                            rid = sid.split("-")[-1]
+                            value = sid
+                            currentObject['objectRid'] = rid
+                        except Exception as e:
+                            print("Could not translate SID Byte Array for " + dn)
+                            print(e)
                     elif attr not in self.excludedLdapAttributes:
-                        value = entry['attributes'][attr]
+                        if isinstance(entry['attributes'][attr], list) and len(entry['attributes'][attr]) > 1:
+                            value = entry['attributes'][attr]
+                        else:
+                            value = str(entry['attributes'][attr])
 
-                    currentObject[attr] = value
+                    try:
+                        currentObject[attr] = value
+                    except Exception as e:
+                        print("Exception on key: " + attr)
+                        print("Object: " + dn)
+                        print(e)
 
-            if self.recursive == True:
+            # Force exclude System folder, has a bunch of objects that aren't useful for administration
+            if self.recursive == True and currentObject['type'].lower() in self.containerTypes and self.__getCN__(dn).lower() != "system":
                 children = self.__getObjectChildren__(entry['dn'])
-
-            if self.childrenObjectType == 'array':
-                if children:
-                    currentObject['children'] = list()
-                    currentObject['children'].append(children)
-                result.append(currentObject)
             else:
-                if children:
-                    currentObject['children'] = dict()
-                    currentObject['children'][entry['dn']] = children
-                result[currentObject.name]
-            self.subobjectId += 1
+                children = list()
 
-        return result
+            # Set the sub-object children
+            if self.childrenObjectType == 'array' and children:
+                currentObject['children'] = children
+            elif children:
+                currentObject['children'].update(children)
+
+            if not currentObject['children']:
+                del currentObject['children']
+            result.append(currentObject)
+        
+        if result:
+            return result
+        else:
+            return None
 
     def __getCN__(self, dn):
-        return str(dn).split(',')[0].split('=')[-1].lower()
+        return str(dn).split(',')[0].split('=')[-1]

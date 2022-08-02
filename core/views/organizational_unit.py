@@ -1,3 +1,4 @@
+import json
 from time import perf_counter
 from django.core.exceptions import PermissionDenied
 from django.db import connection, transaction
@@ -12,6 +13,7 @@ from rest_framework.decorators import action
 from interlock_backend.ldap.connector import openLDAPConnection
 from interlock_backend.ldap.adsi import addSearchFilter, buildFilterFromDict
 from interlock_backend.ldap.dirtree import getFullDirectoryTree, get_children_ou
+from core.models.ldapTree import LDAPTree
 from interlock_backend.ldap.encrypt import validateUser
 from interlock_backend.ldap.settings_func import SettingsList
 import logging
@@ -169,75 +171,6 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
             'LDAP_DIRTREE_CN_FILTER'
         }})
 
-        # Check if iexact filter is in data json
-        if 'iexact' in data:
-            exactFilter = data['iexact']
-        else:
-            exactFilter = {}
-
-        # Check if standard dirtree filter is in data json
-        if 'filter' in data:
-            objectFilters = data['filter']
-        else:
-            objectFilters = {}
-
-        # Get defaults and initialize vars
-        defaultOUFilters = ldap_settings_list.LDAP_DIRTREE_OU_FILTER
-        defaultCNFilters = ldap_settings_list.LDAP_DIRTREE_CN_FILTER
-        searchFilterOU = ""
-        searchFilterCN = ""
-
-        # If objectFilters is not empty use iexact or defaults
-        if not bool(objectFilters) and not bool(exactFilter):
-            searchFilterOU = buildFilterFromDict(defaultOUFilters)
-            searchFilterCN = buildFilterFromDict(defaultCNFilters)
-        else:
-            if bool(objectFilters):
-                # For Filter, Filter Type in...
-                # ( F-Type in this case is Filter Type, not a Jaguar :D )
-                for f, fType in defaultOUFilters.items():
-                    if f not in objectFilters:
-                        searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '|')
-
-                # Build Negations in defaultOUFilters (They have to be in the outer part of the string)
-                for f, fType in defaultOUFilters.items():
-                    if f in objectFilters:
-                        searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '&', negate=True)
-
-                # Same but for CN Filters
-                for f, fType in defaultCNFilters.items():
-                    if f not in objectFilters:
-                        searchFilterCN = addSearchFilter(searchFilterCN, fType + "=" + f, '|')
-
-                # Build Negations in defaultCNFilters
-                for f, fType in defaultCNFilters.items():
-                    if f in objectFilters:
-                        searchFilterCN = addSearchFilter(searchFilterCN, fType + "=" + f, '&', negate=True)
-            if bool(exactFilter):
-                # Build Negations in defaultOUFilters (They have to be in the outer part of the string)
-                for f, fType in exactFilter.items():
-                    if isinstance(fType, dict):
-                        if fType['attr'] == 'ou':
-                            searchFilterOU = addSearchFilter(searchFilterOU, fType['attr'] + "=" + f, '&', negate=fType['exclude'])
-                        if fType['attr'] == 'cn':
-                            searchFilterCN = addSearchFilter(searchFilterCN, fType['attr'] + "=" + f, '&', negate=fType['exclude'])
-                    else:
-                        searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '&')
-                        searchFilterCN = addSearchFilter(searchFilterCN, fType + "=" + f, '&')
-
-        if 'builtinDomain' in objectFilters:
-            disableBuiltIn = True
-        else:
-            disableBuiltIn = False
-
-        if 'organizationalUnit' in objectFilters:
-            enableOuFilter = True
-        else:
-            enableOuFilter = False
-
-        logger.debug("OU Object Search Filter: " + searchFilterOU)
-        logger.debug("CN Object Search Filter: " + searchFilterCN)
-
         # Open LDAP Connection
         try:
             c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
@@ -245,22 +178,32 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
             print(e)
             raise CouldNotOpenConnection
 
+        attributesToSearch = [
+            # User Attrs
+            'objectClass',
+            'objectCategory',
+            'sAMAccountName',
+
+            # Group Attrs
+            'cn',
+            'member',
+            'distinguishedName',
+            'groupType',
+            'objectSid'
+        ]
+
         # Should have:
         # Filter by Object DN
         # Filter by Attribute
         try:
             debugTimerStart = perf_counter()
-            result = getFullDirectoryTree(
-                connection=c,
-                ouFilter=searchFilterOU,
-                cnFilter=searchFilterCN,
-                disableBuiltIn=disableBuiltIn,
-                getOUs=enableOuFilter
-            )
+            dirList = LDAPTree(**{
+                "connection": c,
+                "recursive": True,
+                "ldapAttributes": attributesToSearch
+            })
             debugTimerEnd = perf_counter()
-            logger.debug("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
-            dirList = result['results']
-            c = result['connection']
+            logger.info("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
         except Exception as e:
             print(e)
             raise CouldNotFetchDirtree
@@ -275,12 +218,13 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
             )
 
         # Close / Unbind LDAP Connection
-        c.unbind()
+        dirList.connection.unbind()
+        # c.unbind()
         return Response(
                 data={
                 'code': code,
                 'code_msg': code_msg,
-                'ou_list': dirList,
+                'ou_list': dirList.children,
                 }
         )
 

@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from interlock_backend.ldap.encrypt import validateUser
 from core.views.base import BaseViewSet
 import logging
+import json
 
 ################################# Test Imports #################################
 from core.models.ldapTree import LDAPTree
@@ -30,9 +31,11 @@ class TestViewSet(BaseViewSet):
         ldapTree = LDAPTree(**{
             "connection": ldapConnection,
             "recursive": True,
-            "ldapAttributes": [ 'dn' ]
+            "ldapAttributes": [ 'dn' ],
+            "testFetch": True
         })
-        print(ldapTree.children)
+        # print(json.dumps(ldapTree.children[0], indent=1))
+        # print(ldapTree.children)
         # print(ldapTree.__getTreeCount__())
 
         ldapConnection.unbind()
@@ -40,6 +43,6 @@ class TestViewSet(BaseViewSet):
              data={
                 'code': code,
                 'code_msg': 'ok',
-                'data' : data
+                'data' : ldapTree.children
              }
         )
