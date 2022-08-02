@@ -28,7 +28,10 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         code = 0
         code_msg = 'ok'
 
-        ldap_settings_list = SettingsList(**{"search":{'LDAP_LOG_READ'}})
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_LOG_READ',
+            'LDAP_DIRTREE_OU_FILTER'
+        }})
 
         # Open LDAP Connection
         try:
@@ -37,12 +40,36 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
             print(e)
             raise CouldNotOpenConnection
 
-        debugTimerStart = perf_counter()
-        result = getFullDirectoryTree(connection=c, getCNs=False)
-        debugTimerEnd = perf_counter()
-        logger.debug("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
-        dirList = result['results']
-        c = result['connection']
+        attributesToSearch = [
+            # User Attrs
+            'objectClass',
+            'objectCategory',
+            'sAMAccountName',
+
+            # Group Attrs
+            'cn',
+            'member',
+            'distinguishedName',
+            'groupType',
+            'objectSid'
+        ]
+
+        filterDict = ldap_settings_list.LDAP_DIRTREE_OU_FILTER
+        ldapFilter = buildFilterFromDict(filterDict)
+
+        try:
+            debugTimerStart = perf_counter()
+            dirList = LDAPTree(**{
+                "connection": c,
+                "recursive": True,
+                "ldapFilter": ldapFilter,
+                "ldapAttributes": attributesToSearch,
+            })
+            debugTimerEnd = perf_counter()
+            logger.info("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
+        except Exception as e:
+            print(e)
+            raise CouldNotFetchDirtree
 
         if ldap_settings_list.LDAP_LOG_READ == True:
             # Log this action to DB
@@ -50,7 +77,7 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
                 user_id=request.user.id,
                 actionType="READ",
                 objectClass="OU",
-                affectedObject="ALL"
+                affectedObject="ALL - List Query"
             )
 
         # Close / Unbind LDAP Connection
@@ -59,7 +86,7 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
                 data={
                 'code': code,
                 'code_msg': code_msg,
-                'ou_list': dirList,
+                'ou_list': dirList.children,
                 }
         )
 
@@ -162,8 +189,7 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
             )
 
         # Close / Unbind LDAP Connection
-        dirList.connection.unbind()
-        # c.unbind()
+        c.unbind()
         return Response(
                 data={
                 'code': code,
