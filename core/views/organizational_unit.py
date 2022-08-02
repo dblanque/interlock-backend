@@ -1,7 +1,6 @@
 import json
 from time import perf_counter
 from django.core.exceptions import PermissionDenied
-from django.db import connection, transaction
 from ldap3 import LEVEL
 from rest_framework.response import Response
 from rest_framework import viewsets
@@ -99,47 +98,9 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         code_msg = 'ok'
 
         ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_LOG_READ',
-            'LDAP_DIRTREE_OU_FILTER',
-            'LDAP_DIRTREE_CN_FILTER'
+            'LDAP_LOG_READ'
         }})
-        ldapFilter = ""
-
-        if 'iexact' in data['filter']:
-            logger.debug("Dirtree fetching with Filter iexact")
-            if len(data['filter']['iexact']) > 0:
-                for f in data['filter']['iexact']:
-                    fVal = data['filter']['iexact'][f]
-                    if isinstance(fVal, dict):
-                        fType = fVal.pop('attr')
-                        fExclude = fVal.pop('exclude')
-                        ldapFilter = addSearchFilter(ldapFilter, fType + "=" + f, negate=fExclude)
-                    else:
-                        fType = fVal
-                        ldapFilter = addSearchFilter(ldapFilter, fType + "=" + f)
-        else:
-            logger.debug("Dirtree fetching with Standard Exclusion Filter")
-            filterDict = {**ldap_settings_list.LDAP_DIRTREE_CN_FILTER, **ldap_settings_list.LDAP_DIRTREE_OU_FILTER}
-            if 'filter' in data:
-                if len(data['filter']) > 0:
-                    for i in data['filter']:
-                        if i in filterDict:
-                            del filterDict[i]
-
-            ldapFilter = buildFilterFromDict(filterDict)
-
-            # Where f is Filter Value, fType is the filter Type (not a Jaguar)
-            # Example: objectClass=computer
-            # f = computer
-            # fType = objectClass
-            if 'filter' in data:
-                if len(data['filter']) > 0:
-                    for f in data['filter']:
-                        fType = data['filter'][f]
-                        ldapFilter = addSearchFilter(ldapFilter, fType + "=" + f, negate=True)
-
-        logger.debug("LDAP Filter for Dirtree: ")
-        logger.debug(ldapFilter)
+        ldapFilter = self.processFilter(data)
 
         # Open LDAP Connection
         try:

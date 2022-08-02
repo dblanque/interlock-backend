@@ -117,6 +117,9 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
              }
         )
 
+    # TODO
+    ### FILTER Endpoint for groups
+
     @action(detail=False,methods=['post'])
     def fetch(self, request):
         user = request.user

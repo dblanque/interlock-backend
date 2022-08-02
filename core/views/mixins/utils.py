@@ -18,11 +18,16 @@ def recursiveFindInDict(obj, key):
           item = recursiveFindInDict(v, key)
           if item is not None:
               return item
-
 # Check if in current level array
 # check if has children
 # if has children check in children array
 # if children have children call itself
+
+def __getCN__(dn):
+  return str(dn).split(',')[0].split('=')[-1]
+
+def __getRelativeDN__(dn):
+  return str(dn).split(',').pop(0).join(',')
 
 def testFunc(*args):
   for i in args:

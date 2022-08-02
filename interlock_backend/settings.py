@@ -145,6 +145,10 @@ LOGGING = {
             "handlers": ["console"],
             "level": "DEBUG",
         },
+        "core.views.mixins.organizational_unit": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+        },
     },
 }
 
