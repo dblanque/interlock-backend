@@ -1,17 +1,28 @@
-import json
-from time import perf_counter
+### Exceptions
 from django.core.exceptions import PermissionDenied
-from ldap3 import LEVEL
-from rest_framework.response import Response
-from rest_framework import viewsets
-from .mixins.organizational_unit import OrganizationalUnitMixin
+from core.exceptions.dirtree import DirtreeFilterBad
+from core.exceptions.ldap import (
+    CouldNotOpenConnection,
+    CouldNotFetchDirtree
+)
+
+### Models
 from core.models.log import logToDB
-from rest_framework.exceptions import NotFound
-from core.exceptions.ldap import CouldNotOpenConnection, CouldNotFetchDirtree
-from rest_framework.decorators import action
-from interlock_backend.ldap.connector import openLDAPConnection
-from interlock_backend.ldap.adsi import addSearchFilter, buildFilterFromDict
 from core.models.ldapTree import LDAPTree
+
+### Mixins
+from .mixins.organizational_unit import OrganizationalUnitMixin
+
+### REST
+from rest_framework.response import Response
+from rest_framework.exceptions import NotFound
+from rest_framework import viewsets
+from rest_framework.decorators import action
+
+### Others
+from time import perf_counter
+from interlock_backend.ldap.connector import openLDAPConnection
+from interlock_backend.ldap.adsi import buildFilterFromDict
 from interlock_backend.ldap.encrypt import validateUser
 from interlock_backend.ldap.settings_func import SettingsList
 import logging
@@ -53,6 +64,7 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
             'objectSid'
         ]
 
+        # Read-only end-point, build filters from default dictionary
         filterDict = ldap_settings_list.LDAP_DIRTREE_OU_FILTER
         ldapFilter = buildFilterFromDict(filterDict)
 
@@ -100,7 +112,10 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         ldap_settings_list = SettingsList(**{"search":{
             'LDAP_LOG_READ'
         }})
-        ldapFilter = self.processFilter(data)
+        try:
+            ldapFilter = self.processFilter(data)
+        except:
+            raise DirtreeFilterBad
 
         # Open LDAP Connection
         try:

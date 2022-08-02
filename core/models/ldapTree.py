@@ -1,5 +1,3 @@
-import json
-from django.db import connection
 from django.utils.translation import gettext_lazy as _
 from interlock_backend.ldap.settings_func import SettingsList
 from interlock_backend.ldap.adsi import (
@@ -7,7 +5,6 @@ from interlock_backend.ldap.adsi import (
     LDAP_BUILTIN_OBJECTS
 )
 from interlock_backend.ldap.securityIdentifier import SID
-import ldap3
 class LDAPTree():
     """
     ## LDAPTree Object
@@ -42,61 +39,41 @@ class LDAPTree():
             'LDAP_DIRTREE_CN_FILTER',
             'LDAP_DIRTREE_ATTRIBUTES',
         }})
-        self.name = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
-        if 'searchBase' in kwargs:
-            self.searchBase = kwargs.pop('searchBase')
-        else:
-            self.searchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
 
+        # Set LDAPTree Default Values
+        self.name = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+        self.searchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
         self.connection = kwargs.pop('connection')
         self.usernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
         self.subobjectId = 0
-
         self.excludedLdapAttributes = [
             'objectGUID',
             'objectSid'
         ]
-
         self.requiredLdapAttributes = [
             'dn',
             'objectCategory',
             'objectClass'
         ]
-
         self.containerTypes = [
             'container',
             'organizational-unit'
         ]
-
-        if 'recursive' in kwargs:
-            self.recursive = kwargs.pop('recursive')
-        else:
-            self.recursive = False
-
-        if 'testFetch' in kwargs:
-            self.testFetch = kwargs.pop('testFetch')
-        else:
-            self.testFetch = False
-
-        if 'ldapFilter' in kwargs:
-            self.ldapFilter = kwargs.pop('ldapFilter')
-        else: # Merge the two default filter dicts
-            self.ldapFilter = buildFilterFromDict({**ldap_settings_list.LDAP_DIRTREE_CN_FILTER, **ldap_settings_list.LDAP_DIRTREE_OU_FILTER})
-
-        if 'ldapAttributes' in kwargs:
-            self.ldapAttributes = kwargs.pop('ldapAttributes')
-        else:
-            self.ldapAttributes = ldap_settings_list.LDAP_DIRTREE_ATTRIBUTES
+        self.recursive = False
+        self.testFetch = False        
+        self.ldapFilter = buildFilterFromDict({**ldap_settings_list.LDAP_DIRTREE_CN_FILTER, **ldap_settings_list.LDAP_DIRTREE_OU_FILTER})
+        self.ldapAttributes = ldap_settings_list.LDAP_DIRTREE_ATTRIBUTES
+        self.childrenObjectType = 'array'
 
         # Set required attributes, these are unremovable from the tree searches
         for attr in self.requiredLdapAttributes:
             if attr not in self.ldapAttributes:
                 self.ldapAttributes.append(attr)
 
-        if 'childrenObjectType' in kwargs:
-            self.childrenObjectType = kwargs.pop('childrenObjectType')
-        else:
-            self.childrenObjectType = 'array'
+        # Set passed kwargs from Object Call
+        for kw in kwargs:
+            setattr(self, kw, kwargs[kw])
+
         self.children = self.__getLdapTree__()
 
 
@@ -205,7 +182,7 @@ class LDAPTree():
             currentObject['id'] = self.subobjectId
             currentObject['name'] = str(entry['dn']).split(',')[0].split('=')[1]
             currentObject['type'] = str(entry['attributes']['objectCategory']).split(',')[0].split('=')[1]
-            if currentObject['name'] in LDAP_BUILTIN_OBJECTS or 'builtinDomain' in entry['attributes']['objectClass']:
+            if currentObject['name'] in LDAP_BUILTIN_OBJECTS or 'builtinDomain' in entry['attributes']['objectClass'] or self.__getCN__(dn) in LDAP_BUILTIN_OBJECTS:
                 currentObject['builtin'] = True
 
             # Set the sub-object children
