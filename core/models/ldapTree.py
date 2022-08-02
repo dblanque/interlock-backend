@@ -8,7 +8,6 @@ from interlock_backend.ldap.adsi import (
 )
 from interlock_backend.ldap.securityIdentifier import SID
 import ldap3
-
 class LDAPTree():
     """
     ## LDAPTree Object
