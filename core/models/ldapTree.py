@@ -11,25 +11,30 @@ import ldap3
 
 class LDAPTree():
     """
-    ## Fetches LDAP Directory Tree from the default Search Base or a specified Level
-    ### Arguments
-    - searchBase (OPTIONAL) | Default: LDAP_AUTH_SEARCH_BASE
-    - connection (REQUIRED) | LDAP Connection Object
-    - recursive (OPTIONAL) | Whether or not the Tree should be Recursively searched)
-    - ldapFilter (OPTIONAL) | LDAP Formatted Filter
-    - ldapAttributes (OPTIONAL) | LDAP Attributes to Fetch
-    - excludedLdapAttributes (OPTIONAL) | LDAP Attributes to Exclude
-    - childrenObjectType (OPTIONAL) | Default: List/Array - Can be dict() or list()
-    - testFetch (OPTIONAL) | Default: False - Only fetch one object to test
+    ## LDAPTree Object
+    Fetches LDAP Directory Tree from the default Search Base or a specified Level
+
+    ### Call example
+    LDAPTree(**{
+        "key":"val",\n
+        ...
+    })
+
+    #### Arguments
+     - searchBase: (OPTIONAL) | Default: LDAP_AUTH_SEARCH_BASE
+     - connection: (REQUIRED) | LDAP Connection Object
+     - recursive: (OPTIONAL) | Whether or not the Tree should be Recursively searched)
+     - ldapFilter: (OPTIONAL) | LDAP Formatted Filter
+     - ldapAttributes: (OPTIONAL) | LDAP Attributes to Fetch
+     - excludedLdapAttributes: (OPTIONAL) | LDAP Attributes to Exclude
+     - childrenObjectType: (OPTIONAL) | Default: List/Array - Can be dict() or list()
+     - testFetch: (OPTIONAL) | Default: False - Only fetch one object to test
     """
     use_in_migrations = False
 
     def __init__(self, **kwargs):
         if 'connection' not in kwargs:
             raise Exception("LDAPTree object requires an LDAP Connection to Initialize")
-
-        # TODO - Set default attributes to search
-        # TODO - Set default filters to search
 
         ldap_settings_list = SettingsList(**{"search":{
             'LDAP_AUTH_SEARCH_BASE',
