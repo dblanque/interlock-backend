@@ -181,23 +181,6 @@ def buildFilterFromDict(dictArray, operator="|"):
         search_filter = addSearchFilter(search_filter, objectType + "=" + key, operator)
     return search_filter
 
-def getDefaultFilterFor(type='OU'):
-    """
-    Valid Types:
-    OU - Organizational Unit
-    CN - Common Name
-    """
-    ldap_settings_list = SettingsList(**{"search":{
-        'LDAP_DIRTREE_OU_FILTER',
-        'LDAP_DIRTREE_CN_FILTER'
-    }})
-    if type.upper() == 'OU':
-        filter = ldap_settings_list.LDAP_DIRTREE_OU_FILTER
-    else:
-        filter = ldap_settings_list.LDAP_DIRTREE_CN_FILTER
-    result = buildFilterFromDict(filter)
-    return result
-
 def bin_as_str(value):
     casted_int = int(str(value))
     return str(bin(casted_int))[2:].zfill(32)

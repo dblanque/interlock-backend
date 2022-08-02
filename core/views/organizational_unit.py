@@ -12,7 +12,6 @@ from core.exceptions.ldap import CouldNotOpenConnection, CouldNotFetchDirtree
 from rest_framework.decorators import action
 from interlock_backend.ldap.connector import openLDAPConnection
 from interlock_backend.ldap.adsi import addSearchFilter, buildFilterFromDict
-from interlock_backend.ldap.dirtree import getFullDirectoryTree, get_children_ou
 from core.models.ldapTree import LDAPTree
 from interlock_backend.ldap.encrypt import validateUser
 from interlock_backend.ldap.settings_func import SettingsList
@@ -65,99 +64,6 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         )
 
     @action(detail=False,methods=['post'])
-    def filter(self, request):
-        user = request.user
-        validateUser(request=request, requestUser=user)
-        data = request.data
-        code = 0
-        code_msg = 'ok'
-
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_LOG_READ',
-            'LDAP_DIRTREE_OU_FILTER',
-            'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_AUTH_USERNAME_IDENTIFIER'
-        }})
-
-        # Check if iexact filter is in data json
-        if 'iexact' in data:
-            exactFilter = data['iexact']
-        else:
-            exactFilter = {}
-
-        # Check if standard dirtree filter is in data json
-        if 'filter' in data:
-            objectFilters = data['filter']
-        else:
-            objectFilters = {}
-
-        # Get defaults and initialize vars
-        defaultOUFilters = ldap_settings_list.LDAP_DIRTREE_OU_FILTER
-        searchFilterOU = ""
-
-        # If objectFilters is not empty use iexact or defaults
-        if not bool(objectFilters) and not bool(exactFilter):
-            searchFilterOU = buildFilterFromDict(defaultOUFilters)
-        else:
-            if bool(objectFilters):
-                # For Filter, Filter Type in...
-                # ( F-Type in this case is Filter Type, not a Jaguar :D )
-                for f, fType in defaultOUFilters.items():
-                    if f not in objectFilters:
-                        searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '|')
-
-                # Build Negations in defaultOUFilters (They have to be in the outer part of the string)
-                for f, fType in defaultOUFilters.items():
-                    if f in objectFilters:
-                        searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '&', negate=True)
-            if bool(exactFilter):
-                # Build Negations in defaultOUFilters (They have to be in the outer part of the string)
-                for f, fType in exactFilter.items():
-                    if isinstance(fType, dict):
-                        searchFilterOU = addSearchFilter(searchFilterOU, fType['attr'] + "=" + f, '&', negate=fType['exclude'])
-                    else:
-                        searchFilterOU = addSearchFilter(searchFilterOU, fType + "=" + f, '&')
-
-        logger.debug("OU Object Search Filter: " + searchFilterOU)
-
-        # Open LDAP Connection
-        try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
-        except Exception as e:
-            print(e)
-            raise CouldNotOpenConnection
-
-        debugTimerStart = perf_counter()
-        result = getFullDirectoryTree(
-            connection=c,
-            getCNs=False,
-            ouFilter=searchFilterOU
-        )
-        debugTimerEnd = perf_counter()
-        logger.debug("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
-        dirList = result['results']
-        c = result['connection']
-
-        if ldap_settings_list.LDAP_LOG_READ == True:
-            # Log this action to DB
-            logToDB(
-                user_id=request.user.id,
-                actionType="READ",
-                objectClass="OU",
-                affectedObject="ALL"
-            )
-
-        # Close / Unbind LDAP Connection
-        c.unbind()
-        return Response(
-                data={
-                'code': code,
-                'code_msg': code_msg,
-                'ou_list': dirList,
-                }
-        )
-
-    @action(detail=False,methods=['post'])
     def dirtree(self, request):
         user = request.user
         validateUser(request=request, requestUser=user)
@@ -170,6 +76,43 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
             'LDAP_DIRTREE_OU_FILTER',
             'LDAP_DIRTREE_CN_FILTER'
         }})
+        ldapFilter = ""
+
+        if 'iexact' in data['filter']:
+            logger.debug("Dirtree fetching with Filter iexact")
+            if len(data['filter']['iexact']) > 0:
+                for f in data['filter']['iexact']:
+                    fVal = data['filter']['iexact'][f]
+                    if isinstance(fVal, dict):
+                        fType = fVal.pop('attr')
+                        fExclude = fVal.pop('exclude')
+                        ldapFilter = addSearchFilter(ldapFilter, fType + "=" + f, negate=fExclude)
+                    else:
+                        fType = fVal
+                        ldapFilter = addSearchFilter(ldapFilter, fType + "=" + f)
+        else:
+            logger.debug("Dirtree fetching with Standard Exclusion Filter")
+            filterDict = {**ldap_settings_list.LDAP_DIRTREE_CN_FILTER, **ldap_settings_list.LDAP_DIRTREE_OU_FILTER}
+            if 'filter' in data:
+                if len(data['filter']) > 0:
+                    for i in data['filter']:
+                        if i in filterDict:
+                            del filterDict[i]
+
+            ldapFilter = buildFilterFromDict(filterDict)
+
+            # Where f is Filter Value, fType is the filter Type (not a Jaguar)
+            # Example: objectClass=computer
+            # f = computer
+            # fType = objectClass
+            if 'filter' in data:
+                if len(data['filter']) > 0:
+                    for f in data['filter']:
+                        fType = data['filter'][f]
+                        ldapFilter = addSearchFilter(ldapFilter, fType + "=" + f, negate=True)
+
+        logger.debug("LDAP Filter for Dirtree: ")
+        logger.debug(ldapFilter)
 
         # Open LDAP Connection
         try:
@@ -200,7 +143,8 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
             dirList = LDAPTree(**{
                 "connection": c,
                 "recursive": True,
-                "ldapAttributes": attributesToSearch
+                "ldapFilter": ldapFilter,
+                "ldapAttributes": attributesToSearch,
             })
             debugTimerEnd = perf_counter()
             logger.info("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))

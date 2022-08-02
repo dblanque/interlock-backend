@@ -18,7 +18,9 @@ class LDAPTree():
     - recursive (OPTIONAL) | Whether or not the Tree should be Recursively searched)
     - ldapFilter (OPTIONAL) | LDAP Formatted Filter
     - ldapAttributes (OPTIONAL) | LDAP Attributes to Fetch
+    - excludedLdapAttributes (OPTIONAL) | LDAP Attributes to Exclude
     - childrenObjectType (OPTIONAL) | Default: List/Array - Can be dict() or list()
+    - testFetch (OPTIONAL) | Default: False - Only fetch one object to test
     """
     use_in_migrations = False
 
@@ -45,14 +47,16 @@ class LDAPTree():
         self.connection = kwargs.pop('connection')
         self.usernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
         self.subobjectId = 0
+
+        self.excludedLdapAttributes = [
+            'objectGUID',
+            'objectSid'
+        ]
+
         self.requiredLdapAttributes = [
             'dn',
             'objectCategory',
             'objectClass'
-        ]
-        self.excludedLdapAttributes = [
-            'objectGUID',
-            'objectSid'
         ]
 
         self.containerTypes = [
@@ -129,13 +133,18 @@ class LDAPTree():
 
             # If children object type should be Array
             if self.childrenObjectType == 'array':
+                ###### Append subobject to Array ######
                 children.append(currentEntity)
-            else:
+
+                ###### Increase subobjectId ######
+                self.subobjectId += 1
+            elif self.childrenObjectType == 'dict':
+                ###### Append subobject to Dict ######
                 children['dict'][currentEntity['dn']] = currentEntity
                 children['dict'][currentEntity['dn']].pop('dn')
 
-            ###### Increase subobjectId ######
-            self.subobjectId += 1
+                ###### Increase subobjectId ######
+                self.subobjectId += 1
         return children
 
     def __getTreeCount__(self):
@@ -179,6 +188,12 @@ class LDAPTree():
             attributes=self.ldapAttributes
         )
 
+        userClasses = [
+            'user',
+            'person',
+            'organizationalPerson',
+        ]
+
         for entry in ldapSearch:
             currentObject = dict()
             # Set sub-object main attributes
@@ -198,9 +213,15 @@ class LDAPTree():
             # Set all other attributes
             for attr in entry['attributes']:
                 if attr in self.ldapAttributes or self.ldapAttributes == "*":
-                    if attr == self.usernameIdentifier and self.usernameIdentifier in entry['attributes'] and ('user' in entry['attributes']['objectClass'] or 'person' in entry['attributes']['objectClass']):
-                        value = entry['attributes'][attr][0]
-                        currentObject['username'] = value
+                    if attr == self.usernameIdentifier and self.usernameIdentifier in entry['attributes']:
+                        allowUsername = False
+                        # For class in user classes check if it's in object
+                        for cla in userClasses:
+                            if cla in entry['attributes']['objectClass']:
+                                allowUsername = True
+                        if allowUsername == True:
+                            value = entry['attributes'][attr][0]
+                            currentObject['username'] = value
                     elif attr == 'cn' and 'group' in entry['attributes']['objectClass']:
                         value = entry['attributes'][attr]
                         currentObject['groupname'] = value
