@@ -24,7 +24,10 @@ class SID(object):
         print(sid) # S-1-0-21-2209570321-9700970-2859064192-1159
     """
     def __init__(self, sid_byte_array):
-        sid_byte_array = sid_byte_array.raw_values[0]
+        if isinstance(sid_byte_array, list):
+            sid_byte_array = bytearray(sid_byte_array[0])
+        elif isinstance(sid_byte_array, object):
+            sid_byte_array = sid_byte_array.raw_values[0]
 
         logger.debug("Class SID() in: "+__name__)
         logger.info("SID Byte Array")

@@ -1,0 +1,205 @@
+from django.utils.translation import gettext_lazy as _
+from interlock_backend.ldap.settings_func import SettingsList
+from interlock_backend.ldap.adsi import (
+    buildFilterFromDict,
+    LDAP_BUILTIN_OBJECTS
+)
+from interlock_backend.ldap.securityIdentifier import SID
+import ldap3
+
+class LDAPTree():
+    """
+    ## Fetches LDAP Directory Tree from the default Search Base or a specified Level
+    ### Arguments
+    - searchBase (OPTIONAL) | Default: LDAP_AUTH_SEARCH_BASE
+    - connection (REQUIRED) | LDAP Connection Object
+    - recursive (OPTIONAL) | Whether or not the Tree should be Recursively searched)
+    - ldapFilter (OPTIONAL) | LDAP Formatted Filter
+    - ldapAttributes (OPTIONAL) | LDAP Attributes to Fetch
+    - childrenObjectType (OPTIONAL) | Default: List/Array - Can be dict() or list()
+    """
+    use_in_migrations = False
+
+    def __init__(self, **kwargs):
+        if 'connection' not in kwargs:
+            raise Exception("LDAPTree object requires an LDAP Connection to Initialize")
+
+        # TODO - Set default attributes to search
+        # TODO - Set default filters to search
+
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_AUTH_SEARCH_BASE',
+            'LDAP_AUTH_USERNAME_IDENTIFIER',
+            'LDAP_DIRTREE_OU_FILTER',
+            'LDAP_DIRTREE_CN_FILTER',
+            'LDAP_DIRTREE_ATTRIBUTES',
+        }})
+        self.name = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+        if 'searchBase' in kwargs:
+            self.searchBase = kwargs.pop('searchBase')
+        else:
+            self.searchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+
+        self.connection = kwargs.pop('connection')
+        self.usernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
+        self.subobjectId = 0
+        self.requiredLdapAttributes = [
+            'dn',
+            'objectCategory',
+            'objectClass'
+        ]
+        self.excludedLdapAttributes = [
+            'objectGUID'
+        ]
+
+        if 'recursive' in kwargs:
+            self.recursive = kwargs.pop('recursive')
+        else:
+            self.recursive = False
+
+        if 'ldapFilter' in kwargs:
+            self.ldapFilter = kwargs.pop('ldapFilter')
+        else: # Merge the two default filter dicts
+            self.ldapFilter = buildFilterFromDict({**ldap_settings_list.LDAP_DIRTREE_CN_FILTER, **ldap_settings_list.LDAP_DIRTREE_OU_FILTER})
+
+        if 'ldapAttributes' in kwargs:
+            self.ldapAttributes = kwargs.pop('ldapAttributes')
+        else:
+            self.ldapAttributes = ldap3.ALL_ATTRIBUTES
+
+        for attr in self.requiredLdapAttributes:
+            if attr not in self.ldapAttributes:
+                self.ldapAttributes.append(attr)
+
+        if 'childrenObjectType' in kwargs:
+            self.childrenObjectType = kwargs.pop('childrenObjectType')
+        else:
+            self.childrenObjectType = 'array'
+        self.children = self.__getLdapTree__()
+
+    def __getLdapTree__(self):
+        self.connection.search(
+            search_base     = self.searchBase,
+            search_filter   = self.ldapFilter,
+            search_scope    = 'LEVEL',
+            attributes      = self.ldapAttributes
+        )
+        baseLevelList = self.connection.entries
+        if self.childrenObjectType == 'array':
+            children = list()
+        else:
+            children = dict()
+
+        # For each entity in the base level list
+        for entity in baseLevelList:
+            # Set DN from Abstract Entry object (LDAP3)
+            distinguishedName=entity.entry_dn
+            # Set entity attributes
+            if distinguishedName == 'OU=Dolibarr,DC=brconsulting':
+                currentEntity = {}
+                currentEntity['name'] = str(distinguishedName).split(',')[0].split('=')[1]
+                currentEntity['id'] = self.subobjectId
+                currentEntity['dn'] = distinguishedName
+                currentEntity['type'] = str(entity.objectCategory).split(',')[0].split('=')[1]
+                if currentEntity['name'] in LDAP_BUILTIN_OBJECTS or 'builtinDomain' in entity.objectClass:
+                    currentEntity['builtin'] = True
+                
+                ##################################
+                # Recursive Children Search Here #
+                ##################################
+                if self.recursive == True:
+                    currentEntity['children'] = self.__getObjectChildren__(currentEntity['dn'])
+
+                # If children object type should be Array
+                if self.childrenObjectType == 'array':
+                    children.append(currentEntity)
+                else:
+                    children['dict'][currentEntity['dn']] = currentEntity
+                    children['dict'][currentEntity['dn']].pop('dn')
+
+                ###### Increase subobjectId ######
+                self.subobjectId += 1
+        return children
+
+    def __getTreeCount__(self):
+        count = 0
+
+        for k, v in enumerate(self.children):
+            count += 1
+            if 'children' in self.children[k]:
+                count += self.__getChildCount__(self.children[k]['children'])
+            
+        return count
+
+    def __getChildCount__(self, child):
+        count = 0
+        for k, v in enumerate(child):
+            count += 1
+            if 'children' in child[k]:
+                count += self.__getChildCount__(child[k]['children'])
+
+        return count
+
+    def __getObjectChildren__(self, dn):
+        if dn is None:
+            raise Exception("LDAPTree.__getObjectChildren__() - ERROR: Distinguished Name is None")
+
+        # If children object type should be Array
+        if self.childrenObjectType == 'array':
+            result = list()
+        else:
+            result = dict()
+
+        currentObject = {}
+        # Send Query to LDAP Server(s)
+        ldapSearch = self.connection.extend.standard.paged_search(
+            search_base=dn,
+            search_filter=self.ldapFilter,
+            search_scope='LEVEL',
+            attributes=self.ldapAttributes
+        )
+        for entry in ldapSearch:
+            print("Parent")
+            print(dn)
+            print("Child")
+            print(entry['dn'])
+            currentObject['id'] = self.subobjectId
+            currentObject['name'] = str(entry['dn']).split(',')[0].split('=')[1]
+            for attr in entry['attributes']:
+                if attr in self.ldapAttributes or self.ldapAttributes == "*":
+                    if attr == self.usernameIdentifier and self.usernameIdentifier in entry['attributes']:
+                        value = entry['attributes'][attr]
+                        currentObject['username'] = value
+                    elif attr == 'objectCategory':
+                        value = self.__getCN__(entry['attributes'][attr])
+                        currentObject['type'] = value
+                    elif attr == 'objectSid':
+                        sid = SID(entry['attributes'][attr])
+                        sid = sid.__str__()
+                        rid = sid.split("-")[-1]
+                        value = sid
+                        currentObject['objectRid'] = rid
+                    elif attr not in self.excludedLdapAttributes:
+                        value = entry['attributes'][attr]
+
+                    currentObject[attr] = value
+
+            if self.recursive == True:
+                children = self.__getObjectChildren__(entry['dn'])
+
+            if self.childrenObjectType == 'array':
+                if children:
+                    currentObject['children'] = list()
+                    currentObject['children'].append(children)
+                result.append(currentObject)
+            else:
+                if children:
+                    currentObject['children'] = dict()
+                    currentObject['children'][entry['dn']] = children
+                result[currentObject.name]
+            self.subobjectId += 1
+
+        return result
+
+    def __getCN__(self, dn):
+        return str(dn).split(',')[0].split('=')[-1].lower()

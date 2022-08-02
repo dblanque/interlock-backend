@@ -1,12 +1,6 @@
-from django.contrib.auth.models import PermissionsMixin
-from django.forms import JSONField
 from django.utils.translation import gettext_lazy as _
 from django.db import models
 from .base import BaseModel
-from interlock_backend.ldap.constants import (
-    SETTINGS_WITH_ALLOWABLE_OVERRIDE,
-    __dict__ as constantDictionary
-)
 
 class Setting(BaseModel):
     use_in_migrations = True

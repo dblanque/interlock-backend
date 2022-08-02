@@ -32,6 +32,7 @@ from core.views.organizational_unit import OrganizationalUnitViewSet
 from core.views.settings_view import SettingsViewSet
 from core.views.logs import LogsViewSet
 from core.views.groups import GroupsViewSet
+from core.views.test import TestViewSet
 
 # Initalizes Router
 router = routers.DefaultRouter()
@@ -42,6 +43,7 @@ named_view_sets = {
     r"ou": OrganizationalUnitViewSet,
     r"settings": SettingsViewSet,
     r"logs": LogsViewSet,
+    r"test": TestViewSet,
 }
 
 [router.register(f"api/{name}", view_set, basename=name) for name, view_set in named_view_sets.items()]

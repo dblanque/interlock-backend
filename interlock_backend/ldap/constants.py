@@ -124,6 +124,42 @@ LDAP_DIRTREE_CN_FILTER = {
     "computer" : "objectClass"
 }
 
+LDAP_DIRTREE_ATTRIBUTES = [
+    # User Attrs
+    'givenName', 
+    'sn', 
+    'displayName',
+    'mail',
+    'telephoneNumber',
+    'streetAddress',
+    'postalCode',
+    'l', # Local / City
+    'st', # State/Province
+    'countryCode', # INT
+    'co', # 2 Letter Code for Country
+    'c', # Full Country Name
+    'wWWHomePage',
+    'distinguishedName',
+    'userPrincipalName',
+    'userAccountControl', # Permission ACLs
+    'whenCreated',
+    'whenChanged',
+    'lastLogon',
+    'badPwdCount',
+    'pwdLastSet',
+    'primaryGroupID',
+    'objectClass',
+    'objectCategory',
+    'sAMAccountType',
+
+    # Group Attrs
+    'cn',
+    'member',
+    'distinguishedName',
+    'groupType',
+    'objectSid'
+]
+
 ################################## Logging #####################################
 LDAP_LOG_READ = False
 LDAP_LOG_CREATE = True
