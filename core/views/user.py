@@ -136,7 +136,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                     user_dict['username'] = str_value
 
             # Add entry DN to response dictionary
-            user_dict['dn'] = user.entry_dn
+            user_dict['distinguishedName'] = user.entry_dn
 
             # Check if user is disabled
             if ldap_adsi.list_user_perms(user, permissionToSearch="LDAP_UF_ACCOUNT_DISABLE") == True:
@@ -258,19 +258,17 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                     }
                     group = LDAPObject(**args)
                     memberOfObjects.append(group.attributes)
-
-                    del group
-                    del objectClassFilter
             else:
                 g = user_dict['memberOf']
                 objectClassFilter = ""
                 objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "objectClass=group")
                 objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "distinguishedName=" + g)
-                group = LDAPObject(**{
-                            "connection": c,
-                            "ldapFilter": "(objectClass=group)",
-                            "ldapAttributes": attributes
-                        })
+                args = {
+                    "connection": c,
+                    "ldapFilter": objectClassFilter,
+                    "ldapAttributes": attributes
+                }
+                group = LDAPObject(**args)
                 memberOfObjects.append(group.attributes)
 
             if len(memberOfObjects) > 0:
@@ -758,13 +756,13 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             raise ldap_exceptions.CouldNotOpenConnection
 
         # If data request for deletion has user DN
-        if 'dn' in data.keys() and data['dn'] != "":
-            logger.debug('Deleting with dn obtained from front-end')
-            logger.debug(data['dn'])
-            dn = data['dn']
-            if not dn or dn == "":
+        if 'distinguishedName' in data.keys() and data['distinguishedName'] != "":
+            logger.debug('Deleting with distinguishedName obtained from front-end')
+            logger.debug(data['distinguishedName'])
+            distinguishedName = data['distinguishedName']
+            if not distinguishedName or distinguishedName == "":
                 raise user_exceptions.UserDoesNotExist
-            c.delete(dn)
+            c.delete(distinguishedName)
         # Else, search for username dn
         else:
             logger.debug('Deleting with user dn search method')
@@ -818,10 +816,10 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             raise ldap_exceptions.CouldNotOpenConnection
 
         # If data request for deletion has user DN
-        if 'dn' in data.keys() and data['dn'] != "":
-            logger.debug('Updating with dn obtained from front-end')
-            logger.debug(data['dn'])
-            dn = data['dn']
+        if 'distinguishedName' in data.keys() and data['distinguishedName'] != "":
+            logger.debug('Updating with distinguishedName obtained from front-end')
+            logger.debug(data['distinguishedName'])
+            distinguishedName = data['distinguishedName']
         # Else, search for username dn
         else:
             logger.debug('Updating with user dn search method')
@@ -880,10 +878,10 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             raise ldap_exceptions.CouldNotOpenConnection
 
         # If data request for deletion has user DN
-        if 'dn' in data.keys() and data['dn'] != "":
-            logger.debug('Updating with dn obtained from front-end')
-            logger.debug(data['dn'])
-            dn = data['dn']
+        if 'distinguishedName' in data.keys() and data['distinguishedName'] != "":
+            logger.debug('Updating with distinguishedName obtained from front-end')
+            logger.debug(data['distinguishedName'])
+            distinguishedName = data['distinguishedName']
         # Else, search for username dn
         else:
             logger.debug('Updating with user dn search method')
@@ -948,10 +946,10 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             raise ldap_exceptions.CouldNotOpenConnection
 
         # If data request for deletion has user DN
-        if 'dn' in data.keys() and data['dn'] != "":
-            logger.debug('Updating with dn obtained from front-end')
-            logger.debug(data['dn'])
-            dn = data['dn']
+        if 'distinguishedName' in data.keys() and data['distinguishedName'] != "":
+            logger.debug('Updating with distinguishedName obtained from front-end')
+            logger.debug(data['distinguishedName'])
+            distinguishedName = data['distinguishedName']
         # Else, search for username dn
         else:
             logger.debug('Updating with user dn search method')

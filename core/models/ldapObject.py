@@ -55,7 +55,6 @@ class LDAPObject():
             'objectSid'
         ]
         self.requiredLdapAttributes = [
-            'dn',
             'distinguishedName',
             'objectCategory',
             'objectClass',
@@ -111,7 +110,6 @@ class LDAPObject():
         # Set searchResult attributes
         self.attributes = {}
         self.attributes['name'] = str(distinguishedName).split(',')[0].split('=')[1]
-        self.attributes['dn'] = distinguishedName
         self.attributes['distinguishedName'] = distinguishedName
         self.attributes['type'] = str(self.entry['objectCategory']).split(',')[0].split('=')[1]
         if self.attributes['name'] in LDAP_BUILTIN_OBJECTS or 'builtinDomain' in self.entry['objectClass']:

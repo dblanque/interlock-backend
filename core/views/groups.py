@@ -100,7 +100,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                 group_dict['hasMembers'] = True
 
             # Add entry DN to response dictionary
-            group_dict['dn'] = group.entry_dn
+            group_dict['distinguishedName'] = group.entry_dn
 
             data.append(group_dict)
 
@@ -244,7 +244,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                     group_dict[str_key] = str_value
 
             # Add entry DN to response dictionary
-            group_dict['dn'] = group[0].entry_dn
+            group_dict['distinguishedName'] = group[0].entry_dn
 
         if ldap_settings_list.LDAP_LOG_READ == True:
             # Log this action to DB
