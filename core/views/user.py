@@ -271,8 +271,23 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 group = LDAPObject(**args)
                 memberOfObjects.append(group.attributes)
 
+            ### Also add default Users Group to be available as Selectable PID
+            objectClassFilter = ""
+            objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "objectClass=group")
+            objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "cn=Domain Users*")
+            args = {
+                "connection": c,
+                "ldapFilter": objectClassFilter,
+                "ldapAttributes": attributes
+            }
+            group = LDAPObject(**args)
+            memberOfObjects.append(group.attributes)
+
             if len(memberOfObjects) > 0:
                 user_dict['memberOfObjects'] = memberOfObjects
+
+            del group
+            del memberOfObjects
 
         # Check if user is disabled
         if ldap_adsi.list_user_perms(user_entry, permissionToSearch="LDAP_UF_ACCOUNT_DISABLE", isObject=False) == True:
