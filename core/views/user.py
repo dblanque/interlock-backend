@@ -9,9 +9,13 @@ from core.exceptions import (
 ### Models
 from core.models import User
 from core.models.log import logToDB
+from core.models.ldapObject import LDAPObject
 
 ### Mixins
 from .mixins.user import UserViewMixin
+
+### ViewSets
+from .base import BaseViewSet
 
 ### REST Framework
 from rest_framework.response import Response
@@ -39,7 +43,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class UserViewSet(viewsets.ViewSet, UserViewMixin):
+class UserViewSet(BaseViewSet, UserViewMixin):
     queryset = User.objects.all()
 
     def list(self, request):
@@ -208,7 +212,9 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
             'primaryGroupID',
             'objectClass',
             'objectCategory',
+            'objectSid',
             'sAMAccountType',
+            'memberOf',
         ]
 
         objectClassFilter = "(objectclass=" + authObjectClass + ")"
@@ -219,12 +225,14 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
 
         # Add filter for username
         objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, authUsernameIdentifier + "=" + userToSearch)
-        c.search(
-            authSearchBase,
-            objectClassFilter,
-            attributes=attributes
-        )
-        user = c.entries
+        
+        user_obj = LDAPObject(**{
+            "connection": c,
+            "ldapFilter": objectClassFilter,
+            "ldapAttributes": attributes
+        })
+        user_entry = user_obj.entry
+        user_dict = user_obj.attributes
 
         if ldap_settings_list.LDAP_LOG_READ == True:
             # Log this action to DB
@@ -235,27 +243,14 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
                 affectedObject=data['username']
             )
 
-        # For each attribute in user object attributes
-        user_dict = {}
-        for attr_key in attributes:
-            if attr_key in attributes:
-                str_key = str(attr_key)
-                str_value = str(getattr(user[0],attr_key))
-                if str_value == "[]":
-                    user_dict[str_key] = ""
-                else:
-                    user_dict[str_key] = str_value
-            if attr_key == authUsernameIdentifier:
-                user_dict['username'] = str_value
-
         # Check if user is disabled
-        if ldap_adsi.list_user_perms(user[0], permissionToSearch="LDAP_UF_ACCOUNT_DISABLE", isObject=False) == True:
+        if ldap_adsi.list_user_perms(user_entry, permissionToSearch="LDAP_UF_ACCOUNT_DISABLE", isObject=False) == True:
             user_dict['is_enabled'] = False
         else:
             user_dict['is_enabled'] = True
 
         # Check if user is disabled
-        userPermissions = ldap_adsi.list_user_perms(user[0], permissionToSearch=None, isObject=False)
+        userPermissions = ldap_adsi.list_user_perms(user_entry, permissionToSearch=None, isObject=False)
         user_dict['permission_list'] = userPermissions
 
         # Replace sAMAccountType Value with String Corresponding
@@ -1214,28 +1209,27 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
                 'code_msg': code_msg,
              }
         )
-        
 
-    # def list(self, request, pk=None):
+    # # def list(self, request, pk=None):
+    # #     raise NotFound
+
+    # def create(self, request, pk=None):
     #     raise NotFound
 
-    def create(self, request, pk=None):
-        raise NotFound
-
-    def put(self, request, pk=None):
-        raise NotFound
-
-    def patch(self, request, pk=None):
-        raise NotFound
-        
-    def retrieve(self, request, pk=None):
-        raise NotFound
-
-    # def update(self, request, pk=None):
+    # def put(self, request, pk=None):
     #     raise NotFound
 
-    def partial_update(self, request, pk=None):
-        raise NotFound
+    # def patch(self, request, pk=None):
+    #     raise NotFound
+        
+    # def retrieve(self, request, pk=None):
+    #     raise NotFound
 
-    def destroy(self, request, pk=None):
-        raise NotFound
+    # # def update(self, request, pk=None):
+    # #     raise NotFound
+
+    # def partial_update(self, request, pk=None):
+    #     raise NotFound
+
+    # def destroy(self, request, pk=None):
+    #     raise NotFound

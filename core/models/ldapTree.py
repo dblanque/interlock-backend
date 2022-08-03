@@ -24,7 +24,7 @@ class LDAPTree():
     #### Arguments
      - searchBase: (OPTIONAL) | Default: LDAP_AUTH_SEARCH_BASE
      - connection: (REQUIRED) | LDAP Connection Object
-     - recursive: (OPTIONAL) | Whether or not the Tree should be Recursively searched)
+     - recursive: (OPTIONAL) | Whether or not the Tree should be Recursively searched
      - ldapFilter: (OPTIONAL) | LDAP Formatted Filter
      - ldapAttributes: (OPTIONAL) | LDAP Attributes to Fetch
      - excludedLdapAttributes: (OPTIONAL) | LDAP Attributes to Exclude
@@ -70,17 +70,19 @@ class LDAPTree():
         self.ldapAttributes = ldap_settings_list.LDAP_DIRTREE_ATTRIBUTES
         self.childrenObjectType = 'array'
 
+        # Set passed kwargs from Object Call
+        for kw in kwargs:
+            setattr(self, kw, kwargs[kw])
+
         # Set required attributes, these are unremovable from the tree searches
         for attr in self.requiredLdapAttributes:
             if attr not in self.ldapAttributes:
                 self.ldapAttributes.append(attr)
 
-        # Set passed kwargs from Object Call
-        for kw in kwargs:
-            setattr(self, kw, kwargs[kw])
-
         self.children = self.__getLdapTree__()
 
+    def __getConnection__(self):
+        return self.connection
 
     def __getLdapTree__(self):
         self.connection.search(
