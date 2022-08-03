@@ -1,6 +1,7 @@
 from rest_framework import viewsets
 from interlock_backend.ldap.adsi import addSearchFilter
 from interlock_backend.ldap.settings_func import SettingsList
+from core.models.ldapObject import LDAPObject
 
 class UserViewMixin(viewsets.ViewSetMixin):
     def getUserObjectFilter(self, username):
@@ -58,3 +59,20 @@ class UserViewMixin(viewsets.ViewSetMixin):
         )
 
         return connection
+
+    def getGroupAttributes(self, groupDn, connection, idFilter=None, classFilter=None):
+        attributes = [ 'objectSid' ]
+        if idFilter is None:
+            idFilter =  "distinguishedName=" + groupDn
+        if classFilter is None:
+            classFilter = "objectClass=group"
+        objectClassFilter = ""
+        objectClassFilter = addSearchFilter(objectClassFilter, classFilter)
+        objectClassFilter = addSearchFilter(objectClassFilter, idFilter)
+        args = {
+            "connection": connection,
+            "ldapFilter": objectClassFilter,
+            "ldapAttributes": attributes
+        }
+        group = LDAPObject(**args)
+        return group.attributes

@@ -244,49 +244,20 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             )
 
         memberOfObjects = list()
-        attributes = [ 'objectSid' ]
         if 'memberOf' in user_dict:
             if isinstance(user_dict['memberOf'], list):
                 for g in user_dict['memberOf']:
-                    objectClassFilter = ""
-                    objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "objectClass=group")
-                    objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "distinguishedName=" + g)
-                    args = {
-                        "connection": c,
-                        "ldapFilter": objectClassFilter,
-                        "ldapAttributes": attributes
-                    }
-                    group = LDAPObject(**args)
-                    memberOfObjects.append(group.attributes)
+                    memberOfObjects.append( self.getGroupAttributes(g, c) )
             else:
                 g = user_dict['memberOf']
-                objectClassFilter = ""
-                objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "objectClass=group")
-                objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "distinguishedName=" + g)
-                args = {
-                    "connection": c,
-                    "ldapFilter": objectClassFilter,
-                    "ldapAttributes": attributes
-                }
-                group = LDAPObject(**args)
-                memberOfObjects.append(group.attributes)
+                memberOfObjects.append( self.getGroupAttributes(g, c) )
 
             ### Also add default Users Group to be available as Selectable PID
-            objectClassFilter = ""
-            objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "objectClass=group")
-            objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "cn=Domain Users*")
-            args = {
-                "connection": c,
-                "ldapFilter": objectClassFilter,
-                "ldapAttributes": attributes
-            }
-            group = LDAPObject(**args)
-            memberOfObjects.append(group.attributes)
+            memberOfObjects.append( self.getGroupAttributes(g, c, idFilter="cn=Domain Users*") )
 
             if len(memberOfObjects) > 0:
                 user_dict['memberOfObjects'] = memberOfObjects
 
-            del group
             del memberOfObjects
 
         # Check if user is disabled
