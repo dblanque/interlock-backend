@@ -1,19 +1,28 @@
-from email.headerregistry import Group
-from .base import BaseViewSet
-from .mixins.group import GroupViewMixin
+################################## IMPORTS #####################################
+### Exceptions
 from core.exceptions import ldap as ldap_exceptions
+
+### Models
 from core.models.log import logToDB
+
+### Mixins
+from .mixins.group import GroupViewMixin
+from core.views.mixins.user import UserViewMixin
+
+### ViewSets
+from .base import BaseViewSet
+
+### REST Framework
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from interlock_backend.ldap import adsi as ldap_adsi
+
+### Others
 from interlock_backend.ldap.encrypt import validateUser
 from interlock_backend.ldap.connector import openLDAPConnection
 from interlock_backend.ldap.adsi import addSearchFilter
-from core.views.mixins.user import UserViewMixin
 from interlock_backend.ldap.settings_func import SettingsList
-from interlock_backend.ldap.groupTypes import LDAP_GROUP_TYPES
 from interlock_backend.ldap.securityIdentifier import SID
-from ldap3 import ALL_ATTRIBUTES
+################################################################################
 
 class GroupsViewSet(BaseViewSet, GroupViewMixin):
 

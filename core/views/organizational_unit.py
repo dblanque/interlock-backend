@@ -1,3 +1,4 @@
+################################## IMPORTS #####################################
 ### Exceptions
 from django.core.exceptions import PermissionDenied
 from core.exceptions.dirtree import DirtreeFilterBad
@@ -13,7 +14,7 @@ from core.models.ldapTree import LDAPTree
 ### Mixins
 from .mixins.organizational_unit import OrganizationalUnitMixin
 
-### REST
+### REST Framework
 from rest_framework.response import Response
 from rest_framework.exceptions import NotFound
 from rest_framework import viewsets
@@ -26,6 +27,7 @@ from interlock_backend.ldap.adsi import buildFilterFromDict
 from interlock_backend.ldap.encrypt import validateUser
 from interlock_backend.ldap.settings_func import SettingsList
 import logging
+################################################################################
 
 logger = logging.getLogger(__name__)
 

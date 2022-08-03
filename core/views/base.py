@@ -1,6 +1,9 @@
+################################## IMPORTS #####################################
+### REST Framework
 from rest_framework import viewsets
 from rest_framework.exceptions import NotFound, PermissionDenied
 
+################################################################################
 class BaseViewSet(viewsets.ViewSet):
     def list(self, request, pk=None):
         raise NotFound

@@ -1,9 +1,16 @@
+################################## IMPORTS #####################################
+### ViewSets
+from core.views.base import BaseViewSet
+
+### REST Framework
 from rest_framework.response import Response
 from rest_framework.decorators import action
+
+### Others
 from interlock_backend.ldap.encrypt import validateUser
-from core.views.base import BaseViewSet
 import logging
 import json
+################################################################################
 
 ################################# Test Imports #################################
 from core.models.ldapTree import LDAPTree

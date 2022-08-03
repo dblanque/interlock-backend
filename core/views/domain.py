@@ -1,11 +1,20 @@
+################################## IMPORTS #####################################
+### Exceptions
 from django.core.exceptions import PermissionDenied
-from rest_framework.response import Response
+
+### Mixins
 from .mixins.domain import DomainViewMixin
+
+### REST Framework
+from rest_framework.response import Response
 from rest_framework import viewsets
 from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
+
+### Others
 from interlock_backend.ldap.encrypt import validateUser
 from interlock_backend.ldap.settings_func import SettingsList
+################################################################################
 class DomainViewSet(viewsets.ViewSet, DomainViewMixin):
 
     @action(detail=False, methods=['get'])

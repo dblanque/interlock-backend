@@ -1,12 +1,26 @@
-from rest_framework.response import Response
-from core.models.settings_model import Setting
-from .mixins.logs import LogMixin
-from rest_framework.decorators import action
-from interlock_backend.ldap.encrypt import validateUser
-from core.views.base import BaseViewSet
-from core.models.log import Log
+################################## IMPORTS #####################################
+### Exceptions
 from core.exceptions.logs import LogTruncateMinmaxNotFound
+
+### Models
+from core.models.settings_model import Setting
+from core.models.log import Log
+
+### Mixins
+from .mixins.logs import LogMixin
+
+### ViewSets
+from core.views.base import BaseViewSet
+
+### REST Framework
+from rest_framework.response import Response
+from rest_framework.decorators import action
+
+### Others
+from interlock_backend.ldap.encrypt import validateUser
 import logging
+################################################################################
+
 
 logger = logging.getLogger(__name__)
 

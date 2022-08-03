@@ -1,5 +1,4 @@
 from rest_framework_simplejwt import views as jwt_views
-
 from core.serializers.token import TokenObtainPairSerializer, TokenRefreshSerializer
 
 class TokenObtainPairView(jwt_views.TokenViewBase):
@@ -10,7 +9,6 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
     serializer_class = TokenObtainPairSerializer
 
 token_obtain_pair = TokenObtainPairView.as_view()
-
 
 class TokenRefreshView(jwt_views.TokenViewBase):
     """

@@ -1,30 +1,41 @@
+################################## IMPORTS #####################################
+### Exceptions
 from django.core.exceptions import PermissionDenied
-import ldap3
-from rest_framework.response import Response
-from .mixins.user import UserViewMixin
-from rest_framework import viewsets
-from rest_framework.exceptions import NotFound
 from core.exceptions import (
     users as user_exceptions, 
     ldap as ldap_exceptions
 )
+
+### Models
 from core.models import User
 from core.models.log import logToDB
+
+### Mixins
+from .mixins.user import UserViewMixin
+
+### REST Framework
+from rest_framework.response import Response
+from rest_framework import viewsets
+from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
-from ldap3 import (
-    MODIFY_ADD,
-    MODIFY_DELETE,
-    MODIFY_INCREMENT,
-    MODIFY_REPLACE
-)
-import traceback
-import logging
+
+### Others
 from interlock_backend.ldap.connector import openLDAPConnection
 from interlock_backend.ldap.settings_func import SettingsList
 from interlock_backend.ldap import adsi as ldap_adsi
 from interlock_backend.ldap.countries import LDAP_COUNTRIES
 from interlock_backend.ldap.accountTypes import LDAP_ACCOUNT_TYPES
 from interlock_backend.ldap.encrypt import validateUser
+from ldap3 import (
+    MODIFY_ADD,
+    MODIFY_DELETE,
+    MODIFY_INCREMENT,
+    MODIFY_REPLACE
+)
+import ldap3
+import traceback
+import logging
+################################################################################
 
 logger = logging.getLogger(__name__)
 

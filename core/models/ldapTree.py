@@ -1,10 +1,15 @@
+################################## IMPORTS #####################################
+### Django
 from django.utils.translation import gettext_lazy as _
+
+### Interlock
 from interlock_backend.ldap.settings_func import SettingsList
 from interlock_backend.ldap.adsi import (
     buildFilterFromDict,
     LDAP_BUILTIN_OBJECTS
 )
 from interlock_backend.ldap.securityIdentifier import SID
+################################################################################
 class LDAPTree():
     """
     ## LDAPTree Object

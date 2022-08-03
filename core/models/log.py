@@ -1,12 +1,19 @@
-from sys import argv
+################################## IMPORTS #####################################
+### Django
 from django.utils.translation import gettext_lazy as _
 from django.db.models.manager import BaseManager as Manager
-from .base import BaseManager
 from django.db import models
 from django.utils import timezone as tz
-from interlock_backend.ldap.settings_func import SettingsList
+
+### Base
+from .base import BaseManager
+
+### Choices
 from .choices.log import ACTION_CHOICES, CLASS_CHOICES
 
+### Interlock
+from interlock_backend.ldap.settings_func import SettingsList
+################################################################################
 class BaseLogModel(models.Model):
 
     logged_at = models.DateTimeField(_("logged at"), auto_now_add=True)

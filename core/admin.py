@@ -1,3 +1,5 @@
+################################## IMPORTS #####################################
+### Django
 from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.utils.translation import gettext_lazy as _
@@ -9,8 +11,10 @@ from django.contrib.auth.forms import (
 )
 from django.forms import CharField, EmailField
 
+### Core
 from core import models
 from core.utils import flatten
+################################################################################
 class UserCreationForm(DjangoUserCreationForm):
     class Meta:
         fields = ("username",)

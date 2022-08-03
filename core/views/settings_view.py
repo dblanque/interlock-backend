@@ -1,23 +1,34 @@
-from rest_framework.response import Response
+################################## IMPORTS #####################################
+### Exceptions
+from core.exceptions.ldap import ConnectionTestFailed
+
+### Models
+from core.models.log import logToDB
 from core.models.settings_model import Setting
+
+### Mixins
 from .mixins.settings_mixin import SettingsViewMixin
+
+### REST Framework
+from rest_framework.response import Response
 from rest_framework import viewsets
 from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
+
+### Others
 from interlock_backend.ldap.constants import (
     __dict__ as constantDictionary
 )
+from interlock_backend.ldap.encrypt import validateUser
 from interlock_backend.ldap import constants as ldap_constants
 from interlock_backend.ldap.settings_func import (
     SettingsList,
     getSettingsList,
     normalizeValues
 )
-from core.models.log import logToDB
-from interlock_backend.ldap.encrypt import validateUser
-from core.exceptions.ldap import ConnectionTestFailed
 import logging
 import ssl
+################################################################################
 
 logger = logging.getLogger(__name__)
 
