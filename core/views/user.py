@@ -1189,6 +1189,33 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
              }
         )
 
+    @action(detail=False,methods=['get'])
+    def logout(self, request):
+        user = request.user
+        validateUser(request=request, requestUser=user, requireAdmin=False)
+        code = 0
+        code_msg = 'ok'
+
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_LOG_LOGOUT'
+        }})
+
+        if ldap_settings_list.LDAP_LOG_LOGOUT == True:
+            # Log this action to DB
+            logToDB(
+                user_id=request.user.id,
+                actionType="LOGOUT",
+                objectClass="USER",
+            )
+
+        return Response(
+             data={
+                'code': code,
+                'code_msg': code_msg,
+             }
+        )
+        
+
     # def list(self, request, pk=None):
     #     raise NotFound
 

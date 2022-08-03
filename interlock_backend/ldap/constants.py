@@ -167,6 +167,8 @@ LDAP_LOG_UPDATE = True
 LDAP_LOG_DELETE = True
 LDAP_LOG_OPEN_CONNECTION = False
 LDAP_LOG_CLOSE_CONNECTION = False
+LDAP_LOG_LOGIN = False
+LDAP_LOG_LOGOUT = False
 LDAP_LOG_MAX = 100
 
 SETTINGS_WITH_ALLOWABLE_OVERRIDE = {
@@ -196,6 +198,12 @@ SETTINGS_WITH_ALLOWABLE_OVERRIDE = {
         "type": "boolean",
     },
     "LDAP_LOG_CLOSE_CONNECTION":{
+        "type": "boolean",
+    },
+    "LDAP_LOG_LOGIN":{
+        "type": "boolean",
+    },
+    "LDAP_LOG_LOGOUT":{
         "type": "boolean",
     },
     "LDAP_AUTH_USE_TLS":{ 
