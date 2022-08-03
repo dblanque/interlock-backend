@@ -103,7 +103,14 @@ class LDAPObject():
             attributes      = self.ldapAttributes
         )
         searchResult = self.connection.entries
-        self.entry = searchResult[0]
+        try:
+            self.entry = searchResult[0]
+        except Exception as e:
+            print("Search Result")
+            print(searchResult)
+            print("Error")
+            print(e)
+            raise ValueError("Error setting LDAP Object Entry Result")
 
         # Set DN from Abstract Entry object (LDAP3)
         distinguishedName=str(self.entry['distinguishedName'])
