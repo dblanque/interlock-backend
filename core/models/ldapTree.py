@@ -186,6 +186,7 @@ class LDAPTree():
             self.subobjectId += 1
             currentObject['id'] = self.subobjectId
             currentObject['name'] = str(entry['dn']).split(',')[0].split('=')[1]
+            currentObject['dn'] = entry['dn']
             currentObject['type'] = str(entry['attributes']['objectCategory']).split(',')[0].split('=')[1]
             if currentObject['name'] in LDAP_BUILTIN_OBJECTS or 'builtinDomain' in entry['attributes']['objectClass'] or self.__getCN__(dn) in LDAP_BUILTIN_OBJECTS:
                 currentObject['builtin'] = True
@@ -209,7 +210,7 @@ class LDAPTree():
                             value = entry['attributes'][attr][0]
                             currentObject['username'] = value
                     elif attr == 'cn' and 'group' in entry['attributes']['objectClass']:
-                        value = entry['attributes'][attr]
+                        value = entry['attributes'][attr][0]
                         currentObject['groupname'] = value
                     elif attr == 'objectCategory':
                         value = self.__getCN__(entry['attributes'][attr])
@@ -229,8 +230,8 @@ class LDAPTree():
                     elif attr not in self.excludedLdapAttributes:
                         if isinstance(entry['attributes'][attr], list) and len(entry['attributes'][attr]) > 1:
                             value = entry['attributes'][attr]
-                        else:
-                            value = str(entry['attributes'][attr])
+                        elif entry['attributes'][attr] != []:
+                            value = entry['attributes'][attr][0]
 
                     try:
                         currentObject[attr] = value

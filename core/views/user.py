@@ -833,6 +833,71 @@ class UserViewSet(viewsets.ViewSet, UserViewMixin):
         )
 
     @action(detail=False, methods=['post'])
+    def unlock(self, request, pk=None):
+        user = request.user
+        validateUser(request=request, requestUser=user)
+        code = 0
+        code_msg = 'ok'
+        data = request.data
+
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_LOG_UPDATE'
+        }})
+
+        # Open LDAP Connection
+        try:
+            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
+        except Exception as e:
+            print(e)
+            raise ldap_exceptions.CouldNotOpenConnection
+
+        # If data request for deletion has user DN
+        if 'dn' in data.keys() and data['dn'] != "":
+            logger.debug('Updating with dn obtained from front-end')
+            logger.debug(data['dn'])
+            dn = data['dn']
+        # Else, search for username dn
+        else:
+            logger.debug('Updating with user dn search method')
+            userToUpdate = data['username']
+            c = self.getUserObject(c, userToUpdate)
+            
+            user = c.entries
+            dn = str(user[0].distinguishedName)
+            logger.debug(dn)
+
+        if not dn or dn == "":
+            raise user_exceptions.UserDoesNotExist
+
+        if ldap_settings_list.LDAP_LOG_UPDATE == True:
+            # Log this action to DB
+            logToDB(
+                user_id=request.user.id,
+                actionType="UPDATE",
+                objectClass="USER",
+                affectedObject=data['username'],
+                extraMessage="UNLOCK"
+            )
+
+        c.extend.microsoft.unlock_account(dn)
+
+        result = c.result
+        if result['description'] == 'success':
+            response_result = data['username']
+        else:
+            raise user_exceptions.CouldNotUnlockUser
+
+        # Unbind the connection
+        c.unbind()
+        return Response(
+             data={
+                'code': code,
+                'code_msg': code_msg,
+                'data': response_result
+             }
+        )
+
+    @action(detail=False, methods=['post'])
     def changePasswordSelf(self, request, pk=None):
         user = request.user
         validateUser(request=request, requestUser=user, requireAdmin=False)

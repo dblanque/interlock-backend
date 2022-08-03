@@ -21,3 +21,7 @@ class UserDoesNotExist(BaseException):
     status_code = 554
     default_detail = 'User Distinguished Name does not exist'
     default_code = 'user_dn_does_not_exist'
+class CouldNotUnlockUser(BaseException):
+    status_code = 554
+    default_detail = 'User could not be unlocked'
+    default_code = 'user_unlock_error'

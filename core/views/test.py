@@ -1,5 +1,7 @@
 ################################## IMPORTS #####################################
 ### ViewSets
+import dns
+import ldap3
 from core.views.base import BaseViewSet
 
 ### REST Framework
@@ -13,9 +15,23 @@ import json
 ################################################################################
 
 ################################# Test Imports #################################
-from core.models.ldapTree import LDAPTree
 from core.exceptions.ldap import CouldNotOpenConnection
 from interlock_backend.ldap.connector import openLDAPConnection
+from interlock_backend.ldap.adsi import addSearchFilter, buildFilterFromDict
+from interlock_backend.ldap.settings_func import SettingsList
+from dns import (
+    query as dnsQuery,
+    update as dnsUpdate,
+    zone as dnsZone,
+    xfr as dnsXfr,
+    ipv4,
+    message as dnsMessage,
+    name as dnsName,
+    rdatatype,
+    rdataclass,
+    resolver as dnsResolver
+)
+import dns
 ################################################################################
 
 logger = logging.getLogger(__name__)
@@ -28,6 +44,14 @@ class TestViewSet(BaseViewSet):
         data = {}
         code = 0
 
+        ######################## Get Latest Settings ###########################
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_AUTH_USERNAME_IDENTIFIER',
+            'LDAP_AUTH_OBJECT_CLASS',
+            'LDAP_AUTH_SEARCH_BASE',
+            'LDAP_LOG_READ'
+        }})
+
         # Open LDAP Connection
         try:
             ldapConnection = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
@@ -35,21 +59,18 @@ class TestViewSet(BaseViewSet):
             print(e)
             raise CouldNotOpenConnection
 
-        ldapTree = LDAPTree(**{
-            "connection": ldapConnection,
-            "recursive": True,
-            "ldapAttributes": [ 'dn' ],
-            "testFetch": True
-        })
-        # print(json.dumps(ldapTree.children[0], indent=1))
-        # print(ldapTree.children)
-        # print(ldapTree.__getTreeCount__())
+        domain = 'brconsulting.info'
+        dns_zone = domain + "."
+        qname = dnsName.from_text("brconsulting.info")
+        query = dnsMessage.make_query(qname=qname, rdtype=rdatatype.A)
+        result = dnsQuery.udp(query, "10.10.10.13")
+        print(result)
 
         ldapConnection.unbind()
         return Response(
              data={
                 'code': code,
                 'code_msg': 'ok',
-                'data' : ldapTree.children
+                'data' : data
              }
         )
