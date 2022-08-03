@@ -243,6 +243,39 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 affectedObject=data['username']
             )
 
+        memberOfObjects = list()
+        attributes = [ 'objectSid' ]
+        if 'memberOf' in user_dict:
+            if isinstance(user_dict['memberOf'], list):
+                for g in user_dict['memberOf']:
+                    objectClassFilter = ""
+                    objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "objectClass=group")
+                    objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "distinguishedName=" + g)
+                    args = {
+                        "connection": c,
+                        "ldapFilter": objectClassFilter,
+                        "ldapAttributes": attributes
+                    }
+                    group = LDAPObject(**args)
+                    memberOfObjects.append(group.attributes)
+
+                    del group
+                    del objectClassFilter
+            else:
+                g = user_dict['memberOf']
+                objectClassFilter = ""
+                objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "objectClass=group")
+                objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "distinguishedName=" + g)
+                group = LDAPObject(**{
+                            "connection": c,
+                            "ldapFilter": "(objectClass=group)",
+                            "ldapAttributes": attributes
+                        })
+                memberOfObjects.append(group.attributes)
+
+            if len(memberOfObjects) > 0:
+                user_dict['memberOfObjects'] = memberOfObjects
+
         # Check if user is disabled
         if ldap_adsi.list_user_perms(user_entry, permissionToSearch="LDAP_UF_ACCOUNT_DISABLE", isObject=False) == True:
             user_dict['is_enabled'] = False

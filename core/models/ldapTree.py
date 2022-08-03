@@ -57,8 +57,9 @@ class LDAPTree():
         ]
         self.requiredLdapAttributes = [
             'dn',
+            'distinguishedName',
             'objectCategory',
-            'objectClass'
+            'objectClass',
         ]
         self.containerTypes = [
             'container',

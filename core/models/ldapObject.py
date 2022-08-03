@@ -56,8 +56,9 @@ class LDAPObject():
         ]
         self.requiredLdapAttributes = [
             'dn',
+            'distinguishedName',
             'objectCategory',
-            'objectClass'
+            'objectClass',
         ]
         self.containerTypes = [
             'container',
@@ -72,6 +73,11 @@ class LDAPObject():
         self.testFetch = False
         self.ldapAttributes = ldap_settings_list.LDAP_DIRTREE_ATTRIBUTES
 
+        self.__resetKwargs__(kwargs)
+
+        self.__fetchObject__()
+
+    def __resetKwargs__(self, kwargs):
         # Set passed kwargs from Object Call
         for kw in kwargs:
             setattr(self, kw, kwargs[kw])
@@ -80,8 +86,6 @@ class LDAPObject():
         for attr in self.requiredLdapAttributes:
             if attr not in self.ldapAttributes:
                 self.ldapAttributes.append(attr)
-
-        self.__fetchObject__()
 
     def __getConnection__(self):
         return self.connection
@@ -134,13 +138,11 @@ class LDAPObject():
                 except Exception as e:
                     print("Could not translate SID Byte Array for " + distinguishedName)
                     print(e)
-            elif str_key not in self.attributes:
+            elif str_key not in self.attributes and str_value != "[]":
                 if len(attr_value) > 1:
                     self.attributes[str_key] = list()
                     for k, v in enumerate(attr_value):
                         self.attributes[str_key].append(attr_value[k])
-                elif str_value == "[]":
-                    self.attributes[str_key] = ""
                 else:
                     self.attributes[str_key] = str_value
         return self.attributes
