@@ -135,7 +135,11 @@ class LDAPObject():
                     print("Could not translate SID Byte Array for " + distinguishedName)
                     print(e)
             elif str_key not in self.attributes:
-                if str_value == "[]":
+                if len(attr_value) > 1:
+                    self.attributes[str_key] = list()
+                    for k, v in enumerate(attr_value):
+                        self.attributes[str_key].append(attr_value[k])
+                elif str_value == "[]":
                     self.attributes[str_key] = ""
                 else:
                     self.attributes[str_key] = str_value
