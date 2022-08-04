@@ -22,7 +22,7 @@ from rest_framework.decorators import action
 
 ### Others
 from time import perf_counter
-from interlock_backend.ldap.connector import openLDAPConnection
+from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.adsi import buildFilterFromDict
 from interlock_backend.ldap.encrypt import validateUser
 from interlock_backend.ldap.settings_func import SettingsList
@@ -47,7 +47,7 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
+            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
             raise CouldNotOpenConnection
@@ -122,7 +122,7 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
+            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
             raise CouldNotOpenConnection
@@ -195,7 +195,7 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
+            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
             raise CouldNotOpenConnection

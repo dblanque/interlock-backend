@@ -18,7 +18,7 @@ from rest_framework.decorators import action
 
 ### Others
 from interlock_backend.ldap.encrypt import validateUser
-from interlock_backend.ldap.connector import openLDAPConnection
+from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.adsi import addSearchFilter
 from interlock_backend.ldap.settings_func import SettingsList
 from interlock_backend.ldap.securityIdentifier import SID
@@ -44,7 +44,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
+            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -152,7 +152,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
+            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection

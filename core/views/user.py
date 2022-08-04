@@ -24,7 +24,7 @@ from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
 
 ### Others
-from interlock_backend.ldap.connector import openLDAPConnection
+from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.settings_func import SettingsList
 from interlock_backend.ldap import adsi as ldap_adsi
 from interlock_backend.ldap.countries import LDAP_COUNTRIES
@@ -69,7 +69,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
+            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -182,7 +182,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
+            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -260,6 +260,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
 
         del memberOfObjects
 
+        # If User's member of one group only cast it to array
         if 'memberOf' in user_dict and isinstance(user_dict['memberOf'], str):
             singleMemberOf = user_dict['memberOf']
             user_dict['memberOf'] = [ singleMemberOf ]
@@ -327,7 +328,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
+            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -470,7 +471,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
+            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -600,7 +601,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         userToDisable = data['username']
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
+            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -690,7 +691,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         userToEnable = data['username']
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
+            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -768,7 +769,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
+            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -828,7 +829,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
+            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -890,7 +891,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
+            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -958,7 +959,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection()
+            c = LDAPConnector().connection
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -975,16 +976,16 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             c = self.getUserObject(c, userToUpdate)
             
             user = c.entries
-            dn = str(user[0].distinguishedName)
-            logger.debug(dn)
+            distinguishedName = str(user[0].distinguishedName)
+            logger.debug(distinguishedName)
 
-        if not dn or dn == "":
+        if not distinguishedName or distinguishedName == "":
             raise user_exceptions.UserDoesNotExist
 
         if data['password'] != data['passwordConfirm']:
             raise user_exceptions.UserPasswordsDontMatch
 
-        c.extend.microsoft.modify_password(dn, data['password'])
+        c.extend.microsoft.modify_password(distinguishedName, data['password'])
 
         if ldap_settings_list.LDAP_LOG_UPDATE == True:
             # Log this action to DB
@@ -1052,7 +1053,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection()
+            c = LDAPConnector().connection
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection
@@ -1171,7 +1172,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
 
         # Open LDAP Connection
         try:
-            c = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
+            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
             raise ldap_exceptions.CouldNotOpenConnection

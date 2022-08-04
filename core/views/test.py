@@ -16,7 +16,7 @@ import json
 
 ################################# Test Imports #################################
 from core.exceptions.ldap import CouldNotOpenConnection
-from interlock_backend.ldap.connector import openLDAPConnection
+from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.adsi import addSearchFilter, buildFilterFromDict
 from interlock_backend.ldap.settings_func import SettingsList
 from dns import (
@@ -54,17 +54,26 @@ class TestViewSet(BaseViewSet):
 
         # Open LDAP Connection
         try:
-            ldapConnection = openLDAPConnection(user.dn, user.encryptedPassword, request.user)
+            ldapConnection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
             raise CouldNotOpenConnection
 
-        domain = 'brconsulting.info'
-        dns_zone = domain + "."
-        qname = dnsName.from_text("brconsulting.info")
-        query = dnsMessage.make_query(qname=qname, rdtype=rdatatype.A)
-        result = dnsQuery.udp(query, "10.10.10.13")
-        print(result)
+        ldapConnection.search(
+            ldap_settings_list.LDAP_AUTH_SEARCH_BASE,
+            search_filter="(objectClass=group)",
+            search_scope=ldap3.SUBTREE,
+            attributes=ldap3.ALL_ATTRIBUTES,
+        )
+
+        print(ldapConnection.result)
+
+        # domain = 'brconsulting.info'
+        # dns_zone = domain + "."
+        # qname = dnsName.from_text("brconsulting.info")
+        # query = dnsMessage.make_query(qname=qname, rdtype=rdatatype.A)
+        # result = dnsQuery.udp(query, "10.10.10.13")
+        # print(result)
 
         ldapConnection.unbind()
         return Response(
