@@ -1,3 +1,4 @@
+from attr import attr
 from rest_framework import viewsets
 from interlock_backend.ldap.adsi import bin_as_hex, addSearchFilter
 from interlock_backend.ldap.groupTypes import LDAP_GROUP_TYPES
@@ -5,16 +6,23 @@ from interlock_backend.ldap.securityIdentifier import SID
 from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.settings_func import SettingsList
 from core.exceptions.ldap import CouldNotOpenConnection
+from core.models.ldapObject import LDAPObject
 import ldap3
 import logging
 
 logger = logging.getLogger(__name__)
 class GroupViewMixin(viewsets.ViewSetMixin):
 
-    def getGroupByRID(ridToSearch=None):
+    def getGroupByRID(ridToSearch=None, attributes=['objectSid','distinguishedName']):
         if ridToSearch is None:
             raise ValueError("RID To Search cannot be None")
-        elif not isinstance(ridToSearch, int):
+
+        # Cast to Integer just in case
+        try:
+            ridToSearch = int(ridToSearch)
+        except Exception as e:
+            print(ridToSearch)
+            print(e)
             raise ValueError("RID To Search must be an Integer")
 
         ######################## Get Latest Settings ###########################
@@ -38,7 +46,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
             ldap_settings_list.LDAP_AUTH_SEARCH_BASE,
             search_filter=searchFilter,
             search_scope=ldap3.SUBTREE,
-            attributes=ldap3.ALL_ATTRIBUTES,
+            attributes=attributes,
         )
 
         for g in ldapConnection.entries:
@@ -47,8 +55,14 @@ class GroupViewMixin(viewsets.ViewSetMixin):
             rid = int(sid.split("-")[-1])
             value = sid
             if rid == ridToSearch:
+                args = {
+                    "connection": ldapConnection,
+                    "dn": g.distinguishedName,
+                    "ldapAttributes": attributes
+                }
+                result = LDAPObject(**args)
                 ldapConnection.unbind()
-                return g
+                return result.attributes
 
     def getGroupType(self, groupTypeInt=None, debug=False):
         sum = 0

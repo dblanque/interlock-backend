@@ -13,6 +13,7 @@ from core.models.ldapObject import LDAPObject
 
 ### Mixins
 from .mixins.user import UserViewMixin
+from .mixins.group import GroupViewMixin
 
 ### ViewSets
 from .base import BaseViewSet
@@ -245,26 +246,23 @@ class UserViewSet(BaseViewSet, UserViewMixin):
 
         memberOfObjects = list()
         if 'memberOf' in user_dict:
-            if isinstance(user_dict['memberOf'], list):
-                for g in user_dict['memberOf']:
+            memberOf = user_dict.pop('memberOf')
+            if isinstance(memberOf, list):
+                for g in memberOf:
                     memberOfObjects.append( self.getGroupAttributes(g, c) )
             else:
-                g = user_dict['memberOf']
+                g = memberOf
                 memberOfObjects.append( self.getGroupAttributes(g, c) )
 
         ### Also add default Users Group to be available as Selectable PID
-        memberOfObjects.append( self.getGroupAttributes('', c, idFilter="cn=Domain Users*") )
+        memberOfObjects.append( GroupViewMixin.getGroupByRID(user_dict['primaryGroupID']) )
 
         if len(memberOfObjects) > 0:
             user_dict['memberOfObjects'] = memberOfObjects
+        else:
+            raise user_exceptions.UserGroupsFetchError
 
         del memberOfObjects
-
-        # If User's member of one group only cast it to array
-        if 'memberOf' in user_dict and isinstance(user_dict['memberOf'], str):
-            singleMemberOf = user_dict['memberOf']
-            user_dict['memberOf'] = [ singleMemberOf ]
-            del singleMemberOf
 
         # Check if user is disabled
         if ldap_adsi.list_user_perms(user_entry, permissionToSearch="LDAP_UF_ACCOUNT_DISABLE", isObject=False) == True:
@@ -460,9 +458,6 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         ]
 
         userToUpdate = data['username']
-        if 'memberOfObjects' in data:
-            data.pop('memberOfObjects')
-            data.pop('memberOf')
 
         permList = data['permission_list']
         for key in excludeKeys:
@@ -522,6 +517,12 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             groupsToRemove = data.pop('groupsToRemove')
             if len(groupsToRemove) > 0:
                 c.extend.microsoft.remove_members_from_groups(dn, groupsToRemove)
+            print(c.result)
+
+        if 'memberOfObjects' in data:
+            data.pop('memberOfObjects')
+        if 'memberOf' in data:
+            data.pop('memberOf')
 
         ################### START STANDARD ARGUMENT UPDATES ####################
         arguments = dict()

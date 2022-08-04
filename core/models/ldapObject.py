@@ -5,7 +5,7 @@ from django.utils.translation import gettext_lazy as _
 
 ### Interlock
 from interlock_backend.ldap.settings_func import SettingsList
-from interlock_backend.ldap.adsi import LDAP_BUILTIN_OBJECTS
+from interlock_backend.ldap.adsi import LDAP_BUILTIN_OBJECTS, addSearchFilter
 from interlock_backend.ldap.securityIdentifier import SID
 ################################################################################
 class LDAPObject():
@@ -32,9 +32,9 @@ class LDAPObject():
 
     def __init__(self, **kwargs):
         if 'connection' not in kwargs:
-            raise Exception("LDAPTree object requires an LDAP Connection to Initialize")
-        if 'ldapFilter' not in kwargs:
-            raise Exception("LDAPTree object requires an LDAP Filter to search for the object")
+            raise Exception("LDAP Object requires an LDAP Connection to Initialize")
+        if 'dn' not in kwargs and 'ldapFilter' not in kwargs:
+            raise Exception("LDAP Object requires a distinguishedName or a valid ldapFilter to search for the object")
 
         ldap_settings_list = SettingsList(**{"search":{
             'LDAP_AUTH_SEARCH_BASE',
@@ -71,6 +71,8 @@ class LDAPObject():
         self.recursive = False
         self.testFetch = False
         self.ldapAttributes = ldap_settings_list.LDAP_DIRTREE_ATTRIBUTES
+        if 'dn' in kwargs:
+            self.ldapFilter = addSearchFilter("", "distinguishedName=" + str(kwargs['dn']))
 
         self.__resetKwargs__(kwargs)
 
