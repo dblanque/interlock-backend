@@ -517,7 +517,6 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             groupsToRemove = data.pop('groupsToRemove')
             if len(groupsToRemove) > 0:
                 c.extend.microsoft.remove_members_from_groups(dn, groupsToRemove)
-            print(c.result)
 
         if 'memberOfObjects' in data:
             data.pop('memberOfObjects')
