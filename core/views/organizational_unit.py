@@ -116,7 +116,8 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         }})
         try:
             ldapFilter = self.processFilter(data)
-        except:
+        except Exception as e:
+            print(e)
             raise DirtreeFilterBad
 
         # Open LDAP Connection

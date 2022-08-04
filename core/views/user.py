@@ -252,13 +252,18 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 g = user_dict['memberOf']
                 memberOfObjects.append( self.getGroupAttributes(g, c) )
 
-            ### Also add default Users Group to be available as Selectable PID
-            memberOfObjects.append( self.getGroupAttributes(g, c, idFilter="cn=Domain Users*") )
+        ### Also add default Users Group to be available as Selectable PID
+        memberOfObjects.append( self.getGroupAttributes('', c, idFilter="cn=Domain Users*") )
 
-            if len(memberOfObjects) > 0:
-                user_dict['memberOfObjects'] = memberOfObjects
+        if len(memberOfObjects) > 0:
+            user_dict['memberOfObjects'] = memberOfObjects
 
-            del memberOfObjects
+        del memberOfObjects
+
+        if 'memberOf' in user_dict and isinstance(user_dict['memberOf'], str):
+            singleMemberOf = user_dict['memberOf']
+            user_dict['memberOf'] = [ singleMemberOf ]
+            del singleMemberOf
 
         # Check if user is disabled
         if ldap_adsi.list_user_perms(user_entry, permissionToSearch="LDAP_UF_ACCOUNT_DISABLE", isObject=False) == True:
@@ -419,6 +424,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         code = 0
         code_msg = 'ok'
         data = request.data
+        data = data['user']
 
         ######################## Get Latest Settings ###########################
         ldap_settings_list = SettingsList(**{"search":{
@@ -429,6 +435,11 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         ########################################################################
 
         excludeKeys = [
+            # Added keys for front-end normalization
+            'name',
+            'type',
+
+            # Samba keys to intentionally exclude
             'password', 
             'passwordConfirm',
             'path',
@@ -443,10 +454,15 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             'is_enabled',
             'sAMAccountType',
             'objectCategory',
-            'primaryGroupID'
+            'objectSid',
+            'objectRid'
         ]
 
         userToUpdate = data['username']
+        if 'memberOfObjects' in data:
+            data.pop('memberOfObjects')
+            data.pop('memberOf')
+
         permList = data['permission_list']
         for key in excludeKeys:
             if key in data:
@@ -474,7 +490,8 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         if 'LDAP_UF_LOCKOUT' in permList:
             # Default is 30 Minutes
             data['lockoutTime'] = 30 
-
+        
+        ################# START NON-STANDARD ARGUMENT UPDATES ##################
         try:
             newPermINT = ldap_adsi.calc_permissions(permList)
         except:
@@ -485,12 +502,27 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         logger.debug("New Permission Integer (cast to String):" + str(newPermINT))
         data['userAccountControl'] = newPermINT
 
-        if data['co'] != "":
-            # Set numeric country code (DCC Standard)
-            data['countryCode'] = LDAP_COUNTRIES[data['co']]['dccCode']
-            # Set ISO Country Code
-            data['c'] = LDAP_COUNTRIES[data['co']]['isoCode']
+        if 'co' in data and data['co'] != "" and data['co'] != 0:
+            try:
+                # Set numeric country code (DCC Standard)
+                data['countryCode'] = LDAP_COUNTRIES[data['co']]['dccCode']
+                # Set ISO Country Code
+                data['c'] = LDAP_COUNTRIES[data['co']]['isoCode']
+            except Exception as e:
+                print(data)
+                print(e)
+                raise
 
+        if 'groupsToAdd' in data:
+            groupsToAdd = data.pop('groupsToAdd')
+            if len(groupsToAdd) > 0:
+                c.extend.microsoft.add_members_to_groups(dn, groupsToAdd)
+        if 'groupsToRemove' in data:
+            groupsToRemove = data.pop('groupsToRemove')
+            if len(groupsToRemove) > 0:
+                c.extend.microsoft.remove_members_from_groups(dn, groupsToRemove)
+
+        ################### START STANDARD ARGUMENT UPDATES ####################
         arguments = dict()
         for key in data:
                 try:
@@ -530,7 +562,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 user_id=request.user.id,
                 actionType="UPDATE",
                 objectClass="USER",
-                affectedObject=data['username']
+                affectedObject=userToUpdate
             )
 
         # Unbind the connection

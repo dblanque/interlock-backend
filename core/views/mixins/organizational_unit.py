@@ -19,8 +19,20 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
                     fVal = data['filter']['iexact'][f]
                     if isinstance(fVal, dict):
                         fType = fVal.pop('attr')
-                        fExclude = fVal.pop('exclude')
-                        ldapFilter = addSearchFilter(ldapFilter, fType + "=" + f, negate=fExclude)
+                        if 'exclude' in fVal:
+                            fExclude = fVal.pop('exclude')
+                        else:
+                            fExclude = False
+                        if 'or' in fVal:
+                            fOr = fVal.pop('or')
+                        else:
+                            fOr = False
+
+                        if fOr == True:
+                            operator = "|"
+                        else:
+                            operator = "&"
+                        ldapFilter = addSearchFilter(ldapFilter, fType + "=" + f, operator=operator, negate=fExclude)
                     else:
                         fType = fVal
                         ldapFilter = addSearchFilter(ldapFilter, fType + "=" + f)

@@ -25,3 +25,7 @@ class CouldNotUnlockUser(BaseException):
     status_code = 554
     default_detail = 'User could not be unlocked'
     default_code = 'user_unlock_error'
+class UserCountryUpdateError(BaseException):
+    status_code = 400
+    default_detail = 'User country could not be updated'
+    default_code = 'user_country_error'
