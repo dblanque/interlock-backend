@@ -14,6 +14,7 @@ class SID(object):
     - https://msdn.microsoft.com/en-us/library/windows/desktop/aa379597(v=vs.85).aspx
     - https://blogs.msdn.microsoft.com/oldnewthing/20040315-00/?p=40253
     - https://stackoverflow.com/questions/846038/convert-a-python-int-into-a-big-endian-string-of-bytes
+    - https://github.com/sspreitzer/python-sid
 
     # Usage\n
         from sid import SID
@@ -67,9 +68,9 @@ class SID(object):
         """
         Convert arbitrary number of bytes to int (big endian)
 
-        The struct unpack() method only works with bytes provided with lengths divisible by powers of 2. I could pad
-        the 48-bit (6-byte) identifier authority value but instead I'm just reimplementing unpack to work with any
-        number of bytes since it's easy math
+        The struct unpack() method only works with bytes provided with lengths divisible by powers of 2. 
+        The 48-bit (6-byte) identifier authority value could be padded but instead we'll just unpack it to work with any
+        number of bytes
 
         :param n: list containing bytes to be converted to int (big endian)
         :return: int value of bytes n (big endian)
