@@ -75,11 +75,22 @@ Now we must install the requirements in a virtual environment with pip.
 **ALWAYS** run your virtualenv to avoid creating issues with your local python dependencies
 
 ```bash
+# Create the Virtual Environment
 cd /opt/interlock-backend/
 virtualenv -p python3 .
+
+# Activate it and Install the Requirements
 source bin/activate
 pip3 install -r requirements.txt
+
+# Make migrations and apply them to DB
+python3 ./manage.py makemigrations
 python3 ./manage.py migrate
+
+# Create Default Superuser
+python3 ./manage.py shell < create_default_superuser.py
+
+# Optionally: Create Superuser Manually
 python3 ./manage.py createsuperuser
 ```
 
