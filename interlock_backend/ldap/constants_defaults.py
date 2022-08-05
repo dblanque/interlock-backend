@@ -19,6 +19,10 @@ LDAP_AUTH_SEARCH_BASE = "dc=example,dc=com"
 # The LDAP class that represents a user.
 LDAP_AUTH_OBJECT_CLASS = "person"
 
+
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
+# ! Don't change the values below or Group Type/Scope changes will break ! #
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
 LDAP_GROUP_TYPES = {
     # Distribution Group
     0:0,
@@ -37,8 +41,7 @@ LDAP_GROUP_SCOPES = {
 # Set this to False if you wish to include Computer Accounts in User Listings
 EXCLUDE_COMPUTER_ACCOUNTS = True
 
-# User model fields mapped to the LDAP
-# attributes that represent them.
+# User model fields mapped to the LDAP attributes that represent them.
 LDAP_AUTH_USER_FIELDS = {
     "username": "sAMAccountName",
     "first_name": "givenName",
@@ -46,6 +49,7 @@ LDAP_AUTH_USER_FIELDS = {
     "email": "mail"
 }
 
+# Normalize to the standard LDAP string if it's sAMAccountName just in case
 if str(LDAP_AUTH_USER_FIELDS["username"]).lower() == 'samaccountname':
     LDAP_AUTH_USERNAME_IDENTIFIER = "sAMAccountName"
 else:
@@ -84,6 +88,7 @@ LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN = "BRCONS"
 # The LDAP username and password of a user for querying the LDAP database for user
 # details. If None, then the authenticated user will be used for querying, and
 # the `ldap_sync_users` command will perform an anonymous query.
+# This is used when the local Interlock Admin is logged in.
 LDAP_AUTH_CONNECTION_USER_DN = "CN=user,OU=Service Accounts,DC=example,DC=com"
 
 LDAP_AUTH_CONNECTION_USERNAME = LDAP_AUTH_CONNECTION_USER_DN.split(',')[0].split('CN=')[1]
