@@ -253,15 +253,6 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                 affectedObject=group_dict['cn']
             )
 
-        # print(group_dict)
-        # for i in group_dict:
-        #     print("----")
-        #     print(i)
-        #     print(type(i))
-        #     print(group_dict[i])
-        #     print(type(group_dict[i]))
-        #     json.dumps(group_dict[i])
-
         # Close / Unbind LDAP Connection
         c.unbind()
         return Response(
@@ -371,6 +362,138 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
             membersToAdd = group_dict.pop('membersToAdd')
 
         logger.debug('Creating group in DN Path: ' + groupToCreate['path'])
+        try:
+            c.add(distinguishedName, 'group', attributes=group_dict)
+        except Exception as e:
+            c.unbind()
+            print(e)
+            raise exc_groups.GroupCreate
+
+        if len(membersToAdd) > 0:
+            try:
+                c.extend.microsoft.add_members_to_groups(membersToAdd, distinguishedName)
+            except Exception as e:
+                c.delete(distinguishedName)
+                c.unbind()
+                print(e)
+                raise exc_groups.GroupMembersAdd
+
+        if ldap_settings_list.LDAP_LOG_CREATE == True:
+            # Log this action to DB
+            logToDB(
+                user_id=request.user.id,
+                actionType="CREATE",
+                objectClass="GROUP",
+                affectedObject=group_dict['cn']
+            )
+
+        # Unbind the connection
+        c.unbind()
+        return Response(
+             data={
+                'code': code,
+                'code_msg': code_msg,
+                'data': data
+             }
+        )
+
+    def update(self, request):
+        user = request.user
+        validateUser(request=request, requestUser=user)
+        code = 0
+        code_msg = 'ok'
+        data = request.data
+
+        ######################## Get Latest Settings ###########################
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_DOMAIN',
+            'LDAP_AUTH_SEARCH_BASE',
+            'LDAP_LOG_CREATE'
+        }})
+        authDomain = ldap_settings_list.LDAP_DOMAIN
+        authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+        ########################################################################
+
+        # Open LDAP Connection
+        try:
+            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
+        except Exception as e:
+            c.unbind()
+            print(e)
+            raise exc_ldap.CouldNotOpenConnection
+
+        groupToUpdate = data['group']
+
+        if groupToUpdate['path'] is not None and groupToUpdate['path'] != "":
+            distinguishedName = "cn=" + groupToUpdate['cn'] + "," + groupToUpdate['path']
+        else:
+            distinguishedName = 'CN='+groupToUpdate['cn']+',OU=Users,'+authSearchBase
+
+        groupToUpdate['sAMAccountName'] = str(groupToUpdate['cn']).lower()
+        # Send LDAP Query for user being created to see if it exists
+        attributes = [
+            'cn',
+            'distinguishedName',
+            'userPrincipalName',
+        ]
+        ldapFilter = addSearchFilter("", "cn="+groupToUpdate['cn'])
+        args = {
+            "connection": c,
+            "ldapFilter": ldapFilter,
+            "ldapAttributes": attributes,
+            "hideErrors": True
+        }
+
+        # !!! CHECK IF GROUP EXISTS !!! #
+        try:
+            groupExists = LDAPObject(**args).attributes
+            groupExists = len(groupExists) > 0
+        except:
+            groupExists = False
+
+        # If group exists, return error
+        if groupExists != True:
+            exception = exc_groups.GroupDoesNotExist
+            data = {
+                "code": exception.default_code,
+                "group": groupToUpdate['cn']
+            }
+            exception.setDetail(exception, data)
+            c.unbind()
+            raise exception
+
+        # Set group Type
+        if 'groupType' not in groupToUpdate or 'groupScope' not in groupToUpdate:
+            exception = exc_groups.GroupScopeOrTypeMissing
+            data = {
+                "code": exception.default_code,
+                "group": groupToUpdate['cn']
+            }
+            exception.setDetail(exception, data)
+            c.unbind()
+            raise exception
+
+        sum = LDAP_GROUP_TYPES[int(groupToUpdate['groupType'])]
+        sum += LDAP_GROUP_SCOPES[int(groupToUpdate['groupScope'])]
+        groupToUpdate['groupType'] = sum
+        groupToUpdate.pop('groupScope')
+
+        excludeKeys = [
+            'member', 
+            'path'
+        ]
+
+        group_dict = deepcopy(groupToUpdate)
+        for key in groupToUpdate:
+            if key in excludeKeys:
+                logger.debug("Removing key from dictionary: " + key)
+                group_dict.pop(key)
+
+        group_dict['cn'] = group_dict['cn'].capitalize()
+        if 'membersToAdd' in group_dict:
+            membersToAdd = group_dict.pop('membersToAdd')
+
+        logger.debug('Creating group in DN Path: ' + groupToUpdate['path'])
         try:
             c.add(distinguishedName, 'group', attributes=group_dict)
         except Exception as e:
