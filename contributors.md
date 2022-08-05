@@ -3,8 +3,9 @@
 
 ## Developers
 
-Interlock was originally developed by Dylan Blanqué as an internal tool for
-BR Consulting S.R.L. and made open source
+Interlock was originally developed by **Dylan Blanqué** as an internal tool for
+**BR Consulting S.R.L.** and made open source to share a responsive and more
+dynamic tool with the community in contrast to the ones available at the time.
 
 ## Contributors
 
