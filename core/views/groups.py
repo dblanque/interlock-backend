@@ -281,10 +281,12 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
         ######################## Get Latest Settings ###########################
         ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_AUTH_USERNAME_IDENTIFIER',
             'LDAP_DOMAIN',
             'LDAP_AUTH_SEARCH_BASE',
             'LDAP_LOG_CREATE'
         }})
+        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
         authDomain = ldap_settings_list.LDAP_DOMAIN
         authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
         ########################################################################
@@ -311,7 +313,10 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
             'distinguishedName',
             'userPrincipalName',
         ]
+        
+        #Make sure Group doesn't exist check with CN and authUserField
         ldapFilter = addSearchFilter("", "cn="+groupToCreate['cn'])
+        ldapFilter = addSearchFilter(ldapFilter, authUsernameIdentifier+"="+groupToCreate['cn'], "|")
         args = {
             "connection": c,
             "ldapFilter": ldapFilter,
@@ -328,7 +333,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
         # If group exists, return error
         if groupExists == True:
-            exception = exc_groups.GroupExists
+            exception = exc_ldap.LDAPObjectExists
             data = {
                 "code": exception.default_code,
                 "group": groupToCreate['cn']
@@ -436,11 +441,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
         groupToUpdate['sAMAccountName'] = str(groupToUpdate['cn']).lower()
         # Send LDAP Query for user being created to see if it exists
-        attributes = [
-            'cn',
-            'distinguishedName',
-            'userPrincipalName',
-        ]
+        attributes = list(groupToUpdate.keys())
         args = {
             "connection": c,
             "dn": distinguishedName,
@@ -453,12 +454,12 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         # kind of operation to apply when updating attributes
         try:
             groupEntryInServer = LDAPObject(**args).attributes
-            groupEntryInServer = len(groupEntryInServer) > 0
+            groupEntryInServer_cond = len(groupEntryInServer) > 0
         except:
-            groupEntryInServer = False
+            groupEntryInServer_cond = False
 
         # If group exists, return error
-        if groupEntryInServer == False:
+        if groupEntryInServer_cond == False:
             exception = exc_groups.GroupDoesNotExist
             data = {
                 "code": exception.default_code,
@@ -479,15 +480,20 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
             c.unbind()
             raise exception
 
-        sum = LDAP_GROUP_TYPES[int(groupToUpdate['groupType'])]
-        sum += LDAP_GROUP_SCOPES[int(groupToUpdate['groupScope'])]
+        castGroupType = int(groupToUpdate['groupType'])
+        castGroupScope = int(groupToUpdate['groupScope'])
+        sum = LDAP_GROUP_TYPES[castGroupType]
+        sum += LDAP_GROUP_SCOPES[castGroupScope]
         groupToUpdate['groupType'] = sum
         groupToUpdate.pop('groupScope')
 
         excludeKeys = [
+            'cn',
             'member', 
             'path',
-            'distinguishedName'
+            'distinguishedName',
+            'objectSid',
+            'objectRid'
         ]
 
         group_dict = deepcopy(groupToUpdate)
@@ -496,18 +502,22 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                 logger.debug("Removing key from dictionary: " + key)
                 group_dict.pop(key)
 
-        group_dict['cn'] = group_dict['cn'].capitalize()
         if 'membersToAdd' in group_dict:
             membersToAdd = group_dict.pop('membersToAdd')
+        else:
+            membersToAdd = None
         if 'membersToRemove' in group_dict:
             membersToRemove = group_dict.pop('membersToRemove')
+        else:
+            membersToRemove = None
 
         # We need to check if the attributes exist in the LDAP Object already
         # To know what operation to apply. This is VERY important.
         arguments = dict()
+        operation = None
         for key in group_dict:
                 try:
-                    if key in groupEntryInServer and group_dict[key] == "":
+                    if key in groupEntryInServer and group_dict[key] == "" and key != 'groupType':
                         operation = MODIFY_DELETE
                         c.modify(
                             distinguishedName,
@@ -515,44 +525,73 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                         )
                     elif group_dict[key] != "":
                         operation = MODIFY_REPLACE
-                        if isinstance(data[key], list):
-                            c.modify(
-                                distinguishedName,
-                                {key: [( operation, data[key])]},
-                            )
+                        if key == 'groupType':
+                            previousGroupTypes = self.getGroupType(groupTypeInt=int(groupEntryInServer[key]))
+                            # If we're trying to go from Group Global to Domain Local Scope or viceversa
+                            # We need to make it universal first, otherwise the LDAP server denies the update request
+                            # Sucks but we have to do this :/
+                            if ('GROUP_GLOBAL' in previousGroupTypes and castGroupScope == 1) or ('GROUP_DOMAIN_LOCAL' in previousGroupTypes and castGroupScope == 0):
+                                passthroughSum = LDAP_GROUP_TYPES[castGroupType]
+                                passthroughSum += LDAP_GROUP_SCOPES[2]
+                                print(passthroughSum)
+                                print(group_dict[key])
+                                # Change to Universal Scope
+                                c.modify(
+                                    distinguishedName,
+                                    {key: [( operation, [ passthroughSum ])]},
+                                )
+                                # Change to Target Scope (Global or Domain Local)
+                                c.modify(
+                                    distinguishedName,
+                                    {key: [( operation, [ group_dict[key] ])]},
+                                )
+                            else:
+                                c.modify(
+                                    distinguishedName,
+                                    {key: [( operation, [ group_dict[key] ])]},
+                                )
                         else:
-                            c.modify(
-                                distinguishedName,
-                                {key: [( operation, [ data[key] ])]},
-                            )
+                            if isinstance(group_dict[key], list):
+                                c.modify(
+                                    distinguishedName,
+                                    {key: [( operation, group_dict[key])]},
+                                )
+                            else:
+                                c.modify(
+                                    distinguishedName,
+                                    {key: [( operation, [ group_dict[key] ])]},
+                                )
                     else:
                         logger.info("No suitable operation for attribute " + key)
                         pass
                 except:
                     print(traceback.format_exc())
-                    logger.warn("Unable to update user '" + groupToUpdate['cn'] + "' with attribute '" + key + "'")
-                    logger.warn("Attribute Value:" + data[key])
-                    logger.warn("Operation Type: " + operation)
+                    logger.warn("Unable to update group '" + str(groupToUpdate['cn']) + "' with attribute '" + str(key) + "'")
+                    logger.warn("Attribute Value:" + str(group_dict[key]))
+                    if operation is not None:
+                        logger.warn("Operation Type: " + str(operation))
                     c.unbind()
                     raise exc_groups.GroupUpdate
 
         logger.debug(c.result)
 
-        if len(membersToAdd) > 0:
-            try:
-                c.extend.microsoft.add_members_to_groups(membersToAdd, distinguishedName)
-            except Exception as e:
-                c.unbind()
-                print(e)
-                raise exc_groups.GroupMembersAdd
+        if membersToAdd is not None:
+            if len(membersToAdd) > 0:
+                try:
+                    c.extend.microsoft.add_members_to_groups(membersToAdd, distinguishedName)
+                except Exception as e:
+                    c.unbind()
+                    print(e)
+                    raise exc_groups.GroupMembersAdd
 
-        if len(membersToRemove) > 0:
-            try:
-                c.extend.microsoft.remove_members_from_groups(membersToRemove, distinguishedName)
-            except Exception as e:
-                c.unbind()
-                print(e)
-                raise exc_groups.GroupMembersRemove
+        if membersToRemove is not None:
+            if len(membersToRemove) > 0:
+                try:
+                    c.extend.microsoft.remove_members_from_groups(membersToRemove, distinguishedName)
+                except Exception as e:
+                    c.unbind()
+                    print(e)
+                    raise exc_groups.GroupMembersRemove
 
         if ldap_settings_list.LDAP_LOG_UPDATE == True:
             # Log this action to DB
@@ -560,7 +599,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                 user_id=request.user.id,
                 actionType="UPDATE",
                 objectClass="GROUP",
-                affectedObject=group_dict['cn']
+                affectedObject=groupToUpdate['cn']
             )
 
         # Unbind the connection

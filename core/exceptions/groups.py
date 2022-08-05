@@ -1,10 +1,6 @@
 from core.exceptions.base import BaseException
 
 # Group Custom Exceptions
-class GroupExists(BaseException):
-    status_code = 409
-    default_detail = 'Group already exists'
-    default_code = 'group_exists'
 class GroupDoesNotExist(BaseException):
     status_code = 400
     default_detail = 'Specified Group does not exist'

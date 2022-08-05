@@ -1,10 +1,6 @@
 from core.exceptions.base import BaseException
 
 # User Exceptions
-class UserExists(BaseException):
-    status_code = 409
-    default_detail = 'User already exists'
-    default_code = 'user_exists'
 class UserPermissionError(BaseException):
     status_code = 400
     default_detail = 'User permissions in request are malformed'

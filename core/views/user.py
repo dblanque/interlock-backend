@@ -332,6 +332,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             print(e)
             raise exc_ldap.CouldNotOpenConnection
 
+        # TODO Check by authUsernameIdentifier and CN
         # Send LDAP Query for user being created to see if it exists
         attributes = [
             authUsernameIdentifier,
@@ -344,7 +345,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         # If user exists, return error
         if user != []:
             c.unbind()
-            exception = exc_user.UserExists
+            exception = exc_ldap.LDAPObjectExists
             data = {
                 "code": "user_exists",
                 "user": data['username']
@@ -532,6 +533,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
 
         ################### START STANDARD ARGUMENT UPDATES ####################
         arguments = dict()
+        operation = None
         for key in data:
                 try:
                     if key in user[0].entry_attributes and data[key] == "":
@@ -557,9 +559,10 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                         pass
                 except:
                     print(traceback.format_exc())
-                    logger.warn("Unable to update user '" + userToUpdate + "' with attribute '" + key + "'")
-                    logger.warn("Attribute Value:" + data[key])
-                    logger.warn("Operation Type: " + operation)
+                    logger.warn("Unable to update user '" + str(userToUpdate) + "' with attribute '" + str(key) + "'")
+                    logger.warn("Attribute Value:" + str(data[key]))
+                    if operation is not None:
+                        logger.warn("Operation Type: " + str(operation))
                     c.unbind()
                     raise exc_user.UserUpdateError
 
