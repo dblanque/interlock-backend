@@ -133,7 +133,7 @@ class LDAPObject():
                 self.attributes['username'] = str_value
             elif attr_key == 'cn' and 'group' in self.entry['objectClass']:
                 value = getattr(self.entry, attr_key)
-                self.attributes['groupname'] = value
+                self.attributes['groupname'] = str_value
             elif attr_key == 'objectSid' and self.__getCN__(distinguishedName).lower() != "builtin":
                 value = getattr(self.entry, attr_key)
                 try:
@@ -153,6 +153,7 @@ class LDAPObject():
                         self.attributes[str_key].append(attr_value[k])
                 else:
                     self.attributes[str_key] = str_value
+
         return self.attributes
 
     def __ldapAttributes__(self):

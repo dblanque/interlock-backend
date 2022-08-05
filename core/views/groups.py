@@ -2,6 +2,7 @@
 ### Exceptions
 from ast import arguments
 from copy import deepcopy
+import json
 from core.exceptions import ldap as exc_ldap
 from core.exceptions import groups as exc_groups
 
@@ -233,12 +234,15 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                     sid = sid.__str__()
                     rid = sid.split("-")[-1]
                     group_dict[str_key] = sid
-                    group_dict['objectRid'] = rid
+                    group_dict['objectRid'] = int(rid)
                 else:
                     group_dict[str_key] = str_value
 
+                if group_dict[str_key] == "":
+                    del group_dict[str_key]
+
             # Add entry DN to response dictionary
-            group_dict['distinguishedName'] = group[0].entry_dn
+            group_dict['distinguishedName'] = str(group[0].entry_dn)
 
         if ldap_settings_list.LDAP_LOG_READ == True:
             # Log this action to DB
@@ -248,6 +252,15 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                 objectClass="GROUP",
                 affectedObject=group_dict['cn']
             )
+
+        # print(group_dict)
+        # for i in group_dict:
+        #     print("----")
+        #     print(i)
+        #     print(type(i))
+        #     print(group_dict[i])
+        #     print(type(group_dict[i]))
+        #     json.dumps(group_dict[i])
 
         # Close / Unbind LDAP Connection
         c.unbind()
@@ -400,20 +413,25 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         code = 0
         code_msg = 'ok'
         data = request.data
+        groupToDelete = data['group']
 
         ldap_settings_list = SettingsList(**{"search":{
             'LDAP_LOG_DELETE'
         }})
 
-        if 'cn' not in data:
-            print(data)
+        if 'cn' not in groupToDelete:
+            print(groupToDelete)
             raise exc_groups.GroupDoesNotExist
 
-        if 'distinguishedName' in data:
-            distinguishedName = data['distinguishedName']
+        if 'distinguishedName' in groupToDelete:
+            distinguishedName = groupToDelete['distinguishedName']
         else:
-            print(data)
+            print(groupToDelete)
             raise exc_groups.GroupDoesNotExist
+
+        if str(groupToDelete['cn']).startswith("Domain "):
+            print(groupToDelete)
+            raise exc_groups.GroupBuiltinProtect
 
         # Open LDAP Connection
         try:
@@ -434,7 +452,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                 user_id=request.user.id,
                 actionType="DELETE",
                 objectClass="GROUP",
-                affectedObject=data['cn']
+                affectedObject=groupToDelete['cn']
             )
 
         # Unbind the connection
@@ -443,6 +461,6 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
              data={
                 'code': code,
                 'code_msg': code_msg,
-                'data': data
+                'data': groupToDelete
              }
         )

@@ -25,3 +25,7 @@ class GroupScopeOrTypeMissing(BaseException):
     status_code = 400
     default_detail = 'Group Scope or Type missing from Request'
     default_code = 'group_scope_or_type'
+class GroupBuiltinProtect(BaseException):
+    status_code = 400
+    default_detail = 'Specified Group cannot be Deleted as it is builtin'
+    default_code = 'group_builtin_protect'
