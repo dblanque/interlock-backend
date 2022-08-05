@@ -1,9 +1,11 @@
 ################################## IMPORTS #####################################
 ### Exceptions
+from multiprocessing import connection
 from core.exceptions import ldap as ldap_exceptions
 
 ### Models
 from core.models.log import logToDB
+from core.models.ldapObject import LDAPObject
 
 ### Mixins
 from .mixins.group import GroupViewMixin
@@ -126,9 +128,6 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
              }
         )
 
-    # TODO
-    ### FILTER Endpoint for groups
-
     @action(detail=False,methods=['post'])
     def fetch(self, request):
         user = request.user
@@ -208,30 +207,19 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                         authUsernameIdentifier,
                         'givenName',
                         'sn',
-                        'objectCategory'
+                        'objectCategory',
+                        'objectClass'
                     ]
+                    # Fetch members
                     for u in getattr(group[0], str_key):
-                        c = UserViewMixin.getUserObject(
-                            UserViewMixin,
-                            connection=c,
-                            username=u,
-                            attributes=memberAttributes,
-                            objectClassFilter=addSearchFilter("", "distinguishedName="+u)
-                        )
-                        result = c.entries
-                        memberObject = {}
-                        for attr in memberAttributes:
-                            if attr in result[0]:
-                                attrValue = str(result[0][attr])
-                                if attr == 'objectCategory':
-                                    memberObject[attr] = attrValue.split(',')[0].split('=')[-1].lower()
-                                elif attr == authUsernameIdentifier:
-                                    memberObject['username'] = attrValue.split(',')[0].split('=')[-1].lower()
-                                elif attrValue == "[]":
-                                    memberObject[attr] = ""
-                                else:
-                                    memberObject[attr] = attrValue
-                        memberArray.append(memberObject)
+                        args = {
+                            "connection": c,
+                            "dn": u,
+                            "ldapAttributes": memberAttributes
+                        }
+                        memberObject = LDAPObject(**args)
+                        c = memberObject.__getConnection__()
+                        memberArray.append(memberObject.attributes)
                     group_dict[str_key] = memberArray
                 # Do the standard for every other key
                 elif str_key == 'objectSid':
