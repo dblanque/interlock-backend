@@ -409,7 +409,9 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
             print(data)
             raise exc_groups.GroupDoesNotExist
 
-        if 'distinguishedName' not in data or distinguishedName == "":
+        if 'distinguishedName' in data:
+            distinguishedName = data['distinguishedName']
+        else:
             print(data)
             raise exc_groups.GroupDoesNotExist
 
@@ -420,7 +422,6 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
             print(e)
             raise exc_ldap.CouldNotOpenConnection
 
-        distinguishedName = data['distinguishedName']
         try:
             c.delete(distinguishedName)
         except:
