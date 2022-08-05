@@ -23,12 +23,15 @@ LDAP_AUTH_OBJECT_CLASS = "person"
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
 # ! Don't change the values below or Group Type/Scope changes will break ! #
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
+# Group Type Value Mapping
 LDAP_GROUP_TYPES = {
     # Distribution Group
     0:0,
     # Security Group
     1:-2147483648
 }
+
+# Group Scope Value Mapping
 LDAP_GROUP_SCOPES = {
     # Global Scope
     0:2,
@@ -37,6 +40,7 @@ LDAP_GROUP_SCOPES = {
     # Universal Scope
     2:8
 }
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
 
 # Set this to False if you wish to include Computer Accounts in User Listings
 EXCLUDE_COMPUTER_ACCOUNTS = True
