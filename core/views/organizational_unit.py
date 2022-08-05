@@ -156,6 +156,7 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
             logger.info("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
         except Exception as e:
             print(e)
+            c.unbind()
             raise CouldNotFetchDirtree
 
         if ldap_settings_list.LDAP_LOG_READ == True:

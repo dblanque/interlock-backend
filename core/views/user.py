@@ -2,8 +2,8 @@
 ### Exceptions
 from django.core.exceptions import PermissionDenied
 from core.exceptions import (
-    users as user_exceptions, 
-    ldap as ldap_exceptions
+    users as exc_user, 
+    ldap as exc_ldap
 )
 
 ### Models
@@ -73,7 +73,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
-            raise ldap_exceptions.CouldNotOpenConnection
+            raise exc_ldap.CouldNotOpenConnection
         attributes = [
             'givenName',
             'sn',
@@ -186,7 +186,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
-            raise ldap_exceptions.CouldNotOpenConnection
+            raise exc_ldap.CouldNotOpenConnection
         attributes = [ 
             'givenName', 
             'sn', 
@@ -260,7 +260,8 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         if len(memberOfObjects) > 0:
             user_dict['memberOfObjects'] = memberOfObjects
         else:
-            raise user_exceptions.UserGroupsFetchError
+            c.unbind()
+            raise exc_user.UserGroupsFetchError
 
         del memberOfObjects
 
@@ -300,7 +301,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         data = request.data
 
         if data['password'] != data['passwordConfirm']:
-            exception = user_exceptions.UserPasswordsDontMatch
+            exception = exc_user.UserPasswordsDontMatch
             data = {
                 "code": "user_passwords_dont_match",
                 "user": data['username']
@@ -329,7 +330,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
-            raise ldap_exceptions.CouldNotOpenConnection
+            raise exc_ldap.CouldNotOpenConnection
 
         # Send LDAP Query for user being created to see if it exists
         attributes = [
@@ -342,7 +343,8 @@ class UserViewSet(BaseViewSet, UserViewMixin):
 
         # If user exists, return error
         if user != []:
-            exception = user_exceptions.UserExists
+            c.unbind()
+            exception = exc_user.UserExists
             data = {
                 "code": "user_exists",
                 "user": data['username']
@@ -350,7 +352,10 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             exception.setDetail(exception, data)
             raise exception
 
-        userDN = 'CN='+data['username']+','+data['path'] or 'CN='+data['username']+',OU=Users,'+authSearchBase
+        if data['path'] is not None and data['path'] != "":
+            userDN = 'CN='+data['username']+','+data['path']
+        else:
+            userDN = 'CN='+data['username']+',OU=Users,'+authSearchBase
         userPermissions = 0
 
         # Add permissions selected in user creation
@@ -364,7 +369,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 # If there's an error unbind the connection and print traceback
                 c.unbind()
                 print(traceback.format_exc())
-                raise user_exceptions.user_exceptions.UserPermissionError # Return error code to client
+                raise exc_user.UserPermissionError # Return error code to client
 
         # Add Normal Account permission to list
         userPermissions += ldap_adsi.LDAP_PERMS['LDAP_UF_NORMAL_ACCOUNT']['value']
@@ -469,7 +474,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
-            raise ldap_exceptions.CouldNotOpenConnection
+            raise exc_ldap.CouldNotOpenConnection
 
         # Get basic attributes for this user from AD to compare query and get dn
         attributes = [
@@ -492,7 +497,8 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             newPermINT = ldap_adsi.calc_permissions(permList)
         except:
             print(traceback.format_exc())
-            raise user_exceptions.user_exceptions.UserPermissionError
+            c.unbind()
+            raise exc_user.UserPermissionError
 
         logger.debug("Located in: "+__name__+".update")
         logger.debug("New Permission Integer (cast to String):" + str(newPermINT))
@@ -505,9 +511,10 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 # Set ISO Country Code
                 data['c'] = LDAP_COUNTRIES[data['co']]['isoCode']
             except Exception as e:
+                c.unbind()
                 print(data)
                 print(e)
-                raise
+                raise exc_user.UserCountryUpdateError
 
         if 'groupsToAdd' in data:
             groupsToAdd = data.pop('groupsToAdd')
@@ -553,7 +560,8 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                     logger.warn("Unable to update user '" + userToUpdate + "' with attribute '" + key + "'")
                     logger.warn("Attribute Value:" + data[key])
                     logger.warn("Operation Type: " + operation)
-                    raise user_exceptions.UserUpdateError
+                    c.unbind()
+                    raise exc_user.UserUpdateError
 
         logger.debug(c.result)
 
@@ -604,7 +612,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
-            raise ldap_exceptions.CouldNotOpenConnection
+            raise exc_ldap.CouldNotOpenConnection
 
         attributes = [
             authUsernameIdentifier,
@@ -638,7 +646,8 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             newPermINT = ldap_adsi.calc_permissions(permList, addPerm='LDAP_UF_ACCOUNT_DISABLE')
         except:
             print(traceback.format_exc())
-            raise user_exceptions.user_exceptions.UserPermissionError
+            c.unbind()
+            raise exc_user.UserPermissionError
 
         if ldap_settings_list.LDAP_LOG_UPDATE == True:
             # Log this action to DB
@@ -694,7 +703,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
-            raise ldap_exceptions.CouldNotOpenConnection
+            raise exc_ldap.CouldNotOpenConnection
 
         attributes = [
             authUsernameIdentifier,
@@ -728,7 +737,8 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             newPermINT = ldap_adsi.calc_permissions(permList, removePerm='LDAP_UF_ACCOUNT_DISABLE')
         except:
             print(traceback.format_exc())
-            raise user_exceptions.UserPermissionError
+            c.unbind()
+            raise exc_user.UserPermissionError
 
         if ldap_settings_list.LDAP_LOG_UPDATE == True:
             # Log this action to DB
@@ -772,7 +782,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
-            raise ldap_exceptions.CouldNotOpenConnection
+            raise exc_ldap.CouldNotOpenConnection
 
         # If data request for deletion has user DN
         if 'distinguishedName' in data.keys() and data['distinguishedName'] != "":
@@ -780,7 +790,8 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             logger.debug(data['distinguishedName'])
             distinguishedName = data['distinguishedName']
             if not distinguishedName or distinguishedName == "":
-                raise user_exceptions.UserDoesNotExist
+                c.unbind()
+                raise exc_user.UserDoesNotExist
             c.delete(distinguishedName)
         # Else, search for username dn
         else:
@@ -793,7 +804,8 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             logger.debug(dn)
 
             if not dn or dn == "":
-                raise user_exceptions.UserDoesNotExist
+                c.unbind()
+                raise exc_user.UserDoesNotExist
             c.delete(dn)
 
         if ldap_settings_list.LDAP_LOG_DELETE == True:
@@ -832,7 +844,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
-            raise ldap_exceptions.CouldNotOpenConnection
+            raise exc_ldap.CouldNotOpenConnection
 
         # If data request for deletion has user DN
         if 'distinguishedName' in data.keys() and data['distinguishedName'] != "":
@@ -850,10 +862,12 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             logger.debug(dn)
 
         if not dn or dn == "":
-            raise user_exceptions.UserDoesNotExist
+            c.unbind()
+            raise exc_user.UserDoesNotExist
 
         if data['password'] != data['passwordConfirm']:
-            raise user_exceptions.UserPasswordsDontMatch
+            c.unbind()
+            raise exc_user.UserPasswordsDontMatch
 
         if ldap_settings_list.LDAP_LOG_UPDATE == True:
             # Log this action to DB
@@ -894,7 +908,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
-            raise ldap_exceptions.CouldNotOpenConnection
+            raise exc_ldap.CouldNotOpenConnection
 
         # If data request for deletion has user DN
         if 'distinguishedName' in data.keys() and data['distinguishedName'] != "":
@@ -912,7 +926,8 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             logger.debug(dn)
 
         if not dn or dn == "":
-            raise user_exceptions.UserDoesNotExist
+            c.unbind()
+            raise exc_user.UserDoesNotExist
 
         if ldap_settings_list.LDAP_LOG_UPDATE == True:
             # Log this action to DB
@@ -930,7 +945,8 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         if result['description'] == 'success':
             response_result = data['username']
         else:
-            raise user_exceptions.CouldNotUnlockUser
+            c.unbind()
+            raise exc_user.CouldNotUnlockUser
 
         # Unbind the connection
         c.unbind()
@@ -962,7 +978,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             c = LDAPConnector().connection
         except Exception as e:
             print(e)
-            raise ldap_exceptions.CouldNotOpenConnection
+            raise exc_ldap.CouldNotOpenConnection
 
         # If data request for deletion has user DN
         if 'distinguishedName' in data.keys() and data['distinguishedName'] != "":
@@ -980,10 +996,12 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             logger.debug(distinguishedName)
 
         if not distinguishedName or distinguishedName == "":
-            raise user_exceptions.UserDoesNotExist
+            c.unbind()
+            raise exc_user.UserDoesNotExist
 
         if data['password'] != data['passwordConfirm']:
-            raise user_exceptions.UserPasswordsDontMatch
+            c.unbind()
+            raise exc_user.UserPasswordsDontMatch
 
         c.extend.microsoft.modify_password(distinguishedName, data['password'])
 
@@ -1056,7 +1074,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             c = LDAPConnector().connection
         except Exception as e:
             print(e)
-            raise ldap_exceptions.CouldNotOpenConnection
+            raise exc_ldap.CouldNotOpenConnection
 
         # Get basic attributes for this user from AD to compare query and get dn
         attributes = [
@@ -1107,7 +1125,8 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                     logger.warn("Unable to update user '" + userToUpdate + "' with attribute '" + key + "'")
                     logger.warn("Attribute Value:" + data[key])
                     logger.warn("Operation Type: " + operation)
-                    raise user_exceptions.UserUpdateError
+                    c.unbind()
+                    raise exc_user.UserUpdateError
 
         logger.debug(c.result)
 
@@ -1175,7 +1194,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
-            raise ldap_exceptions.CouldNotOpenConnection
+            raise exc_ldap.CouldNotOpenConnection
         attributes = [ 
             'givenName', 
             'sn', 

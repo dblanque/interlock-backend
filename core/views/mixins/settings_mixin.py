@@ -4,8 +4,10 @@ from core.models.user import User
 from django.db import transaction
 from interlock_backend.ldap.connector import LDAPConnector, testLDAPConnection
 from interlock_backend.ldap.settings_func import normalizeValues
-from core.exceptions import ldap as ldap_exceptions
-from core.exceptions import users as user_exceptions
+from core.exceptions import (
+    ldap as exc_ldap,
+    users as exc_user
+)
 from core.views.mixins.utils import testPort
 import logging
 import re
@@ -46,7 +48,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 
     def testSettings(self, user, data):
         if user == None:
-            raise user_exceptions.UserPermissionError
+            raise exc_user.UserPermissionError
 
         ldapAuthConnectionUser = data['LDAP_AUTH_CONNECTION_USER_DN']['value']
         ldapAuthConnectionPassword = data['LDAP_AUTH_CONNECTION_PASSWORD']['value']
@@ -63,7 +65,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
             logger.info("IP to Test: " + ip)
             logger.info("Port to Test: " + port)
             if not testPort(ip, port, ldapAuthConnectTimeout):
-                exception = ldap_exceptions.PortUnreachable
+                exception = exc_ldap.PortUnreachable
                 data = {
                     "code": "ldap_port_err",
                     "ipAddress": ip,
@@ -107,7 +109,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
                 )
         except Exception as e:
             print(e)
-            raise ldap_exceptions.CouldNotOpenConnection
+            raise exc_ldap.CouldNotOpenConnection
 
         result = c.result
         c.unbind()

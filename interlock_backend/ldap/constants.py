@@ -19,6 +19,21 @@ LDAP_AUTH_SEARCH_BASE = "dc=brconsulting"
 # The LDAP class that represents a user.
 LDAP_AUTH_OBJECT_CLASS = "person"
 
+LDAP_GROUP_TYPES = {
+    # Distribution Group
+    0:0,
+    # Security Group
+    1:-2147483648
+}
+LDAP_GROUP_SCOPES = {
+    # Global Scope
+    0:2,
+    # Domain Local Scope
+    1:4,
+    # Universal Scope
+    2:8
+}
+
 # Set this to False if you wish to include Computer Accounts in User Listings
 EXCLUDE_COMPUTER_ACCOUNTS = True
 
@@ -104,8 +119,6 @@ def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
         user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
         user.save()
     pass
-
-
 
 LDAP_AUTH_SYNC_USER_RELATIONS = sync_user_relations
 
