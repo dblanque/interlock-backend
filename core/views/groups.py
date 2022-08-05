@@ -22,6 +22,12 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
+from ldap3 import (
+    MODIFY_ADD,
+    MODIFY_DELETE,
+    MODIFY_INCREMENT,
+    MODIFY_REPLACE
+)
 from interlock_backend.ldap.encrypt import validateUser
 from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.adsi import addSearchFilter
@@ -29,6 +35,7 @@ from interlock_backend.ldap.settings_func import SettingsList
 from interlock_backend.ldap.securityIdentifier import SID
 from interlock_backend.ldap.constants import LDAP_GROUP_TYPES, LDAP_GROUP_SCOPES
 import logging
+import traceback
 ################################################################################
 
 logger = logging.getLogger(__name__)
@@ -397,7 +404,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
              }
         )
 
-    def update(self, request):
+    def update(self, request, pk=None):
         user = request.user
         validateUser(request=request, requestUser=user)
         code = 0
@@ -408,10 +415,8 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         ldap_settings_list = SettingsList(**{"search":{
             'LDAP_DOMAIN',
             'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_LOG_CREATE'
+            'LDAP_LOG_UPDATE'
         }})
-        authDomain = ldap_settings_list.LDAP_DOMAIN
-        authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
         ########################################################################
 
         # Open LDAP Connection
@@ -424,10 +429,10 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
         groupToUpdate = data['group']
 
-        if groupToUpdate['path'] is not None and groupToUpdate['path'] != "":
-            distinguishedName = "cn=" + groupToUpdate['cn'] + "," + groupToUpdate['path']
+        if 'distinguishedName' not in groupToUpdate:
+            raise exc_groups.GroupDistinguishedNameMissing
         else:
-            distinguishedName = 'CN='+groupToUpdate['cn']+',OU=Users,'+authSearchBase
+            distinguishedName = groupToUpdate['distinguishedName']
 
         groupToUpdate['sAMAccountName'] = str(groupToUpdate['cn']).lower()
         # Send LDAP Query for user being created to see if it exists
@@ -436,23 +441,24 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
             'distinguishedName',
             'userPrincipalName',
         ]
-        ldapFilter = addSearchFilter("", "cn="+groupToUpdate['cn'])
         args = {
             "connection": c,
-            "ldapFilter": ldapFilter,
+            "dn": distinguishedName,
             "ldapAttributes": attributes,
             "hideErrors": True
         }
 
         # !!! CHECK IF GROUP EXISTS !!! #
+        # We also need to fetch the existing LDAP group object to know what
+        # kind of operation to apply when updating attributes
         try:
-            groupExists = LDAPObject(**args).attributes
-            groupExists = len(groupExists) > 0
+            groupEntryInServer = LDAPObject(**args).attributes
+            groupEntryInServer = len(groupEntryInServer) > 0
         except:
-            groupExists = False
+            groupEntryInServer = False
 
         # If group exists, return error
-        if groupExists != True:
+        if groupEntryInServer == False:
             exception = exc_groups.GroupDoesNotExist
             data = {
                 "code": exception.default_code,
@@ -480,7 +486,8 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
         excludeKeys = [
             'member', 
-            'path'
+            'path',
+            'distinguishedName'
         ]
 
         group_dict = deepcopy(groupToUpdate)
@@ -492,29 +499,66 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         group_dict['cn'] = group_dict['cn'].capitalize()
         if 'membersToAdd' in group_dict:
             membersToAdd = group_dict.pop('membersToAdd')
+        if 'membersToRemove' in group_dict:
+            membersToRemove = group_dict.pop('membersToRemove')
 
-        logger.debug('Creating group in DN Path: ' + groupToUpdate['path'])
-        try:
-            c.add(distinguishedName, 'group', attributes=group_dict)
-        except Exception as e:
-            c.unbind()
-            print(e)
-            raise exc_groups.GroupCreate
+        # We need to check if the attributes exist in the LDAP Object already
+        # To know what operation to apply. This is VERY important.
+        arguments = dict()
+        for key in group_dict:
+                try:
+                    if key in groupEntryInServer and group_dict[key] == "":
+                        operation = MODIFY_DELETE
+                        c.modify(
+                            distinguishedName,
+                            {key: [( operation ), []]},
+                        )
+                    elif group_dict[key] != "":
+                        operation = MODIFY_REPLACE
+                        if isinstance(data[key], list):
+                            c.modify(
+                                distinguishedName,
+                                {key: [( operation, data[key])]},
+                            )
+                        else:
+                            c.modify(
+                                distinguishedName,
+                                {key: [( operation, [ data[key] ])]},
+                            )
+                    else:
+                        logger.info("No suitable operation for attribute " + key)
+                        pass
+                except:
+                    print(traceback.format_exc())
+                    logger.warn("Unable to update user '" + groupToUpdate['cn'] + "' with attribute '" + key + "'")
+                    logger.warn("Attribute Value:" + data[key])
+                    logger.warn("Operation Type: " + operation)
+                    c.unbind()
+                    raise exc_groups.GroupUpdate
+
+        logger.debug(c.result)
 
         if len(membersToAdd) > 0:
             try:
                 c.extend.microsoft.add_members_to_groups(membersToAdd, distinguishedName)
             except Exception as e:
-                c.delete(distinguishedName)
                 c.unbind()
                 print(e)
                 raise exc_groups.GroupMembersAdd
 
-        if ldap_settings_list.LDAP_LOG_CREATE == True:
+        if len(membersToRemove) > 0:
+            try:
+                c.extend.microsoft.remove_members_from_groups(membersToRemove, distinguishedName)
+            except Exception as e:
+                c.unbind()
+                print(e)
+                raise exc_groups.GroupMembersRemove
+
+        if ldap_settings_list.LDAP_LOG_UPDATE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
-                actionType="CREATE",
+                actionType="UPDATE",
                 objectClass="GROUP",
                 affectedObject=group_dict['cn']
             )
