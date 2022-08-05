@@ -12,6 +12,9 @@ dynamic tool with the community in contrast to the ones available at the time.
 The following people or organizations have contributed directly or indirectly
 to this project.
 
+* **Javier Blanqué**
+    - Site: [https://javier.blanque.com.ar/](https://javier.blanque.com.ar/)
+    - Credited for Assistance with Samba Binary Permission Parsing
 * **Martin Vilche**
     - Site: [https://martinvsolutions.com/](https://martinvsolutions.com/)
     - Credited for Calls Module and Constructors in Interlock Front-end
