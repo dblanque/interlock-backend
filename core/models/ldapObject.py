@@ -130,9 +130,11 @@ class LDAPObject():
             str_key = str(attr_key)
             str_value = str(attr_value)
             if attr_key == self.usernameIdentifier:
+                self.attributes[attr_key] = str_value
                 self.attributes['username'] = str_value
             elif attr_key == 'cn' and 'group' in self.entry['objectClass']:
                 value = getattr(self.entry, attr_key)
+                self.attributes[attr_key] = str_value
                 self.attributes['groupname'] = str_value
             elif attr_key == 'objectSid' and self.__getCN__(distinguishedName).lower() != "builtin":
                 value = getattr(self.entry, attr_key)
