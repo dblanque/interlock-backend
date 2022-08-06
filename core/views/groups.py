@@ -502,6 +502,12 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                 logger.debug("Removing key from dictionary: " + key)
                 group_dict.pop(key)
 
+        if 'membersToAdd' in data and 'membersToRemove' in data:
+            if data['membersToAdd'] == data['membersToRemove'] and data['membersToAdd'] != list():
+                c.unbind()
+                print(data)
+                raise exc_groups.BadMemberSelection
+
         if 'membersToAdd' in group_dict:
             membersToAdd = group_dict.pop('membersToAdd')
         else:

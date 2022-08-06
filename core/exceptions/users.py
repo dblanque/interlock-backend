@@ -33,3 +33,7 @@ class CannotDeleteUserPrimaryGroup(BaseException):
     status_code = 400
     default_detail = 'Primary Group for User cannot be Deleted, change the Primary Group ID first'
     default_code = 'user_group_primary_err'
+class BadGroupSelection(BaseException):
+    status_code = 400
+    default_detail = 'The same groups are in the Add to Group and Remove from Group entries'
+    default_code = 'user_group_bad'

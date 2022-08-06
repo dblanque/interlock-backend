@@ -517,6 +517,12 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 print(e)
                 raise exc_user.UserCountryUpdateError
 
+        if 'groupsToAdd' in data and 'groupsToRemove' in data:
+            if data['groupsToAdd'] == data['groupsToRemove'] and data['groupsToAdd'] != list():
+                c.unbind()
+                print(data)
+                raise exc_user.BadGroupSelection
+
         if 'groupsToAdd' in data:
             groupsToAdd = data.pop('groupsToAdd')
             if len(groupsToAdd) > 0:

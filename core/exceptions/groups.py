@@ -37,3 +37,7 @@ class GroupBuiltinProtect(BaseException):
     status_code = 400
     default_detail = 'Specified Group cannot be Deleted as it is builtin'
     default_code = 'group_builtin_protect'
+class BadMemberSelection(BaseException):
+    status_code = 400
+    default_detail = 'The same members are in the Add Member and Remove Member lists'
+    default_code = 'group_members_bad'

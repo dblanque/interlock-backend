@@ -30,3 +30,4 @@ v0.3 - 2022-08-05
 - Implemented Group Membership Management
 - Implemented Dirtree Object Filtering
 - Implemented "Go To Group" functionality in UserDialog
+- Implemented Custom Connector to fix TLS functionality and Rebind
