@@ -48,7 +48,7 @@ LDAP_AUTH_USER_FIELDS = {
     "first_name": "givenName",
     "last_name": "sn",
     "email": "mail",
-    "distinguishedName": "distinguishedName"
+    "dn": "distinguishedName"
 }
 
 if str(LDAP_AUTH_USER_FIELDS["username"]).lower() == 'samaccountname':

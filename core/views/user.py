@@ -787,6 +787,8 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             print(e)
             raise exc_ldap.CouldNotOpenConnection
 
+        userToDelete = data['username']
+
         # If data request for deletion has user DN
         if 'distinguishedName' in data.keys() and data['distinguishedName'] != "":
             logger.debug('Deleting with distinguishedName obtained from front-end')
@@ -799,7 +801,6 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         # Else, search for username dn
         else:
             logger.debug('Deleting with user dn search method')
-            userToDelete = data['username']
             c = self.getUserObject(c, userToDelete)
 
             user = c.entries
@@ -817,7 +818,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 user_id=request.user.id,
                 actionType="DELETE",
                 objectClass="USER",
-                affectedObject=data['username']
+                affectedObject=userToDelete
             )
 
         # Unbind the connection
@@ -849,22 +850,23 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             print(e)
             raise exc_ldap.CouldNotOpenConnection
 
+        userToUpdate = data['username']
+
         # If data request for deletion has user DN
         if 'distinguishedName' in data.keys() and data['distinguishedName'] != "":
             logger.debug('Updating with distinguishedName obtained from front-end')
             logger.debug(data['distinguishedName'])
-            distinguishedName = data['distinguishedName']
+            dn = data['distinguishedName']
         # Else, search for username dn
         else:
             logger.debug('Updating with user dn search method')
-            userToUpdate = data['username']
             c = self.getUserObject(c, userToUpdate)
             
             user = c.entries
             dn = str(user[0].distinguishedName)
             logger.debug(dn)
 
-        if not dn or dn == "":
+        if dn is None or dn == "":
             c.unbind()
             raise exc_user.UserDoesNotExist
 
@@ -878,7 +880,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 user_id=request.user.id,
                 actionType="UPDATE",
                 objectClass="USER",
-                affectedObject=data['username'],
+                affectedObject=userToUpdate,
                 extraMessage="CHANGED_PASSWORD"
             )
 
@@ -938,7 +940,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 user_id=request.user.id,
                 actionType="UPDATE",
                 objectClass="USER",
-                affectedObject=data['username'],
+                affectedObject=userToUpdate,
                 extraMessage="UNLOCK"
             )
 
@@ -983,6 +985,8 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             print(e)
             raise exc_ldap.CouldNotOpenConnection
 
+        userToUpdate = user.username
+
         # If data request for deletion has user DN
         if 'distinguishedName' in data.keys() and data['distinguishedName'] != "":
             logger.debug('Updating with distinguishedName obtained from front-end')
@@ -991,7 +995,6 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         # Else, search for username dn
         else:
             logger.debug('Updating with user dn search method')
-            userToUpdate = user.username
             c = self.getUserObject(c, userToUpdate)
             
             user = c.entries
@@ -1014,7 +1017,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 user_id=request.user.id,
                 actionType="UPDATE",
                 objectClass="USER",
-                affectedObject=data['username'],
+                affectedObject=userToUpdate,
                 extraMessage="CHANGED_PASSWORD"
             )
 
@@ -1139,7 +1142,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 user_id=request.user.id,
                 actionType="UPDATE",
                 objectClass="USER",
-                affectedObject=data['username'],
+                affectedObject=userToUpdate,
                 extraMessage="END_USER_UPDATED"
             )
 

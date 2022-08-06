@@ -69,7 +69,6 @@ class BaseUser(BaseModel, PermissionsMixin):
     id = models.BigAutoField(primary_key=True)
     username = models.CharField(_("username"), max_length=128, unique=True)
     password = models.CharField(_("password"), max_length=128)
-    distinguishedName = models.CharField(_("distinguishedName"), max_length=256, unique=True, null=True, blank=False)
     encryptedPassword = models.CharField(_("encryptedPassword"), max_length=256, null=True)
     last_login = models.DateTimeField(_("last login"), blank=True, null=True)
     email = models.EmailField(_("email address"), unique=True, db_index=True, null=True)
@@ -180,3 +179,9 @@ class User(BaseUser):
     email = models.EmailField(_("Email"), null=True, blank=True)
     dn = models.CharField(_("distinguishedName"), max_length=128, null=True, blank=True)
     is_local = models.BooleanField(null=False, default=True)
+
+    def get_distinguishedname(self):
+        return self.dn
+        
+    def is_user_local(self):
+        return self.is_local

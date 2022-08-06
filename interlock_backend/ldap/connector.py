@@ -60,7 +60,7 @@ def authenticate(*args, **kwargs):
     if c.connection is None:
         return None
     user = c.get_user(**ldap_kwargs)
-    if not c.rebind(user=user.distinguishedName, password=password):
+    if user is None or not c.rebind(user=user.dn, password=password):
         return None
     user.encryptedPassword = encryptedPass
     user.is_local = False
@@ -264,11 +264,15 @@ class LDAPConnector(object):
             if attribute_name in attributes
         }
         user_fields = import_func(self.ldap_settings_list.LDAP_AUTH_CLEAN_USER_DATA)(user_fields)
+        # ! Removed this because it broke user updating
         # Create the user lookup.
+        # user_lookup = {
+        #     field_name: user_fields.pop(field_name, "")
+        #     for field_name
+        #     in self.ldap_settings_list.LDAP_AUTH_USER_LOOKUP_FIELDS
+        # }
         user_lookup = {
-            field_name: user_fields.pop(field_name, "")
-            for field_name
-            in self.ldap_settings_list.LDAP_AUTH_USER_LOOKUP_FIELDS
+            'username': user_fields['username']
         }
         # Update or create the user.
         user, created = User.objects.update_or_create(
