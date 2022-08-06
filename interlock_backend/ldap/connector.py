@@ -7,13 +7,14 @@
 # Originally Created by Dylan Blanqué and BR Consulting S.R.L. (2022)
 
 from enum import Enum
-from django_python3_ldap.utils import import_func, format_search_filter
+from django_python3_ldap.utils import import_func
 from inspect import getfullargspec
 from django.contrib.auth import get_user_model
 from interlock_backend.ldap.encrypt import (
     decrypt,
     encrypt
 )
+from interlock_backend.ldap.adsi import addSearchFilter
 from interlock_backend.ldap.settings_func import (
     SettingsList,
     getSetting
@@ -50,15 +51,17 @@ def authenticate(*args, **kwargs):
     encryptedPass = str(encryptedPass).strip("b'").rstrip("'")
 
     # Check that this is valid login data.
-    if not password or frozenset(ldap_kwargs.keys()) != auth_user_lookup_fields:
+    if not password or 'username' not in frozenset(ldap_kwargs.keys()):
         return None
 
     # Connect to LDAP.
     # with orig_connection(password=password, **ldap_kwargs) as c:
-    c = LDAPConnector(user=username, password=password, initialAuth=True, plainPassword=True)
+    c = LDAPConnector(password=password, initialAuth=True, plainPassword=True)
     if c.connection is None:
         return None
     user = c.get_user(**ldap_kwargs)
+    if not c.rebind(user=user.distinguishedName, password=password):
+        return None
     user.encryptedPassword = encryptedPass
     user.is_local = False
     user.save()
@@ -126,6 +129,7 @@ class LDAPConnector(object):
         if not isinstance(ldapAuthTLSVersion, Enum):
             ldapAuthTLSVersion = getattr(ssl, ldapAuthTLSVersion)
 
+        # Include SSL / TLS, if requested.
         if ldapAuthUseTLS:
             tlsSettings = ldap3.Tls(
                 ciphers='ALL',
@@ -157,7 +161,6 @@ class LDAPConnector(object):
                     actionType="OPEN",
                     objectClass="CONN"
                 )
-            # Include SSL / TLS, if requested.
             connection_args = {
                 "user": user_dn,
                 "password": password,
@@ -199,6 +202,17 @@ class LDAPConnector(object):
             exception.setDetail(exception, data)
             raise exception
 
+    def rebind(self, user, password):
+        try:
+            self.connection.rebind(
+                user=user,
+                password=password,
+                read_server_info=True
+            )
+            return self.connection.result
+        except:
+            return None
+
     def get_user(self, **kwargs):
         """
         Returns the user with the given identifier.
@@ -207,10 +221,14 @@ class LDAPConnector(object):
         in settings.LDAP_AUTH_USER_LOOKUP_FIELDS.
         """
         ldapAuthSearchBase = self.ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+        ldapAuthUserFields = self.ldap_settings_list.LDAP_AUTH_USER_FIELDS
+        searchFilter = ""
+        for i in self.ldap_settings_list.LDAP_AUTH_USER_LOOKUP_FIELDS:
+            searchFilter = addSearchFilter(searchFilter, ldapAuthUserFields[i]+"="+kwargs['username'], '|')
         # Search the LDAP database.
         if self.connection.search(
             search_base=ldapAuthSearchBase,
-            search_filter=format_search_filter(kwargs),
+            search_filter=searchFilter,
             search_scope=ldap3.SUBTREE,
             attributes=ldap3.ALL_ATTRIBUTES,
             get_operational_attributes=True,

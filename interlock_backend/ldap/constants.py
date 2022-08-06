@@ -37,13 +37,18 @@ LDAP_GROUP_SCOPES = {
 # Set this to False if you wish to include Computer Accounts in User Listings
 EXCLUDE_COMPUTER_ACCOUNTS = True
 
+# Set this if you want to only use the settings in this constants,
+# Overrides will stop having an effect on system calls
+DISABLE_SETTING_OVERRIDES = False
+
 # User model fields mapped to the LDAP
 # attributes that represent them.
 LDAP_AUTH_USER_FIELDS = {
     "username": "sAMAccountName",
     "first_name": "givenName",
     "last_name": "sn",
-    "email": "mail"
+    "email": "mail",
+    "distinguishedName": "distinguishedName"
 }
 
 if str(LDAP_AUTH_USER_FIELDS["username"]).lower() == 'samaccountname':
@@ -54,6 +59,7 @@ else:
 # A tuple of django model fields used to uniquely identify a user.
 LDAP_AUTH_USER_LOOKUP_FIELDS = (
     "username",
+    "email"
 )
 
 # Path to a callable that takes a dict of {model_field_name: value},
@@ -92,8 +98,6 @@ LDAP_AUTH_CONNECTION_PASSWORD = "!kDZladKxt-Ed2QI7P2eN5"
 # Set connection/receive timeouts (in seconds) on the underlying `ldap3` library.
 LDAP_AUTH_CONNECT_TIMEOUT = 5
 LDAP_AUTH_RECEIVE_TIMEOUT = 5
-
-DISABLE_SETTING_OVERRIDES = True
 
 ADMIN_GROUP_TO_SEARCH = "CN=admins,OU=Administrators,DC=brconsulting"
 

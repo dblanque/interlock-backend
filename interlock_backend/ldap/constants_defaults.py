@@ -45,6 +45,10 @@ LDAP_GROUP_SCOPES = {
 # Set this to False if you wish to include Computer Accounts in User Listings
 EXCLUDE_COMPUTER_ACCOUNTS = True
 
+# Set this if you want to only use the settings in this constants,
+# Overrides will stop having an effect on system calls
+DISABLE_SETTING_OVERRIDES = False
+
 # User model fields mapped to the LDAP attributes that represent them.
 LDAP_AUTH_USER_FIELDS = {
     "username": "sAMAccountName",
