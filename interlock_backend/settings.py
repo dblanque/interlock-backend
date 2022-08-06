@@ -135,7 +135,7 @@ LOGGING = {
         },
         "interlock_backend.ldap.connector": {
             "handlers": ["console"],
-            "level": "INFO",
+            "level": "DEBUG",
         },
         "interlock_backend.ldap.securityIdentifier": {
             "handlers": ["console"],

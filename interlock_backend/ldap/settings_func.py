@@ -5,6 +5,7 @@ from core.models.user import User
 # Interlock Imports
 from interlock_backend.ldap.constants import (
     SETTINGS_WITH_ALLOWABLE_OVERRIDE,
+    DISABLE_SETTING_OVERRIDES,
     __dict__ as constantDictionary
 )
 # Full imports
@@ -103,7 +104,6 @@ def getSettingsList(settingList=SETTINGS_WITH_ALLOWABLE_OVERRIDE):
                 data[c]['value'] = str(data[c]['value'])
                 data[c]['value'] = data[c]['value'].split('.')[-1]
 
-    # print(data)
     return data
 
 def getSetting(settingKey):
@@ -120,7 +120,7 @@ def getSetting(settingKey):
     except Exception as e:
         print("EXCEPTION FOR DB FILTER:" + settingKey)
         print(e)
-    if querySet.count() != 0 and querySet.count() != None:
+    if querySet.count() != 0 and querySet.count() != None and DISABLE_SETTING_OVERRIDES != True:
         logger.debug("Fetching value for "+ settingKey+' from DB')
         try:
             setting = querySet[0]

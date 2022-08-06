@@ -146,32 +146,41 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
     @transaction.atomic
     def update_or_create_setting(self, itemKey, data, forceDelete=False):
         code = "NO_OPERATION"
-        # Normalize Select Types to String
-        if data['type'] == 'select':
-            data['type'] = 'string'
-        # Normalize Array Types
-        if data['type'] == 'array' or data['type'] == 'ldap_uri':
-            data['type'] = 'list'
 
-        # Set Values to correct field by type
-        if data['type'] == 'boolean':
-            valueField = 'value_bool'
-            data[valueField] = data['value']
-            del data['value']
+        try:
+            strTypes = [ 'string', 'password', 'select' ]
+            listTypes = [ 'list', 'object', 'ldap_uri', 'array' ]
 
-        listTypes = [ 'list', 'object', 'ldap_uri', 'array' ]
-        if data['type'] in listTypes:
-            valueField = 'value_json'
-            data[valueField] = data['value']
-            del data['value']
-        if data['type'] == 'integer':
-            valueField = 'value_int'
-            data[valueField] = data['value']
-            del data['value']
-        if data['type'] == 'float':
-            valueField = 'value_float'
-            data[valueField] = data['value']
-            del data['value']
+            # Normalize Select Types to String
+            if data['type'] in strTypes:
+                data['type'] = 'string'
+            # Normalize Array Types
+            if data['type'] == 'array' or data['type'] == 'ldap_uri':
+                data['type'] = 'list'
+
+            # Set Values to correct field by type
+            if data['type'] == 'boolean':
+                valueField = 'value_bool'
+                data[valueField] = data['value']
+                del data['value']
+            elif data['type'] in listTypes:
+                valueField = 'value_json'
+                data[valueField] = data['value']
+                del data['value']
+            elif data['type'] == 'integer':
+                valueField = 'value_int'
+                data[valueField] = data['value']
+                del data['value']
+            elif data['type'] == 'float':
+                valueField = 'value_float'
+                data[valueField] = data['value']
+                del data['value']
+            else:
+                valueField = 'value'
+                data[valueField] = data['value']
+        except Exception as e:
+            print(e)
+            print("Error in update_or_create_setting value normalization")
 
         try:
             querySet = Setting.objects.filter(id = itemKey)
@@ -190,7 +199,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
                 code = "CREATE_SUCCESS"
                 return code
             except Exception as e:
-                print("Couldn't save setting: " + itemKey)
+                print("Couldn't create setting override: " + itemKey)
                 print(data)
                 print(e)
                 code = "CREATE_TRANSACTION_ERROR"
@@ -208,7 +217,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
                     code = "UPDATE_SUCCESS"
                     return code
             except Exception as e:
-                print("Couldn't save setting: " + itemKey)
+                print("Couldn't update setting override: " + itemKey)
                 print(data)
                 print(e)
                 code = "UPDATE_TRANSACTION_ERROR"

@@ -93,34 +93,9 @@ LDAP_AUTH_CONNECTION_PASSWORD = "!kDZladKxt-Ed2QI7P2eN5"
 LDAP_AUTH_CONNECT_TIMEOUT = 5
 LDAP_AUTH_RECEIVE_TIMEOUT = 5
 
+DISABLE_SETTING_OVERRIDES = True
+
 ADMIN_GROUP_TO_SEARCH = "CN=admins,OU=Administrators,DC=brconsulting"
-
-def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
-    GROUP_TO_SEARCH = ADMIN_GROUP_TO_SEARCH
-    if 'Administrator' in ldap_attributes[LDAP_AUTH_USER_FIELDS["username"]]:
-        user.is_staff = True
-        user.is_superuser = True
-        user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
-        user.save()
-        pass
-    elif 'memberOf' in ldap_attributes and GROUP_TO_SEARCH in ldap_attributes['memberOf']:
-        # Do staff shit here
-        user.is_staff = True
-        user.is_superuser = True
-        if user.email is not None:
-            user.email = str(ldap_attributes['mail']).lstrip("['").rstrip("']") or ""
-        user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
-        user.save()
-    else:
-        user.is_staff = True
-        user.is_superuser = False
-        if user.email is not None:
-            user.email = str(ldap_attributes['mail']).lstrip("['").rstrip("']") or ""
-        user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
-        user.save()
-    pass
-
-LDAP_AUTH_SYNC_USER_RELATIONS = sync_user_relations
 
 LDAP_DIRTREE_OU_FILTER = {
     "organizationalUnit" : "objectCategory",

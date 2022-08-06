@@ -94,8 +94,6 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
 
         for setting in data:
             data[setting] = normalizeValues(setting, data[setting])
-            if setting == 'LDAP_AUTH_TLS_VERSION':
-                data[setting]['value'] = getattr(ssl, data[setting]['value'])
             if setting in constantDictionary:
                 dictValue = getattr(ldap_constants, setting)
                 if dictValue not in data[setting].values():
