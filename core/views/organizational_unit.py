@@ -1,11 +1,14 @@
 ################################## IMPORTS #####################################
 ### Exceptions
 from django.core.exceptions import PermissionDenied
-from core.exceptions.dirtree import DirtreeFilterBad
-from core.exceptions.ldap import (
-    CouldNotOpenConnection,
-    CouldNotFetchDirtree
+from core.exceptions import (
+    ldap as exc_ldap,
+    dirtree as exc_dirtree,
+    organizational_unit as exc_ou
 )
+
+### ViewSets
+from .base import BaseViewSet
 
 ### Models
 from core.models.log import logToDB
@@ -31,7 +34,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
+class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 
     def list(self, request):
         user = request.user
@@ -50,7 +53,7 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
             c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
-            raise CouldNotOpenConnection
+            raise exc_ldap.CouldNotOpenConnection
 
         attributesToSearch = [
             # User Attrs
@@ -82,7 +85,7 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
             logger.info("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
         except Exception as e:
             print(e)
-            raise CouldNotFetchDirtree
+            raise exc_ldap.CouldNotFetchDirtree
 
         if ldap_settings_list.LDAP_LOG_READ == True:
             # Log this action to DB
@@ -118,14 +121,14 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
             ldapFilter = self.processFilter(data)
         except Exception as e:
             print(e)
-            raise DirtreeFilterBad
+            raise exc_dirtree.DirtreeFilterBad
 
         # Open LDAP Connection
         try:
             c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
-            raise CouldNotOpenConnection
+            raise exc_ldap.CouldNotOpenConnection
 
         attributesToSearch = [
             # User Attrs
@@ -157,7 +160,7 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
         except Exception as e:
             print(e)
             c.unbind()
-            raise CouldNotFetchDirtree
+            raise exc_ldap.CouldNotFetchDirtree
 
         if ldap_settings_list.LDAP_LOG_READ == True:
             # Log this action to DB
@@ -199,7 +202,7 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
             c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
         except Exception as e:
             print(e)
-            raise CouldNotOpenConnection
+            raise exc_ldap.CouldNotOpenConnection
 
         # Close / Unbind LDAP Connection
         c.unbind()
@@ -211,29 +214,107 @@ class OrganizationalUnitViewSet(viewsets.ViewSet, OrganizationalUnitMixin):
                 }
         )
 
-    # def list(self, request, pk=None):
-    #     raise NotFound
+    @action(detail=False,methods=['post'])
+    def insert(self, request):
+        user = request.user
+        validateUser(request=request, requestUser=user)
+        data = request.data
+        code = 0
+        code_msg = 'ok'
 
-    def create(self, request, pk=None):
-        raise NotFound
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_LOG_CREATE'
+        }})
 
-    def put(self, request, pk=None):
-        raise NotFound
+        ou = data['ou']
 
-    def patch(self, request, pk=None):
-        raise NotFound
-        
-    def retrieve(self, request, pk=None):
-        raise NotFound
+        if 'name' not in ou or 'distinguishedName' not in ou or 'ou' not in ou:
+            raise exc_ou.MissingField
 
-    def update(self, request, pk=None):
-        raise NotFound
+        ouName = ou.pop('name')
+        ouMain = ou.pop('ou')
+        ouPath = ou.pop('path')
+        ouDistinguishedName = "OU=" + ouName + "," + ouPath
 
-    def partial_update(self, request, pk=None):
-        raise NotFound
+        attributes = {
+            "name": ouName,
+            "ou": ouMain
+        }
 
-    def destroy(self, request, pk=None):
-        raise NotFound
+        # Open LDAP Connection
+        try:
+            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
+        except Exception as e:
+            print(e)
+            raise exc_ldap.CouldNotOpenConnection
 
+        try:
+            c.add(ouDistinguishedName, "organizationalUnit", attributes=attributes)
+        except Exception as e:
+            c.unbind()
+            print(e)
+            raise exc_ou.OUCreate
+
+        if ldap_settings_list.LDAP_LOG_CREATE == True:
+            # Log this action to DB
+            logToDB(
+                user_id=request.user.id,
+                actionType="CREATE",
+                objectClass="LDAP",
+                affectedObject=ouName
+            )
+
+        # Close / Unbind LDAP Connection
+        c.unbind()
+        return Response(
+                data={
+                'code': code,
+                'code_msg': code_msg,
+                # 'user': username,
+                }
+        )
+
+    @action(detail=False, methods=['post'])
     def delete(self, request, pk=None):
-        raise NotFound
+        user = request.user
+        validateUser(request=request, requestUser=user)
+        code = 0
+        code_msg = 'ok'
+        data = request.data
+
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_LOG_DELETE'
+        }})
+
+        # Open LDAP Connection
+        try:
+            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
+        except Exception as e:
+            print(e)
+            raise exc_ldap.CouldNotOpenConnection
+
+        objectToDelete = data['distinguishedName']
+
+        if not objectToDelete or objectToDelete == "":
+            c.unbind()
+            raise exc_ldap.LDAPObjectDoesNotExist
+        c.delete(objectToDelete)
+
+        if ldap_settings_list.LDAP_LOG_DELETE == True:
+            # Log this action to DB
+            logToDB(
+                user_id=request.user.id,
+                actionType="DELETE",
+                objectClass="USER",
+                affectedObject=objectToDelete
+            )
+
+        # Unbind the connection
+        c.unbind()
+        return Response(
+             data={
+                'code': code,
+                'code_msg': code_msg,
+                'data': data
+             }
+        )

@@ -400,9 +400,21 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         arguments['sn'] = arguments['sn'].capitalize()
 
         logger.debug('Creating user in DN Path: ' + userDN)
-        c.add(userDN, authObjectClass, attributes=arguments)
-        # TODO - Test if password changes correctly?
-        c.extend.microsoft.modify_password(userDN, data['password'])
+        try:
+            c.add(userDN, authObjectClass, attributes=arguments)
+        except Exception as e:
+            c.unbind()
+            print(e)
+            print(userDN)
+            raise exc_user.UserCreate
+
+        try:
+            c.extend.microsoft.modify_password(userDN, data['password'])
+        except Exception as e:
+            c.unbind()
+            print(e)
+            print(userDN)
+            raise exc_user.UserUpdateError
 
         if ldap_settings_list.LDAP_LOG_CREATE == True:
             # Log this action to DB

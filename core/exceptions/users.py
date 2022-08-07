@@ -9,6 +9,10 @@ class UserPasswordsDontMatch(BaseException):
     status_code = 400
     default_detail = 'User passwords do not match'
     default_code = 'user_passwords_dont_match'
+class UserCreate(BaseException):
+    status_code = 500
+    default_detail = 'User could not be created'
+    default_code = 'user_create_error'
 class UserUpdateError(BaseException):
     status_code = 500
     default_detail = 'User could not be updated'
