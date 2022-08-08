@@ -1,4 +1,5 @@
 # Core Imports
+from typing import Literal
 from core.models.settings_model import Setting
 from core.models.user import User
 
@@ -16,22 +17,47 @@ import json
 
 logger = logging.getLogger(__name__)
 
-class SettingsList():
-    def __init__(self,**kwargs):
-        self.name = 'SettingsList'
-        if 'search' in kwargs:
-            for arg in kwargs['search']:
-                if arg in SETTINGS_WITH_ALLOWABLE_OVERRIDE:
-                    setattr(self, arg, getSetting(arg))
-                else:
-                    setattr(self, arg, constantDictionary[arg])
-        else:
-            for setting in constantDictionary:
-                if setting in SETTINGS_WITH_ALLOWABLE_OVERRIDE:
-                    setattr(self, setting, getSetting(setting))
-                else:
-                    setattr(self, setting, constantDictionary[setting])
+def getSetting(settingKey):
+    valueFields = [
+        'value',
+        'value_bool',
+        'value_json',
+        'value_int',
+        'value_float'
+    ]
 
+    try:
+        querySet = Setting.objects.filter(id = settingKey).exclude(deleted=True)
+    except Exception as e:
+        print("EXCEPTION FOR DB FILTER:" + settingKey)
+        print(e)
+    if querySet.count() != 0 and querySet.count() != None and DISABLE_SETTING_OVERRIDES != True:
+        logger.debug("Fetching value for "+ settingKey+' from DB')
+        try:
+            setting = querySet[0]
+            # setting = normalizeValues(settingKey, setting.__dict__)
+
+            if settingKey == 'LDAP_AUTH_TLS_VERSION':
+                return getattr(ssl, setting.value)
+            else:
+                for field in valueFields:
+                    fieldValue = getattr(setting, field)
+                    if fieldValue is not None and fieldValue != "":
+                        return fieldValue
+        except Exception as e:
+            print("EXCEPTION FOR DB FETCH:" + settingKey)
+            print(e)
+    else:
+        logger.debug("Fetching value for "+ settingKey +' from Constants')
+        return constantDictionary[settingKey]
+
+def getSettingType(settingKey):
+    # Set the Type for the Front-end based on Types in List
+    if 'type' in SETTINGS_WITH_ALLOWABLE_OVERRIDE[settingKey]:
+        type = SETTINGS_WITH_ALLOWABLE_OVERRIDE[settingKey]['type']
+    else:
+        type = 'string'
+    return type
 
 def normalizeValues(settingKey, settingDict):
     """
@@ -105,45 +131,54 @@ def getSettingsList(settingList=SETTINGS_WITH_ALLOWABLE_OVERRIDE):
                 data[c]['value'] = data[c]['value'].split('.')[-1]
 
     return data
+class SettingsList():
+    LDAP_AUTH_URL = Literal
+    LDAP_DOMAIN = Literal
+    LDAP_AUTH_USE_TLS = Literal
+    LDAP_AUTH_TLS_VERSION = Literal
+    LDAP_AUTH_SEARCH_BASE = Literal
+    LDAP_AUTH_OBJECT_CLASS = Literal
+    LDAP_GROUP_TYPES = Literal
+    LDAP_GROUP_SCOPES = Literal
+    EXCLUDE_COMPUTER_ACCOUNTS = Literal
+    LDAP_AUTH_USER_FIELDS = Literal
+    LDAP_AUTH_USERNAME_IDENTIFIER = Literal
+    LDAP_AUTH_USER_LOOKUP_FIELDS = Literal
+    LDAP_AUTH_CLEAN_USER_DATA = Literal
+    LDAP_AUTH_SYNC_USER_RELATIONS = Literal
+    LDAP_AUTH_FORMAT_SEARCH_FILTERS = Literal
+    LDAP_AUTH_FORMAT_USERNAME = Literal
+    LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN = Literal
+    LDAP_AUTH_CONNECTION_USER_DN = Literal
+    LDAP_AUTH_CONNECTION_USERNAME = Literal
+    LDAP_AUTH_CONNECTION_PASSWORD = Literal
+    LDAP_AUTH_CONNECT_TIMEOUT = Literal
+    LDAP_AUTH_RECEIVE_TIMEOUT = Literal
+    ADMIN_GROUP_TO_SEARCH = Literal
+    LDAP_DIRTREE_OU_FILTER = Literal
+    LDAP_DIRTREE_CN_FILTER = Literal
+    LDAP_DIRTREE_ATTRIBUTES = Literal
+    LDAP_LOG_READ = Literal
+    LDAP_LOG_CREATE = Literal
+    LDAP_LOG_UPDATE = Literal
+    LDAP_LOG_DELETE = Literal
+    LDAP_LOG_OPEN_CONNECTION = Literal
+    LDAP_LOG_CLOSE_CONNECTION = Literal
+    LDAP_LOG_LOGIN = Literal
+    LDAP_LOG_LOGOUT = Literal
+    LDAP_LOG_MAX = Literal
 
-def getSetting(settingKey):
-    valueFields = [
-        'value',
-        'value_bool',
-        'value_json',
-        'value_int',
-        'value_float'
-    ]
-
-    try:
-        querySet = Setting.objects.filter(id = settingKey).exclude(deleted=True)
-    except Exception as e:
-        print("EXCEPTION FOR DB FILTER:" + settingKey)
-        print(e)
-    if querySet.count() != 0 and querySet.count() != None and DISABLE_SETTING_OVERRIDES != True:
-        logger.debug("Fetching value for "+ settingKey+' from DB')
-        try:
-            setting = querySet[0]
-            # setting = normalizeValues(settingKey, setting.__dict__)
-
-            if settingKey == 'LDAP_AUTH_TLS_VERSION':
-                return getattr(ssl, setting.value)
-            else:
-                for field in valueFields:
-                    fieldValue = getattr(setting, field)
-                    if fieldValue is not None and fieldValue != "":
-                        return fieldValue
-        except Exception as e:
-            print("EXCEPTION FOR DB FETCH:" + settingKey)
-            print(e)
-    else:
-        logger.debug("Fetching value for "+ settingKey +' from Constants')
-        return constantDictionary[settingKey]
-
-def getSettingType(settingKey):
-    # Set the Type for the Front-end based on Types in List
-    if 'type' in SETTINGS_WITH_ALLOWABLE_OVERRIDE[settingKey]:
-        type = SETTINGS_WITH_ALLOWABLE_OVERRIDE[settingKey]['type']
-    else:
-        type = 'string'
-    return type
+    def __init__(self,**kwargs):
+        self.name = 'SettingsList'
+        if 'search' in kwargs:
+            for arg in kwargs['search']:
+                if arg in SETTINGS_WITH_ALLOWABLE_OVERRIDE:
+                    setattr(self, arg, getSetting(arg))
+                else:
+                    setattr(self, arg, constantDictionary[arg])
+        else:
+            for setting in constantDictionary:
+                if setting in SETTINGS_WITH_ALLOWABLE_OVERRIDE:
+                    setattr(self, setting, getSetting(setting))
+                else:
+                    setattr(self, setting, constantDictionary[setting])

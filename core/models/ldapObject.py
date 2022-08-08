@@ -1,6 +1,5 @@
 ################################## IMPORTS #####################################
 ### Django
-from attr import attr
 from django.utils.translation import gettext_lazy as _
 
 ### Interlock

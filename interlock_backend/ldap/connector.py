@@ -71,12 +71,13 @@ class LDAPConnector(object):
     defaultUserDn = getSetting('LDAP_AUTH_CONNECTION_USER_DN')
     defaultUserPassword = getSetting('LDAP_AUTH_CONNECTION_PASSWORD')
 
-    def __init__(self, 
-        user_dn=None, 
-        password=None, 
-        user=None, 
-        initialAuth=False, 
-        plainPassword=False
+    def __init__(self,
+        user_dn=None,
+        password=None,
+        user=None,
+        initialAuth=False,
+        plainPassword=False,
+        getInfo=ldap3.NONE
         ):
         self.ldap_settings_list = SettingsList(**{"search":{
             'LDAP_AUTH_USER_FIELDS',
@@ -107,7 +108,9 @@ class LDAPConnector(object):
         if password is None:
             password = self.defaultUserPassword
 
+        # If it's an Initial Authentication we need to use the bind user first
         if initialAuth == True or user is not None:
+            # If initial auth or user is local interlock superadmin
             if initialAuth == True or (user.username == 'admin' and user.is_local == True):
                 user_dn = self.ldap_settings_list.LDAP_AUTH_CONNECTION_USER_DN
                 password = ldapAuthConnectionPassword
@@ -127,36 +130,36 @@ class LDAPConnector(object):
             password = str(decrypt(password))
 
         # Build server pool
-        server_pool = ldap3.ServerPool(None, ldap3.RANDOM, active=True, exhaust=5)
-        auth_url = ldapAuthURL
-        if not isinstance(auth_url, list):
-            auth_url = [auth_url]
+        self.server_pool = ldap3.ServerPool(None, ldap3.RANDOM, active=True, exhaust=5)
+        self.auth_url = ldapAuthURL
+        if not isinstance(self.auth_url, list):
+            self.auth_url = [self.auth_url]
 
         if not isinstance(ldapAuthTLSVersion, Enum):
             ldapAuthTLSVersion = getattr(ssl, ldapAuthTLSVersion)
 
         # Include SSL / TLS, if requested.
         if ldapAuthUseTLS:
-            tlsSettings = ldap3.Tls(
+            self.tlsSettings = ldap3.Tls(
                 ciphers='ALL',
                 version=ldapAuthTLSVersion,
             )
         else:
-            tlsSettings = None
-        for u in auth_url:
-            server_pool.add(
-                ldap3.Server(
-                    u,
-                    allowed_referral_hosts=[("*", True)],
-                    get_info=ldap3.NONE,
-                    connect_timeout=ldapAuthConnectTimeout,
-                    use_ssl=ldapAuthUseTLS,
-                    tls=tlsSettings
-                )
-            )
+            self.tlsSettings = None
+        for u in self.auth_url:
+            server = ldap3.Server(
+                            u,
+                            allowed_referral_hosts=[("*", True)],
+                            # ! Do NOT change get_info to ALL or SCHEMA, or stuff WILL break
+                            get_info=getInfo,
+                            connect_timeout=ldapAuthConnectTimeout,
+                            use_ssl=ldapAuthUseTLS,
+                            tls=self.tlsSettings
+                        )
+            self.server_pool.add(server)
 
         self.user = user_dn
-        self.auth_url = auth_url
+        self.auth_url = self.auth_url
         self.connection = None
         # Connect.
         try:
@@ -175,7 +178,7 @@ class LDAPConnector(object):
                 "receive_timeout": ldapAuthReceiveTimeout,
             }
             c = ldap3.Connection(
-                server_pool,
+                self.server_pool,
                 **connection_args,
             )
         except LDAPException as ex:
@@ -306,6 +309,39 @@ class LDAPConnector(object):
         logger.info("LDAP user lookup succeeded")
         return user
 
+class LDAPInfo(LDAPConnector):
+    
+    def __init__(
+        self, 
+        user_dn=None, 
+        password=None, 
+        user=None, 
+        initialAuth=False, 
+        plainPassword=False,
+        getInfo=ldap3.ALL
+        ):
+        super().__init__(user_dn, password, user, initialAuth, plainPassword, getInfo)
+        self.refresh_server_info()
+
+    def refresh_server_info(self):
+        current_server = self.connection.server_pool.get_current_server(self.connection)
+        current_server.get_info_from_server(self.connection)
+        self.schema = current_server.schema
+        self.info = current_server.info
+
+    def get_domain_root(self):
+        try:
+            domainroot = self.info.other['defaultNamingContext'][0]
+        except Exception as e:
+            print(e)
+        return domainroot
+
+    def get_forest_root(self):
+        try:
+            forestroot = self.info.other['rootDomainNamingContext'][0]
+        except Exception as e:
+            print(e)
+        return forestroot
 
 def testLDAPConnection(
         username,

@@ -1,4 +1,7 @@
 ################################## IMPORTS #####################################
+### Exceptions
+from core.exceptions.test import TestError
+
 ### ViewSets
 import dns
 import ldap3
@@ -17,22 +20,10 @@ import json
 ################################# Test Imports #################################
 from core.views.mixins.group import GroupViewMixin
 from core.exceptions.ldap import CouldNotOpenConnection
-from interlock_backend.ldap.connector import LDAPConnector
+from interlock_backend.ldap.connector import LDAPConnector, LDAPInfo
 from interlock_backend.ldap.adsi import addSearchFilter, buildFilterFromDict
 from interlock_backend.ldap.settings_func import SettingsList
-from dns import (
-    query as dnsQuery,
-    update as dnsUpdate,
-    zone as dnsZone,
-    xfr as dnsXfr,
-    ipv4,
-    message as dnsMessage,
-    name as dnsName,
-    rdatatype,
-    rdataclass,
-    resolver as dnsResolver
-)
-import dns
+from core.utils import dnstool
 ################################################################################
 
 logger = logging.getLogger(__name__)
@@ -45,35 +36,57 @@ class TestViewSet(BaseViewSet):
         data = {}
         code = 0
 
-        print(GroupViewMixin.getGroupByRID(513))
+        dnsServer = "10.10.10.1"
+        queryZone = "brconsulting.info"
+        # entry = dnsEntry(
+        #             dnsAddresses=dnsServer,
+        #             dnsZone=queryZone,
+        #             queryString="pfsenseborde"
+        #         )
 
-        # domain = 'brconsulting.info'
-        # dns_zone = domain + "."
-        # qname = dnsName.from_text("brconsulting.info")
-        # query = dnsMessage.make_query(qname=qname, rdtype=rdatatype.A)
-        # result = dnsQuery.udp(query, "10.10.10.13")
-        # print(result)
+        # answer = entry.query().__dict__
+        # for i in answer:
+        #     print(answer[i])
 
-        # ######################## Get Latest Settings ###########################
-        # ldap_settings_list = SettingsList(**{"search":{
-        #     'LDAP_AUTH_USERNAME_IDENTIFIER',
-        #     'LDAP_AUTH_OBJECT_CLASS',
-        #     'LDAP_AUTH_SEARCH_BASE',
-        #     'LDAP_LOG_READ'
-        # }})
+        # zone = dnsZone(dnsZone=queryZone)
 
-        # # Open LDAP Connection
-        # try:
-        #     ldapConnection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
-        # except Exception as e:
-        #     print(e)
-        #     raise CouldNotOpenConnection
+        ######################## Get Latest Settings ###########################
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_DOMAIN',
+            'LDAP_AUTH_USERNAME_IDENTIFIER',
+            'LDAP_AUTH_OBJECT_CLASS',
+            'LDAP_AUTH_SEARCH_BASE',
+            'LDAP_LOG_READ'
+        }})
 
-        # ldapConnection.unbind()
+        # Open LDAP Connection
+        try:
+            connector = LDAPInfo()
+            ldapConnection = connector.connection
+        except Exception as e:
+            print(e)
+            raise CouldNotOpenConnection
+
+        try:
+            print(connector.get_domain_root())
+            print(connector.get_forest_root())
+        except:
+            raise TestError
+
+        # ldapConnection.search(
+        #     search_base=ldap_settings_list.LDAP_AUTH_SEARCH_BASE,
+        #     search_filter=searchFilter,
+        #     search_scope=ldap3.LEVEL,
+        #     attributes=['dc']
+        #     )
+
+        # print(ldapConnection.response)
+
+        ldapConnection.unbind()
         return Response(
              data={
                 'code': code,
                 'code_msg': 'ok',
-                'data' : data
+                'data' : ldapConnection.result
              }
         )
