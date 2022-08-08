@@ -24,6 +24,7 @@ from interlock_backend.ldap.connector import LDAPConnector, LDAPInfo
 from interlock_backend.ldap.adsi import addSearchFilter, buildFilterFromDict
 from interlock_backend.ldap.settings_func import SettingsList
 from core.utils import dnstool
+from core.models.dns import LDAPDNS, record_to_dict
 ################################################################################
 
 logger = logging.getLogger(__name__)
@@ -36,20 +37,6 @@ class TestViewSet(BaseViewSet):
         data = {}
         code = 0
 
-        dnsServer = "10.10.10.1"
-        queryZone = "brconsulting.info"
-        # entry = dnsEntry(
-        #             dnsAddresses=dnsServer,
-        #             dnsZone=queryZone,
-        #             queryString="pfsenseborde"
-        #         )
-
-        # answer = entry.query().__dict__
-        # for i in answer:
-        #     print(answer[i])
-
-        # zone = dnsZone(dnsZone=queryZone)
-
         ######################## Get Latest Settings ###########################
         ldap_settings_list = SettingsList(**{"search":{
             'LDAP_DOMAIN',
@@ -61,26 +48,40 @@ class TestViewSet(BaseViewSet):
 
         # Open LDAP Connection
         try:
-            connector = LDAPInfo()
+            connector = LDAPConnector()
             ldapConnection = connector.connection
         except Exception as e:
             print(e)
             raise CouldNotOpenConnection
 
-        try:
-            print(connector.get_domain_root())
-            print(connector.get_forest_root())
-        except:
-            raise TestError
+        # try:
+        #     print(connector.get_domain_root())
+        #     print(connector.get_forest_root())
+        # except:
+        #     raise TestError
 
-        # ldapConnection.search(
-        #     search_base=ldap_settings_list.LDAP_AUTH_SEARCH_BASE,
-        #     search_filter=searchFilter,
-        #     search_scope=ldap3.LEVEL,
-        #     attributes=['dc']
-        #     )
+        searchFilter = addSearchFilter("", "objectClass=dnsNode")
+        attributes=['dnsRecord','dNSTombstoned','name']
 
-        # print(ldapConnection.response)
+        dnsList = LDAPDNS(ldapConnection)
+
+        print(dnsList.dnsroot)
+        print(dnsList.forestroot)
+        print(dnsList.list_dns_zones())
+        print(dnsList.list_forest_zones())
+
+        search_target = 'DC=%s,%s' % ("brconsulting.info", dnsList.dnsroot)
+        ldapConnection.search(
+            search_base=search_target,
+            search_filter=searchFilter,
+            attributes=attributes
+        )
+
+        for entry in ldapConnection.response:
+            for record in entry['raw_attributes']['dnsRecord']:
+                dr = dnstool.DNS_RECORD(record)
+                result = record_to_dict(dr, entry['attributes']['dNSTombstoned'])
+                print(result)
 
         ldapConnection.unbind()
         return Response(

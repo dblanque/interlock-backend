@@ -24,7 +24,11 @@ from interlock_backend.ldap.settings_func import SettingsList
 from interlock_backend.ldap.connector import LDAPConnector
 from core.utils import dnstool
 from core.models.dns import LDAPDNS, record_to_dict
+import logging
 ################################################################################
+
+logger = logging.getLogger(__name__)
+
 class DomainViewSet(BaseViewSet, DomainViewMixin):
 
     @action(detail=False, methods=['get'])
@@ -71,7 +75,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 
         # Open LDAP Connection
         try:
-            connector = LDAPConnector()
+            connector = LDAPConnector(user.dn, user.encryptedPassword, request.user)
             ldapConnection = connector.connection
         except Exception as e:
             print(e)
@@ -80,12 +84,13 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         responseData = {}
 
         responseData['headers'] = [
-            'nameTarget',
+            'name',
             'address',
-            # 'type',
             'typeName',
             'serial',
             'ts',
+            # 'nameTarget',
+            # 'type',
             # 'tstime',
             # 'wPriority',
             # 'wWeight',
@@ -119,11 +124,31 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 
         result = list()
 
+        excludeEntries = [
+            'ForestDnsZones',
+            'DomainDnsZones'
+        ]
+
         for entry in ldapConnection.response:
+            # Set Record Name
+            record_name = entry['raw_attributes']['name'][0]
+            record_name = str(record_name)[2:-1]
+            orig_name = record_name
+            if record_name != "@":
+                record_name += "." + target_zone
+            else:
+                record_name = target_zone
+            logger.info(record_name)
+
+            # Set Record Data
             for record in entry['raw_attributes']['dnsRecord']:
                 dr = dnstool.DNS_RECORD(record)
+                logger.info(dr)
                 record_dict = record_to_dict(dr, entry['attributes']['dNSTombstoned'])
-                result.append(record_dict)
+                record_dict['name'] = record_name
+                logger.debug('Record: %s, Starts With Underscore: %s, Exclude Entry: %s' % (record_name, record_name.startswith("_"), record_name in excludeEntries))
+                if not record_name.startswith("_") and orig_name not in excludeEntries:
+                    result.append(record_dict)
 
         ldapConnection.unbind()
 

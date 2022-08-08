@@ -66,6 +66,9 @@ class DNS_RECORD(Structure):
         ('Data', ':')
     )
 
+    def __str__(self):
+        return print_record(self)
+
 # Note that depending on whether we use RPC or LDAP all the DNS_RPC_XXXX
 # structures use DNS_RPC_NAME when communication is over RPC,
 # but DNS_COUNT_NAME is the way they are stored in LDAP.
