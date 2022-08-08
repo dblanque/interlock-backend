@@ -372,6 +372,8 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         group_dict['cn'] = group_dict['cn'].capitalize()
         if 'membersToAdd' in group_dict:
             membersToAdd = group_dict.pop('membersToAdd')
+        else:
+            membersToAdd = list()
 
         logger.debug('Creating group in DN Path: ' + groupToCreate['path'])
         try:
