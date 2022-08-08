@@ -1,4 +1,8 @@
 ################################## IMPORTS #####################################
+### Models
+from core.models.log import logToDB
+from core.models.dns import LDAPDNS, record_to_dict
+
 ### ViewSets
 from email import header
 from core.views.base import BaseViewSet
@@ -18,12 +22,11 @@ from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
 
 ### Others
+from core.utils import dnstool
 from interlock_backend.ldap.adsi import addSearchFilter
 from interlock_backend.ldap.encrypt import validateUser
 from interlock_backend.ldap.settings_func import SettingsList
 from interlock_backend.ldap.connector import LDAPConnector
-from core.utils import dnstool
-from core.models.dns import LDAPDNS, record_to_dict
 import logging
 ################################################################################
 
@@ -161,6 +164,15 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
             else:
                 cleanDnsZones.append(dnsZones[c][0])
             c += 1
+
+        if ldap_settings_list.LDAP_LOG_READ == True:
+            # Log this action to DB
+            logToDB(
+                user_id=request.user.id,
+                actionType="READ",
+                objectClass="DNSZ",
+                affectedObject=target_zone
+            )
 
         responseData['dnsZones'] = cleanDnsZones
         responseData['forestZones'] = forestZones

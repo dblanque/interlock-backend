@@ -20,4 +20,6 @@ CLASS_CHOICES = [
     ('LDAP', 'LDAP Object'),
     ('CONN', 'Connection'),
     ('SET', 'Setting'),
+    ('DNSZ', 'DNS Zone'),
+    ('DNSR', 'DNS Record'),
 ]
