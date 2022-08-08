@@ -116,6 +116,9 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 
         result['user_used'] = username
         result['user_dn_used'] = user_dn
+        result['server_pool'] = ldapAuthURL
+        result['tls'] = ldapAuthUseTLS
+        result['tls_version'] = ldapAuthTLSVersion
         logger.info("Test Connection Endpoint Result: ")
         logger.info(result)
         return result

@@ -203,7 +203,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
         else:
             objectName = distinguishedName
 
-        relativeDistinguishedName = safe_rdn(distinguishedName)
+        relativeDistinguishedName = distinguishedName.split(",")[0]
 
         if relativeDistinguishedName == distinguishedName:
             raise exc_dirtree.DirtreeDistinguishedNameConflict
@@ -219,7 +219,8 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
             c.modify_dn(distinguishedName, relativeDistinguishedName, new_superior=newPath)
         except Exception as e:
             print(e)
-            ldapErrorCode = str(e).split(" - ")[2]
+            ldapError = str(e).split(" - ")
+            ldapErrorCode = ldapError[2] or ldapError[0] or ldapError
             exception = exc_dirtree.DirtreeMove
             if ldapErrorCode == "entryAlreadyExists":
                 exception.status_code = 409
@@ -273,11 +274,13 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
         else:
             objectName = distinguishedName
 
-        relativeDistinguishedName = safe_rdn(distinguishedName)
+        relativeDistinguishedName = distinguishedName.split(",")[0]
         newRDN = ldapObject['newRDN']
 
         if relativeDistinguishedName == newRDN:
             raise exc_dirtree.DirtreeDistinguishedNameConflict
+
+        newRDN = str(distinguishedName).split("=")[0].lower() + "=" + newRDN
 
         # Open LDAP Connection
         try:
@@ -285,12 +288,13 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
         except Exception as e:
             print(e)
             raise exc_ldap.CouldNotOpenConnection
-    
+
         try:
-            c.modify_dn(distinguishedName, relativeDistinguishedName, new_superior=newPath)
+            c.modify_dn(distinguishedName, newRDN)
         except Exception as e:
             print(e)
-            ldapErrorCode = str(e).split(" - ")[2]
+            ldapError = str(e).split(" - ")
+            ldapErrorCode = ldapError[2] or ldapError[0] or ldapError
             exception = exc_dirtree.DirtreeMove
             if ldapErrorCode == "entryAlreadyExists":
                 exception.default_code = 409

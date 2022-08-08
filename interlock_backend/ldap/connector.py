@@ -71,7 +71,13 @@ class LDAPConnector(object):
     defaultUserDn = getSetting('LDAP_AUTH_CONNECTION_USER_DN')
     defaultUserPassword = getSetting('LDAP_AUTH_CONNECTION_PASSWORD')
 
-    def __init__(self, user_dn=None, password=None, user=None, initialAuth=False, plainPassword=False):
+    def __init__(self, 
+        user_dn=None, 
+        password=None, 
+        user=None, 
+        initialAuth=False, 
+        plainPassword=False
+        ):
         self.ldap_settings_list = SettingsList(**{"search":{
             'LDAP_AUTH_USER_FIELDS',
             'LDAP_AUTH_CLEAN_USER_DATA',
@@ -340,10 +346,11 @@ def testLDAPConnection(
     if not isinstance(ldapAuthTLSVersion, Enum):
         ldapAuthTLSVersion = getattr(ssl, ldapAuthTLSVersion)
 
+    # Include SSL / TLS, if requested.
     if ldapAuthUseTLS:
         tlsSettings = ldap3.Tls(
             ciphers='ALL',
-            version=getattr(ssl, ldapAuthTLSVersion),
+            version=ldapAuthTLSVersion,
         )
     else:
         tlsSettings = None
