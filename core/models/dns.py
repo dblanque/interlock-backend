@@ -86,3 +86,6 @@ class LDAPDNS():
             for zone in zones:
                 logger.info('    %s' % zone)
         return zones
+
+class LDAPRecord(LDAPDNS):
+    pass
