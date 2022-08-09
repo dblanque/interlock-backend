@@ -37,7 +37,7 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
 
     def list(self, request, pk=None):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         data = {}
         code = 0
 
@@ -70,7 +70,7 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
     @action(detail=False, methods=['post'])
     def save(self, request, pk=None):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         data = request.data
         code = 0
 
@@ -140,7 +140,7 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
     @action(detail=False, methods=['get'])
     def reset(self, request, pk=None):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         data = request.data
         code = 0
 
@@ -157,7 +157,7 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
     @action(detail=False, methods=['post'])
     def test(self, request, pk=None):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         data = request.data
         code = 0
 

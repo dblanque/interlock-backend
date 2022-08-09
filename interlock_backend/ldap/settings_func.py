@@ -43,7 +43,12 @@ def getSetting(settingKey):
                 for field in valueFields:
                     fieldValue = getattr(setting, field)
                     if fieldValue is not None and fieldValue != "":
-                        return fieldValue
+                        if settingKey == 'LDAP_AUTH_SEARCH_BASE':
+                            normalizedSearchBase = fieldValue.replace('dc=', 'DC=')
+                            normalizedSearchBase = normalizedSearchBase.replace('cn=', 'CN=')
+                            return normalizedSearchBase
+                        else:
+                            return fieldValue
         except Exception as e:
             print("EXCEPTION FOR DB FETCH:" + settingKey)
             print(e)

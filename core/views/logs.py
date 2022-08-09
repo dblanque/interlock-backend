@@ -29,7 +29,7 @@ class LogsViewSet(BaseViewSet, LogMixin):
 
     def list(self, request, pk=None):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         data = {}
         code = 0
         headers = [
@@ -68,7 +68,7 @@ class LogsViewSet(BaseViewSet, LogMixin):
     @action(detail=False, methods=['get'])
     def reset(self, request, pk=None):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         data = request.data
         code = 0
 
@@ -85,7 +85,7 @@ class LogsViewSet(BaseViewSet, LogMixin):
     @action(detail=False, methods=['post'])
     def truncate(self, request, pk=None):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         data = request.data
         code = 0
 

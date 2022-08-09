@@ -44,7 +44,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
     def list(self, request):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         data = []
         code = 0
         code_msg = 'ok'
@@ -145,7 +145,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
     @action(detail=False,methods=['post'])
     def fetch(self, request):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         data = []
         code = 0
         code_msg = 'ok'
@@ -274,7 +274,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
     @action(detail=False,methods=['post'])
     def insert(self, request):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -413,7 +413,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
     def update(self, request, pk=None):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -623,7 +623,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
     @action(detail=False, methods=['post'])
     def delete(self, request, pk=None):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         code = 0
         code_msg = 'ok'
         data = request.data

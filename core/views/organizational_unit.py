@@ -39,7 +39,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 
     def list(self, request):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         data = request.data
         code = 0
         code_msg = 'ok'
@@ -110,7 +110,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
     @action(detail=False,methods=['post'])
     def dirtree(self, request):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         data = request.data
         code = 0
         code_msg = 'ok'
@@ -185,7 +185,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
     @action(detail=False,methods=['post'])
     def move(self, request):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         data = request.data
         code = 0
         code_msg = 'ok'
@@ -257,7 +257,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
     @action(detail=False,methods=['post'])
     def rename(self, request):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         data = request.data
         code = 0
         code_msg = 'ok'
@@ -330,7 +330,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
     @action(detail=False,methods=['post'])
     def insert(self, request):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         data = request.data
         code = 0
         code_msg = 'ok'
@@ -417,7 +417,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
     @action(detail=False, methods=['post'])
     def delete(self, request, pk=None):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         code = 0
         code_msg = 'ok'
         data = request.data

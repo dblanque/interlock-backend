@@ -49,7 +49,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
 
     def list(self, request):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         data = []
         code = 0
         code_msg = 'ok'
@@ -161,7 +161,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
     @action(detail=False,methods=['post'])
     def fetch(self, request):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -295,7 +295,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
     @action(detail=False,methods=['post'])
     def insert(self, request):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -437,7 +437,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
 
     def update(self, request, pk=None):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -608,7 +608,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
     @action(detail=False,methods=['post'])
     def disable(self, request):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -699,7 +699,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
     @action(detail=False,methods=['post'])
     def enable(self, request):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -789,7 +789,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
     @action(detail=False, methods=['post'])
     def delete(self, request, pk=None):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -852,7 +852,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
     @action(detail=False, methods=['post'])
     def changePassword(self, request, pk=None):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -917,7 +917,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
     @action(detail=False, methods=['post'])
     def unlock(self, request, pk=None):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -984,7 +984,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
     @action(detail=False, methods=['post'])
     def changePasswordSelf(self, request, pk=None):
         user = request.user
-        validateUser(request=request, requestUser=user, requireAdmin=False)
+        validateUser(request=request, requireAdmin=False)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -1052,7 +1052,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
     @action(detail=False, methods=['put', 'post'])
     def updateSelf(self, request, pk=None):
         user = request.user
-        validateUser(request=request, requestUser=user, requireAdmin=False)
+        validateUser(request=request, requireAdmin=False)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -1177,7 +1177,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
     @action(detail=False, methods=['get'])
     def me(self, request):
         user = request.user
-        validateUser(request=request, requestUser=user, requireAdmin=False)
+        validateUser(request=request, requireAdmin=False)
         data = {}
         code = 0
         data["username"] = request.user.username or ""
@@ -1196,7 +1196,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
     @action(detail=False,methods=['post'])
     def fetchme(self, request):
         user = request.user
-        validateUser(request=request, requestUser=user, requireAdmin=False)
+        validateUser(request=request, requireAdmin=False)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -1280,7 +1280,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
     @action(detail=False,methods=['get'])
     def logout(self, request):
         user = request.user
-        validateUser(request=request, requestUser=user, requireAdmin=False)
+        validateUser(request=request, requireAdmin=False)
         code = 0
         code_msg = 'ok'
 
