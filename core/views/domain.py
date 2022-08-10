@@ -1,7 +1,7 @@
 ################################## IMPORTS #####################################
 ### Models
 from core.models.log import logToDB
-from core.models.dns import LDAPDNS, record_to_dict
+from core.models.dns import LDAPDNS
 
 ### ViewSets
 from email import header
@@ -24,6 +24,7 @@ from rest_framework.decorators import action
 
 ### Others
 from core.utils import dnstool
+from core.utils.dnstool import record_to_dict
 from interlock_backend.ldap.adsi import addSearchFilter
 from interlock_backend.ldap.encrypt import validateUser
 from interlock_backend.ldap.settings_func import SettingsList
@@ -148,6 +149,10 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
             # Set Record Data
             for record in entry['raw_attributes']['dnsRecord']:
                 dr = dnstool.DNS_RECORD(record)
+                
+                if dr.__dict__()['type'] == 15 or dr.__dict__()['type'] == 16:
+                    print(dr.__dict__())
+
                 logger.info(dr)
                 record_dict = record_to_dict(dr, entry['attributes']['dNSTombstoned'])
                 record_dict['displayName'] = record_name
