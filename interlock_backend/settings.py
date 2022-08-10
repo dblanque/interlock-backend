@@ -129,26 +129,14 @@ LOGGING = {
             "handlers": ["console"],
             "level": "INFO",
         },
-        "interlock_backend.ldap.dirtree": {
-            "handlers": ["console"],
-            "level": "INFO",
-        },
         "interlock_backend.ldap.connector": {
             "handlers": ["console"],
             "level": "INFO",
         },
-        "interlock_backend.ldap.securityIdentifier": {
-            "handlers": ["console"],
-            "level": "WARNING",
-        },
-        "core.views.organizational_unit": {
-            "handlers": ["console"],
-            "level": "DEBUG",
-        },
-        "core.views.mixins.organizational_unit": {
-            "handlers": ["console"],
-            "level": "DEBUG",
-        },
+        # "core.views.domain": {
+        #     "handlers": ["console"],
+        #     "level": "INFO",
+        # },
     },
 }
 
