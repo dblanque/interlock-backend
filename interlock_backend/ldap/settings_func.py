@@ -1,6 +1,7 @@
 # Core Imports
 from typing import Literal
 from core.models.settings_model import Setting
+from core.exceptions import settings_exc as exc_settings
 from core.models.user import User
 
 # Interlock Imports
@@ -12,8 +13,8 @@ from interlock_backend.ldap.constants import (
 # Full imports
 import logging
 import ssl
-import re
-import json
+import inspect
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +137,7 @@ def getSettingsList(settingList=SETTINGS_WITH_ALLOWABLE_OVERRIDE):
                 data[c]['value'] = data[c]['value'].split('.')[-1]
 
     return data
-class SettingsList():
+class SettingsList(object):
     LDAP_AUTH_URL = Literal
     LDAP_DOMAIN = Literal
     LDAP_AUTH_USE_TLS = Literal
@@ -187,3 +188,14 @@ class SettingsList():
                     setattr(self, setting, getSetting(setting))
                 else:
                     setattr(self, setting, constantDictionary[setting])
+
+    def __getattribute__(self, attr):
+        result = super(SettingsList, self).__getattribute__(attr)
+        if result == Literal:
+            message = "%s could not be fetched as it's not in the search list" % (attr)
+            caller = inspect.getframeinfo(inspect.stack()[1][0])
+            print(message)
+            print("Traceback: %s at line %s" % (caller.filename, caller.lineno + 1))
+            raise exc_settings.SettingNotInList
+        else:
+            return result
