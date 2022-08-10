@@ -1,4 +1,13 @@
-################################## IMPORTS #####################################
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.views.organizational_unit
+# Contains the ViewSet for Directory Tree and Organizational Unit
+# related operations
+
+#---------------------------------- IMPORTS -----------------------------------#
 ### Exceptions
 from django.core.exceptions import PermissionDenied
 from core.exceptions import (

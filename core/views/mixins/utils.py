@@ -1,3 +1,12 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.views.mixins.utils
+# Contains extra utilities and functions
+
+#---------------------------------- IMPORTS -----------------------------------#
 import socket
 
 def testPort(ip , port, timeout=5):

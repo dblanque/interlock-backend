@@ -1,5 +1,18 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.views.token
+# Contains the ViewSet for Token Authentication related operations
+
+#---------------------------------- IMPORTS -----------------------------------#
 from rest_framework_simplejwt import views as jwt_views
-from core.serializers.token import TokenObtainPairSerializer, TokenRefreshSerializer
+from core.serializers.token import (
+    TokenObtainPairSerializer,
+    TokenRefreshSerializer
+)
+################################################################################
 
 class TokenObtainPairView(jwt_views.TokenViewBase):
     """

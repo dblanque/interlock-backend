@@ -1,4 +1,12 @@
-################################## IMPORTS #####################################
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.views.domain
+# Contains the ViewSet for Domain related operations
+
+#---------------------------------- IMPORTS -----------------------------------#
 ### Models
 from core.models.log import logToDB
 from core.models.dns import LDAPDNS
@@ -153,8 +161,8 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
             for record in entry['raw_attributes']['dnsRecord']:
                 dr = dnstool.DNS_RECORD(record)
                 
-                if dr.__dict__()['type'] == 15 or dr.__dict__()['type'] == 16:
-                    print(dr.__dict__())
+                # if dr.__dict__()['type'] == 15 or dr.__dict__()['type'] == 16:
+                #     print(dr.__dict__())
 
                 logger.info(dr)
                 record_dict = record_to_dict(dr, entry['attributes']['dNSTombstoned'])

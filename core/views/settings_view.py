@@ -1,4 +1,12 @@
-################################## IMPORTS #####################################
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.views.settings
+# Contains the ViewSet for System Setting related operations
+
+#---------------------------------- IMPORTS -----------------------------------#
 ### Exceptions
 from core.exceptions.ldap import ConnectionTestFailed
 

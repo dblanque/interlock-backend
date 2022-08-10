@@ -1,7 +1,22 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.views.mixins.user
+# Contains the Mixin for User related operations
+
+#---------------------------------- IMPORTS -----------------------------------#
+### ViewSets
 from rest_framework import viewsets
+
+### Interlock
 from interlock_backend.ldap.adsi import addSearchFilter
 from interlock_backend.ldap.settings_func import SettingsList
+
+### Models
 from core.models.ldapObject import LDAPObject
+################################################################################
 
 class UserViewMixin(viewsets.ViewSetMixin):
     def getUserObjectFilter(self, username):

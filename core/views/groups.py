@@ -1,8 +1,14 @@
-################################## IMPORTS #####################################
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.views.groups
+# Contains the ViewSet for Group related operations
+
+#---------------------------------- IMPORTS -----------------------------------#
 ### Exceptions
-from ast import arguments
 from copy import deepcopy
-import json
 from core.exceptions import ldap as exc_ldap
 from core.exceptions import groups as exc_groups
 

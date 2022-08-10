@@ -1,7 +1,22 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.views.mixins.organizational_unit
+# Contains the Mixin for Organizational Unit related operations
+
+#---------------------------------- IMPORTS -----------------------------------#
+### ViewSets
 from rest_framework import viewsets
+
+### Interlock
 from interlock_backend.ldap.adsi import addSearchFilter, buildFilterFromDict
 from interlock_backend.ldap.settings_func import SettingsList
+
+### Others
 import logging
+################################################################################
 
 logger = logging.getLogger(__name__)
 class OrganizationalUnitMixin(viewsets.ViewSetMixin):

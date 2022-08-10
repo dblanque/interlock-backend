@@ -1,17 +1,36 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.views.mixins.settings_mixin
+# Contains the Mixin for Setting related operations
+
+#---------------------------------- IMPORTS -----------------------------------#
+### Django
+from django.db import transaction
+
+### ViewSets
 from rest_framework import viewsets
+
+### Core
+#### Models
 from core.models.settings_model import Setting
 from core.models.user import User
-from django.db import transaction
-from interlock_backend.ldap.connector import LDAPConnector, testLDAPConnection
-from interlock_backend.ldap.settings_func import normalizeValues
+
+#### Exceptions
 from core.exceptions import (
     ldap as exc_ldap,
     users as exc_user
 )
+
+#### Mixins
 from core.views.mixins.utils import testPort
+
+### Others
+from interlock_backend.ldap.connector import testLDAPConnection
 import logging
-import re
-import json
+################################################################################
 
 logger = logging.getLogger(__name__)
 

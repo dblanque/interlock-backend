@@ -1,14 +1,30 @@
-from attr import attr
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.views.mixins.group
+# Contains the Mixin for Group related operations
+
+#---------------------------------- IMPORTS -----------------------------------#
+### ViewSets
 from rest_framework import viewsets
+
+### Interlock
 from interlock_backend.ldap.adsi import bin_as_hex, addSearchFilter
 from interlock_backend.ldap.groupTypes import LDAP_GROUP_TYPES
 from interlock_backend.ldap.securityIdentifier import SID
 from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.settings_func import SettingsList
+
+### Core
 from core.exceptions.ldap import CouldNotOpenConnection
 from core.models.ldapObject import LDAPObject
+
+### Others
 import ldap3
 import logging
+################################################################################
 
 logger = logging.getLogger(__name__)
 class GroupViewMixin(viewsets.ViewSetMixin):

@@ -1,4 +1,12 @@
-################################## IMPORTS #####################################
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.views.base
+# Contains a Basic Parent Class ViewSet and methods shared to all ViewSets
+
+#---------------------------------- IMPORTS -----------------------------------#
 ### REST Framework
 from rest_framework import viewsets
 from rest_framework.exceptions import NotFound, PermissionDenied
