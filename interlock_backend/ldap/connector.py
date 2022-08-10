@@ -28,6 +28,35 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
+    ldap_settings_list = SettingsList(**{"search":{
+        'ADMIN_GROUP_TO_SEARCH',
+        'LDAP_AUTH_USER_FIELDS',
+    }})
+    GROUP_TO_SEARCH = ldap_settings_list.ADMIN_GROUP_TO_SEARCH
+    if 'Administrator' in ldap_attributes[ldap_settings_list.LDAP_AUTH_USER_FIELDS["username"]]:
+        user.is_staff = True
+        user.is_superuser = True
+        user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
+        user.save()
+        pass
+    elif 'memberOf' in ldap_attributes and GROUP_TO_SEARCH in ldap_attributes['memberOf']:
+        # Do staff shit here
+        user.is_staff = True
+        user.is_superuser = True
+        if user.email is not None and 'mail' in ldap_attributes:
+            user.email = str(ldap_attributes['mail']).lstrip("['").rstrip("']") or ""
+        user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
+        user.save()
+    else:
+        user.is_staff = True
+        user.is_superuser = False
+        if user.email is not None and 'mail' in ldap_attributes:
+            user.email = str(ldap_attributes['mail']).lstrip("['").rstrip("']") or ""
+        user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
+        user.save()
+    pass
+
 def authenticate(*args, **kwargs):
     """
     Authenticates with the LDAP server, and returns
@@ -293,7 +322,8 @@ class LDAPConnector(object):
             user.set_unusable_password()
             user.save()
         # Update relations
-        sync_user_relations_func = import_func(self.ldap_settings_list.LDAP_AUTH_SYNC_USER_RELATIONS)
+        # sync_user_relations_func = import_func(self.ldap_settings_list.LDAP_AUTH_SYNC_USER_RELATIONS)
+        sync_user_relations_func = sync_user_relations
         sync_user_relations_arginfo = getfullargspec(sync_user_relations_func)
         args = {}  # additional keyword arguments
         for argname in sync_user_relations_arginfo.kwonlyargs:
