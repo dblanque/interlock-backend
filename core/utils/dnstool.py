@@ -83,7 +83,7 @@ def record_to_dict(record, ts=False):
     # TXT record
     if record['Type'] == 16:
         address = DNS_RPC_RECORD_STRING(record['Data'])
-        record_dict['address'] = address['stringData'].toString()
+        record_dict['stringData'] = address['stringData'].toString()
     # SRV record
     if record['Type'] == 33:
         record_data = DNS_RPC_RECORD_SRV(record['Data'])
@@ -154,7 +154,8 @@ class DNS_RPC_NAME(Structure):
         ind = 0
         labels = ""
         for i in range(self['cchNameLength']):
-            # Convert byte array of ASCII or UTF-8 single? byte characters
+            # Convert byte array of ASCII or UTF-8 data from (single?) 
+            # byte character.
             labels = labels + chr(self['dnsName'][i])
         return labels
 
@@ -470,7 +471,6 @@ RECORD_TYPE_MAPPING = {
     5: 'CNAME',
     6: 'SOA',
     16: 'TXT',
-    12: 'PTR',
     # 13: 'X25',
     # 14: 'ISDN',
     15: 'MX',
@@ -478,6 +478,7 @@ RECORD_TYPE_MAPPING = {
     # 19: 'KEY',
     28: 'AAAA',
     33: 'SRV',
+    35: 'PTR',
     65281: 'WINS'
 }
 
