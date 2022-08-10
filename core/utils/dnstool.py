@@ -75,10 +75,15 @@ def record_to_dict(record, ts=False):
     if record['Type'] == 2 or record['Type'] == 5:
         address = DNS_RPC_RECORD_NODE_NAME(record['Data'])
         record_dict['address'] = address['nameNode'].toFqdn()
+    # MX record
+    if record['Type'] == 15:
+        address = DNS_RPC_RECORD_NAME_PREFERENCE(record['Data'])
+        record_dict['wPreference'] = address['wPreference']
+        record_dict['nameExchange'] = address['nameExchange'].toFqdn()
     # TXT record
     if record['Type'] == 16:
         address = DNS_RPC_RECORD_STRING(record['Data'])
-        record_dict['address'] = address['stringData']
+        record_dict['address'] = address['stringData'].toString()
     # SRV record
     if record['Type'] == 33:
         record_data = DNS_RPC_RECORD_SRV(record['Data'])
@@ -144,6 +149,14 @@ class DNS_RPC_NAME(Structure):
         ('cchNameLength', 'B-dnsName'),
         ('dnsName', ':')
     )
+
+    def toString(self):
+        ind = 0
+        labels = ""
+        for i in range(self['cchNameLength']):
+            # Convert byte array of ASCII or UTF-8 single? byte characters
+            labels = labels + chr(self['dnsName'][i])
+        return labels
 
 class DNS_COUNT_NAME(Structure):
     """
@@ -290,7 +303,6 @@ class DNS_RPC_RECORD_NAME_PREFERENCE(Structure):
         ('nameExchange', ':', DNS_COUNT_NAME)
     )
 
-# Some missing structures here that I skipped
 
 class DNS_RPC_RECORD_SIG(Structure):
     """

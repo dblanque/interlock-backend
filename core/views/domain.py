@@ -91,7 +91,9 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         responseData['headers'] = [
             'displayName', # Custom Header, attr not in LDAP
             # 'name',
-            'address',
+            # 'address',
+            # 'nameExchange',
+            'value',
             'typeName',
             'serial',
             'ts',
@@ -135,6 +137,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
             'DomainDnsZones'
         ]
 
+        record_id = 0
         for entry in ldapConnection.response:
             # Set Record Name
             record_name = entry['raw_attributes']['name'][0]
@@ -155,12 +158,14 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 
                 logger.info(dr)
                 record_dict = record_to_dict(dr, entry['attributes']['dNSTombstoned'])
+                record_dict['id'] = record_id
                 record_dict['displayName'] = record_name
                 record_dict['name'] = orig_name
                 record_dict['distinguishedName'] = entry['dn']
                 logger.debug('Record: %s, Starts With Underscore: %s, Exclude Entry: %s' % (record_name, record_name.startswith("_"), record_name in excludeEntries))
                 if not record_name.startswith("_") and orig_name not in excludeEntries:
                     result.append(record_dict)
+                record_id += 1
 
         ldapConnection.unbind()
 
