@@ -12,7 +12,6 @@ from core.models.log import logToDB
 from core.models.dns import LDAPDNS
 
 ### ViewSets
-from email import header
 from core.views.base import BaseViewSet
 
 ### Exceptions
@@ -124,8 +123,8 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         attributes=['dnsRecord','dNSTombstoned','name']
 
         dnsList = LDAPDNS(ldapConnection)
-        dnsZones = dnsList.list_dns_zones()
-        forestZones = dnsList.list_forest_zones()
+        dnsZones = dnsList.dnszones
+        forestZones = dnsList.forestzones
 
         if zoneFilter is not None:
             target_zone = zoneFilter
@@ -177,15 +176,10 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 
         ldapConnection.unbind()
 
-        cleanDnsZones = list()
-        c = 0
-        for i in dnsZones:
-            zoneName = dnsZones[c][0]
+        for i in range(len(dnsZones)):
+            zoneName = dnsZones[i]
             if zoneName == 'RootDNSServers':
-                cleanDnsZones.append("Root DNS Servers")
-            else:
-                cleanDnsZones.append(dnsZones[c][0])
-            c += 1
+                dnsZones[i] = "Root DNS Servers"
 
         if ldap_settings_list.LDAP_LOG_READ == True:
             # Log this action to DB
@@ -196,7 +190,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
                 affectedObject=target_zone
             )
 
-        responseData['dnsZones'] = cleanDnsZones
+        responseData['dnsZones'] = dnsZones
         responseData['forestZones'] = forestZones
         responseData['records'] = result
 

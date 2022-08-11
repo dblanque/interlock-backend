@@ -1,6 +1,22 @@
+from importlib import import_module
 from core.utils.dns import *
 from core.utils import dnstool
 from interlock_backend.ldap.settings_func import SettingsList
+from core.exceptions import dns as exc_dns
+from interlock_backend.ldap.adsi import addSearchFilter
+from core.utils.dnstool import (
+    new_record,
+    record_to_dict,
+    get_next_serial
+)
+from ldap3 import (
+    MODIFY_ADD,
+    MODIFY_DELETE,
+    MODIFY_INCREMENT,
+    MODIFY_REPLACE
+)
+from core.models.dnsRecordClasses import *
+from interlock_backend.ldap.connector import LDAPInfo
 import ipaddress
 import logging
 
@@ -8,33 +24,236 @@ logger = logging.getLogger(__name__)
 class LDAPDNS():
     def __init__(self, connection, legacy=False):
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_AUTH_SEARCH_BASE'
+        self.ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_AUTH_SEARCH_BASE',
+            'LDAP_DOMAIN'
         }})
 
         if legacy == True:
-            self.dnsroot = 'CN=MicrosoftDNS,CN=System,%s' % ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+            self.dnsroot = 'CN=MicrosoftDNS,CN=System,%s' % self.ldap_settings_list.LDAP_AUTH_SEARCH_BASE
         else:
-            self.dnsroot = 'CN=MicrosoftDNS,DC=DomainDnsZones,%s' % ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+            self.dnsroot = 'CN=MicrosoftDNS,DC=DomainDnsZones,%s' % self.ldap_settings_list.LDAP_AUTH_SEARCH_BASE
         
-        self.forestroot = 'CN=MicrosoftDNS,DC=ForestDnsZones,%s' % ldap_settings_list.LDAP_AUTH_SEARCH_BASE  
+        self.forestroot = 'CN=MicrosoftDNS,DC=ForestDnsZones,%s' % self.ldap_settings_list.LDAP_AUTH_SEARCH_BASE  
         self.connection = connection
+        self.list_dns_zones()
+        self.list_forest_zones()
 
     def list_dns_zones(self):
         zones = dnstool.get_dns_zones(self.connection, self.dnsroot)
+        self.dnszones = zones
         if len(zones) > 0:
             logger.info('Found %d domain DNS zone(s):' % len(zones))
             for zone in zones:
                 logger.info('    %s' % zone)
-        return zones
 
     def list_forest_zones(self):
         zones = dnstool.get_dns_zones(self.connection, self.forestroot)
+        self.forestzones = zones
         if len(zones) > 0:
             logger.info('Found %d forest DNS zone(s):' % len(zones))
             for zone in zones:
                 logger.info('    %s' % zone)
-        return zones
 
 class LDAPRecord(LDAPDNS):
-    pass
+
+    def __init__(
+        self, 
+        connection, 
+        legacy=False,
+        rName=None,
+        rZone=None,
+        rType=None,
+        zoneType="fwdLookup",
+    ):
+        super().__init__(connection=connection, legacy=legacy)
+
+        self.ldap_info = LDAPInfo()
+        self.schemaNamingContext = self.ldap_info.get_schema_naming_context()
+        if rName is None:
+            raise ValueError("Name cannot be none (LDAPRecord Object Class)")
+        if rZone is None:
+            raise ValueError("Zone cannot be none (LDAPRecord Object Class)")
+        if rType is None:
+            raise ValueError("Record Type cannot be none (LDAPRecord Object Class)")
+        if zoneType != 'fwdLookup':
+            raise ValueError("Reverse Lookup Entries are unsupported (LDAPRecord Object Class)")
+
+        self.rawEntry = None
+        self.data = None
+        self.name = rName
+        self.zone = rZone
+        self.zoneType = zoneType
+        self.type = rType
+        self.distinguishedName = "DC=%s,DC=%s,%s" % (self.name, self.zone, self.dnsroot)
+        self.fetch()
+
+    def fetch(self):
+        if self.zone not in self.dnszones:
+            msg = "Target zone (%s) is not in the LDAP Server DNS List" % (self.zone)
+            print(self.dnszones)
+            raise Exception(msg)
+
+        if self.name.endswith(self.zone) or self.zone in self.name:
+            raise exc_dns.DNSZoneInRecord
+
+        searchFilter = addSearchFilter("", "objectClass=dnsNode")
+        searchFilter = addSearchFilter(searchFilter, "distinguishedName=" + self.distinguishedName)
+        attributes=['dnsRecord','dNSTombstoned','name']
+
+        search_target = 'DC=%s,%s' % (self.zone, self.dnsroot)
+        self.connection.search(
+            search_base=search_target,
+            search_filter=searchFilter,
+            attributes=attributes
+        )
+        if len(self.connection.response) > 0:
+            self.rawEntry = self.connection.response[0]
+        else: 
+            return None
+
+        excludeEntries = [
+            'ForestDnsZones',
+            'DomainDnsZones'
+        ]
+
+        result = list()
+        record_dict = dict()
+
+        if self.rawEntry['type'] == 'searchResEntry':
+            if self.rawEntry['dn'] == self.distinguishedName:
+                print("Entry exists")
+
+            # Set Record Name
+            record_name = self.rawEntry['raw_attributes']['name'][0]
+            record_name = str(record_name)[2:-1]
+            logger.info(record_name)
+
+            # Set Record Data
+            for record in self.rawEntry['raw_attributes']['dnsRecord']:
+                dr = dnstool.DNS_RECORD(record)
+                logger.info(dr)
+                record_dict = record_to_dict(dr, self.rawEntry['attributes']['dNSTombstoned'])
+                record_dict['name'] = record_name
+                logger.debug('Record: %s, Starts With Underscore: %s, Exclude Entry: %s' % (record_name, record_name.startswith("_"), record_name in excludeEntries))
+                if (not record_name.startswith("_") 
+                    and record_name not in excludeEntries):
+                    result.append(record_dict)
+
+            if len(result) > 0:
+                self.data = result
+        return self.data
+
+    def __attributes__(self):
+        # Exclude specific keys from self record attributes
+        excludedKeys = [
+            'rawEntry',
+            'connection',
+            'ldap_info',
+            'ldap_settings_list'
+        ]
+        return [v for v in self.__dict__.keys() if v not in excludedKeys]
+
+    def __printAttributes__(self, printRawData=False):
+        if printRawData == True:
+            msg = "%s: %s" % ('rawEntry', self.rawEntry)
+            print(msg)
+        for attr in self.__attributes__():
+            msg = "%s: %s" % (attr, str(getattr(self, attr)))
+            print(msg)
+
+    def __connection__(self):
+        return self.connection
+
+    def create(self, values):
+        print(get_next_serial(self.connection.server.host, self.zone, tcp=False))
+
+        ## Check if class type is supported for creation ##
+        if (self.type in RECORD_CLASS_MAPPING):
+            record = new_record(self.type, get_next_serial(self.connection.server.host, self.zone, tcp=False))
+            # Dynamically fetch the class based on the mapping
+            record['Data'] = getattr(dnstool, RECORD_CLASS_MAPPING[self.type])()
+            # Additional Operations based on type
+            if RECORD_TYPE_MAPPING[self.type] == "A":
+                record['Data'].fromCanonical(values['ipAddress'])
+        else:
+            exception = exc_dns.RecordTypeUnsupported
+            data = {
+                "code": exception.default_code,
+                "typeName": RECORD_TYPE_MAPPING[self.type],
+                "typeCode": self.type,
+                "name": self.name,
+            }
+            exception.setDetail(exception, data)
+            self.connection.unbind()
+            raise exception
+
+        ## Check if LDAP Entry Exists ##
+
+        # LDAP Entry does not exist
+        if self.rawEntry is None:
+            print("Create Entry")
+            node_data = {
+                'objectCategory': 'CN=Dns-Node,%s' % self.schemaNamingContext,
+                'dNSTombstoned': False,
+                'name': self.name,
+                'dnsRecord': [ record.getData() ]
+            }
+            # self.connection.add(self.distinguishedName, ['top', 'dnsNode'], node_data)
+            # print(self.connection.result)
+        # LDAP entry exists
+        else:
+            # Check for record type conflicts in Entry
+            try:
+                self.checkRecordTypeCollision()
+            except Exception as e:
+                print(e)
+                self.connection.unbind()
+                raise exc_dns.RecordTypeConflict
+            print("Add Record to Entry")
+            # self.connection.modify(self.distinguishedName, {'dnsRecord': [( MODIFY_ADD, record.getData() )]})
+            # print(self.connection.result)
+        return None
+
+    def update(self):
+        return None
+
+    def delete(self):
+        return None
+
+    def checkRecordExists(self):
+        if self.data is not None:
+            if len(self.data) > 0:
+                for record in self.data:
+                    if record['name'] == self.name and record['type'] == self.type:
+                        return True
+        return False
+
+    def checkRecordTypeCollision(self):
+        if self.data is not None:
+            if len(self.data) > 0:
+                exc = False
+                msg = None
+                for record in self.data:
+                    if (
+                        # If Any other type of Entry conflicts with CNAME
+                        (self.type == DNS_RECORD_TYPE_CNAME and record['type'] != DNS_RECORD_TYPE_CNAME)
+                        # A -> CNAME
+                        or
+                        (self.type == DNS_RECORD_TYPE_A and record['type'] == DNS_RECORD_TYPE_CNAME)
+                        # A -> AAAA
+                        or
+                        (self.type == DNS_RECORD_TYPE_A and record['type'] == DNS_RECORD_TYPE_AAAA)
+                        # AAAA -> CNAME
+                        or
+                        (self.type == DNS_RECORD_TYPE_AAAA and record['type'] == DNS_RECORD_TYPE_CNAME)
+                        # AAAA -> A
+                        or
+                        (self.type == DNS_RECORD_TYPE_AAAA and record['type'] == DNS_RECORD_TYPE_A)
+                        ):
+                        exc = True
+                        msg = "A conflicting DNS Record %s was found for this %s Entry: \n -> %s" % \
+                        (RECORD_TYPE_MAPPING[record['type']], RECORD_TYPE_MAPPING[self.type], record)
+                if exc == True:
+                    raise Exception(msg)
+        return False

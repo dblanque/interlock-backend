@@ -18,3 +18,11 @@ class DistinguishedNameNotInDNSRecord(BaseException):
     status_code = 400
     default_detail = 'Distinguished Name is not present in Record'
     default_code = 'dns_dn_not_in_record'
+class RecordTypeConflict(BaseException):
+    status_code = 409
+    default_detail = 'The requested Record Type Insertion or Update has a conflict'
+    default_code = 'dns_record_type_conflict'
+class RecordTypeUnsupported(BaseException):
+    status_code = 400
+    default_detail = 'Creating or Updating requested Record Type is not supported'
+    default_code = 'dns_record_type_unsupported'

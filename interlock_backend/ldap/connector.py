@@ -361,17 +361,24 @@ class LDAPInfo(LDAPConnector):
 
     def get_domain_root(self):
         try:
-            domainroot = self.info.other['defaultNamingContext'][0]
+            domainRoot = self.info.other['defaultNamingContext'][0]
         except Exception as e:
             print(e)
-        return domainroot
+        return domainRoot
+
+    def get_schema_naming_context(self):
+        try:
+            schemaNamingContext = self.info.other['schemaNamingContext'][0]
+        except Exception as e:
+            print(e)
+        return schemaNamingContext
 
     def get_forest_root(self):
         try:
-            forestroot = self.info.other['rootDomainNamingContext'][0]
+            forestRoot = self.info.other['rootDomainNamingContext'][0]
         except Exception as e:
             print(e)
-        return forestroot
+        return forestRoot
 
 def testLDAPConnection(
         username,

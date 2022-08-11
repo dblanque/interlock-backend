@@ -20,11 +20,14 @@ import json
 ################################# Test Imports #################################
 from core.views.mixins.group import GroupViewMixin
 from core.exceptions.ldap import CouldNotOpenConnection
+from core.exceptions import dns as exc_dns
 from interlock_backend.ldap.connector import LDAPConnector, LDAPInfo
 from interlock_backend.ldap.adsi import addSearchFilter, buildFilterFromDict
 from interlock_backend.ldap.settings_func import SettingsList
 from core.utils import dnstool
-from core.models.dns import LDAPDNS, record_to_dict
+from core.utils.dnstool import record_to_dict, RECORD_TYPE_MAPPING
+from core.models.dnsRecordTypes import *
+from core.models.dns import LDAPDNS, LDAPRecord
 ################################################################################
 
 logger = logging.getLogger(__name__)
@@ -33,7 +36,7 @@ class TestViewSet(BaseViewSet):
 
     def list(self, request, pk=None):
         user = request.user
-        validateUser(request=request, requestUser=user)
+        validateUser(request=request)
         data = {}
         code = 0
 
@@ -54,34 +57,13 @@ class TestViewSet(BaseViewSet):
             print(e)
             raise CouldNotOpenConnection
 
-        # try:
-        #     print(connector.get_domain_root())
-        #     print(connector.get_forest_root())
-        # except:
-        #     raise TestError
-
-        searchFilter = addSearchFilter("", "objectClass=dnsNode")
-        attributes=['dnsRecord','dNSTombstoned','name']
-
-        dnsList = LDAPDNS(ldapConnection)
-
-        print(dnsList.dnsroot)
-        print(dnsList.forestroot)
-        print(dnsList.list_dns_zones())
-        print(dnsList.list_forest_zones())
-
-        search_target = 'DC=%s,%s' % ("brconsulting.info", dnsList.dnsroot)
-        ldapConnection.search(
-            search_base=search_target,
-            search_filter=searchFilter,
-            attributes=attributes
+        dnsRecord = LDAPRecord(
+            connection=ldapConnection, 
+            rName="pepe", 
+            rZone="brconsulting.info",
+            rType=DNS_RECORD_TYPE_A
         )
-
-        for entry in ldapConnection.response:
-            for record in entry['raw_attributes']['dnsRecord']:
-                dr = dnstool.DNS_RECORD(record)
-                result = record_to_dict(dr, entry['attributes']['dNSTombstoned'])
-                print(result)
+        print(dnsRecord.create(values={'ipAddress': '10.10.10.202'}))
 
         ldapConnection.unbind()
         return Response(
