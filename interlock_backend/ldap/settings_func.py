@@ -14,7 +14,6 @@ from interlock_backend.ldap.constants import (
 import logging
 import ssl
 import inspect
-from pathlib import Path
 from django.db.migrations.executor import MigrationExecutor
 from django.db import connections, DEFAULT_DB_ALIAS
 
