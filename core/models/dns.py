@@ -176,6 +176,10 @@ class LDAPRecord(LDAPDNS):
             # Additional Operations based on type
             if RECORD_TYPE_MAPPING[self.type] == "A":
                 record['Data'].fromCanonical(values['ipAddress'])
+
+            # ! For debugging, do the decoding process to see if it's not a broken entry
+            dr = dnstool.DNS_RECORD(record.getData())
+            print(record_to_dict(dr, ts=False))
         else:
             exception = exc_dns.RecordTypeUnsupported
             data = {
