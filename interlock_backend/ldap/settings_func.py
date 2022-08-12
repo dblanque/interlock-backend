@@ -15,8 +15,23 @@ import logging
 import ssl
 import inspect
 from pathlib import Path
+from django.db.migrations.executor import MigrationExecutor
+from django.db import connections, DEFAULT_DB_ALIAS
 
 logger = logging.getLogger(__name__)
+
+def is_database_synchronized(database):
+    try:
+        connection = connections[database]
+        connection.prepare_database()
+        executor = MigrationExecutor(connection)
+        targets = executor.loader.graph.leaf_nodes()
+        executor.migration_plan(targets)
+        if not executor.recorder.ensure_schema():
+            return False
+        return True
+    except:
+        return False
 
 def getSetting(settingKey):
     valueFields = [
@@ -26,6 +41,9 @@ def getSetting(settingKey):
         'value_int',
         'value_float'
     ]
+
+    if not is_database_synchronized(DEFAULT_DB_ALIAS):
+        return constantDictionary[settingKey]
 
     try:
         querySet = Setting.objects.filter(id = settingKey).exclude(deleted=True)
