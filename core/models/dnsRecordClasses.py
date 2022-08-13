@@ -3,87 +3,111 @@ from impacket.structure import Structure
 from .dnsRecordTypes import *
 import socket
 import datetime
+import sys
 
-RECORD_TYPE_MAPPING = {
-    DNS_RECORD_TYPE_ZERO: 'ZERO',
-    DNS_RECORD_TYPE_A: 'A',
-    DNS_RECORD_TYPE_NS: 'NS',
-    DNS_RECORD_TYPE_CNAME: 'CNAME',
-    DNS_RECORD_TYPE_SOA: 'SOA',
-    DNS_RECORD_TYPE_TXT: 'TXT',
-    DNS_RECORD_TYPE_X25: 'X25',
-    DNS_RECORD_TYPE_ISDN: 'ISDN',
-    DNS_RECORD_TYPE_MX: 'MX',
-    DNS_RECORD_TYPE_SIG: 'SIG',
-    DNS_RECORD_TYPE_KEY: 'KEY',
-    DNS_RECORD_TYPE_AAAA: 'AAAA',
-    DNS_RECORD_TYPE_SRV: 'SRV',
-    DNS_RECORD_TYPE_PTR: 'PTR',
-    DNS_RECORD_TYPE_WINS: 'WINS'
-}
-
-RECORD_CLASS_MAPPING = {
-    #! DNS_RECORD_TYPE_ZERO: ?,
-    DNS_RECORD_TYPE_A: 'DNS_RPC_RECORD_A',
-    # DNS_RECORD_TYPE_NS: 'DNS_RPC_RECORD_NODE_NAME',
-    # DNS_RECORD_TYPE_CNAME: 'DNS_RPC_RECORD_NODE_NAME',
-    # DNS_RECORD_TYPE_SOA: 'DNS_RPC_RECORD_SOA',
-    # DNS_RECORD_TYPE_TXT: 'DNS_RPC_RECORD_STRING',
-    #! DNS_RECORD_TYPE_X25: 'X25',
-    #! DNS_RECORD_TYPE_ISDN: 'ISDN',
-    # DNS_RECORD_TYPE_MX: 'DNS_RPC_RECORD_NAME_PREFERENCE',
-    #! DNS_RECORD_TYPE_SIG: 'SIG',
-    #! DNS_RECORD_TYPE_KEY: 'KEY',
-    # DNS_RECORD_TYPE_AAAA: 'DNS_RPC_RECORD_AAAA',
-    # DNS_RECORD_TYPE_SRV: 'DNS_RPC_RECORD_SRV',
-    # DNS_RECORD_TYPE_PTR: 'DNS_RPC_RECORD_NODE_NAME',
-    #! DNS_RECORD_TYPE_WINS: ?
-}
-
-RECORD_MULTIRECORD_VALID_TYPES = [ 1 ]
-
-# Main Value Field should be index 0
-RECORD_VALUE_MAPPING = {
-    # A Record
-    DNS_RECORD_TYPE_A: [ 'address' ],
-    # NS Record
-    DNS_RECORD_TYPE_NS: [ 'nameNode' ],
-    # CNAME Record
-    DNS_RECORD_TYPE_CNAME: [ 'nameNode' ],
-    # SOA Record
-    DNS_RECORD_TYPE_SOA: [
-        'namePrimaryServer',
-        'dwSerialNo',
-        'dwRefresh',
-        'dwRetry',
-        'dwExpire',
-        'dwMinimumTtl',
-        'zoneAdminEmail'
-        ],
-    # MX Record
-    DNS_RECORD_TYPE_MX: [
-            'nameExchange',
-            'wPreference'
-        ],
-    # TXT Record
-    DNS_RECORD_TYPE_TXT: [ 'stringData' ],
-    # SRV Record
-    DNS_RECORD_TYPE_SRV: [
-            'nameTarget',
-            'wPriority', 
-            'wWeight', 
-            'wPort'
-        ],
-    # PTR Record
-    DNS_RECORD_TYPE_PTR: [],
-    # WINS Record
-    DNS_RECORD_TYPE_WINS: []
+RECORD_MAPPINGS = {
+    DNS_RECORD_TYPE_ZERO: {
+        'name':'ZERO',
+        'class':'DNS_RPC_RECORD_TS',
+        'fields':[ 'tstime' ]
+    },
+    DNS_RECORD_TYPE_A: {
+        'name':'A',
+        'class':'DNS_RPC_RECORD_A',
+        'fields': [ 'address' ],
+        'multiRecord': True
+    },
+    DNS_RECORD_TYPE_NS: {
+        'name':'NS',
+        'class':'DNS_RPC_RECORD_NODE_NAME',
+        'fields': [ 'nameNode' ],
+        'multiRecord': True
+    },
+    DNS_RECORD_TYPE_CNAME: {
+        'name':'CNAME',
+        'class':'DNS_RPC_RECORD_NODE_NAME',
+        'fields': [ 'nameNode' ]
+    },
+    DNS_RECORD_TYPE_SOA: {
+        'name':'SOA',
+        'class':'DNS_RPC_RECORD_SOA',
+        'fields': [
+                    'namePrimaryServer',
+                    'dwSerialNo',
+                    'dwRefresh',
+                    'dwRetry',
+                    'dwExpire',
+                    'dwMinimumTtl',
+                    'zoneAdminEmail'
+                ],
+    },
+    DNS_RECORD_TYPE_TXT: {
+        'name':'TXT',
+        'class':'DNS_RPC_RECORD_STRING',
+        'fields': [ 'stringData' ],
+        'multiRecord': True
+    },
+    DNS_RECORD_TYPE_X25: {
+        'name':'X25',
+        'class': None,
+        'fields': []
+    },
+    DNS_RECORD_TYPE_ISDN: {
+        'name':'ISDN',
+        'class': None,
+        'fields': []
+    },
+    DNS_RECORD_TYPE_MX: {
+        'name':'MX',
+        'class':'DNS_RPC_RECORD_NAME_PREFERENCE',
+        'fields': [
+                    'nameExchange',
+                    'wPreference'
+                ],
+    },
+    DNS_RECORD_TYPE_SIG: {
+        'name':'SIG',
+        'class': None,
+        'fields': []
+    },
+    DNS_RECORD_TYPE_KEY: {
+        'name':'KEY',
+        'class': None,
+        'fields': []
+    },
+    DNS_RECORD_TYPE_AAAA: {
+        'name':'AAAA',
+        'class':'DNS_RPC_RECORD_AAAA',
+        'fields': []
+    },
+    DNS_RECORD_TYPE_SRV: {
+        'name':'SRV',
+        'class':'DNS_RPC_RECORD_SRV',
+        'fields': [
+                    'nameTarget',
+                    'wPriority', 
+                    'wWeight', 
+                    'wPort'
+                ],
+    },
+    DNS_RECORD_TYPE_PTR: {
+        'name':'PTR',
+        'class':'DNS_RPC_RECORD_NODE_NAME',
+        'fields': [ 'nameNode' ]
+    },
+    DNS_RECORD_TYPE_WINS: {
+        'name':'WINS',
+        'class': None,
+        'fields': []
+    },
 }
 
 def record_to_dict(record, ts=False):
+    thismodule = sys.modules[__name__]
+
     # For original reference see print_record
     try:
-        rtype = RECORD_TYPE_MAPPING[record['Type']]
+        rtype = RECORD_MAPPINGS[record['Type']]['name']
     except KeyError:
         rtype = 'Unsupported'
 
@@ -99,46 +123,74 @@ def record_to_dict(record, ts=False):
     record_dict['type'] = record['Type']
     record_dict['typeName'] = rtype
     record_dict['serial'] = record['Serial']
-    if record['Type'] == 0:
-        tstime = DNS_RPC_RECORD_TS(record['Data'])
-        record_dict['tstime'] = tstime.toDatetime()
-    # A record
-    if record['Type'] == 1:
-        address = DNS_RPC_RECORD_A(record['Data'])
-        record_dict['address'] = address.formatCanonical()
-    # NS record or CNAME record
-    if record['Type'] == 2 or record['Type'] == 5:
-        address = DNS_RPC_RECORD_NODE_NAME(record['Data'])
-        record_dict['nameNode'] = address['nameNode'].toFqdn()
-    # MX record
-    if record['Type'] == 15:
-        address = DNS_RPC_RECORD_NAME_PREFERENCE(record['Data'])
-        record_dict['wPreference'] = address['wPreference']
-        record_dict['nameExchange'] = address['nameExchange'].toFqdn()
-    # TXT record
-    if record['Type'] == 16:
-        address = DNS_RPC_RECORD_STRING(record['Data'])
-        record_dict['stringData'] = address['stringData'].toString()
-    # SRV record
-    if record['Type'] == 33:
-        record_data = DNS_RPC_RECORD_SRV(record['Data'])
-        record_dict['wPriority'] = record_data['wPriority']
-        record_dict['wWeight'] = record_data['wWeight']
-        record_dict['wPort'] = record_data['wPort']
-        record_dict['nameTarget'] = record_data['nameTarget'].toFqdn()
-    # SOA record
-    if record['Type'] == 6:
-        record_data = DNS_RPC_RECORD_SOA(record['Data'])
-        record_dict['dwSerialNo'] = record_data['dwSerialNo']
-        record_dict['dwRefresh'] = record_data['dwRefresh']
-        record_dict['dwRetry'] = record_data['dwRetry']
-        record_dict['dwExpire'] = record_data['dwExpire']
-        record_dict['dwMinimumTtl'] = record_data['dwMinimumTtl']
-        record_dict['namePrimaryServer'] = record_data['namePrimaryServer'].toFqdn()
-        record_dict['zoneAdminEmail'] = record_data['zoneAdminEmail'].toFqdn()
 
-    return record_dict
+    # If the Record Type is Mapped to a Class
+    if record['Type'] in RECORD_MAPPINGS:
+        # Initialize the class with the record Data key
+        data = getattr(thismodule, RECORD_MAPPINGS[record['Type']]['class'])(record['Data'])
+
+        # ! Print class ! #
+        # print(getattr(thismodule, RECORD_MAPPINGS[record['Type']]['class']))
+
+        # For each value field mapped for this Record Type set it
+        for valueField in RECORD_MAPPINGS[record['Type']]['fields']:
+            if valueField == 'tstime':
+                record_dict[valueField] = data.toDatetime()
+            elif valueField == 'address':
+                record_dict[valueField] = data.formatCanonical()
+            elif valueField == 'stringData':
+                record_dict[valueField] = data[valueField].toString()
+            elif (  valueField == 'nameNode' or 
+                    valueField == 'nameExchange' or 
+                    valueField == 'nameTarget' or 
+                    valueField == 'namePrimaryServer' or 
+                    valueField == 'zoneAdminEmail'
+                    ):
+                record_dict[valueField] = data[valueField].toFqdn()
+            else:
+                record_dict[valueField] = data[valueField]
+
+    # ! Legacy Code, helps understand what it does
+    # if record['Type'] == 0:
+    #     tstime = DNS_RPC_RECORD_TS(record['Data'])
+    #     record_dict['tstime'] = tstime.toDatetime()
+    # # A record
+    # if record['Type'] == 1:
+    #     address = DNS_RPC_RECORD_A(record['Data'])
+    #     record_dict['address'] = address.formatCanonical()
+    # # NS record or CNAME record
+    # if record['Type'] == 2 or record['Type'] == 5:
+    #     address = DNS_RPC_RECORD_NODE_NAME(record['Data'])
+    #     record_dict['nameNode'] = address['nameNode'].toFqdn()
+    # # MX record
+    # if record['Type'] == 15:
+    #     address = DNS_RPC_RECORD_NAME_PREFERENCE(record['Data'])
+    #     record_dict['wPreference'] = address['wPreference']
+    #     record_dict['nameExchange'] = address['nameExchange'].toFqdn()
+    # # TXT record
+    # if record['Type'] == 16:
+    #     address = DNS_RPC_RECORD_STRING(record['Data'])
+    #     record_dict['stringData'] = address['stringData'].toString()
+    # # SRV record
+    # if record['Type'] == 33:
+    #     record_data = DNS_RPC_RECORD_SRV(record['Data'])
+    #     record_dict['wPriority'] = record_data['wPriority']
+    #     record_dict['wWeight'] = record_data['wWeight']
+    #     record_dict['wPort'] = record_data['wPort']
+    #     record_dict['nameTarget'] = record_data['nameTarget'].toFqdn()
+    # # SOA record
+    # if record['Type'] == 6:
+    #     record_data = DNS_RPC_RECORD_SOA(record['Data'])
+    #     record_dict['dwSerialNo'] = record_data['dwSerialNo']
+    #     record_dict['dwRefresh'] = record_data['dwRefresh']
+    #     record_dict['dwRetry'] = record_data['dwRetry']
+    #     record_dict['dwExpire'] = record_data['dwExpire']
+    #     record_dict['dwMinimumTtl'] = record_data['dwMinimumTtl']
+    #     record_dict['namePrimaryServer'] = record_data['namePrimaryServer'].toFqdn()
+    #     record_dict['zoneAdminEmail'] = record_data['zoneAdminEmail'].toFqdn()
+
     # record_data.dump()
+    return record_dict
 
 class DNS_RECORD(Structure):
     """
@@ -196,6 +248,16 @@ class DNS_RPC_NAME(Structure):
             labels = labels + chr(self['dnsName'][i])
         return labels
 
+    def toRPCName(self, valueString):
+        length = len(valueString)
+        self['cchNameLength'] = length
+        ind = 0
+        dnsName = list()
+        for i in range(length):
+            # Convert character to ASCII single byte character.
+            dnsName.append(ord(valueString[i]))
+        self['dnsName'] = bytes(dnsName)
+
 class DNS_COUNT_NAME(Structure):
     """
     DNS_COUNT_NAME
@@ -212,6 +274,8 @@ class DNS_COUNT_NAME(Structure):
     def toFqdn(self):
         ind = 0
         labels = []
+        print(self['LabelCount'])
+        print(self['RawName'])
         for i in range(self['LabelCount']):
             nextlen = unpack('B', self['RawName'][ind:ind+1])[0]
             labels.append(self['RawName'][ind+1:ind+1+nextlen].decode('utf-8'))
@@ -220,9 +284,31 @@ class DNS_COUNT_NAME(Structure):
         labels.append('')
         return '.'.join(labels)
 
-    # TODO - From FQDN
-    def fromFqdn(self):
-        pass
+    def toCountName(self, valueString):
+        # Structure:
+        # String -> FQDN -> 1-byte Label Length COUNT for the subsequent label
+
+        length = len(valueString)
+        splitString = valueString.split('.')
+        labelCount = len(splitString) - 1
+        newString = bytes()
+        for i in range(labelCount):
+            newString += pack('B', len(splitString[i])) + bytes(splitString[i], 'utf-8')
+
+        self['Length'] = length
+        self['LabelCount'] = labelCount
+        self['RawName'] = newString + bytes('\0', 'utf-8')
+
+        # print(self['RawName'])
+
+        # print('Length')
+        # print(self['Length'])
+        # print('LabelCount')
+        # print(self['LabelCount'])
+        # print('RawName')
+        # print(self['RawName'])
+        return self
+
 
 class DNS_RPC_NODE(Structure):
     """

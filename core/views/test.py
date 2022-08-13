@@ -25,7 +25,7 @@ from interlock_backend.ldap.connector import LDAPConnector, LDAPInfo
 from interlock_backend.ldap.adsi import addSearchFilter, buildFilterFromDict
 from interlock_backend.ldap.settings_func import SettingsList
 from core.utils import dnstool
-from core.utils.dnstool import record_to_dict, RECORD_TYPE_MAPPING
+from core.utils.dnstool import record_to_dict, RECORD_MAPPINGS
 from core.models.dnsRecordTypes import *
 from core.models.dns import LDAPDNS, LDAPRecord
 ################################################################################
@@ -57,13 +57,21 @@ class TestViewSet(BaseViewSet):
             print(e)
             raise CouldNotOpenConnection
 
+        # dnsRecord = LDAPRecord(
+        #     connection=ldapConnection, 
+        #     rName="pepe", 
+        #     rZone="brconsulting.info",
+        #     rType=DNS_RECORD_TYPE_A
+        # )
+        # print(dnsRecord.create(values={'address': '10.10.10.202'}))
+
         dnsRecord = LDAPRecord(
             connection=ldapConnection, 
             rName="pepe", 
             rZone="brconsulting.info",
-            rType=DNS_RECORD_TYPE_A
+            rType=DNS_RECORD_TYPE_CNAME
         )
-        print(dnsRecord.create(values={'ipAddress': '10.10.10.202'}))
+        print(dnsRecord.create(values={'nameNode': 'front.brconsulting.info.'}))
 
         ldapConnection.unbind()
         return Response(

@@ -169,13 +169,24 @@ class LDAPRecord(LDAPDNS):
         print(get_next_serial(self.connection.server.host, self.zone, tcp=False))
 
         ## Check if class type is supported for creation ##
-        if (self.type in RECORD_CLASS_MAPPING):
+        if (self.type in RECORD_MAPPINGS):
             record = new_record(self.type, get_next_serial(self.connection.server.host, self.zone, tcp=False))
             # Dynamically fetch the class based on the mapping
-            record['Data'] = getattr(dnstool, RECORD_CLASS_MAPPING[self.type])()
-            # Additional Operations based on type
-            if RECORD_TYPE_MAPPING[self.type] == "A":
-                record['Data'].fromCanonical(values['ipAddress'])
+            if RECORD_MAPPINGS[self.type]['class'] != None:
+                if RECORD_MAPPINGS[self.type]['name'] == "CNAME":
+                    # If it's CNAME then re-create the record Data with a sub-class DNS_COUNT_NAME
+                    # record['Data'] = getattr(dnstool, RECORD_MAPPINGS[self.type]['class'])(getattr(dnstool, 'DNS_COUNT_NAME')())
+                    # record['Data'] = getattr(dnstool, RECORD_MAPPINGS[self.type]['class'])()
+                    record['Data'] = getattr(dnstool, 'DNS_COUNT_NAME')()
+                else:
+                    print(RECORD_MAPPINGS[self.type]['class'])
+                    record['Data'] = getattr(dnstool, RECORD_MAPPINGS[self.type]['class'])()
+
+                # Additional Operations based on type
+                if RECORD_MAPPINGS[self.type]['name'] == "A":
+                    record['Data'].fromCanonical(values['address'])
+                if RECORD_MAPPINGS[self.type]['name'] == "CNAME":
+                    record['Data'].toCountName(values['nameNode'])
 
             # ! For debugging, do the decoding process to see if it's not a broken entry
             dr = dnstool.DNS_RECORD(record.getData())
@@ -184,7 +195,7 @@ class LDAPRecord(LDAPDNS):
             exception = exc_dns.RecordTypeUnsupported
             data = {
                 "code": exception.default_code,
-                "typeName": RECORD_TYPE_MAPPING[self.type],
+                "typeName": RECORD_MAPPINGS[self.type]['name'],
                 "typeCode": self.type,
                 "name": self.name,
             }
@@ -257,7 +268,7 @@ class LDAPRecord(LDAPDNS):
                         ):
                         exc = True
                         msg = "A conflicting DNS Record %s was found for this %s Entry: \n -> %s" % \
-                        (RECORD_TYPE_MAPPING[record['type']], RECORD_TYPE_MAPPING[self.type], record)
+                        (RECORD_MAPPINGS[record['type']]['name'], RECORD_MAPPINGS[self.type]['name'], record)
                 if exc == True:
                     raise Exception(msg)
         return False
