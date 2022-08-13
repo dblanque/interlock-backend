@@ -28,6 +28,36 @@ RECORD_MAPPINGS = {
         'class':'DNS_RPC_RECORD_NODE_NAME',
         'fields': [ 'nameNode' ]
     },
+    DNS_RECORD_TYPE_DNAME: {
+        'name':'DNAME',
+        'class':'DNS_RPC_RECORD_NODE_NAME',
+        'fields': [ 'nameNode' ]
+    },
+    DNS_RECORD_TYPE_MB: {
+        'name':'MB',
+        'class':'DNS_RPC_RECORD_NODE_NAME',
+        'fields': [ 'nameNode' ]
+    },
+    DNS_TYPE_MR: {
+        'name':'MR',
+        'class':'DNS_RPC_RECORD_NODE_NAME',
+        'fields': [ 'nameNode' ]
+    },
+    DNS_TYPE_MG: {
+        'name':'MG',
+        'class':'DNS_RPC_RECORD_NODE_NAME',
+        'fields': [ 'nameNode' ]
+    },
+    DNS_TYPE_MD: {
+        'name':'MD',
+        'class':'DNS_RPC_RECORD_NODE_NAME',
+        'fields': [ 'nameNode' ]
+    },
+    DNS_TYPE_MF: {
+        'name':'MF',
+        'class':'DNS_RPC_RECORD_NODE_NAME',
+        'fields': [ 'nameNode' ]
+    },
     DNS_RECORD_TYPE_SOA: {
         'name':'SOA',
         'class':'DNS_RPC_RECORD_SOA',
@@ -240,7 +270,6 @@ class DNS_RPC_NAME(Structure):
     )
 
     def toString(self):
-        ind = 0
         labels = ""
         for i in range(self['cchNameLength']):
             # Convert byte array of ASCII or UTF-8 data from (single?) 
@@ -250,12 +279,12 @@ class DNS_RPC_NAME(Structure):
 
     def toRPCName(self, valueString):
         length = len(valueString)
-        self['cchNameLength'] = length
-        ind = 0
         dnsName = list()
         for i in range(length):
             # Convert character to ASCII single byte character.
             dnsName.append(ord(valueString[i]))
+        lengthToPack = pack('B', length)
+        self['cchNameLength'] = lengthToPack
         self['dnsName'] = bytes(dnsName)
 
 class DNS_COUNT_NAME(Structure):
@@ -274,8 +303,6 @@ class DNS_COUNT_NAME(Structure):
     def toFqdn(self):
         ind = 0
         labels = []
-        print(self['LabelCount'])
-        print(self['RawName'])
         for i in range(self['LabelCount']):
             nextlen = unpack('B', self['RawName'][ind:ind+1])[0]
             labels.append(self['RawName'][ind+1:ind+1+nextlen].decode('utf-8'))

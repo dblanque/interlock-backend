@@ -57,21 +57,20 @@ class TestViewSet(BaseViewSet):
             print(e)
             raise CouldNotOpenConnection
 
-        # dnsRecord = LDAPRecord(
-        #     connection=ldapConnection, 
-        #     rName="pepe", 
-        #     rZone="brconsulting.info",
-        #     rType=DNS_RECORD_TYPE_A
-        # )
-        # print(dnsRecord.create(values={'address': '10.10.10.202'}))
+        rType = DNS_RECORD_TYPE_TXT
+        values = {
+            # 'address': '10.10.10.202',
+            # 'nameNode': 'front.brconsulting.info.',
+            'stringData': '"v=spf1 mx a ip4:190.183.222.180 ip4:190.183.222.179 ip4:190.183.222.178 ~all"'
+        }
 
         dnsRecord = LDAPRecord(
             connection=ldapConnection, 
             rName="pepe", 
             rZone="brconsulting.info",
-            rType=DNS_RECORD_TYPE_CNAME
+            rType=rType
         )
-        print(dnsRecord.create(values={'nameNode': 'front.brconsulting.info.'}))
+        print(dnsRecord.create(values=values))
 
         ldapConnection.unbind()
         return Response(

@@ -173,20 +173,30 @@ class LDAPRecord(LDAPDNS):
             record = new_record(self.type, get_next_serial(self.connection.server.host, self.zone, tcp=False))
             # Dynamically fetch the class based on the mapping
             if RECORD_MAPPINGS[self.type]['class'] != None:
-                if RECORD_MAPPINGS[self.type]['name'] == "CNAME":
-                    # If it's CNAME then re-create the record Data with a sub-class DNS_COUNT_NAME
-                    # record['Data'] = getattr(dnstool, RECORD_MAPPINGS[self.type]['class'])(getattr(dnstool, 'DNS_COUNT_NAME')())
-                    # record['Data'] = getattr(dnstool, RECORD_MAPPINGS[self.type]['class'])()
-                    record['Data'] = getattr(dnstool, 'DNS_COUNT_NAME')()
+                if RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_NODE_NAME":
+                    # If it's NODE_NAME then re-create the record Data with a sub-class DNS_COUNT_NAME
+                    record['Data'] = DNS_COUNT_NAME()
+                elif RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_STRING":
+                    # If it's RECORD_STRING then re-create the record Data with a sub-class DNS_RPC_NAME
+                    record['Data'] = DNS_RPC_NAME()
                 else:
-                    print(RECORD_MAPPINGS[self.type]['class'])
+                    # Standard Class Creation
+                    # print(RECORD_MAPPINGS[self.type]['class'])
                     record['Data'] = getattr(dnstool, RECORD_MAPPINGS[self.type]['class'])()
 
-                # Additional Operations based on type
-                if RECORD_MAPPINGS[self.type]['name'] == "A":
-                    record['Data'].fromCanonical(values['address'])
-                if RECORD_MAPPINGS[self.type]['name'] == "CNAME":
-                    record['Data'].toCountName(values['nameNode'])
+                print(type(record['Data']))
+                # Additional Operations based on special case type
+                for field in RECORD_MAPPINGS[self.type]['fields']:
+                    print(field)
+                    if RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_A":
+                        record['Data'].fromCanonical(values[field])
+
+                    if RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_NODE_NAME":
+                        record['Data'].toCountName(values[field])
+
+                    if RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_STRING":
+                        if field == 'stringData':
+                            record['Data'].toRPCName(values[field])
 
             # ! For debugging, do the decoding process to see if it's not a broken entry
             dr = dnstool.DNS_RECORD(record.getData())
