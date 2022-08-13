@@ -79,13 +79,23 @@ RECORD_MAPPINGS = {
     },
     DNS_RECORD_TYPE_X25: {
         'name':'X25',
-        'class': None,
-        'fields': []
+        'class':'DNS_RPC_RECORD_STRING',
+        'fields': [ 'stringData' ],
     },
     DNS_RECORD_TYPE_ISDN: {
         'name':'ISDN',
-        'class': None,
-        'fields': []
+        'class':'DNS_RPC_RECORD_STRING',
+        'fields': [ 'stringData' ],
+    },
+    DNS_RECORD_TYPE_LOC: {
+        'name':'LOC',
+        'class':'DNS_RPC_RECORD_STRING',
+        'fields': [ 'stringData' ],
+    },
+    DNS_RECORD_TYPE_HINFO: {
+        'name':'HINFO',
+        'class':'DNS_RPC_RECORD_STRING',
+        'fields': [ 'stringData' ],
     },
     DNS_RECORD_TYPE_MX: {
         'name':'MX',
