@@ -267,6 +267,9 @@ class DNS_RECORD(Structure):
     def __dict__(self):
         return record_to_dict(self)
 
+    def __getTTL__(self):
+        return self['TtlSeconds']
+
 # Note that depending on whether we use RPC or LDAP all the DNS_RPC_XXXX
 # structures use DNS_RPC_NAME when communication is over RPC,
 # but DNS_COUNT_NAME is the way they are stored in LDAP.

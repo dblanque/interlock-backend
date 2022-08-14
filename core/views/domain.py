@@ -101,6 +101,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
             # 'address',
             # 'nameExchange',
             'value',
+            'ttl',
             'typeName',
             'serial',
             'ts',
@@ -148,7 +149,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         for entry in ldapConnection.response:
             # Set Record Name
             record_name = entry['raw_attributes']['name'][0]
-            record_name = str(record_name)[2:-1]
+            record_name = record_name.decode('utf-8')
             orig_name = record_name
             if record_name != "@":
                 record_name += "." + target_zone
@@ -159,15 +160,12 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
             # Set Record Data
             for record in entry['raw_attributes']['dnsRecord']:
                 dr = dnstool.DNS_RECORD(record)
-                
-                # if dr.__dict__()['type'] == 15 or dr.__dict__()['type'] == 16:
-                #     print(dr.__dict__())
-
                 logger.info(dr)
                 record_dict = record_to_dict(dr, entry['attributes']['dNSTombstoned'])
                 record_dict['id'] = record_id
                 record_dict['displayName'] = record_name
                 record_dict['name'] = orig_name
+                record_dict['ttl'] = dr.__getTTL__()
                 record_dict['distinguishedName'] = entry['dn']
                 logger.debug('Record: %s, Starts With Underscore: %s, Exclude Entry: %s' % (record_name, record_name.startswith("_"), record_name in excludeEntries))
                 if not record_name.startswith("_") and orig_name not in excludeEntries:
