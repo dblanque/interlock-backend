@@ -73,7 +73,7 @@ def ldap2domain(ldap):
 
 def print_record(record, ts=False):
     try:
-        rtype = RECORD_TYPE_MAPPING[record['Type']]
+        rtype = RECORD_MAPPINGS[record['Type']]['name']
     except KeyError:
         rtype = 'Unsupported'
 

@@ -189,6 +189,17 @@ class LDAPRecord(LDAPDNS):
                 # ! Print Chosen Class    
                 # print(RECORD_MAPPINGS[self.type]['class'])
 
+                numFields = [
+                    'dwSerialNo',
+                    'dwRefresh',
+                    'dwRetry',
+                    'dwExpire',
+                    'dwMinimumTtl',
+                    'wPriority',
+                    'wWeight',
+                    'wPort',
+                ]
+
                 # Additional Operations based on special case type
                 for field in RECORD_MAPPINGS[self.type]['fields']:
                     if RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_A":
@@ -207,9 +218,22 @@ class LDAPRecord(LDAPDNS):
                             record['Data'].set_wPreference(value=values[field])
                         if field == 'nameExchange':
                             record['Data'].toCountName(values[field])
+            
+                    if RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_SOA":
+                        if field in numFields:
+                            record['Data'].setField(field, values[field])
+                        else:
+                            record['Data'][field] = record['Data'].addCountName(values[field])
+
+                    if RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_SRV":
+                        if field in numFields:
+                            record['Data'].setField(field, values[field])
+                        else:
+                            record['Data'][field] = record['Data'].addCountName(values[field])
 
             # ! For debugging, do the decoding process to see if it's not a broken entry
-            dr = dnstool.DNS_RECORD(record.getData())
+            result = record.getData()
+            dr = dnstool.DNS_RECORD(result)
             print(record_to_dict(dr, ts=False))
         else:
             exception = exc_dns.RecordTypeUnsupported

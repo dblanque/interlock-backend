@@ -14,23 +14,15 @@ from interlock_backend.ldap.constants import (
 import logging
 import ssl
 import inspect
-from django.db.migrations.executor import MigrationExecutor
-from django.db import connections, DEFAULT_DB_ALIAS
+from django.db import connection
 
 logger = logging.getLogger(__name__)
 
-def is_database_synchronized(database):
-    try:
-        connection = connections[database]
-        connection.prepare_database()
-        executor = MigrationExecutor(connection)
-        targets = executor.loader.graph.leaf_nodes()
-        executor.migration_plan(targets)
-        if not executor.recorder.ensure_schema():
-            return False
+def settings_table_exists():
+    db_tables = connection.introspection.table_names()
+    if 'core_setting' in db_tables:
         return True
-    except:
-        return False
+    return False
 
 def getSetting(settingKey):
     valueFields = [
@@ -41,7 +33,7 @@ def getSetting(settingKey):
         'value_float'
     ]
 
-    if not is_database_synchronized(DEFAULT_DB_ALIAS):
+    if not settings_table_exists():
         return constantDictionary[settingKey]
 
     try:

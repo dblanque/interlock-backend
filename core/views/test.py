@@ -57,22 +57,95 @@ class TestViewSet(BaseViewSet):
             print(e)
             raise CouldNotOpenConnection
 
-        rType = DNS_RECORD_TYPE_A
-        values = {
-            'address': '10.10.10.202',
-            # 'wPreference': 10,
-            # 'nameExchange': 'front.brconsulting.info.',
-            # 'nameNode': 'front.brconsulting.info.',
-            # 'stringData': '"v=spf1 mx a ip4:190.183.222.180 ip4:190.183.222.179 ip4:190.183.222.178 ~all"'
+        testRecord = "SRV"
+        values_soa = {
+            # SOA TEST
+            'dwSerialNo': 82,
+            'dwRefresh': 900,
+            'dwRetry': 600,
+            'dwExpire': 86400,
+            'dwMinimumTtl': 3600,
+            'namePrimaryServer': 'vm113-ldap.brconsulting.info.',
+            'zoneAdminEmail': 'dylan.brconsulting.info.'
+        }
+        values_a = {
+            # A TEST
+            'address': '10.10.10.202'
+        }
+        values_txt = {
+            # TXT TEST
+            'stringData': '"v=spf1 mx a ip4:190.183.222.180 ip4:190.183.222.179 ip4:190.183.222.178 ~all"'
+        }
+        values_cname = {
+            # CNAME TEST
+            'nameNode': 'front.brconsulting.info.',
+        }
+        values_mx = {
+            # MX TEST
+            'wPreference': 10,
+            'nameExchange': 'front.brconsulting.info.',
+        }
+        values_srv = {
+            # SRV TEST
+            'wPriority': 10,
+            'wWeight': 5,
+            'wPort': 3306,
+            'nameTarget': 'psql.brconsulting.info.',
         }
 
-        dnsRecord = LDAPRecord(
-            connection=ldapConnection, 
-            rName="pepe", 
-            rZone="brconsulting.info",
-            rType=rType
-        )
-        print(dnsRecord.create(values=values))
+        if testRecord == 'A':
+            dnsRecord = LDAPRecord(
+                connection=ldapConnection, 
+                rName="@", 
+                rZone="brconsulting.info",
+                rType=DNS_RECORD_TYPE_A
+            )
+            print(dnsRecord.create(values=values_a))
+
+        if testRecord == 'CNAME':
+            dnsRecord = LDAPRecord(
+                connection=ldapConnection, 
+                rName="javier", 
+                rZone="brconsulting.info",
+                rType=DNS_RECORD_TYPE_CNAME
+            )
+            print(dnsRecord.create(values=values_cname))
+
+        if testRecord == 'MX':
+            dnsRecord = LDAPRecord(
+                connection=ldapConnection, 
+                rName="mail", 
+                rZone="brconsulting.info",
+                rType=DNS_RECORD_TYPE_MX
+            )
+            print(dnsRecord.create(values=values_mx))
+
+        if testRecord == 'TXT':
+            dnsRecord = LDAPRecord(
+                connection=ldapConnection, 
+                rName="@", 
+                rZone="brconsulting.info",
+                rType=DNS_RECORD_TYPE_TXT
+            )
+            print(dnsRecord.create(values=values_txt))
+
+        if testRecord == 'SOA':
+            dnsRecord = LDAPRecord(
+                connection=ldapConnection, 
+                rName="@", 
+                rZone="brconsulting.info",
+                rType=DNS_RECORD_TYPE_SOA
+            )
+            print(dnsRecord.create(values=values_soa))
+
+        if testRecord == 'SRV':
+            dnsRecord = LDAPRecord(
+                connection=ldapConnection, 
+                rName="@", 
+                rZone="brconsulting.info",
+                rType=DNS_RECORD_TYPE_SRV
+            )
+            print(dnsRecord.create(values=values_srv))
 
         ldapConnection.unbind()
         return Response(

@@ -124,10 +124,10 @@ RECORD_MAPPINGS = {
         'name':'SRV',
         'class':'DNS_RPC_RECORD_SRV',
         'fields': [
-                    'nameTarget',
                     'wPriority', 
                     'wWeight', 
-                    'wPort'
+                    'wPort',
+                    'nameTarget'
                 ],
     },
     DNS_RECORD_TYPE_PTR: {
@@ -172,6 +172,14 @@ def record_to_dict(record, ts=False):
         # ! Print class ! #
         # print(getattr(thismodule, RECORD_MAPPINGS[record['Type']]['class']))
 
+
+        stringFields = [
+            'nameNode',
+            'nameExchange',
+            'nameTarget',
+            'namePrimaryServer',
+            'zoneAdminEmail'
+        ]
         # For each value field mapped for this Record Type set it
         for valueField in RECORD_MAPPINGS[record['Type']]['fields']:
             try:
@@ -181,16 +189,12 @@ def record_to_dict(record, ts=False):
                     record_dict[valueField] = data.formatCanonical()
                 elif valueField == 'stringData':
                     record_dict[valueField] = data[valueField].toString()
-                elif (  valueField == 'nameNode' or 
-                        valueField == 'nameExchange' or 
-                        valueField == 'nameTarget' or 
-                        valueField == 'namePrimaryServer' or 
-                        valueField == 'zoneAdminEmail'
-                        ):
+                elif (valueField in stringFields):
                     record_dict[valueField] = data[valueField].toFqdn()
                 else:
                     record_dict[valueField] = data[valueField]
             except Exception as e:
+                # data.dump()
                 print(record_dict)
                 print(valueField)
                 raise e
@@ -234,7 +238,6 @@ def record_to_dict(record, ts=False):
     #     record_dict['namePrimaryServer'] = record_data['namePrimaryServer'].toFqdn()
     #     record_dict['zoneAdminEmail'] = record_data['zoneAdminEmail'].toFqdn()
 
-    # data.dump()
     return record_dict
 
 class DNS_RECORD(Structure):
@@ -333,36 +336,61 @@ class DNS_COUNT_NAME(Structure):
         ind = 0
         labels = []
         for i in range(self['LabelCount']):
-            nextlen = unpack('B', self['RawName'][ind:ind+1])[0]
-            labels.append(self['RawName'][ind+1:ind+1+nextlen].decode('utf-8'))
-            ind += nextlen + 1
+            try:
+                nextlen = unpack('B', self['RawName'][ind:ind+1])[0]
+                labels.append(self['RawName'][ind+1:ind+1+nextlen].decode('utf-8'))
+                ind += nextlen + 1
+            except Exception as e:
+                print("Unable to UNPACK Raw Name in DNS Record")
+                print('Length (' + str(type(self['Length'])) + '): ')
+                print(self['Length'])
+                print('LabelCount (' + str(type(self['LabelCount'])) + '): ')
+                print(self['LabelCount'])
+                print('RawName (' + str(type(self['RawName'])) + '): ')
+                print(self['RawName'])
+                raise e
+
         # For the final dot
         labels.append('')
         return '.'.join(labels)
 
-    def toCountName(self, valueString, getData=False):
+    def toCountName(self, valueString, addNullAtEnd=True):
         # Structure:
         # String -> FQDN -> 1-byte Label Length COUNT for the subsequent label
 
         length = len(valueString)
-        splitString = valueString.split('.')
-        labelCount = len(splitString) - 1
+        splitString = valueString.rstrip('.').split('.')
+        labelCount = len(splitString)
+        if labelCount < 0:
+            labelCount = 0
         newString = bytes()
         for i in range(labelCount):
             newString += pack('B', len(splitString[i])) + (bytes(splitString[i], 'utf-8'))
 
-        self['Length'] = length
+        self['Length'] = length + 1
         self['LabelCount'] = labelCount
-        self['RawName'] = newString + bytes('\0', 'utf-8')
+        try:
+            if addNullAtEnd == True:
+                self['RawName'] = newString + b'\x00'
+            else:
+                self['RawName'] = newString
+        except Exception as e:
+            print(e)
+            raise Exception("Error setting RawName key in Data Structure")
+
+        if len(self['RawName']) > 256:
+            print(self['RawName'])
+            raise ValueError("Raw Name Length cannot be more than 256")
 
         # print('Length')
         # print(self['Length'])
+        # print(type(self['Length']))
         # print('LabelCount')
         # print(self['LabelCount'])
+        # print(type(self['LabelCount']))
         # print('RawName')
         # print(self['RawName'])
-        if getData == True:
-            return self.getData()
+        # print(type(self['RawName']))
 
 
 class DNS_RPC_NODE(Structure):
@@ -433,6 +461,14 @@ class DNS_RPC_RECORD_SOA(Structure):
         ('namePrimaryServer', ':', DNS_COUNT_NAME),
         ('zoneAdminEmail', ':', DNS_COUNT_NAME)
     )
+
+    def setField(self, fieldName, value):
+        self[fieldName] = int(value)
+
+    def addCountName(self, valueString):
+        countName = DNS_COUNT_NAME()
+        countName.toCountName(valueString=valueString, addNullAtEnd=True)
+        return countName.getData()
 
 class DNS_RPC_RECORD_NULL(Structure):
     """
@@ -536,6 +572,14 @@ class DNS_RPC_RECORD_SRV(Structure):
         ('wPort', '>H'),
         ('nameTarget', ':', DNS_COUNT_NAME)
     )
+
+    def setField(self, fieldName, value):
+        self[fieldName] = int(value)
+
+    def addCountName(self, valueString):
+        countName = DNS_COUNT_NAME()
+        countName.toCountName(valueString=valueString, addNullAtEnd=True)
+        return countName.getData()
 
 # TODO
 ## DNS_RPC_RECORD_ATMA      | 2.2.2.2.4.19
