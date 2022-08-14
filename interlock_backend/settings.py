@@ -133,10 +133,10 @@ LOGGING = {
             "handlers": ["console"],
             "level": "INFO",
         },
-        # "core.views.domain": {
-        #     "handlers": ["console"],
-        #     "level": "INFO",
-        # },
+        "core.models.dns": {
+            "handlers": ["console"],
+            "level": "INFO",
+        },
     },
 }
 

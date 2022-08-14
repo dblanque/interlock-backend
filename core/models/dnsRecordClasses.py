@@ -328,9 +328,15 @@ class DNS_COUNT_NAME(Structure):
         self.structure.extend(list(oldStruct))
         self.structure = tuple(self.structure)
 
-    def set_wPreference(self, value):
-        # Pack INT to 2 Byte Big Endian Unsigned
-        self['wPreference'] = int(value)
+    def setField(self, fieldName, value, type=int):
+        """
+        Set value for an inserted field in the structure
+        You may cast to a specific type, default is int
+        - fieldName: The name of the field
+        - value: The value of the field
+        - type: The type to cast (default: int)
+        """
+        self[fieldName] = type(value)
 
     def toFqdn(self):
         ind = 0

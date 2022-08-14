@@ -43,17 +43,17 @@ class LDAPDNS():
         zones = dnstool.get_dns_zones(self.connection, self.dnsroot)
         self.dnszones = zones
         if len(zones) > 0:
-            logger.info('Found %d domain DNS zone(s):' % len(zones))
+            logger.debug('Found %d domain DNS zone(s):' % len(zones))
             for zone in zones:
-                logger.info('    %s' % zone)
+                logger.debug('    %s' % zone)
 
     def list_forest_zones(self):
         zones = dnstool.get_dns_zones(self.connection, self.forestroot)
         self.forestzones = zones
         if len(zones) > 0:
-            logger.info('Found %d forest DNS zone(s):' % len(zones))
+            logger.debug('Found %d forest DNS zone(s):' % len(zones))
             for zone in zones:
-                logger.info('    %s' % zone)
+                logger.debug('    %s' % zone)
 
 class LDAPRecord(LDAPDNS):
 
@@ -122,17 +122,17 @@ class LDAPRecord(LDAPDNS):
 
         if self.rawEntry['type'] == 'searchResEntry':
             if self.rawEntry['dn'] == self.distinguishedName:
-                print("Entry exists")
+                logger.debug("Entry exists")
 
             # Set Record Name
             record_name = self.rawEntry['raw_attributes']['name'][0]
             record_name = str(record_name)[2:-1]
-            logger.info(record_name)
+            logger.debug(record_name)
 
             # Set Record Data
             for record in self.rawEntry['raw_attributes']['dnsRecord']:
                 dr = dnstool.DNS_RECORD(record)
-                logger.info(dr)
+                logger.debug(dr)
                 record_dict = record_to_dict(dr, self.rawEntry['attributes']['dNSTombstoned'])
                 record_dict['name'] = record_name
                 logger.debug('Record: %s, Starts With Underscore: %s, Exclude Entry: %s' % (record_name, record_name.startswith("_"), record_name in excludeEntries))
@@ -165,7 +165,7 @@ class LDAPRecord(LDAPDNS):
     def __connection__(self):
         return self.connection
 
-    def create(self, values):
+    def makeRecord(self, values):
         next_zone_serial = get_next_serial(self.connection.server.host, self.zone, tcp=False)
 
         ## Check if class type is supported for creation ##
@@ -215,7 +215,7 @@ class LDAPRecord(LDAPDNS):
                     if RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_NAME_PREFERENCE":
                         if field == 'wPreference':
                             record['Data'].insert_field_to_struct(fieldName=field, fieldStructVal='>H')
-                            record['Data'].set_wPreference(value=values[field])
+                            record['Data'].setField(field, value=values[field])
                         if field == 'nameExchange':
                             record['Data'].toCountName(values[field])
             
@@ -230,11 +230,7 @@ class LDAPRecord(LDAPDNS):
                             record['Data'].setField(field, values[field])
                         else:
                             record['Data'][field] = record['Data'].addCountName(values[field])
-
-            # ! For debugging, do the decoding process to see if it's not a broken entry
-            result = record.getData()
-            dr = dnstool.DNS_RECORD(result)
-            print(record_to_dict(dr, ts=False))
+            return record
         else:
             exception = exc_dns.RecordTypeUnsupported
             data = {
@@ -246,12 +242,19 @@ class LDAPRecord(LDAPDNS):
             exception.setDetail(exception, data)
             self.connection.unbind()
             raise exception
+   
+    def create(self, values):
+        record = self.makeRecord(values)
+
+        # ! For debugging, do the decoding process to see if it's not a broken entry
+        result = record.getData()
+        dr = dnstool.DNS_RECORD(result)
 
         ## Check if LDAP Entry Exists ##
-
         # LDAP Entry does not exist
         if self.rawEntry is None:
-            print("Create Entry")
+            logger.info("Create Entry for %s" % (self.name))
+            logger.info(record_to_dict(dr, ts=False))
             node_data = {
                 'objectCategory': 'CN=Dns-Node,%s' % self.schemaNamingContext,
                 'dNSTombstoned': False,
@@ -269,7 +272,8 @@ class LDAPRecord(LDAPDNS):
                 print(e)
                 self.connection.unbind()
                 raise exc_dns.RecordTypeConflict
-            print("Add Record to Entry")
+            logger.info("Adding Record to Entry with name %s" % (self.name))
+            logger.info(record_to_dict(dr, ts=False))
             # self.connection.modify(self.distinguishedName, {'dnsRecord': [( MODIFY_ADD, record.getData() )]})
             # print(self.connection.result)
         return None

@@ -57,7 +57,7 @@ class TestViewSet(BaseViewSet):
             print(e)
             raise CouldNotOpenConnection
 
-        testRecord = "SRV"
+        testRecord = "ALL"
         values_soa = {
             # SOA TEST
             'dwSerialNo': 82,
@@ -93,7 +93,7 @@ class TestViewSet(BaseViewSet):
             'nameTarget': 'psql.brconsulting.info.',
         }
 
-        if testRecord == 'A':
+        if testRecord == 'A' or testRecord == 'ALL':
             dnsRecord = LDAPRecord(
                 connection=ldapConnection, 
                 rName="@", 
@@ -102,7 +102,7 @@ class TestViewSet(BaseViewSet):
             )
             print(dnsRecord.create(values=values_a))
 
-        if testRecord == 'CNAME':
+        if testRecord == 'CNAME' or testRecord == 'ALL':
             dnsRecord = LDAPRecord(
                 connection=ldapConnection, 
                 rName="javier", 
@@ -111,7 +111,7 @@ class TestViewSet(BaseViewSet):
             )
             print(dnsRecord.create(values=values_cname))
 
-        if testRecord == 'MX':
+        if testRecord == 'MX' or testRecord == 'ALL':
             dnsRecord = LDAPRecord(
                 connection=ldapConnection, 
                 rName="mail", 
@@ -120,7 +120,7 @@ class TestViewSet(BaseViewSet):
             )
             print(dnsRecord.create(values=values_mx))
 
-        if testRecord == 'TXT':
+        if testRecord == 'TXT' or testRecord == 'ALL':
             dnsRecord = LDAPRecord(
                 connection=ldapConnection, 
                 rName="@", 
@@ -129,7 +129,7 @@ class TestViewSet(BaseViewSet):
             )
             print(dnsRecord.create(values=values_txt))
 
-        if testRecord == 'SOA':
+        if testRecord == 'SOA' or testRecord == 'ALL':
             dnsRecord = LDAPRecord(
                 connection=ldapConnection, 
                 rName="@", 
@@ -138,7 +138,7 @@ class TestViewSet(BaseViewSet):
             )
             print(dnsRecord.create(values=values_soa))
 
-        if testRecord == 'SRV':
+        if testRecord == 'SRV' or testRecord == 'ALL':
             dnsRecord = LDAPRecord(
                 connection=ldapConnection, 
                 rName="@", 
