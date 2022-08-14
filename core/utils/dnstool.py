@@ -113,13 +113,13 @@ def print_record(record, ts=False):
         print(' - Primary server: %s' %  record_data['namePrimaryServer'].toFqdn())
         print(' - Zone admin email: %s' %  record_data['zoneAdminEmail'].toFqdn())
 
-def new_record(rtype, serial):
+def new_record(rtype, serial, ttl=180, rank=240):
     nr = DNS_RECORD()
     nr['Type'] = rtype
     nr['Serial'] = serial
-    nr['TtlSeconds'] = 180
+    nr['TtlSeconds'] = ttl
     # From authoritive zone
-    nr['Rank'] = 240
+    nr['Rank'] = rank
     return nr
 
 def print_operation_result(result):

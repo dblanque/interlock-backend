@@ -165,12 +165,13 @@ class LDAPRecord(LDAPDNS):
     def __connection__(self):
         return self.connection
 
-    def makeRecord(self, values):
-        next_zone_serial = get_next_serial(self.connection.server.host, self.zone, tcp=False)
+    def makeRecord(self, values, serial=None, ttl=180):
+        if serial is None:
+            serial = get_next_serial(self.connection.server.host, self.zone, tcp=False)
 
         ## Check if class type is supported for creation ##
         if (self.type in RECORD_MAPPINGS):
-            record = new_record(self.type, get_next_serial(self.connection.server.host, self.zone, tcp=False))
+            record = new_record(self.type, get_next_serial(self.connection.server.host, self.zone, tcp=False), ttl=ttl)
             # Dynamically fetch the class based on the mapping
             if RECORD_MAPPINGS[self.type]['class'] != None:
                 if RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_NODE_NAME":
@@ -244,7 +245,9 @@ class LDAPRecord(LDAPDNS):
             raise exception
    
     def create(self, values):
-        record = self.makeRecord(values)
+        if 'ttl' not in values:
+            values['ttl'] = 180
+        record = self.makeRecord(values, ttl=values['ttl'])
 
         # ! For debugging, do the decoding process to see if it's not a broken entry
         result = record.getData()
