@@ -38,22 +38,22 @@ RECORD_MAPPINGS = {
         'class':'DNS_RPC_RECORD_NODE_NAME',
         'fields': [ 'nameNode' ]
     },
-    DNS_TYPE_MR: {
+    DNS_RECORD_TYPE_MR: {
         'name':'MR',
         'class':'DNS_RPC_RECORD_NODE_NAME',
         'fields': [ 'nameNode' ]
     },
-    DNS_TYPE_MG: {
+    DNS_RECORD_TYPE_MG: {
         'name':'MG',
         'class':'DNS_RPC_RECORD_NODE_NAME',
         'fields': [ 'nameNode' ]
     },
-    DNS_TYPE_MD: {
+    DNS_RECORD_TYPE_MD: {
         'name':'MD',
         'class':'DNS_RPC_RECORD_NODE_NAME',
         'fields': [ 'nameNode' ]
     },
-    DNS_TYPE_MF: {
+    DNS_RECORD_TYPE_MF: {
         'name':'MF',
         'class':'DNS_RPC_RECORD_NODE_NAME',
         'fields': [ 'nameNode' ]
