@@ -57,11 +57,13 @@ class TestViewSet(BaseViewSet):
             print(e)
             raise CouldNotOpenConnection
 
-        rType = DNS_RECORD_TYPE_TXT
+        rType = DNS_RECORD_TYPE_A
         values = {
-            # 'address': '10.10.10.202',
+            'address': '10.10.10.202',
+            # 'wPreference': 10,
+            # 'nameExchange': 'front.brconsulting.info.',
             # 'nameNode': 'front.brconsulting.info.',
-            'stringData': '"v=spf1 mx a ip4:190.183.222.180 ip4:190.183.222.179 ip4:190.183.222.178 ~all"'
+            # 'stringData': '"v=spf1 mx a ip4:190.183.222.180 ip4:190.183.222.179 ip4:190.183.222.178 ~all"'
         }
 
         dnsRecord = LDAPRecord(

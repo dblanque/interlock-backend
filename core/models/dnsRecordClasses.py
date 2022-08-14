@@ -62,12 +62,12 @@ RECORD_MAPPINGS = {
         'name':'SOA',
         'class':'DNS_RPC_RECORD_SOA',
         'fields': [
-                    'namePrimaryServer',
                     'dwSerialNo',
                     'dwRefresh',
                     'dwRetry',
                     'dwExpire',
                     'dwMinimumTtl',
+                    'namePrimaryServer',
                     'zoneAdminEmail'
                 ],
     },
@@ -101,8 +101,8 @@ RECORD_MAPPINGS = {
         'name':'MX',
         'class':'DNS_RPC_RECORD_NAME_PREFERENCE',
         'fields': [
-                    'nameExchange',
-                    'wPreference'
+                    'wPreference',
+                    'nameExchange'
                 ],
     },
     DNS_RECORD_TYPE_SIG: {
@@ -174,21 +174,26 @@ def record_to_dict(record, ts=False):
 
         # For each value field mapped for this Record Type set it
         for valueField in RECORD_MAPPINGS[record['Type']]['fields']:
-            if valueField == 'tstime':
-                record_dict[valueField] = data.toDatetime()
-            elif valueField == 'address':
-                record_dict[valueField] = data.formatCanonical()
-            elif valueField == 'stringData':
-                record_dict[valueField] = data[valueField].toString()
-            elif (  valueField == 'nameNode' or 
-                    valueField == 'nameExchange' or 
-                    valueField == 'nameTarget' or 
-                    valueField == 'namePrimaryServer' or 
-                    valueField == 'zoneAdminEmail'
-                    ):
-                record_dict[valueField] = data[valueField].toFqdn()
-            else:
-                record_dict[valueField] = data[valueField]
+            try:
+                if valueField == 'tstime':
+                    record_dict[valueField] = data.toDatetime()
+                elif valueField == 'address':
+                    record_dict[valueField] = data.formatCanonical()
+                elif valueField == 'stringData':
+                    record_dict[valueField] = data[valueField].toString()
+                elif (  valueField == 'nameNode' or 
+                        valueField == 'nameExchange' or 
+                        valueField == 'nameTarget' or 
+                        valueField == 'namePrimaryServer' or 
+                        valueField == 'zoneAdminEmail'
+                        ):
+                    record_dict[valueField] = data[valueField].toFqdn()
+                else:
+                    record_dict[valueField] = data[valueField]
+            except Exception as e:
+                print(record_dict)
+                print(valueField)
+                raise e
 
     # ! Legacy Code, helps understand what it does
     # if record['Type'] == 0:
@@ -229,7 +234,7 @@ def record_to_dict(record, ts=False):
     #     record_dict['namePrimaryServer'] = record_data['namePrimaryServer'].toFqdn()
     #     record_dict['zoneAdminEmail'] = record_data['zoneAdminEmail'].toFqdn()
 
-    # record_data.dump()
+    # data.dump()
     return record_dict
 
 class DNS_RECORD(Structure):
@@ -304,11 +309,25 @@ class DNS_COUNT_NAME(Structure):
     MUST be converted to DNS_RPC_NAME for RPC communication
     [MS-DNSP] section 2.2.2.2.2
     """
+
     structure = (
         ('Length', 'B-RawName'),
         ('LabelCount', 'B'),
         ('RawName', ':')
     )
+
+    def insert_field_to_struct(self, fieldName=None, fieldStructVal=None):
+        """
+        Insert a field into the byte structure before the defaults
+        """
+        oldStruct = self.structure
+        self.structure = [(fieldName, fieldStructVal)]
+        self.structure.extend(list(oldStruct))
+        self.structure = tuple(self.structure)
+
+    def set_wPreference(self, value):
+        # Pack INT to 2 Byte Big Endian Unsigned
+        self['wPreference'] = int(value)
 
     def toFqdn(self):
         ind = 0
@@ -321,7 +340,7 @@ class DNS_COUNT_NAME(Structure):
         labels.append('')
         return '.'.join(labels)
 
-    def toCountName(self, valueString):
+    def toCountName(self, valueString, getData=False):
         # Structure:
         # String -> FQDN -> 1-byte Label Length COUNT for the subsequent label
 
@@ -330,13 +349,11 @@ class DNS_COUNT_NAME(Structure):
         labelCount = len(splitString) - 1
         newString = bytes()
         for i in range(labelCount):
-            newString += pack('B', len(splitString[i])) + bytes(splitString[i], 'utf-8')
+            newString += pack('B', len(splitString[i])) + (bytes(splitString[i], 'utf-8'))
 
         self['Length'] = length
         self['LabelCount'] = labelCount
         self['RawName'] = newString + bytes('\0', 'utf-8')
-
-        # print(self['RawName'])
 
         # print('Length')
         # print(self['Length'])
@@ -344,7 +361,8 @@ class DNS_COUNT_NAME(Structure):
         # print(self['LabelCount'])
         # print('RawName')
         # print(self['RawName'])
-        return self
+        if getData == True:
+            return self.getData()
 
 
 class DNS_RPC_NODE(Structure):
@@ -431,7 +449,7 @@ class DNS_RPC_RECORD_NULL(Structure):
 
 class DNS_RPC_RECORD_STRING(Structure):
     """
-    DNS_RPC_RECORD_NAME_PREFERENCE
+    DNS_RPC_RECORD_STRING
 
     This Structure specifies information about a DNS record of
     any of the following types:
@@ -467,7 +485,6 @@ class DNS_RPC_RECORD_NAME_PREFERENCE(Structure):
         ('wPreference', '>H'),
         ('nameExchange', ':', DNS_COUNT_NAME)
     )
-
 
 class DNS_RPC_RECORD_SIG(Structure):
     """

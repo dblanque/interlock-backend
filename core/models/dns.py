@@ -166,7 +166,7 @@ class LDAPRecord(LDAPDNS):
         return self.connection
 
     def create(self, values):
-        print(get_next_serial(self.connection.server.host, self.zone, tcp=False))
+        next_zone_serial = get_next_serial(self.connection.server.host, self.zone, tcp=False)
 
         ## Check if class type is supported for creation ##
         if (self.type in RECORD_MAPPINGS):
@@ -176,18 +176,21 @@ class LDAPRecord(LDAPDNS):
                 if RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_NODE_NAME":
                     # If it's NODE_NAME then re-create the record Data with a sub-class DNS_COUNT_NAME
                     record['Data'] = DNS_COUNT_NAME()
+                elif RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_NAME_PREFERENCE":
+                    # If it's NODE_NAME then re-create the record Data with a sub-class DNS_COUNT_NAME
+                    record['Data'] = DNS_COUNT_NAME()
                 elif RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_STRING":
                     # If it's RECORD_STRING then re-create the record Data with a sub-class DNS_RPC_NAME
                     record['Data'] = DNS_RPC_NAME()
                 else:
                     # Standard Class Creation
-                    # print(RECORD_MAPPINGS[self.type]['class'])
                     record['Data'] = getattr(dnstool, RECORD_MAPPINGS[self.type]['class'])()
 
-                print(type(record['Data']))
+                # ! Print Chosen Class    
+                # print(RECORD_MAPPINGS[self.type]['class'])
+
                 # Additional Operations based on special case type
                 for field in RECORD_MAPPINGS[self.type]['fields']:
-                    print(field)
                     if RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_A":
                         record['Data'].fromCanonical(values[field])
 
@@ -197,6 +200,13 @@ class LDAPRecord(LDAPDNS):
                     if RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_STRING":
                         if field == 'stringData':
                             record['Data'].toRPCName(values[field])
+
+                    if RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_NAME_PREFERENCE":
+                        if field == 'wPreference':
+                            record['Data'].insert_field_to_struct(fieldName=field, fieldStructVal='>H')
+                            record['Data'].set_wPreference(value=values[field])
+                        if field == 'nameExchange':
+                            record['Data'].toCountName(values[field])
 
             # ! For debugging, do the decoding process to see if it's not a broken entry
             dr = dnstool.DNS_RECORD(record.getData())
