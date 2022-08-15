@@ -10,6 +10,7 @@
 ### Models
 from core.models.log import logToDB
 from core.models.dns import LDAPDNS
+from core.models.dnsRecordClasses import RECORD_MAPPINGS
 
 ### ViewSets
 from core.views.base import BaseViewSet
@@ -49,7 +50,45 @@ class RecordViewSet(BaseViewSet):
         data = {}
         code = 0
 
-        reqData = request.data
+        if 'record' not in request.data:
+            raise exc_dns.DNSRecordNotInRequest
+
+        recordValues = request.data['record']
+
+        if 'type' not in recordValues:
+            raise exc_dns.DNSRecordTypeMissing
+
+        requiredAttributes = [
+            'name',
+            'type',
+            'zone',
+            'ttl'
+        ]
+        # Add the necessary fields for this Record Type to Required Fields
+        requiredAttributes.extend(RECORD_MAPPINGS[recordValues['type']]['fields'])
+
+        print(requiredAttributes)
+
+        for a in requiredAttributes:
+            if a not in recordValues:
+                exception = exc_dns.DNSRecordDataMissing
+                data = {
+                    "code": exception.default_code,
+                    "attribute": a,
+                }
+                exception.setDetail(exception, data)
+                raise exception
+
+        recordName = recordValues.pop('name')
+        recordType = recordValues.pop('type')
+        recordZone = recordValues.pop('zone')
+        recordTTL = recordValues.pop('ttl')
+
+        print(recordName)
+        print(recordType)
+        print(recordZone)
+        print(recordTTL)
+        print(recordValues)
 
         ######################## Get Latest Settings ###########################
         ldap_settings_list = SettingsList(**{"search":{
@@ -67,16 +106,6 @@ class RecordViewSet(BaseViewSet):
             raise exc_ldap.CouldNotOpenConnection
 
         responseData = {}
-
-        responseData['headers'] = [
-            'displayName', # Custom Header, attr not in LDAP
-            'value',
-            'ttl',
-            'typeName',
-            'serial',
-            'ts',
-        ]
-
         ldapConnection.unbind()
 
         return Response(

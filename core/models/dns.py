@@ -233,7 +233,7 @@ class LDAPRecord(LDAPDNS):
                             record['Data'][field] = record['Data'].addCountName(values[field])
             return record
         else:
-            exception = exc_dns.RecordTypeUnsupported
+            exception = exc_dns.DNSRecordTypeUnsupported
             data = {
                 "code": exception.default_code,
                 "typeName": RECORD_MAPPINGS[self.type]['name'],
@@ -274,7 +274,7 @@ class LDAPRecord(LDAPDNS):
             except Exception as e:
                 print(e)
                 self.connection.unbind()
-                raise exc_dns.RecordTypeConflict
+                raise exc_dns.DNSRecordTypeConflict
             logger.info("Adding Record to Entry with name %s" % (self.name))
             logger.info(record_to_dict(dr, ts=False))
             # self.connection.modify(self.distinguishedName, {'dnsRecord': [( MODIFY_ADD, record.getData() )]})
