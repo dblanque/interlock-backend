@@ -376,6 +376,7 @@ class DNS_COUNT_NAME(Structure):
         for i in range(labelCount):
             newString += pack('B', len(splitString[i])) + (bytes(splitString[i], 'utf-8'))
 
+        # Add 1 to Length as it must include the NULL Terminator Byte
         self['Length'] = length + 1
         self['LabelCount'] = labelCount
         try:

@@ -33,6 +33,7 @@ from core.views.settings_view import SettingsViewSet
 from core.views.logs import LogsViewSet
 from core.views.groups import GroupsViewSet
 from core.views.test import TestViewSet
+from core.views.record import RecordViewSet
 
 # Initalizes Router
 router = routers.DefaultRouter()
@@ -40,6 +41,7 @@ named_view_sets = {
     r"users": UserViewSet,
     r"groups": GroupsViewSet,
     r"domain": DomainViewSet,
+    r"record": RecordViewSet,
     r"ou": OrganizationalUnitViewSet,
     r"settings": SettingsViewSet,
     r"logs": LogsViewSet,
