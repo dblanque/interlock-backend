@@ -57,7 +57,7 @@ class TestViewSet(BaseViewSet):
             print(e)
             raise CouldNotOpenConnection
 
-        testRecord = "ALL"
+        testRecord = "A"
         values_soa = {
             # SOA TEST
             'dwSerialNo': 82,
@@ -70,7 +70,9 @@ class TestViewSet(BaseViewSet):
         }
         values_a = {
             # A TEST
-            'address': '10.10.10.202'
+            'address': '10.10.10.1',
+            'ttl': 900,
+            'serial': 1
         }
         values_txt = {
             # TXT TEST
@@ -95,8 +97,8 @@ class TestViewSet(BaseViewSet):
 
         if testRecord == 'A' or testRecord == 'ALL':
             dnsRecord = LDAPRecord(
-                connection=ldapConnection, 
-                rName="@", 
+                connection=ldapConnection,
+                rName="@",
                 rZone="brconsulting.info",
                 rType=DNS_RECORD_TYPE_A
             )

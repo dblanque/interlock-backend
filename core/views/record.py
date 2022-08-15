@@ -9,7 +9,8 @@
 #---------------------------------- IMPORTS -----------------------------------#
 ### Models
 from core.models.log import logToDB
-from core.models.dns import LDAPDNS
+from core.models.dns import LDAPRecord
+from core.models.dnsRecordTypes import *
 from core.models.dnsRecordClasses import RECORD_MAPPINGS
 
 ### ViewSets
@@ -43,6 +44,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 class RecordViewSet(BaseViewSet):
+
     @action(detail=False,methods=['post'])
     def insert(self, request):
         user = request.user
@@ -67,8 +69,6 @@ class RecordViewSet(BaseViewSet):
         # Add the necessary fields for this Record Type to Required Fields
         requiredAttributes.extend(RECORD_MAPPINGS[recordValues['type']]['fields'])
 
-        print(requiredAttributes)
-
         for a in requiredAttributes:
             if a not in recordValues:
                 exception = exc_dns.DNSRecordDataMissing
@@ -82,13 +82,6 @@ class RecordViewSet(BaseViewSet):
         recordName = recordValues.pop('name')
         recordType = recordValues.pop('type')
         recordZone = recordValues.pop('zone')
-        recordTTL = recordValues.pop('ttl')
-
-        print(recordName)
-        print(recordType)
-        print(recordZone)
-        print(recordTTL)
-        print(recordValues)
 
         ######################## Get Latest Settings ###########################
         ldap_settings_list = SettingsList(**{"search":{
@@ -105,14 +98,21 @@ class RecordViewSet(BaseViewSet):
             print(e)
             raise exc_ldap.CouldNotOpenConnection
 
-        responseData = {}
+        dnsRecord = LDAPRecord(
+            connection=ldapConnection,
+            rName=recordName,
+            rZone=recordZone,
+            rType=recordType
+        )
+        dnsRecord.create(values=recordValues)
+
         ldapConnection.unbind()
 
         return Response(
              data={
                 'code': code,
                 'code_msg': 'ok',
-                'data' : responseData
+                'data' : dnsRecord.structure.getData()
              }
         )
 
@@ -160,13 +160,44 @@ class RecordViewSet(BaseViewSet):
              }
         )
 
+    @action(detail=False,methods=['post'])
     def delete(self, request):
         user = request.user
         validateUser(request=request)
         data = {}
         code = 0
 
-        reqData = request.data
+        if 'record' not in request.data:
+            raise exc_dns.DNSRecordNotInRequest
+
+        recordValues = request.data['record']
+
+        if 'type' not in recordValues:
+            raise exc_dns.DNSRecordTypeMissing
+
+        requiredAttributes = [
+            'name',
+            'type',
+            'zone',
+            'ttl',
+            'index'
+        ]
+        # Add the necessary fields for this Record Type to Required Fields
+        requiredAttributes.extend(RECORD_MAPPINGS[recordValues['type']]['fields'])
+
+        for a in requiredAttributes:
+            if a not in recordValues:
+                exception = exc_dns.DNSRecordDataMissing
+                data = {
+                    "code": exception.default_code,
+                    "attribute": a,
+                }
+                exception.setDetail(exception, data)
+                raise exception
+
+        recordName = recordValues.pop('name')
+        recordType = recordValues.pop('type')
+        recordZone = recordValues.pop('zone')
 
         ######################## Get Latest Settings ###########################
         ldap_settings_list = SettingsList(**{"search":{
@@ -183,16 +214,13 @@ class RecordViewSet(BaseViewSet):
             print(e)
             raise exc_ldap.CouldNotOpenConnection
 
-        responseData = {}
-
-        responseData['headers'] = [
-            'displayName', # Custom Header, attr not in LDAP
-            'value',
-            'ttl',
-            'typeName',
-            'serial',
-            'ts',
-        ]
+        dnsRecord = LDAPRecord(
+            connection=ldapConnection,
+            rName=recordName,
+            rZone=recordZone,
+            rType=recordType
+        )
+        result = dnsRecord.delete(recordIndex=recordValues['index'], values=recordValues)
 
         ldapConnection.unbind()
 
@@ -200,6 +228,6 @@ class RecordViewSet(BaseViewSet):
              data={
                 'code': code,
                 'code_msg': 'ok',
-                'data' : responseData
+                'data' : result
              }
         )

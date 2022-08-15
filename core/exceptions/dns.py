@@ -41,3 +41,8 @@ class DNSRecordTypeMissing(BaseException):
     status_code = 400
     default_detail = 'Record Type is not in Request'
     default_code = 'dns_record_type_missing'
+
+class DNSRecordDoesNotMatch(BaseException):
+    status_code = 409
+    default_detail = 'Record Data does not match server-side entry'
+    default_code = 'dns_record_data_does_not_match'

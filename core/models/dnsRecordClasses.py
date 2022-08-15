@@ -61,6 +61,7 @@ RECORD_MAPPINGS = {
     DNS_RECORD_TYPE_SOA: {
         'name':'SOA',
         'class':'DNS_RPC_RECORD_SOA',
+        'mainField': 'namePrimaryServer',
         'fields': [
                     'dwSerialNo',
                     'dwRefresh',
@@ -100,6 +101,7 @@ RECORD_MAPPINGS = {
     DNS_RECORD_TYPE_MX: {
         'name':'MX',
         'class':'DNS_RPC_RECORD_NAME_PREFERENCE',
+        'mainField': 'nameExchange',
         'fields': [
                     'wPreference',
                     'nameExchange'
@@ -123,6 +125,7 @@ RECORD_MAPPINGS = {
     DNS_RECORD_TYPE_SRV: {
         'name':'SRV',
         'class':'DNS_RPC_RECORD_SRV',
+        'mainField': 'nameTarget',
         'fields': [
                     'wPriority', 
                     'wWeight', 
