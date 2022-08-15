@@ -87,7 +87,7 @@ class RecordViewSet(BaseViewSet):
         ldap_settings_list = SettingsList(**{"search":{
             'LDAP_DOMAIN',
             'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_LOG_READ'
+            'LDAP_LOG_CREATE'
         }})
 
         # Open LDAP Connection
@@ -106,13 +106,25 @@ class RecordViewSet(BaseViewSet):
         )
         dnsRecord.create(values=recordValues)
 
+        result = dnsRecord.structure.getData()
+        dr = dnstool.DNS_RECORD(result)
+
         ldapConnection.unbind()
+
+        if ldap_settings_list.LDAP_LOG_CREATE == True:
+            # Log this action to DB
+            logToDB(
+                user_id=request.user.id,
+                actionType="CREATE",
+                objectClass="DNSR",
+                affectedObject=recordName + "." + recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"
+            )
 
         return Response(
              data={
                 'code': code,
                 'code_msg': 'ok',
-                'data' : dnsRecord.structure.getData()
+                'data' : record_to_dict(dr, ts=False)
              }
         )
 
@@ -203,7 +215,7 @@ class RecordViewSet(BaseViewSet):
         ldap_settings_list = SettingsList(**{"search":{
             'LDAP_DOMAIN',
             'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_LOG_READ'
+            'LDAP_LOG_DELETE'
         }})
 
         # Open LDAP Connection
@@ -223,6 +235,15 @@ class RecordViewSet(BaseViewSet):
         result = dnsRecord.delete(recordIndex=recordValues['index'], values=recordValues)
 
         ldapConnection.unbind()
+
+        if ldap_settings_list.LDAP_LOG_DELETE == True:
+            # Log this action to DB
+            logToDB(
+                user_id=request.user.id,
+                actionType="DELETE",
+                objectClass="DNSR",
+                affectedObject=recordName + "." + recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"
+            )
 
         return Response(
              data={

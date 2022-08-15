@@ -257,14 +257,18 @@ class LDAPRecord(LDAPDNS):
         # LDAP Entry does not exist
         if self.rawEntry is None:
             logger.info("Create Entry for %s" % (self.name))
-            logger.info(record_to_dict(dr, ts=False))
+            logger.debug(record_to_dict(dr, ts=False))
             node_data = {
                 'objectCategory': 'CN=Dns-Node,%s' % self.schemaNamingContext,
-                'dNSTombstoned': False,
+                'dNSTombstoned': 'FALSE',
                 'name': self.name,
                 'dnsRecord': [ self.structure.getData() ]
             }
-            self.connection.add(self.distinguishedName, ['top', 'dnsNode'], node_data)
+            try:
+                self.connection.add(self.distinguishedName, ['top', 'dnsNode'], node_data)
+            except Exception as e:
+                print(e)
+                print(record_to_dict(dr, ts=False))
         # LDAP entry exists
         else:
             if 'mainField' in RECORD_MAPPINGS[self.type]:
