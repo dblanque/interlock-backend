@@ -51,7 +51,13 @@ class DNSRecordDoesNotMatch(BaseException):
     status_code = 409
     default_detail = 'Record Data does not match server-side entry'
     default_code = 'dns_record_data_does_not_match'
+
 class DNSRecordEntryDoesNotExist(BaseException):
     status_code = 400
     default_detail = 'Record LDAP Entry does not exist'
     default_code = 'dns_record_entry_does_not_exist'
+
+class SOARecordRootOnly(BaseException):
+    status_code = 400
+    default_detail = 'A Start Of Authority Record can only be set for the root of your zone'
+    default_code = 'dns_soa_record_root_only'

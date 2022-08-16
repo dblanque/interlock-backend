@@ -43,7 +43,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class RecordViewSet(BaseViewSet):
+class RecordViewSet(BaseViewSet, DomainViewMixin):
 
     @action(detail=False,methods=['post'])
     def insert(self, request):
@@ -98,6 +98,9 @@ class RecordViewSet(BaseViewSet):
             print(e)
             raise exc_ldap.CouldNotOpenConnection
 
+        if recordType == DNS_RECORD_TYPE_SOA and recordName != "@":
+            raise exc_dns.SOARecordRootOnly
+
         dnsRecord = LDAPRecord(
             connection=ldapConnection,
             rName=recordName,
@@ -105,6 +108,10 @@ class RecordViewSet(BaseViewSet):
             rType=recordType
         )
         dnsRecord.create(values=recordValues)
+
+        # Update Start of Authority Record Serial
+        if recordType != DNS_RECORD_TYPE_SOA:
+            self.updateSOASerial(ldapConnection=ldapConnection, recordZone=recordZone)
 
         result = dnsRecord.structure.getData()
         dr = dnstool.DNS_RECORD(result)
@@ -188,7 +195,11 @@ class RecordViewSet(BaseViewSet):
             rZone=recordZone,
             rType=recordType
         )
-        result = dnsRecord.update(recordIndex=recordValues['index'], values=recordValues, oldValues=oldRecordValues)
+        result = dnsRecord.update(values=recordValues, oldValues=oldRecordValues)
+
+        # Update Start of Authority Record Serial
+        if recordType != DNS_RECORD_TYPE_SOA:
+            self.updateSOASerial(ldapConnection=ldapConnection, recordZone=recordZone)
 
         result = dnsRecord.structure.getData()
         dr = dnstool.DNS_RECORD(result)
@@ -263,7 +274,7 @@ class RecordViewSet(BaseViewSet):
             rZone=recordZone,
             rType=recordType
         )
-        result = dnsRecord.delete(recordIndex=recordValues['index'], values=recordValues)
+        result = dnsRecord.delete(values=recordValues)
 
         ldapConnection.unbind()
 
