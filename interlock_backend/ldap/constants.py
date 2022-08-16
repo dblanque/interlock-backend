@@ -16,6 +16,9 @@ LDAP_AUTH_TLS_VERSION = ssl.PROTOCOL_TLSv1_2
 # The LDAP search base for looking up users.
 LDAP_AUTH_SEARCH_BASE = "dc=brconsulting"
 
+# The Schema Naming Context, you shouldn't need to change this
+LDAP_SCHEMA_NAMING_CONTEXT = "CN=Schema,CN=Configuration"
+
 # The LDAP class that represents a user.
 LDAP_AUTH_OBJECT_CLASS = "person"
 
