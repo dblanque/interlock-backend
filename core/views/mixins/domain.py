@@ -21,8 +21,8 @@ class DomainViewMixin(viewsets.ViewSetMixin):
             rZone=recordZone,
             rType=DNS_RECORD_TYPE_SOA
         )
+        nextSoa = None
         for record in soaRecord.data:
-            nextSoa = None
             # If there's a SOA Record
             if record['type'] == DNS_RECORD_TYPE_SOA:
                 prevSoa = soaRecord.makeRecord(record, record['serial'], record['ttl']).getData()
@@ -30,9 +30,10 @@ class DomainViewMixin(viewsets.ViewSetMixin):
                 nextSoa['dwSerialNo'] += 1
                 nextSoa['serial'] = nextSoa['dwSerialNo']
 
-            # If zone has no SOA Record
-            if nextSoa is None:
-                return
+        # If zone has no SOA Record
+        if nextSoa is None:
+            print("No SOA Record")
+            return
         try:
             soaRecord.update(values=nextSoa, oldRecordBytes=prevSoa)
             return soaRecord.connection.result
