@@ -68,7 +68,7 @@ class LDAPRecord(LDAPDNS):
     ):
         super().__init__(connection=connection, legacy=legacy)
 
-        self.schemaNamingContext = self.ldap_settings_list.LDAP_SCHEMA_NAMING_CONTEXT + "," + self.ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+        self.schemaNamingContext = "%s,%s" % (self.ldap_settings_list.LDAP_SCHEMA_NAMING_CONTEXT, self.ldap_settings_list.LDAP_AUTH_SEARCH_BASE)
 
         if rName is None:
             raise ValueError("Name cannot be none (LDAPRecord Object Class)")
@@ -177,13 +177,13 @@ class LDAPRecord(LDAPDNS):
             # Dynamically fetch the class based on the mapping
             if RECORD_MAPPINGS[self.type]['class'] != None:
                 if RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_NODE_NAME":
-                    # If it's NODE_NAME then re-create the record Data with a sub-class DNS_COUNT_NAME
+                    # If it's NODE_NAME create the record Data as DNS_COUNT_NAME
                     record['Data'] = DNS_COUNT_NAME()
                 elif RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_NAME_PREFERENCE":
-                    # If it's NODE_NAME then re-create the record Data with a sub-class DNS_COUNT_NAME
+                    # If it's NODE_NAME create the record Data as DNS_COUNT_NAME
                     record['Data'] = DNS_COUNT_NAME()
                 elif RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_STRING":
-                    # If it's RECORD_STRING then re-create the record Data with a sub-class DNS_RPC_NAME
+                    # If it's RECORD_STRING create the record Data as DNS_RPC_NAME
                     record['Data'] = DNS_RPC_NAME()
                 else:
                     # Standard Class Creation
@@ -244,6 +244,14 @@ class LDAPRecord(LDAPDNS):
             raise exc_dns.DNSRecordTypeUnsupported(data=data)
    
     def create(self, values):
+        """
+        Create a Record in the LDAP Entry identified by it's Bytes
+
+        Arguments
+        - values (dict) | Contains the values for the Record to create
+
+        Returns the connection result
+        """
         if 'ttl' not in values:
             values['ttl'] = 900
         self.structure = self.makeRecord(values, ttl=values['ttl'])
@@ -330,6 +338,15 @@ class LDAPRecord(LDAPDNS):
         return self.connection.result
 
     def update(self, values, oldRecordBytes):
+        """
+        Update a Record in the LDAP Entry identified by it's Bytes
+
+        Arguments
+        - values (dict) | Contains the values for the Record to update
+        - oldRecordBytes (bytes) | Contains the bytes to identify the Record
+
+        Returns the connection result
+        """
         if self.rawEntry is None or oldRecordBytes not in self.rawEntry['raw_attributes']['dnsRecord']:
             self.connection.unbind()
             raise exc_dns.DNSRecordEntryDoesNotExist
@@ -371,12 +388,21 @@ class LDAPRecord(LDAPDNS):
         return self.connection.result
 
     def delete(self, recordBytes):
+        """
+        Delete a Record in the LDAP Entry identified by it's Bytes
+
+        Arguments
+        - recordBytes (bytes)
+
+        Returns the connection result
+        """
+        # Check if Record exists in Entry
         if self.rawEntry is None or recordBytes not in self.rawEntry['raw_attributes']['dnsRecord']:
             self.connection.unbind()
             raise exc_dns.DNSRecordEntryDoesNotExist
 
-        # Check if entry has more than one record
-        # More than one record -> delete by record index
+        # Check if Entry has more than one Record
+        # More than one record -> Delete Record Byte Data
         if len(self.rawEntry['raw_attributes']['dnsRecord']) >= 2:
             try:
                 self.connection.modify(self.distinguishedName, {'dnsRecord': [( MODIFY_DELETE, recordBytes )]})
@@ -390,10 +416,19 @@ class LDAPRecord(LDAPDNS):
                 print(e)
                 print(record_to_dict(dnstool.DNS_RECORD(recordBytes)))
                 self.connection.unbind()
-        # Only record -> delete entire entry
+        # Only record in Entry -> Delete entire Entry
         return self.connection.result
 
     def checkRecordExistsInEntry(self, mainField, mainFieldValue):
+        """
+        Checks if the record exists in the current LDAP Entry
+
+        Arguments
+        - mainField (string) | The main value field for this record
+        - mainFieldValue | The main value for this record
+
+        Returns Boolean [ True | False ]
+        """
         if self.data is not None:
             if len(self.data) > 0:
                 for record in self.data:
@@ -405,6 +440,12 @@ class LDAPRecord(LDAPDNS):
         return False
 
     def recordExistsByType(self):
+        """
+        Checks if a record of this type exists in the LDAP Entry,
+        if multiRecord is not allowed for self.type
+
+        Returns Boolean [ True | False ]
+        """
         if 'multiRecord' in RECORD_MAPPINGS[self.type]:
             multiRecord = RECORD_MAPPINGS[self.type]['multiRecord']
         else:
@@ -427,6 +468,12 @@ class LDAPRecord(LDAPDNS):
         return False
 
     def checkRecordTypeCollision(self):
+        """
+        Checks if a record of this type conflicts with another record type
+        in this entry
+
+        Returns Boolean [ True | False ]
+        """
         if self.data is not None:
             if len(self.data) > 0:
                 exc = False
