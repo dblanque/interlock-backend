@@ -25,18 +25,23 @@ FIELD_VALIDATORS = {
 }
 
 def natural_validator(value):
-    if re.match(r'^[0-9]+$', value):
-        return True
+    try:
+        if re.match(r'^[0-9]+$', str(value)):
+            return True
+    except Exception as e:
+        print(value)
+        print(type(value))
+        raise e
     return False
 
 def ip_validator(value):
     try:
-        socket.inet_aton(value)
+        socket.inet_aton(str(value))
         return True
     except socket.error:
         return False
 
 def ascii_validator(value):
-    if isascii(value):
+    if isascii(str(value)):
         return True
     return False
