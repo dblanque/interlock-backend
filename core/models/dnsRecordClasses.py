@@ -26,37 +26,14 @@ RECORD_MAPPINGS = {
     DNS_RECORD_TYPE_CNAME: {
         'name':'CNAME',
         'class':'DNS_RPC_RECORD_NODE_NAME',
-        'fields': [ 'nameNode' ]
+        'fields': [ 'nameNode' ],
+        'multiRecord': False
     },
     DNS_RECORD_TYPE_DNAME: {
         'name':'DNAME',
         'class':'DNS_RPC_RECORD_NODE_NAME',
-        'fields': [ 'nameNode' ]
-    },
-    DNS_RECORD_TYPE_MB: {
-        'name':'MB',
-        'class':'DNS_RPC_RECORD_NODE_NAME',
-        'fields': [ 'nameNode' ]
-    },
-    DNS_RECORD_TYPE_MR: {
-        'name':'MR',
-        'class':'DNS_RPC_RECORD_NODE_NAME',
-        'fields': [ 'nameNode' ]
-    },
-    DNS_RECORD_TYPE_MG: {
-        'name':'MG',
-        'class':'DNS_RPC_RECORD_NODE_NAME',
-        'fields': [ 'nameNode' ]
-    },
-    DNS_RECORD_TYPE_MD: {
-        'name':'MD',
-        'class':'DNS_RPC_RECORD_NODE_NAME',
-        'fields': [ 'nameNode' ]
-    },
-    DNS_RECORD_TYPE_MF: {
-        'name':'MF',
-        'class':'DNS_RPC_RECORD_NODE_NAME',
-        'fields': [ 'nameNode' ]
+        'fields': [ 'nameNode' ],
+        'multiRecord': False
     },
     DNS_RECORD_TYPE_SOA: {
         'name':'SOA',
@@ -71,6 +48,7 @@ RECORD_MAPPINGS = {
                     'namePrimaryServer',
                     'zoneAdminEmail'
                 ],
+        'multiRecord': False
     },
     DNS_RECORD_TYPE_TXT: {
         'name':'TXT',
@@ -82,21 +60,25 @@ RECORD_MAPPINGS = {
         'name':'X25',
         'class':'DNS_RPC_RECORD_STRING',
         'fields': [ 'stringData' ],
+        'multiRecord': True
     },
     DNS_RECORD_TYPE_ISDN: {
         'name':'ISDN',
         'class':'DNS_RPC_RECORD_STRING',
         'fields': [ 'stringData' ],
+        'multiRecord': True
     },
     DNS_RECORD_TYPE_LOC: {
         'name':'LOC',
         'class':'DNS_RPC_RECORD_STRING',
         'fields': [ 'stringData' ],
+        'multiRecord': True
     },
     DNS_RECORD_TYPE_HINFO: {
         'name':'HINFO',
         'class':'DNS_RPC_RECORD_STRING',
         'fields': [ 'stringData' ],
+        'multiRecord': True
     },
     DNS_RECORD_TYPE_MX: {
         'name':'MX',
@@ -106,6 +88,7 @@ RECORD_MAPPINGS = {
                     'wPreference',
                     'nameExchange'
                 ],
+        'multiRecord': True
     },
     DNS_RECORD_TYPE_SIG: {
         'name':'SIG',
@@ -132,16 +115,45 @@ RECORD_MAPPINGS = {
                     'wPort',
                     'nameTarget'
                 ],
+        'multiRecord': True
     },
     DNS_RECORD_TYPE_PTR: {
         'name':'PTR',
         'class':'DNS_RPC_RECORD_NODE_NAME',
-        'fields': [ 'nameNode' ]
+        'fields': [ 'nameNode' ],
+        'multiRecord': False
     },
     DNS_RECORD_TYPE_WINS: {
         'name':'WINS',
         'class': None,
         'fields': []
+    },
+
+    # DEPRECATED BY RFCs
+    DNS_RECORD_TYPE_MB: {
+        'name':'MB',
+        'class':'DNS_RPC_RECORD_NODE_NAME',
+        'fields': [ 'nameNode' ]
+    },
+    DNS_RECORD_TYPE_MR: {
+        'name':'MR',
+        'class':'DNS_RPC_RECORD_NODE_NAME',
+        'fields': [ 'nameNode' ]
+    },
+    DNS_RECORD_TYPE_MG: {
+        'name':'MG',
+        'class':'DNS_RPC_RECORD_NODE_NAME',
+        'fields': [ 'nameNode' ]
+    },
+    DNS_RECORD_TYPE_MD: {
+        'name':'MD',
+        'class':'DNS_RPC_RECORD_NODE_NAME',
+        'fields': [ 'nameNode' ]
+    },
+    DNS_RECORD_TYPE_MF: {
+        'name':'MF',
+        'class':'DNS_RPC_RECORD_NODE_NAME',
+        'fields': [ 'nameNode' ]
     },
 }
 

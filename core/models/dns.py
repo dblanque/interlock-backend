@@ -1,4 +1,5 @@
 from importlib import import_module
+from re import I
 from core.utils.dns import *
 from core.utils import dnstool
 from interlock_backend.ldap.settings_func import SettingsList
@@ -172,6 +173,7 @@ class LDAPRecord(LDAPDNS):
         ## Check if class type is supported for creation ##
         if (self.type in RECORD_MAPPINGS):
             record = new_record(self.type, serial, ttl=ttl)
+
             # Dynamically fetch the class based on the mapping
             if RECORD_MAPPINGS[self.type]['class'] != None:
                 if RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_NODE_NAME":
@@ -275,9 +277,9 @@ class LDAPRecord(LDAPDNS):
             else:
                 mainField = RECORD_MAPPINGS[self.type]['fields'][0]
 
-            # Check if record exists in Entry
+            # ! Check if record exists in Entry
             exists = self.checkRecordExistsInEntry(mainField=mainField, mainFieldValue=values[mainField])
-            if isinstance(exists, int) and exists != False:
+            if exists != False:
                 print("%s Record already exists in an LDAP Entry (Conflicting value: %s)" % (RECORD_MAPPINGS[self.type]['name'], values[mainField]))
                 self.connection.unbind()
                 data = {
@@ -288,7 +290,11 @@ class LDAPRecord(LDAPDNS):
                     "conflictField": mainField
                 }
                 raise exc_dns.DNSRecordTypeConflict(data=data)
-            
+
+            # Check Multi-Record eligibility
+            if self.recordExistsByType() != False:
+                raise exc_dns.DNSRecordExistsConflict
+
             # Check if a SOA Record already Exists
             if self.type == DNS_RECORD_TYPE_SOA:
                 if self.checkSOAExists() == True:
@@ -335,13 +341,16 @@ class LDAPRecord(LDAPDNS):
 
         self.structure = self.makeRecord(values, ttl=values['ttl'], serial=values['serial'])
 
-        # Check if the record with the new values exists, if true raise exception
+        # ! Check if the record with the new values exists, if true raise exception
         # Exclude SOA from condition as that record is unique in Zone.
         if self.type != DNS_RECORD_TYPE_SOA:
             exists = self.checkRecordExistsInEntry(mainField=mainField, mainFieldValue=values[mainField])
-            if isinstance(exists, int) and exists != False:
-                print(record_to_dict(dnstool.DNS_RECORD(self.rawEntry['raw_attributes']['dnsRecord'][exists])))
+            if exists != False:
+                print(record_to_dict(dnstool.DNS_RECORD(self.rawEntry['raw_attributes']['dnsRecord'])))
                 print(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
+                raise exc_dns.DNSRecordEntryDoesNotExist
+            # Check Multi-Record eligibility
+            if self.recordExistsByType() != False:
                 raise exc_dns.DNSRecordExistsConflict
 
         newRecord = self.structure.getData()
@@ -387,12 +396,26 @@ class LDAPRecord(LDAPDNS):
     def checkRecordExistsInEntry(self, mainField, mainFieldValue):
         if self.data is not None:
             if len(self.data) > 0:
-                for index, record in enumerate(self.data):
+                for record in self.data:
                     if mainField in record:
                         if (record['name'] == self.name
                         and record['type'] == self.type
                         and record[mainField] == mainFieldValue):
-                            return index
+                            return True
+        return False
+
+    def recordExistsByType(self):
+        if 'multiRecord' in RECORD_MAPPINGS[self.type]:
+            multiRecord = RECORD_MAPPINGS[self.type]['multiRecord']
+        else:
+            multiRecord = False
+
+        if multiRecord != True:
+            if self.data is not None:
+                if len(self.data) > 0:
+                    for record in self.data:
+                        if record['type'] == self.type:
+                            return True
         return False
 
     def checkSOAExists(self):
