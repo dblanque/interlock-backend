@@ -256,6 +256,7 @@ class LDAPRecord(LDAPDNS):
         ## Check if LDAP Entry Exists ##
         # LDAP Entry does not exist
         if self.rawEntry is None:
+            # If Entry does not exist create it with the record in it
             logger.info("Create Entry for %s" % (self.name))
             logger.debug(record_to_dict(dr, ts=False))
             node_data = {
@@ -269,8 +270,10 @@ class LDAPRecord(LDAPDNS):
             except Exception as e:
                 print(e)
                 print(record_to_dict(dr, ts=False))
+                self.connection.unbind()
         # LDAP entry exists
         else:
+            # If it exists add the record to the entry after all the required checks
             if 'mainField' in RECORD_MAPPINGS[self.type]:
                 mainField = RECORD_MAPPINGS[self.type]['mainField']
             else:
@@ -298,9 +301,52 @@ class LDAPRecord(LDAPDNS):
         return self.connection.result
 
     def update(self, recordIndex, values, oldValues):
+        oldStructure = self.makeRecord(oldValues, ttl=oldValues['ttl'], serial=oldValues['serial'])
         self.structure = self.makeRecord(values, ttl=values['ttl'], serial=values['serial'])
-        structureAsData = self.structure.getData()
-        return None
+        
+        if self.rawEntry is None:
+            self.connection.unbind()
+            raise exc_dns.DNSRecordEntryDoesNotExist
+
+        if 'mainField' in RECORD_MAPPINGS[self.type]:
+            mainField = RECORD_MAPPINGS[self.type]['mainField']
+        else:
+            mainField = RECORD_MAPPINGS[self.type]['fields'][0]
+        oldRecordIndex = self.checkRecordExists(mainField=mainField, mainFieldValue=oldValues[mainField])
+
+        # Check if the record with the new values exists, if true raise exception
+        exists = self.checkRecordExists(mainField=mainField, mainFieldValue=values[mainField])
+        if isinstance(exists, int) and exists != recordIndex:
+            print(record_to_dict(self.structure.getData(), ts=False))
+            raise exc_dns.DNSRecordExistsConflict
+
+        # If new and old record indexes differ raise an exception
+        if recordIndex != oldRecordIndex:
+            self.connection.unbind()
+            raise exc_dns.DNSRecordDoesNotMatch
+        else:
+            newRecord = self.structure.getData()
+            oldRecord = oldStructure.getData()
+
+        # Check that old values from front-end client match the old LDAP Record
+        if oldStructure.getData() != self.rawEntry['raw_attributes']['dnsRecord'][oldRecordIndex]:
+            self.connection.unbind()
+            raise exc_dns.DNSRecordDoesNotMatch
+
+        # Check for record type conflicts in Entry
+        try:
+            self.checkRecordTypeCollision()
+        except Exception as e:
+            print(e)
+            self.connection.unbind()
+            raise exc_dns.DNSRecordTypeConflict
+
+        # All checks passed
+        ## Delete Old Record
+        self.connection.modify(self.distinguishedName, {'dnsRecord': [( MODIFY_DELETE, oldRecord )]})
+        ## Add new DNS Record
+        self.connection.modify(self.distinguishedName, {'dnsRecord': [( MODIFY_ADD, newRecord )]})
+        return self.connection.result
 
     def delete(self, recordIndex, values):
         self.structure = self.makeRecord(values, ttl=values['ttl'], serial=values['serial'])
@@ -312,6 +358,7 @@ class LDAPRecord(LDAPDNS):
             if self.rawEntry['raw_attributes']['dnsRecord'][recordIndex] == structureAsData:
                 self.connection.modify(self.distinguishedName, {'dnsRecord': [( MODIFY_DELETE, structureAsData )]})
             else:
+                self.connection.unbind()
                 raise exc_dns.DNSRecordTypeConflict
         else:
             self.connection.delete(self.distinguishedName)
@@ -322,10 +369,12 @@ class LDAPRecord(LDAPDNS):
         if self.data is not None:
             if len(self.data) > 0:
                 for index, record in enumerate(self.data):
-                    if (record['name'] == self.name
-                    and record['type'] == self.type
-                    and record[mainField] == mainFieldValue):
-                        return index
+                    if mainField in record:
+                        print(record[mainField] == mainFieldValue)
+                        if (record['name'] == self.name
+                        and record['type'] == self.type
+                        and record[mainField] == mainFieldValue):
+                            return index
         return False
 
     def checkRecordTypeCollision(self):

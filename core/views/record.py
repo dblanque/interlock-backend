@@ -128,20 +128,51 @@ class RecordViewSet(BaseViewSet):
              }
         )
 
-    def update(self, request):
+    def update(self, request, pk=None):
         user = request.user
         validateUser(request=request)
         data = {}
         code = 0
 
-        reqData = request.data
-
         ######################## Get Latest Settings ###########################
         ldap_settings_list = SettingsList(**{"search":{
             'LDAP_DOMAIN',
             'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_LOG_READ'
+            'LDAP_LOG_UPDATE'
         }})
+
+        if 'record' not in request.data or 'oldRecord' not in request.data:
+            raise exc_dns.DNSRecordNotInRequest
+
+        recordValues = request.data['record']
+        oldRecordValues = request.data['oldRecord']
+
+        if 'type' not in recordValues:
+            raise exc_dns.DNSRecordTypeMissing
+
+        requiredAttributes = [
+            'name',
+            'type',
+            'zone',
+            'ttl',
+            'index'
+        ]
+        # Add the necessary fields for this Record Type to Required Fields
+        requiredAttributes.extend(RECORD_MAPPINGS[recordValues['type']]['fields'])
+
+        for a in requiredAttributes:
+            if a not in recordValues:
+                exception = exc_dns.DNSRecordDataMissing
+                data = {
+                    "code": exception.default_code,
+                    "attribute": a,
+                }
+                exception.setDetail(exception, data)
+                raise exception
+
+        recordName = recordValues.pop('name')
+        recordType = recordValues.pop('type')
+        recordZone = recordValues.pop('zone')
 
         # Open LDAP Connection
         try:
@@ -151,16 +182,16 @@ class RecordViewSet(BaseViewSet):
             print(e)
             raise exc_ldap.CouldNotOpenConnection
 
-        responseData = {}
+        dnsRecord = LDAPRecord(
+            connection=ldapConnection,
+            rName=recordName,
+            rZone=recordZone,
+            rType=recordType
+        )
+        result = dnsRecord.update(recordIndex=recordValues['index'], values=recordValues, oldValues=oldRecordValues)
 
-        responseData['headers'] = [
-            'displayName', # Custom Header, attr not in LDAP
-            'value',
-            'ttl',
-            'typeName',
-            'serial',
-            'ts',
-        ]
+        result = dnsRecord.structure.getData()
+        dr = dnstool.DNS_RECORD(result)
 
         ldapConnection.unbind()
 
@@ -168,7 +199,7 @@ class RecordViewSet(BaseViewSet):
              data={
                 'code': code,
                 'code_msg': 'ok',
-                'data' : responseData
+                'data' : record_to_dict(dr, ts=False)
              }
         )
 

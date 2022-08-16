@@ -24,8 +24,13 @@ class DNSRecordDNMissing(BaseException):
 
 class DNSRecordTypeConflict(BaseException):
     status_code = 409
-    default_detail = 'The requested Record Type Insertion or Update has a conflict'
+    default_detail = 'Requested Record Type Insertion or Update has a conflict'
     default_code = 'dns_record_type_conflict'
+
+class DNSRecordExistsConflict(BaseException):
+    status_code = 409
+    default_detail = 'Requested Record Insertion or Update already exists'
+    default_code = 'dns_record_exists_conflict'
 
 class DNSRecordTypeUnsupported(BaseException):
     status_code = 400
@@ -46,3 +51,7 @@ class DNSRecordDoesNotMatch(BaseException):
     status_code = 409
     default_detail = 'Record Data does not match server-side entry'
     default_code = 'dns_record_data_does_not_match'
+class DNSRecordEntryDoesNotExist(BaseException):
+    status_code = 400
+    default_detail = 'Record LDAP Entry does not exist'
+    default_code = 'dns_record_entry_does_not_exist'
