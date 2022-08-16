@@ -61,3 +61,13 @@ class SOARecordRootOnly(BaseException):
     status_code = 400
     default_detail = 'A Start Of Authority Record can only be set for the root of your zone'
     default_code = 'dns_soa_record_root_only'
+
+class DNSRootServersOnlyCLI(BaseException):
+    status_code = 400
+    default_detail = 'Root DNS Servers may only be modified by command-line'
+    default_code = 'dns_root_servers_only_cli'
+
+class DNSFieldValidatorFailed(BaseException):
+    status_code = 400
+    default_detail = 'A Field in the DNS Record has failed validation'
+    default_code = 'dns_field_validator_failed'

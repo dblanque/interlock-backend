@@ -34,6 +34,9 @@ from rest_framework.decorators import action
 ### Others
 from core.utils import dnstool
 from core.utils.dnstool import record_to_dict
+from core.views.mixins.utils import convert_string_to_bytes
+from core.models.dnsRecordFieldValidators import FIELD_VALIDATORS as DNS_FIELD_VALIDATORS
+from core.models import dnsRecordFieldValidators as dnsValidators
 from interlock_backend.ldap.adsi import addSearchFilter
 from interlock_backend.ldap.encrypt import validateUser
 from interlock_backend.ldap.settings_func import SettingsList
@@ -83,6 +86,20 @@ class RecordViewSet(BaseViewSet, DomainViewMixin):
         recordType = recordValues.pop('type')
         recordZone = recordValues.pop('zone')
 
+        if recordZone == 'Root DNS Servers':
+            raise exc_dns.DNSRootServersOnlyCLI
+
+        for f in recordValues.keys():
+            if f in DNS_FIELD_VALIDATORS:
+                if DNS_FIELD_VALIDATORS[f] is not None:
+                    validator = DNS_FIELD_VALIDATORS[f] + "_validator"
+                    if getattr(dnsValidators, validator)(recordValues[f]) == False:
+                        data = {
+                            'field': f,
+                            'value': recordValues[f]
+                        }
+                        raise exc_dns.DNSFieldValidatorFailed()
+
         ######################## Get Latest Settings ###########################
         ldap_settings_list = SettingsList(**{"search":{
             'LDAP_DOMAIN',
@@ -111,10 +128,10 @@ class RecordViewSet(BaseViewSet, DomainViewMixin):
 
         # Update Start of Authority Record Serial
         if recordType != DNS_RECORD_TYPE_SOA:
-            self.updateSOASerial(ldapConnection=ldapConnection, recordZone=recordZone)
+            self.incrementSOASerial(ldapConnection=ldapConnection, recordZone=recordZone)
 
-        result = dnsRecord.structure.getData()
-        dr = dnstool.DNS_RECORD(result)
+        # result = dnsRecord.structure.getData()
+        # dr = dnstool.DNS_RECORD(result)
 
         ldapConnection.unbind()
 
@@ -131,7 +148,7 @@ class RecordViewSet(BaseViewSet, DomainViewMixin):
              data={
                 'code': code,
                 'code_msg': 'ok',
-                'data' : record_to_dict(dr, ts=False)
+                # 'data' : record_to_dict(dr, ts=False)
              }
         )
 
@@ -152,7 +169,6 @@ class RecordViewSet(BaseViewSet, DomainViewMixin):
             raise exc_dns.DNSRecordNotInRequest
 
         recordValues = request.data['record']
-        oldRecordValues = request.data['oldRecord']
 
         if 'type' not in recordValues:
             raise exc_dns.DNSRecordTypeMissing
@@ -162,7 +178,8 @@ class RecordViewSet(BaseViewSet, DomainViewMixin):
             'type',
             'zone',
             'ttl',
-            'index'
+            'index',
+            'record_bytes'
         ]
         # Add the necessary fields for this Record Type to Required Fields
         requiredAttributes.extend(RECORD_MAPPINGS[recordValues['type']]['fields'])
@@ -180,6 +197,23 @@ class RecordViewSet(BaseViewSet, DomainViewMixin):
         recordName = recordValues.pop('name')
         recordType = recordValues.pop('type')
         recordZone = recordValues.pop('zone')
+        recordIndex = recordValues.pop('index')
+        recordBytes = recordValues.pop('record_bytes')
+        recordBytes = convert_string_to_bytes(recordBytes)
+
+        if recordZone == 'Root DNS Servers':
+            raise exc_dns.DNSRootServersOnlyCLI
+
+        for f in recordValues.keys():
+            if f in DNS_FIELD_VALIDATORS:
+                if DNS_FIELD_VALIDATORS[f] is not None:
+                    validator = DNS_FIELD_VALIDATORS[f] + "_validator"
+                    if getattr(dnsValidators, validator)(recordValues[f]) == False:
+                        data = {
+                            'field': f,
+                            'value': recordValues[f]
+                        }
+                        raise exc_dns.DNSFieldValidatorFailed()
 
         # Open LDAP Connection
         try:
@@ -195,11 +229,11 @@ class RecordViewSet(BaseViewSet, DomainViewMixin):
             rZone=recordZone,
             rType=recordType
         )
-        result = dnsRecord.update(values=recordValues, oldValues=oldRecordValues)
+        result = dnsRecord.update(values=recordValues, oldRecordBytes=recordBytes)
 
         # Update Start of Authority Record Serial
         if recordType != DNS_RECORD_TYPE_SOA:
-            self.updateSOASerial(ldapConnection=ldapConnection, recordZone=recordZone)
+            self.incrementSOASerial(ldapConnection=ldapConnection, recordZone=recordZone)
 
         result = dnsRecord.structure.getData()
         dr = dnstool.DNS_RECORD(result)
@@ -234,7 +268,8 @@ class RecordViewSet(BaseViewSet, DomainViewMixin):
             'type',
             'zone',
             'ttl',
-            'index'
+            'index',
+            'record_bytes'
         ]
         # Add the necessary fields for this Record Type to Required Fields
         requiredAttributes.extend(RECORD_MAPPINGS[recordValues['type']]['fields'])
@@ -252,6 +287,23 @@ class RecordViewSet(BaseViewSet, DomainViewMixin):
         recordName = recordValues.pop('name')
         recordType = recordValues.pop('type')
         recordZone = recordValues.pop('zone')
+        recordIndex = recordValues.pop('index')
+        recordBytes = recordValues.pop('record_bytes')
+        recordBytes = convert_string_to_bytes(recordBytes)
+
+        if recordZone == 'Root DNS Servers':
+            raise exc_dns.DNSRootServersOnlyCLI
+
+        for f in recordValues.keys():
+            if f in DNS_FIELD_VALIDATORS:
+                if DNS_FIELD_VALIDATORS[f] is not None:
+                    validator = DNS_FIELD_VALIDATORS[f] + "_validator"
+                    if getattr(dnsValidators, validator)(recordValues[f]) == False:
+                        data = {
+                            'field': f,
+                            'value': recordValues[f]
+                        }
+                        raise exc_dns.DNSFieldValidatorFailed()
 
         ######################## Get Latest Settings ###########################
         ldap_settings_list = SettingsList(**{"search":{
@@ -274,7 +326,7 @@ class RecordViewSet(BaseViewSet, DomainViewMixin):
             rZone=recordZone,
             rType=recordType
         )
-        result = dnsRecord.delete(values=recordValues)
+        result = dnsRecord.delete(recordBytes=recordBytes)
 
         ldapConnection.unbind()
 

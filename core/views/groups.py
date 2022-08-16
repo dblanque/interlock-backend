@@ -339,25 +339,19 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
         # If group exists, return error
         if groupExists == True:
-            exception = exc_ldap.LDAPObjectExists
+            c.unbind()
             data = {
-                "code": exception.default_code,
                 "group": groupToCreate['cn']
             }
-            exception.setDetail(exception, data)
-            c.unbind()
-            raise exception
+            raise exc_ldap.LDAPObjectExists(data=data)
 
         # Set group Type
         if 'groupType' not in groupToCreate or 'groupScope' not in groupToCreate:
-            exception = exc_groups.GroupScopeOrTypeMissing
+            c.unbind()
             data = {
-                "code": exception.default_code,
                 "group": groupToCreate['cn']
             }
-            exception.setDetail(exception, data)
-            c.unbind()
-            raise exception
+            raise exc_groups.GroupScopeOrTypeMissing(data=data)
 
         sum = LDAP_GROUP_TYPES[int(groupToCreate['groupType'])]
         sum += LDAP_GROUP_SCOPES[int(groupToCreate['groupScope'])]
@@ -468,25 +462,19 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
         # If group exists, return error
         if groupEntryInServer_cond == False:
-            exception = exc_groups.GroupDoesNotExist
+            c.unbind()
             data = {
-                "code": exception.default_code,
                 "group": groupToUpdate['cn']
             }
-            exception.setDetail(exception, data)
-            c.unbind()
-            raise exception
+            raise exc_groups.GroupDoesNotExist(data=data)
 
         # Set group Type
         if 'groupType' not in groupToUpdate or 'groupScope' not in groupToUpdate:
-            exception = exc_groups.GroupScopeOrTypeMissing
+            c.unbind()
             data = {
-                "code": exception.default_code,
                 "group": groupToUpdate['cn']
             }
-            exception.setDetail(exception, data)
-            c.unbind()
-            raise exception
+            raise exc_groups.GroupScopeOrTypeMissing(data=data)
 
         castGroupType = int(groupToUpdate['groupType'])
         castGroupScope = int(groupToUpdate['groupScope'])

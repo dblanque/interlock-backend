@@ -8,6 +8,23 @@
 
 #---------------------------------- IMPORTS -----------------------------------#
 import socket
+import struct
+
+def convert_string_to_bytes(string):
+    if not isinstance(string, str):
+      raise ValueError("Value must be a string")
+    string = string.replace("\\\\", "\\")
+    string = string.lstrip("b'").rstrip("'")
+    bytes = b''
+    for k, i in enumerate(string):
+        if i != "\\" and k > 0:
+          bytes += struct.pack("B", ord(i))
+        elif k - 1 > 0:
+          if i == "\\" and string[k - 1] != "\\":
+            bytes += struct.pack("B", ord(i))
+        else:
+            bytes += struct.pack("B", ord(i))
+    return bytes.decode('unicode_escape').encode('raw_unicode_escape')
 
 def testPort(ip , port, timeout=5):
   s = socket.socket(socket.AF_INET , socket.SOCK_STREAM)

@@ -101,7 +101,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
             'ttl',
             'typeName',
             'serial',
-            'ts',
+            # 'ts',
         ]
 
         searchFilter = addSearchFilter("", "objectClass=dnsNode")
@@ -148,6 +148,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
                 logger.info(dr)
                 record_dict = record_to_dict(dr, entry['attributes']['dNSTombstoned'])
                 record_dict['id'] = record_id
+                record_dict['record_bytes'] = str(record)
                 record_dict['index'] = record_index
                 record_dict['displayName'] = record_name
                 record_dict['name'] = orig_name
