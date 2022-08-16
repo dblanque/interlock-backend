@@ -152,6 +152,7 @@ class SettingsList(object):
     LDAP_AUTH_USE_TLS = Literal
     LDAP_AUTH_TLS_VERSION = Literal
     LDAP_AUTH_SEARCH_BASE = Literal
+    LDAP_SCHEMA_NAMING_CONTEXT = Literal
     LDAP_AUTH_OBJECT_CLASS = Literal
     LDAP_GROUP_TYPES = Literal
     LDAP_GROUP_SCOPES = Literal
