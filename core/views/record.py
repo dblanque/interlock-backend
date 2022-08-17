@@ -82,9 +82,9 @@ class RecordViewSet(BaseViewSet, DomainViewMixin):
                 exception.setDetail(exception, data)
                 raise exception
 
-        recordName = recordValues.pop('name')
+        recordName = recordValues.pop('name').lower()
         recordType = recordValues.pop('type')
-        recordZone = recordValues.pop('zone')
+        recordZone = recordValues.pop('zone').lower()
 
         if recordZone == 'Root DNS Servers':
             raise exc_dns.DNSRootServersOnlyCLI
@@ -194,9 +194,9 @@ class RecordViewSet(BaseViewSet, DomainViewMixin):
                 exception.setDetail(exception, data)
                 raise exception
 
-        recordName = recordValues.pop('name')
+        recordName = recordValues.pop('name').lower()
         recordType = recordValues.pop('type')
-        recordZone = recordValues.pop('zone')
+        recordZone = recordValues.pop('zone').lower()
         recordIndex = recordValues.pop('index')
         recordBytes = recordValues.pop('record_bytes')
         recordBytes = convert_string_to_bytes(recordBytes)
