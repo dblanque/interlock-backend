@@ -200,7 +200,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         if 'dnsZone' not in reqData:
             raise exc_dns.DNSZoneNotInRequest
         else:
-            target_zone = reqData['dnsZone']
+            target_zone = reqData['dnsZone'].lower()
 
         ######################## Get Latest Settings ###########################
         ldap_settings_list = SettingsList(**{"search":{
@@ -224,7 +224,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         dnsZones = dnsList.dnszones
         forestZones = dnsList.forestzones
 
-        if target_zone.lower() in dnsZones:
+        if target_zone in dnsZones:
             raise exc_dns.DNSZoneExists
 
         zoneToCreate_dns = 'DC=%s,%s' % (target_zone, dnsList.dnsroot)
@@ -277,7 +277,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         if 'dnsZone' not in reqData:
             raise exc_dns.DNSZoneNotInRequest
         else:
-            target_zone = reqData['dnsZone']
+            target_zone = reqData['dnsZone'].lower()
 
         ######################## Get Latest Settings ###########################
         ldap_settings_list = SettingsList(**{"search":{
@@ -301,7 +301,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         dnsZones = dnsList.dnszones
         forestZones = dnsList.forestzones
 
-        if target_zone.lower() not in dnsZones:
+        if target_zone not in dnsZones:
             raise exc_dns.DNSZoneDoesNotExist
 
         zoneToCreate_dns = 'DC=%s,%s' % (target_zone, dnsList.dnsroot)
