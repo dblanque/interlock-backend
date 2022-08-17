@@ -30,6 +30,7 @@ from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
 
 ### Others
+from core.models.dnsRecordFieldValidators import domain_validator
 from core.utils import dnstool
 from core.utils.dnstool import record_to_dict
 from interlock_backend.ldap.adsi import addSearchFilter
@@ -202,6 +203,12 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         else:
             target_zone = reqData['dnsZone'].lower()
 
+        if domain_validator(target_zone) != True:
+            data = {
+                'dnsZone': target_zone
+            }
+            raise exc_dns.DNSFieldValidatorFailed(data=data)
+
         ######################## Get Latest Settings ###########################
         ldap_settings_list = SettingsList(**{"search":{
             'LDAP_DOMAIN',
@@ -278,6 +285,12 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
             raise exc_dns.DNSZoneNotInRequest
         else:
             target_zone = reqData['dnsZone'].lower()
+
+        if domain_validator(target_zone) != True:
+            data = {
+                'dnsZone': target_zone
+            }
+            raise exc_dns.DNSFieldValidatorFailed(data=data)
 
         ######################## Get Latest Settings ###########################
         ldap_settings_list = SettingsList(**{"search":{

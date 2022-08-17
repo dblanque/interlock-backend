@@ -98,7 +98,7 @@ class RecordViewSet(BaseViewSet, DomainViewMixin):
                             'field': f,
                             'value': recordValues[f]
                         }
-                        raise exc_dns.DNSFieldValidatorFailed()
+                        raise exc_dns.DNSFieldValidatorFailed(data=data)
 
         ######################## Get Latest Settings ###########################
         ldap_settings_list = SettingsList(**{"search":{
@@ -213,7 +213,7 @@ class RecordViewSet(BaseViewSet, DomainViewMixin):
                             'field': f,
                             'value': recordValues[f]
                         }
-                        raise exc_dns.DNSFieldValidatorFailed()
+                        raise exc_dns.DNSFieldValidatorFailed(data=data)
 
         # Open LDAP Connection
         try:
@@ -303,7 +303,7 @@ class RecordViewSet(BaseViewSet, DomainViewMixin):
                             'field': f,
                             'value': recordValues[f]
                         }
-                        raise exc_dns.DNSFieldValidatorFailed()
+                        raise exc_dns.DNSFieldValidatorFailed(data=data)
 
         ######################## Get Latest Settings ###########################
         ldap_settings_list = SettingsList(**{"search":{
