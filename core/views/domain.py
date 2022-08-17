@@ -206,7 +206,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         ldap_settings_list = SettingsList(**{"search":{
             'LDAP_DOMAIN',
             'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_LOG_READ'
+            'LDAP_LOG_CREATE'
         }})
 
         if target_zone == ldap_settings_list.LDAP_DOMAIN or target_zone == 'RootDNSServers':
@@ -245,7 +245,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 
         ldapConnection.unbind()
 
-        if ldap_settings_list.LDAP_LOG_READ == True:
+        if ldap_settings_list.LDAP_LOG_CREATE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -283,7 +283,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         ldap_settings_list = SettingsList(**{"search":{
             'LDAP_DOMAIN',
             'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_LOG_READ'
+            'LDAP_LOG_DELETE'
         }})
 
         if target_zone == ldap_settings_list.LDAP_DOMAIN or target_zone == 'RootDNSServers':
@@ -322,7 +322,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 
         ldapConnection.unbind()
 
-        if ldap_settings_list.LDAP_LOG_READ == True:
+        if ldap_settings_list.LDAP_LOG_DELETE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
