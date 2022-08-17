@@ -187,3 +187,157 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
                 'data' : responseData
              }
         )
+
+    @action(detail=False, methods=['post'])
+    def insert(self, request):
+        user = request.user
+        validateUser(request=request)
+        data = {}
+        code = 0
+
+        reqData = request.data
+
+        if 'dnsZone' not in reqData:
+            raise exc_dns.DNSZoneNotInRequest
+        else:
+            target_zone = reqData['dnsZone']
+
+        ######################## Get Latest Settings ###########################
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_DOMAIN',
+            'LDAP_AUTH_SEARCH_BASE',
+            'LDAP_LOG_READ'
+        }})
+
+        if target_zone == ldap_settings_list.LDAP_DOMAIN or target_zone == 'RootDNSServers':
+            raise exc_dns.DNSZoneNotDeletable
+
+        # Open LDAP Connection
+        try:
+            connector = LDAPConnector(user.dn, user.encryptedPassword, request.user)
+            ldapConnection = connector.connection
+        except Exception as e:
+            print(e)
+            raise exc_ldap.CouldNotOpenConnection
+
+        dnsList = LDAPDNS(ldapConnection)
+        dnsZones = dnsList.dnszones
+        forestZones = dnsList.forestzones
+
+        if target_zone in dnsZones:
+            raise exc_dns.DNSZoneExists
+
+        zoneToCreate_dns = 'DC=%s,%s' % (target_zone, dnsList.dnsroot)
+        zoneToCreate_forest = 'DC=_msdcs.%s,%s' % (target_zone, dnsList.forestroot)
+        forest_dc = "_msdcs.%s" % (target_zone)
+
+        attributes_dns = dict()
+        attributes_dns['dc'] = target_zone
+
+        attributes_forest = dict()
+        attributes_forest['dc'] = forest_dc
+
+        ldapConnection.add(dn=zoneToCreate_dns, object_class=[ 'dnsZone', 'top' ], attributes=attributes_dns)
+        dnsCreateResult = ldapConnection.result
+
+        ldapConnection.add(dn=zoneToCreate_forest, object_class=[ 'dnsZone', 'top' ], attributes=attributes_forest)
+        forestCreateResult = ldapConnection.result
+
+        ldapConnection.unbind()
+
+        if ldap_settings_list.LDAP_LOG_READ == True:
+            # Log this action to DB
+            logToDB(
+                user_id=request.user.id,
+                actionType="CREATE",
+                objectClass="DNSZ",
+                affectedObject=target_zone
+            )
+
+        return Response(
+             data={
+                'code': code,
+                'code_msg': 'ok',
+                'result' : {
+                    "dns": dnsCreateResult,
+                    "forest": forestCreateResult
+                }
+             }
+        )
+
+    @action(detail=False, methods=['post'])
+    def delete(self, request):
+        user = request.user
+        validateUser(request=request)
+        data = {}
+        code = 0
+
+        reqData = request.data
+
+        if 'dnsZone' not in reqData:
+            raise exc_dns.DNSZoneNotInRequest
+        else:
+            target_zone = reqData['dnsZone']
+
+        ######################## Get Latest Settings ###########################
+        ldap_settings_list = SettingsList(**{"search":{
+            'LDAP_DOMAIN',
+            'LDAP_AUTH_SEARCH_BASE',
+            'LDAP_LOG_READ'
+        }})
+
+        if target_zone == ldap_settings_list.LDAP_DOMAIN or target_zone == 'RootDNSServers':
+            raise exc_dns.DNSZoneNotDeletable
+
+        # Open LDAP Connection
+        try:
+            connector = LDAPConnector(user.dn, user.encryptedPassword, request.user)
+            ldapConnection = connector.connection
+        except Exception as e:
+            print(e)
+            raise exc_ldap.CouldNotOpenConnection
+
+        dnsList = LDAPDNS(ldapConnection)
+        dnsZones = dnsList.dnszones
+        forestZones = dnsList.forestzones
+
+        if target_zone not in dnsZones:
+            raise exc_dns.DNSZoneDoesNotExist
+
+        zoneToCreate_dns = 'DC=%s,%s' % (target_zone, dnsList.dnsroot)
+        zoneToCreate_forest = 'DC=_msdcs.%s,%s' % (target_zone, dnsList.forestroot)
+        forest_dc = "_msdcs.%s" % (target_zone)
+
+        attributes_dns = dict()
+        attributes_dns['dc'] = target_zone
+
+        attributes_forest = dict()
+        attributes_forest['dc'] = forest_dc
+
+        ldapConnection.delete(dn=zoneToCreate_dns)
+        dnsDeleteResult = ldapConnection.result
+
+        ldapConnection.delete(dn=zoneToCreate_forest)
+        forestDeleteResult = ldapConnection.result
+
+        ldapConnection.unbind()
+
+        if ldap_settings_list.LDAP_LOG_READ == True:
+            # Log this action to DB
+            logToDB(
+                user_id=request.user.id,
+                actionType="DELETE",
+                objectClass="DNSZ",
+                affectedObject=target_zone
+            )
+
+        return Response(
+             data={
+                'code': code,
+                'code_msg': 'ok',
+                'result' : {
+                    "dns": dnsDeleteResult,
+                    "forest": forestDeleteResult
+                }
+             }
+        )

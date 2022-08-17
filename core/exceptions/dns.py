@@ -12,6 +12,21 @@ class DNSZoneInRecord(BaseException):
     default_detail = 'Target Record should not include the zone'
     default_code = 'dns_zone_in_record'
 
+class DNSZoneNotDeletable(BaseException):
+    status_code = 400
+    default_detail = 'That Zone is critical to the system and cannot be deleted'
+    default_code = 'dns_zone_not_deletable'
+
+class DNSZoneExists(BaseException):
+    status_code = 409
+    default_detail = 'The Zone you wish to create already exists'
+    default_code = 'dns_zone_exists'
+
+class DNSZoneDoesNotExist(BaseException):
+    status_code = 400
+    default_detail = 'The Zone you wish to delete does not exist'
+    default_code = 'dns_zone_does_not_exist'
+
 class DNSRecordNotInRequest(BaseException):
     status_code = 400
     default_detail = 'DNS Record is not present in request'
