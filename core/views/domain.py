@@ -224,7 +224,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         dnsZones = dnsList.dnszones
         forestZones = dnsList.forestzones
 
-        if target_zone in dnsZones:
+        if target_zone.lower() in dnsZones:
             raise exc_dns.DNSZoneExists
 
         zoneToCreate_dns = 'DC=%s,%s' % (target_zone, dnsList.dnsroot)
@@ -301,7 +301,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         dnsZones = dnsList.dnszones
         forestZones = dnsList.forestzones
 
-        if target_zone not in dnsZones:
+        if target_zone.lower() not in dnsZones:
             raise exc_dns.DNSZoneDoesNotExist
 
         zoneToCreate_dns = 'DC=%s,%s' % (target_zone, dnsList.dnsroot)
