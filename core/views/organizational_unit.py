@@ -247,9 +247,10 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
-                actionType="MOVE",
+                actionType="UPDATE",
                 objectClass="LDAP",
-                affectedObject=objectName
+                affectedObject=objectName,
+                extraMessage="MOVE"
             )
 
         # Close / Unbind LDAP Connection
@@ -262,7 +263,6 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
                 }
         )
 
-    # TODO
     @action(detail=False,methods=['post'])
     def rename(self, request):
         user = request.user
@@ -318,12 +318,17 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
             raise exception
 
         if ldap_settings_list.LDAP_LOG_UPDATE == True:
+            if objectName != ldapObject['name']:
+                affectedObject = "%s -> %s" % (objectName, ldapObject['name'])
+            else:
+                affectedObject = objectName
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
-                actionType="MOVE",
+                actionType="UPDATE",
                 objectClass="LDAP",
-                affectedObject=objectName
+                affectedObject=affectedObject,
+                extraMessage="RENAME"
             )
 
         # Close / Unbind LDAP Connection
@@ -409,7 +414,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
             logToDB(
                 user_id=request.user.id,
                 actionType="CREATE",
-                objectClass="LDAP",
+                objectClass="OU",
                 affectedObject=objectName
             )
 
@@ -454,8 +459,8 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
             logToDB(
                 user_id=request.user.id,
                 actionType="DELETE",
-                objectClass="USER",
-                affectedObject=objectToDelete
+                objectClass="LDAP",
+                affectedObject=data['name']
             )
 
         # Unbind the connection
