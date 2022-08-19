@@ -1,4 +1,12 @@
-################################## IMPORTS #####################################
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.models.ldapObject
+# Contains the Models for generic LDAP Objects
+
+#---------------------------------- IMPORTS -----------------------------------#
 ### Django
 from django.utils.translation import gettext_lazy as _
 

@@ -1,3 +1,12 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.models.user
+# Contains the Model for Interlock's LDAP Synced and Local Users
+
+# --------------------------------- IMPORTS ---------------------------------- #
 from django.contrib.auth.base_user import (
     BaseUserManager as DjangoBaseUserManager,
 )
@@ -11,8 +20,11 @@ from django.db import models
 from django.utils.crypto import salted_hmac
 from django.utils.translation import gettext_lazy as _
 from .base import BaseModel
-from interlock_backend.settings import DJANGO_SUPERUSER_USERNAME, DJANGO_SUPERUSER_PASSWORD
-
+from interlock_backend.settings import (
+    DJANGO_SUPERUSER_USERNAME,
+    DJANGO_SUPERUSER_PASSWORD
+)
+# ---------------------------------------------------------------------------- #
 class BaseUserManager(DjangoBaseUserManager):
     use_in_migrations = True
 

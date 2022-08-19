@@ -1,10 +1,26 @@
-from importlib import import_module
-from re import I
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.models.dns
+# Contains the Models for DNS Zones and Records
+
+#---------------------------------- IMPORTS -----------------------------------#
+
+### Exceptions
+from core.exceptions import dns as exc_dns
+
+### Models
+from core.models.dnsRecordClasses import *
+
+### Interlock
+from interlock_backend.ldap.settings_func import SettingsList
+from interlock_backend.ldap.adsi import addSearchFilter
+
+### Utils
 from core.utils.dns import *
 from core.utils import dnstool
-from interlock_backend.ldap.settings_func import SettingsList
-from core.exceptions import dns as exc_dns
-from interlock_backend.ldap.adsi import addSearchFilter
 from core.utils.dnstool import (
     new_record,
     record_to_dict,
@@ -16,8 +32,8 @@ from ldap3 import (
     MODIFY_INCREMENT,
     MODIFY_REPLACE
 )
-from core.models.dnsRecordClasses import *
 import logging
+################################################################################
 
 logger = logging.getLogger(__name__)
 class LDAPDNS():

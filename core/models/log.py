@@ -1,4 +1,12 @@
-################################## IMPORTS #####################################
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.models.log
+# Contains the Model for Log Entries
+
+#---------------------------------- IMPORTS -----------------------------------#
 ### Django
 from django.utils.translation import gettext_lazy as _
 from django.db.models.manager import BaseManager as Manager
@@ -13,7 +21,7 @@ from .choices.log import ACTION_CHOICES, CLASS_CHOICES
 
 ### Interlock
 from interlock_backend.ldap.settings_func import SettingsList
-################################################################################
+# ---------------------------------------------------------------------------- #
 class BaseLogModel(models.Model):
 
     logged_at = models.DateTimeField(_("logged at"), auto_now_add=True)

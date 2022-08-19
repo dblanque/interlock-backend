@@ -1,3 +1,11 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.models.dns.types
+# Contains the Constants for DNS Record Types
+
 DNS_RECORD_TYPE_ZERO = 0
 DNS_RECORD_TYPE_A = 1
 DNS_RECORD_TYPE_NS = 2

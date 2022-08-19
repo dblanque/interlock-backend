@@ -1,3 +1,12 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.models.dns.validators
+# Contains the Validators for DNS Records
+
+#---------------------------------- IMPORTS -----------------------------------#
 from curses.ascii import isascii
 import sys
 import re

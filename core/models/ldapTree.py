@@ -1,4 +1,12 @@
-################################## IMPORTS #####################################
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.models.ldapTree
+# Contains the Models for the LDAP Directory Tree
+
+#---------------------------------- IMPORTS -----------------------------------#
 ### Django
 from django.utils.translation import gettext_lazy as _
 

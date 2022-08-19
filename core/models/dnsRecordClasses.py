@@ -1,9 +1,19 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.models.dns.record
+# Contains the Models for DNS Record Types
+
+#---------------------------------- IMPORTS -----------------------------------#
 from struct import unpack, pack
 from impacket.structure import Structure
 from .dnsRecordTypes import *
 import socket
 import datetime
 import sys
+################################################################################
 
 RECORD_MAPPINGS = {
     DNS_RECORD_TYPE_ZERO: {

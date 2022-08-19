@@ -1,8 +1,18 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.models.base
+# Contains the Base Model and Base Manager
+
+#---------------------------------- IMPORTS -----------------------------------#
 from django.db import models
 from django.db.models.manager import BaseManager as Manager
 from django.db.models.query import QuerySet
 from django.utils import timezone as tz
 from django.utils.translation import gettext_lazy as _
+################################################################################
 
 class BaseManager(Manager.from_queryset(QuerySet)):
     use_in_migrations = False

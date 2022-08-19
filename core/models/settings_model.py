@@ -1,6 +1,16 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.models.settings_model
+# Contains the Model for Interlock's Changeable Settings
+
+# --------------------------------- IMPORTS ---------------------------------- #
 from django.utils.translation import gettext_lazy as _
 from django.db import models
 from .base import BaseModel
+# ---------------------------------------------------------------------------- #
 
 class Setting(BaseModel):
     use_in_migrations = True
