@@ -34,6 +34,7 @@ from core.views.logs import LogsViewSet
 from core.views.groups import GroupsViewSet
 from core.views.test import TestViewSet
 from core.views.record import RecordViewSet
+from interlock_backend.settings import DEBUG
 
 # Initalizes Router
 router = routers.DefaultRouter()
@@ -45,8 +46,10 @@ named_view_sets = {
     r"ou": OrganizationalUnitViewSet,
     r"settings": SettingsViewSet,
     r"logs": LogsViewSet,
-    r"test": TestViewSet,
 }
+
+if DEBUG == True:
+    named_view_sets.update({ r"test": TestViewSet })
 
 [router.register(f"api/{name}", view_set, basename=name) for name, view_set in named_view_sets.items()]
 
