@@ -18,11 +18,12 @@ to this project.
 * **Martin Vilche**
     - Site: [https://martinvsolutions.com/](https://martinvsolutions.com/)
     - Credited for Calls Module and Constructors in Interlock Front-end
+    - Credited for Notification Bus: Assistance with Implementation
     - Other Minor Fixes and Assistance
 * **etianen**
     - Credited for creating the Django-python3-ldap module
     - Site: [django-python3-ldap (Github)](https://github.com/etianen/django-python3-ldap)
 * **dirkjanm**
     - Credited for his *amazing* krbrelayx repo and scripts
-    - We're using his dnstool.py script
+    - I managed to do all the DNS Section Operations thanks to this script set
     - Repo Link: [krbrelayx (Github)](https://github.com/dirkjanm/krbrelayx)
