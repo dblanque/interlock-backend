@@ -1,0 +1,17 @@
+[Unit]
+Description=Interlock Backend Service
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+#Environment="HTTPS=on"
+WorkingDirectory=/opt/interlock/interlock_backend
+Type=simple
+Restart=always
+RestartSec=2
+# User=root
+ExecStart=source bin/activate && /usr/bin/python3 ./manage.py runsslserver --certificate /opt/interlock/sslcerts/fullchain.pem --key /opt/interlock/sslcerts/privkey.pem
+#ExecStart=/usr/bin/bash /opt/start-backend.sh
+
+[Install]
+WantedBy=multi-user.target

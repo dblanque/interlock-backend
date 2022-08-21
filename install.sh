@@ -70,18 +70,46 @@ if [[ ! -d "/opt/interlock" ]]; then
     fi
 fi
 
-exit
+workpath="/opt/interlock"
 
-cd /opt/interlock
+cd "$workpath" || ( echo "Could not cd to directory /opt/interlock" && exit 1 )
 
-### BACK-END INSTALLATION ###
+### ! BACK-END INSTALLATION ###
 # Clone repository
 git clone gitbr:dblanque/interlock-backend
 
+# Replace Password in Local DB Settings File
+sed -i "s/'PASSWORD':.*/'PASSWORD':'$db_pwd'/g" "$workpath/interlock_backend/local_django_settings.py"
 
-### FRONT-END INSTALLATION ###
-git clone gitbr:dblanque/interlock-frontend
+db_pwd="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 13 ; echo '')"
+
+# Create and import initial schema to DB
+echo "-- Interlock PGSQL Create DB File
+CREATE DATABASE interlockdb;
+CREATE USER interlockadmin WITH ENCRYPTED PASSWORD '$db_pwd';
+GRANT ALL PRIVILEGES ON DATABASE interlockdb TO interlockadmin;" > "$workpath/install/initial_schema.sql"
+
+sudo -u postgres psql < "$workpath/install/initial_schema.sql"
+
+# Checks if PSQL Command was Successful
+if [ $? -ne 0 ] ; then
+    echo -e "${LIGHTRED}Could not create Interlock DB or User.${NC}"
+    exit 4
+ficreate_default_superuser.py
+
+# Do VENV Creation and install pip requirements
+virtualenv -p python3 "$workpath"
+source "$workpath/bin/activate"
+pip3 install -r "$workpath/requirements.txt"
+
+# Create Systemd Service
+# TODO - Change user in service automatically, tell installer user to add certs to sslcerts folder
+cp "$workpath/install/interlock_backend.service" "/etc/systemd/system/"
+systemctl daemon-reload
 
 # Creates default superuser
-# python manage.py shell < create_default_superuser.py
+python3 "$workpath/manage.py" shell < "$workpath/install/create_default_superuser.py"
 # echo "from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.create_default_superuser()" | python manage.py shell
+
+### ! FRONT-END INSTALLATION ###
+git clone gitbr:dblanque/interlock-frontend
