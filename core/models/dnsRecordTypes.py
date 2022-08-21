@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.models.dns.types
+# Module: core.models.dns.record.types
 # Contains the Constants for DNS Record Types
 
 DNS_RECORD_TYPE_ZERO = 0

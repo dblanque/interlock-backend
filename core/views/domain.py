@@ -9,7 +9,8 @@
 #---------------------------------- IMPORTS -----------------------------------#
 ### Models
 from core.models.log import logToDB
-from core.models.dns import LDAPDNS
+from core.models.dns import LDAPDNS, LDAPRecord
+from core.models.dnsRecordTypes import *
 
 ### ViewSets
 from core.views.base import BaseViewSet
@@ -249,6 +250,39 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 
         ldapConnection.add(dn=zoneToCreate_forest, object_class=[ 'dnsZone', 'top' ], attributes=attributes_forest)
         forestCreateResult = ldapConnection.result
+
+        currentLDAPServer = ldapConnection.server_pool.get_current_server(ldapConnection)
+
+        values_a = {
+            'address': currentLDAPServer.host,
+            'ttl': 900,
+            'serial': 1
+        }
+        dnsRecord = LDAPRecord(
+            connection=ldapConnection,
+            rName="@",
+            rZone=target_zone,
+            rType=DNS_RECORD_TYPE_A
+        )
+        dnsRecord.create(values=values_a)
+
+        dnsRecord = LDAPRecord(
+            connection=ldapConnection, 
+            rName="@", 
+            rZone=target_zone,
+            rType=DNS_RECORD_TYPE_SOA
+        )
+        values_soa = {
+            # SOA TEST
+            'dwSerialNo': 1,
+            'dwRefresh': 900,
+            'dwRetry': 600,
+            'dwExpire': 86400,
+            'dwMinimumTtl': 3600,
+            'namePrimaryServer': 'ns.%s.' % (target_zone),
+            'zoneAdminEmail': 'hostmaster.%s' % (target_zone)
+        }
+        dnsRecord.create(values=values_soa)
 
         ldapConnection.unbind()
 

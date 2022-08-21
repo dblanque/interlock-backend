@@ -24,7 +24,7 @@ FIELD_VALIDATORS = {
     'dwMinimumTtl': 'natural',
     'namePrimaryServer': 'canonicalHostname',
     'zoneAdminEmail': 'canonicalHostname',
-    'stringData': 'ascii',
+    'stringData': None,
     'wPreference': 'natural',
     'nameExchange': 'canonicalHostname',
     'wPriority': 'natural', 

@@ -395,7 +395,7 @@ class DNS_COUNT_NAME(Structure):
         length = len(valueString)
         splitString = valueString.rstrip('.').split('.')
         labelCount = len(splitString)
-        if labelCount < 0:
+        if labelCount <= 0:
             labelCount = 0
         newString = bytes()
         for i in range(labelCount):

@@ -184,7 +184,10 @@ class LDAPRecord(LDAPDNS):
 
     def makeRecord(self, values, serial=None, ttl=180):
         if serial is None:
-            serial = get_next_serial(self.connection.server.host, self.zone, tcp=False)
+            try:
+                serial = get_next_serial(self.connection.server.host, self.zone, tcp=False)
+            except:
+                serial = 1
 
         ## Check if class type is supported for creation ##
         if (self.type in RECORD_MAPPINGS):
@@ -205,7 +208,7 @@ class LDAPRecord(LDAPDNS):
                     # Standard Class Creation
                     record['Data'] = getattr(dnstool, RECORD_MAPPINGS[self.type]['class'])()
 
-                # ! Print Chosen Class    
+                # ! Print Chosen Class
                 # print(RECORD_MAPPINGS[self.type]['class'])
 
                 numFields = [
@@ -259,7 +262,7 @@ class LDAPRecord(LDAPDNS):
             }
             raise exc_dns.DNSRecordTypeUnsupported(data=data)
    
-    def create(self, values):
+    def create(self, values, debugMode=False):
         """
         Create a Record in the LDAP Entry identified by it's Bytes
 
@@ -350,7 +353,8 @@ class LDAPRecord(LDAPDNS):
             # logger.info(record_to_dict(dnstool.DNS_RECORD(result), ts=False))
 
             # If all checks passed
-            self.connection.modify(self.distinguishedName, {'dnsRecord': [( MODIFY_ADD, self.structure.getData() )]})
+            if debugMode != False:
+                self.connection.modify(self.distinguishedName, {'dnsRecord': [( MODIFY_ADD, self.structure.getData() )]})
         return self.connection.result
 
     def update(self, values, oldRecordBytes):
