@@ -353,7 +353,7 @@ class LDAPRecord(LDAPDNS):
             # logger.info(record_to_dict(dnstool.DNS_RECORD(result), ts=False))
 
             # If all checks passed
-            if debugMode != False:
+            if debugMode != True:
                 self.connection.modify(self.distinguishedName, {'dnsRecord': [( MODIFY_ADD, self.structure.getData() )]})
         return self.connection.result
 

@@ -258,15 +258,17 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
             'ttl': 900,
             'serial': 1
         }
-        dnsRecord = LDAPRecord(
+        base_aRecord = LDAPRecord(
             connection=ldapConnection,
             rName="@",
             rZone=target_zone,
             rType=DNS_RECORD_TYPE_A
         )
-        dnsRecord.create(values=values_a)
+        base_aRecord.create(values=values_a)
 
-        dnsRecord = LDAPRecord(
+        aCreateResult = ldapConnection.result
+
+        base_soaRecord = LDAPRecord(
             connection=ldapConnection, 
             rName="@", 
             rZone=target_zone,
@@ -282,7 +284,9 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
             'namePrimaryServer': 'ns.%s.' % (target_zone),
             'zoneAdminEmail': 'hostmaster.%s' % (target_zone)
         }
-        dnsRecord.create(values=values_soa)
+        base_soaRecord.create(values=values_soa)
+
+        soaCreateResult = ldapConnection.result
 
         ldapConnection.unbind()
 
@@ -301,7 +305,9 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
                 'code_msg': 'ok',
                 'result' : {
                     "dns": dnsCreateResult,
-                    "forest": forestCreateResult
+                    "forest": forestCreateResult,
+                    "soa": soaCreateResult,
+                    "a": aCreateResult
                 }
              }
         )
@@ -360,6 +366,19 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 
         attributes_forest = dict()
         attributes_forest['dc'] = forest_dc
+
+        search_target = 'DC=%s,%s' % (target_zone, dnsList.dnsroot)
+        searchFilter = addSearchFilter("", "objectClass=dnsNode")
+        attributes=['dnsRecord','dNSTombstoned','name']
+        records = ldapConnection.extend.standard.paged_search(
+            search_base=search_target,
+            search_filter=searchFilter,
+            search_scope='LEVEL',
+            attributes=attributes
+        )
+
+        for r in list(records):
+            ldapConnection.delete(r['dn'])
 
         ldapConnection.delete(dn=zoneToCreate_dns)
         dnsDeleteResult = ldapConnection.result
