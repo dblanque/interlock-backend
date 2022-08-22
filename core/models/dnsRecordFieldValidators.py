@@ -7,7 +7,6 @@
 # Contains the Validators for DNS Records
 
 #---------------------------------- IMPORTS -----------------------------------#
-from curses.ascii import isascii
 import sys
 import re
 import socket
@@ -24,7 +23,7 @@ FIELD_VALIDATORS = {
     'dwMinimumTtl': 'natural',
     'namePrimaryServer': 'canonicalHostname',
     'zoneAdminEmail': 'canonicalHostname',
-    'stringData': None,
+    'stringData': 'ascii',
     'wPreference': 'natural',
     'nameExchange': 'canonicalHostname',
     'wPriority': 'natural', 
@@ -73,6 +72,6 @@ def ip_validator(value):
         return False
 
 def ascii_validator(value):
-    if isascii(str(value)):
-        return True
-    return False
+    # https://stackoverflow.com/questions/35889505/check-that-a-string-contains-only-ascii-characters
+    isAscii = lambda s: re.match('^[\x00-\x7F]+$', s) != None
+    return isAscii(value)
