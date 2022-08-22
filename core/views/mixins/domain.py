@@ -22,10 +22,13 @@ class DomainViewMixin(viewsets.ViewSetMixin):
             rType=DNS_RECORD_TYPE_SOA
         )
         nextSoa = None
-        for record in soaRecord.data:
+        for index, record in enumerate(soaRecord.data):
             # If there's a SOA Record
             if record['type'] == DNS_RECORD_TYPE_SOA:
-                prevSoa = soaRecord.makeRecord(record, record['serial'], record['ttl']).getData()
+                prevSoa = soaRecord.rawEntry['raw_attributes']['dnsRecord'][index]
+                # checkPrevSoa = soaRecord.makeRecord(record, record['serial'], record['ttl']).getData()
+                # if prevSoa != checkPrevSoa:
+                #     raise Exception("Unhandled SOA Record Match Exception.")
                 nextSoa = deepcopy(record)
                 nextSoa['dwSerialNo'] += 1
                 nextSoa['serial'] = nextSoa['dwSerialNo']
@@ -38,4 +41,5 @@ class DomainViewMixin(viewsets.ViewSetMixin):
             soaRecord.update(values=nextSoa, oldRecordBytes=prevSoa)
             return soaRecord.connection.result
         except Exception as e:
-            raise e
+            print(e)
+

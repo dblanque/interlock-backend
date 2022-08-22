@@ -268,6 +268,34 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 
         aCreateResult = ldapConnection.result
 
+        values_a_ns = {
+            'address': currentLDAPServer.host,
+            'ttl': 900,
+            'serial': 1
+        }
+        a_nsRecord = LDAPRecord(
+            connection=ldapConnection,
+            rName="ns1",
+            rZone=target_zone,
+            rType=DNS_RECORD_TYPE_A
+        )
+        a_nsRecord.create(values=values_a_ns)
+
+        a_nsCreateResult = ldapConnection.result
+
+        values_ns = {
+            'nameNode':'ns1.%s.' % (target_zone)
+        }
+        base_nsRecord = LDAPRecord(
+            connection=ldapConnection,
+            rName="@",
+            rZone=target_zone,
+            rType=DNS_RECORD_TYPE_NS
+        )
+        base_nsRecord.create(values=values_ns)
+
+        nsCreateResult = ldapConnection.result
+
         base_soaRecord = LDAPRecord(
             connection=ldapConnection, 
             rName="@", 
@@ -307,6 +335,8 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
                     "dns": dnsCreateResult,
                     "forest": forestCreateResult,
                     "soa": soaCreateResult,
+                    "ns": nsCreateResult,
+                    "a_ns": a_nsCreateResult,
                     "a": aCreateResult
                 }
              }

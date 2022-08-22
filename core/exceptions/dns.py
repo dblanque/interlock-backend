@@ -72,6 +72,11 @@ class DNSRecordEntryDoesNotExist(BaseException):
     default_detail = 'Record LDAP Entry does not exist'
     default_code = 'dns_record_entry_does_not_exist'
 
+class DNSCouldNotIncrementSOA(BaseException):
+    status_code = 500
+    default_detail = 'Unable to increment Start of Authority Serial'
+    default_code = 'dns_soa_increment'
+
 class SOARecordRootOnly(BaseException):
     status_code = 400
     default_detail = 'A Start Of Authority Record can only be set for the root of your zone'
