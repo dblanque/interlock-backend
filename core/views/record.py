@@ -135,13 +135,18 @@ class RecordViewSet(BaseViewSet, DomainViewMixin):
 
         ldapConnection.unbind()
 
+        if recordName == "@":
+            affectedObject = recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"
+        else:
+            affectedObject = recordName + "." + recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"
+
         if ldap_settings_list.LDAP_LOG_CREATE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
                 actionType="CREATE",
                 objectClass="DNSR",
-                affectedObject=recordName + "." + recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"
+                affectedObject=affectedObject
             )
 
         return Response(
@@ -240,6 +245,20 @@ class RecordViewSet(BaseViewSet, DomainViewMixin):
 
         ldapConnection.unbind()
 
+        if recordName == "@":
+            affectedObject = recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"
+        else:
+            affectedObject = recordName + "." + recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"
+
+        if ldap_settings_list.LDAP_LOG_UPDATE == True:
+            # Log this action to DB
+            logToDB(
+                user_id=request.user.id,
+                actionType="UPDATE",
+                objectClass="DNSR",
+                affectedObject=affectedObject
+            )
+
         return Response(
              data={
                 'code': code,
@@ -330,13 +349,18 @@ class RecordViewSet(BaseViewSet, DomainViewMixin):
 
         ldapConnection.unbind()
 
+        if recordName == "@":
+            affectedObject = recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"
+        else:
+            affectedObject = recordName + "." + recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"
+
         if ldap_settings_list.LDAP_LOG_DELETE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
                 actionType="DELETE",
                 objectClass="DNSR",
-                affectedObject=recordName + "." + recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"
+                affectedObject=affectedObject
             )
 
         return Response(
