@@ -25,6 +25,7 @@ from core.exceptions import (
 
 ### Mixins
 from .mixins.domain import DomainViewMixin
+from .mixins.record import DNSRecordMixin
 
 ### REST Framework
 from rest_framework.response import Response
@@ -46,7 +47,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class RecordViewSet(BaseViewSet, DomainViewMixin):
+class RecordViewSet(BaseViewSet, DNSRecordMixin):
 
     @action(detail=False,methods=['post'])
     def insert(self, request):
@@ -267,101 +268,46 @@ class RecordViewSet(BaseViewSet, DomainViewMixin):
              }
         )
 
-    @action(detail=False,methods=['post'])
+    @action(detail=False, methods=['post'])
     def delete(self, request):
         user = request.user
         validateUser(request=request)
         data = {}
         code = 0
 
-        if 'record' not in request.data:
+        if 'record' in request.data:
+            mode = 'single'
+        elif 'records' in request.data:
+            mode = 'multiple'
+        else:
             raise exc_dns.DNSRecordNotInRequest
 
-        recordValues = request.data['record']
-
-        if 'type' not in recordValues:
-            raise exc_dns.DNSRecordTypeMissing
-
-        requiredAttributes = [
-            'name',
-            'type',
-            'zone',
-            'ttl',
-            'index',
-            'record_bytes'
-        ]
-        # Add the necessary fields for this Record Type to Required Fields
-        requiredAttributes.extend(RECORD_MAPPINGS[recordValues['type']]['fields'])
-
-        for a in requiredAttributes:
-            if a not in recordValues:
-                exception = exc_dns.DNSRecordDataMissing
+        if mode == 'single':
+            if isinstance(request.data['record'], dict):
+                recordValues = request.data['record']
+            else:
                 data = {
-                    "code": exception.default_code,
-                    "attribute": a,
+                    'mode': mode,
+                    'data': request.data['record']
                 }
-                exception.setDetail(exception, data)
-                raise exception
+                raise exc_dns.DNSRecordDataMalformed(data=data)
+        elif mode == 'multiple':
+            if isinstance(request.data['records'], list):
+                recordValues = request.data['records']
+            else:
+                data = {
+                    'mode': mode,
+                    'data': request.data['records']
+                }
+                raise exc_dns.DNSRecordDataMalformed
 
-        recordName = recordValues.pop('name')
-        recordType = recordValues.pop('type')
-        recordZone = recordValues.pop('zone')
-        recordIndex = recordValues.pop('index')
-        recordBytes = recordValues.pop('record_bytes')
-        recordBytes = convert_string_to_bytes(recordBytes)
-
-        if recordZone == 'Root DNS Servers':
-            raise exc_dns.DNSRootServersOnlyCLI
-
-        for f in recordValues.keys():
-            if f in DNS_FIELD_VALIDATORS:
-                if DNS_FIELD_VALIDATORS[f] is not None:
-                    validator = DNS_FIELD_VALIDATORS[f] + "_validator"
-                    if getattr(dnsValidators, validator)(recordValues[f]) == False:
-                        data = {
-                            'field': f,
-                            'value': recordValues[f]
-                        }
-                        raise exc_dns.DNSFieldValidatorFailed(data=data)
-
-        ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_DOMAIN',
-            'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_LOG_DELETE'
-        }})
-
-        # Open LDAP Connection
-        try:
-            connector = LDAPConnector(user.dn, user.encryptedPassword, request.user)
-            ldapConnection = connector.connection
-        except Exception as e:
-            print(e)
-            raise exc_ldap.CouldNotOpenConnection
-
-        dnsRecord = LDAPRecord(
-            connection=ldapConnection,
-            rName=recordName,
-            rZone=recordZone,
-            rType=recordType
-        )
-        result = dnsRecord.delete(recordBytes=recordBytes)
-
-        ldapConnection.unbind()
-
-        if recordName == "@":
-            affectedObject = recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"
-        else:
-            affectedObject = recordName + "." + recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"
-
-        if ldap_settings_list.LDAP_LOG_DELETE == True:
-            # Log this action to DB
-            logToDB(
-                user_id=request.user.id,
-                actionType="DELETE",
-                objectClass="DNSR",
-                affectedObject=affectedObject
-            )
+        if isinstance(recordValues, dict):
+            result = self.deleteRecord(recordValues, user)
+        elif isinstance(recordValues, list):
+            result = list()
+            for r in recordValues:
+                print(r)
+                result.append(self.deleteRecord(r, user))
 
         return Response(
              data={

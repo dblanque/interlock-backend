@@ -32,6 +32,11 @@ class DNSRecordNotInRequest(BaseException):
     default_detail = 'DNS Record is not present in request'
     default_code = 'dns_record_not_in_request'
 
+class DNSRecordDataMalformed(BaseException):
+    status_code = 400
+    default_detail = 'DNS Record Data is Malformed'
+    default_code = 'dns_record_data_malformed'
+
 class DNSRecordDNMissing(BaseException):
     status_code = 400
     default_detail = 'Distinguished Name is not present in Record'
