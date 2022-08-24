@@ -275,7 +275,7 @@ catch || {
     esac
 }
 # Deactivate VENV
-deactivate
+deactivate 2>/dev/null
 # ! -- End of Stage 2 -- ! #
 
 # ! -- Beginning of Stage 3 -- ! #
@@ -321,7 +321,7 @@ catch || {
     esac
 }
 # Deactivate VENV
-deactivate
+deactivate 2>/dev/null
 # ! -- End of Stage 3 -- ! #
 
 # Go back to workpath
@@ -345,11 +345,52 @@ yarn install
 
 yarn build
 
-echo "Front-end build was generated in $frontendPath/dist"
+rm "/etc/nginx/sites-enabled/default"
 
-echo "This server requires the following ports open:"
+echo \
+"server {
+        listen 80;
+        server_name default_server;
+        return 301 https://\$host\$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name default_server;
+    ssl_certificate $workpath/sslcerts/cert.pem;
+    ssl_certificate_key $workpath/sslcerts/privkey.pem;
+
+    add_header Allow \"GET, POST, HEAD, PUT, DELETE\" always;
+    add_header Cache-Control no-cache;
+    if (\$request_method !~ ^(GET|POST|HEAD|PUT|DELETE)$) {
+        return 405;
+    }
+
+    location / {
+        root $frontendPath/dist;
+    }
+}" > "/etc/nginx/sites-available/interlock"
+
+ln -s "/etc/nginx/sites-available/interlock" "/etc/nginx/sites-enabled/interlock"
+
+systemctl enable nginx
+
+# Advise Administrator to change the SSL Cert
+echo -e "${LIGHTBLUE}-------------------------------------------------------------------------------------------------------${NC}"
+echo -e "Don't forget to add your full chain and private key .pem files to ${LIGHTBLUE}$workpath/sslcerts/${NC}"
+echo -e "\t- fullchain.pem"
+echo -e "\t- privkey.pem"
+echo
+echo -e "To run SSL on the Back-end modify the systemd service file at ${LIGHTBLUE}/etc/systemd/system/interlock_backend.service${NC}"
+echo -e "${LIGHTBLUE}-------------------------------------------------------------------------------------------------------${NC}"
+
+echo "Interlock requires the following ports open on this server:"
 echo -e "\t- 80 (HTTP)"
 echo -e "\t- 443 (HTTPS)"
 echo -e "\t- 8008 (Django Backend)"
+echo
+echo "Do not forget to open the LDAP port on your LDAP/AD Server(s):"
+echo -e "\t- 389 (Default LDAP)"
+echo -e "\t- 636 (Default LDAPS)"
 
 exit
