@@ -100,6 +100,8 @@ if [ "$EUID" != 0 ]; then
     exit $?
 fi
 
+apt update -y
+
 for r in "${reqs[@]}"
 do
     apt -qq list $r 2>/dev/null|grep installed 1> /dev/null
