@@ -40,28 +40,41 @@ function ignoreErrors()
 }
 
 ## Errors
-err_req_install = 1
-err_yarn_pubkey = 2
-err_yarn_repo = 3
-err_yarn_install = 4
-err_mkdir_interlock = 5
-err_back_git_clone = 10
-err_back_pwdReplace = 11
-err_back_schemaGen = 12
-err_back_schemaInstall = 13
-err_back_venv_create = 20
-err_back_venv_activate = 21
-err_back_venv_reqs = 22
-err_back_service_copy = 23
-err_back_service_modify = 24
-err_back_migrate = 30
-err_back_create_superuser = 31
-err_back_venv_deactivate = 32
-err_back_service = 33
+err_req_install=1
+err_yarn_pubkey=2
+err_yarn_repo=3
+err_yarn_install=4
+err_mkdir_interlock=5
+err_back_git_clone=10
+err_back_pwdReplace=11
+err_back_schemaGen=12
+err_back_schemaInstall=13
+err_back_venv_create=20
+err_back_venv_activate=21
+err_back_venv_reqs=22
+err_back_service_copy=23
+err_back_service_modify=24
+err_back_migrate=30
+err_back_create_superuser=31
+err_back_venv_deactivate=32
+err_back_service=33
 
 workpath="/var/lib/interlock"
 backendPath="$workpath/interlock_backend"
 frontendPath="$workpath/interlock_frontend"
+
+ADDRESSES=(
+    "gitlab.brconsulting.info"
+)
+
+for address in $ADDRESSES; do
+    ssh-keygen -F $address 2>/dev/null 1>/dev/null
+    if [ $? -eq 0 ]; then
+        echo "SSH Key for $address is already known"
+        continue
+    fi
+    ssh-keyscan -t rsa -T 10 $address >> ~/.ssh/known_hosts
+done
 
 ##############################################
 ##############################################
@@ -75,6 +88,7 @@ python3
 python3-virtualenv
 python3-venv
 python3-pip
+libpq-dev
 postgresql
 nodejs
 curl
@@ -89,10 +103,10 @@ fi
 for r in "${reqs[@]}"
 do
     apt -qq list $r 2>/dev/null|grep installed 1> /dev/null
-    
+
     # Checks if requirements are met and tries to install.
     if [ $? -ne 0 ]; then
-        echo "$r is not installed, attempting to install requirement."
+        echo -e "${LIGHTBLUE}$r is not installed, attempting to install requirement.${NC}"
         apt-get -qq install $r -y 2>/dev/null
     fi
   
@@ -153,17 +167,26 @@ cd "$workpath" || ( echo "Could not cd to directory $workpath" && exit 1 )
 try
 (
 # Clone repository
-git clone interlock-be:dblanque/interlock-backend || throw $err_back_git_clone
+
+if [[ ! -d $backendPath ]]; then
+    git clone interlock-be:dblanque/interlock-backend $backendPath || throw $err_back_git_clone
+else
+    cd $backendPath
+    git pull || throw $err_back_git_clone
+fi
 
 cd $backendPath
 
 db_pwd="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 13 ; echo '')"
 
 # Replace Password in Local DB Settings File
-sed -i "s/'PASSWORD':.*/'PASSWORD':'$db_pwd'/g" "$backendPath/interlock_backend/local_django_settings.py" || throw $err_back_pwdReplace
+sed -i "s/'PASSWORD':.*/'PASSWORD':'$db_pwd',/g" "$backendPath/interlock_backend/local_django_settings.py" || throw $err_back_pwdReplace
 
 # Create and import initial schema to DB
+# TODO - Add 
 echo "-- Interlock PGSQL Create DB File
+DROP DATABASE interlockdb;
+DROP USER interlockadmin;
 CREATE DATABASE interlockdb;
 CREATE USER interlockadmin WITH ENCRYPTED PASSWORD '$db_pwd';
 GRANT ALL PRIVILEGES ON DATABASE interlockdb TO interlockadmin;" > "$backendPath/install/initial_schema.sql" || throw $err_back_schemaGen
@@ -211,7 +234,12 @@ sed -i "s/User=.*/User=$(whoami)/g" "/etc/systemd/system/interlock_backend.servi
 systemctl daemon-reload
 
 # Advise Administrator to change the SSL Cert
+echo -e "${LIGHTBLUE}-------------------------------------------------------------------------------------------------------${NC}"
 echo -e "If you wish to use SSL modify the backend service file at ${LIGHTBLUE}/etc/systemd/system/interlock_backend.service${NC}"
+echo -e "${LIGHTBLUE}-------------------------------------------------------------------------------------------------------${NC}"
+
+# Deactivate VENV
+deactivate || throw $err_back_venv_deactivate
 )
 catch || {
     # now you can handle
@@ -222,6 +250,10 @@ catch || {
         ;;
         $err_back_venv_activate)
             echo -e "${LIGHTRED}Could not activate Virtual Environment${NC}"
+            throw $ex_code
+        ;;
+        $err_back_venv_deactivate)
+            echo -e "${LIGHTRED}There was an error deactivating the virtual environment${NC}"
             throw $ex_code
         ;;
         $err_back_venv_reqs)
@@ -247,11 +279,13 @@ catch || {
 # ! -- Beginning of Stage 3 -- ! #
 try
 (
+source "$backendPath/bin/activate" || throw $err_back_venv_activate
+
 # Apply migrations
-python3 "$backendPath/manage.py" migrate || throw $err_back_migrate
+"$backendPath/bin/python3" "$backendPath/manage.py" migrate || throw $err_back_migrate
 
 # Creates default superuser
-python3 "$backendPath/manage.py" shell < "$backendPath/install/create_default_superuser.py" || throw $err_back_create_superuser
+"$backendPath/bin/python3" "$backendPath/manage.py" shell < "$backendPath/install/create_default_superuser.py" || throw $err_back_create_superuser
 
 # Deactivate VENV
 deactivate || throw $err_back_venv_deactivate
@@ -267,6 +301,10 @@ catch || {
         ;;
         $err_back_create_superuser)
             echo -e "${LIGHTRED}Could not Create Default Superuser${NC}"
+            throw $ex_code
+        ;;
+        $err_back_venv_activate)
+            echo -e "${LIGHTRED}Could not activate Virtual Environment${NC}"
             throw $ex_code
         ;;
         $err_back_venv_deactivate)
@@ -293,7 +331,12 @@ cd $workpath
 ########### FRONT-END INSTALLATION ###########
 ##############################################
 ##############################################
-git clone interlock-fe:dblanque/interlock-frontend
+if [[ ! -d $frontendPath ]]; then
+    git clone interlock-fe:dblanque/interlock-frontend $frontendPath
+else
+    cd $frontendPath
+    git pull
+fi
 
 cd $frontendPath
 
@@ -302,5 +345,10 @@ yarn install
 yarn build
 
 echo "Front-end build was generated in $frontendPath/dist"
+
+echo "This server requires the following ports open:"
+echo -e "\t- 80 (HTTP)"
+echo -e "\t- 443 (HTTPS)"
+echo -e "\t- 8008 (Django Backend)"
 
 exit
