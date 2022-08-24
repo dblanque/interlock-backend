@@ -58,6 +58,8 @@ err_back_migrate=30
 err_back_create_superuser=31
 err_back_venv_deactivate=32
 err_back_service=33
+err_front_yarn_install=40
+err_front_yarn_build=41
 
 workpath="/var/lib/interlock"
 backendPath="$workpath/interlock_backend"
@@ -111,7 +113,7 @@ do
         echo -e "${LIGHTBLUE}$r is not installed, attempting to install requirement.${NC}"
         apt-get -qq install $r -y 2>/dev/null
     fi
-  
+
     # Checks if install was successful.
     if [ $? -ne 0 ]; then
         echo -e "${LIGHTRED}There was an error installing requirement $r, installation cancelled.${NC}"
@@ -341,11 +343,33 @@ fi
 
 cd $frontendPath
 
-yarn install
+try
+(
+yarn install || throw $err_front_yarn_install
 
-yarn build
+yarn build || throw $err_front_yarn_build
+)
+catch || {
+    # now you can handle
+    case $ex_code in
+        $err_front_yarn_install)
+            echo -e "${LIGHTRED}There was an error installing the required components for the VueJS Front-end${NC}"
+            throw $ex_code
+        ;;
+        $err_front_yarn_build)
+            echo -e "${LIGHTRED}There was an error compiling the front end${NC}"
+            throw $ex_code
+        ;;
+        *)
+            echo "An unexpected exception was thrown"
+            throw $ex_code # you can rethrow the "exception" causing the script to exit if not caught
+        ;;
+    esac
+}
 
-rm "/etc/nginx/sites-enabled/default"
+if [ test -e "/etc/nginx/sites-enabled/default" ]; then
+    rm "/etc/nginx/sites-enabled/default"
+fi
 
 echo \
 "server {
