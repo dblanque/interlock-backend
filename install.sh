@@ -137,6 +137,7 @@ if [ $? -ne 0 ]; then
     exit $err_yarn_repo
 fi
 
+apt update -y
 apt-get -qq install yarn -y 2>/dev/null
 
 # Checks if YARN install was successful.
