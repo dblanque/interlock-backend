@@ -237,9 +237,6 @@ systemctl daemon-reload
 echo -e "${LIGHTBLUE}-------------------------------------------------------------------------------------------------------${NC}"
 echo -e "If you wish to use SSL modify the backend service file at ${LIGHTBLUE}/etc/systemd/system/interlock_backend.service${NC}"
 echo -e "${LIGHTBLUE}-------------------------------------------------------------------------------------------------------${NC}"
-
-# Deactivate VENV
-deactivate || throw $err_back_venv_deactivate
 )
 catch || {
     # now you can handle
@@ -274,6 +271,8 @@ catch || {
         ;;
     esac
 }
+# Deactivate VENV
+deactivate
 # ! -- End of Stage 2 -- ! #
 
 # ! -- Beginning of Stage 3 -- ! #
@@ -286,9 +285,6 @@ source "$backendPath/bin/activate" || throw $err_back_venv_activate
 
 # Creates default superuser
 "$backendPath/bin/python3" "$backendPath/manage.py" shell < "$backendPath/install/create_default_superuser.py" || throw $err_back_create_superuser
-
-# Deactivate VENV
-deactivate || throw $err_back_venv_deactivate
 
 (systemctl enable interlock_backend && systemctl start interlock_backend) || throw $err_back_service
 )
@@ -321,6 +317,8 @@ catch || {
         ;;
     esac
 }
+# Deactivate VENV
+deactivate
 # ! -- End of Stage 3 -- ! #
 
 # Go back to workpath
