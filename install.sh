@@ -549,8 +549,8 @@ try
     cd $frontendPath
 
     sed -i "s/const ssl.*/const ssl = true/g" "$frontendPath/src/providers/interlock_backend/config.js"
-    sed -i "s/{backend_url:.*}/{backend_url:\"$backendURL\"}/g" $frontendPath/dist/js/*.js
-    sed -i "s/backend_url:.*/backend_url: \"${backendURL}\",/g" "$frontendPath/public/js/local_settings.js"
+    sed -i "s/{backend_url:.*}/{backend_url:\"$backendURL\"}/g" $frontendPath/dist/js/app*.js
+    sed -i "s/backend_url:.*/backend_url: \"${backendURL}\",/g" "$frontendPath/src/providers/interlock_backend/local_settings.js"
     
     if [ $compileFront == true ]; then
         yarn install || throw $err_front_yarn_install
