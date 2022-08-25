@@ -236,6 +236,33 @@ if [[ ! -d "$workpath/sslcerts" ]]; then
     fi
 fi
 
+generateSSLCert=""
+if [[ -f "$workpath/sslcerts/fullchain.pem" ]] && [[ -f "$workpath/sslcerts/privkey.pem" ]]; then
+    until [[ $generateSSLCert == true ]] || [[ $generateSSLCert == false ]]; do
+    read -n 1 -rp "Would you like to re-generate the SSL Certificate? (Y|N) [N]: " generateSSLCert
+        case $generateSSLCert in
+            [Yy] )
+                generateSSLCert=true
+            ;;
+            * )
+                generateSSLCert=false
+            ;;
+        esac
+    done
+fi
+
+if [[ $generateSSLCert == true ]] || [[ ! -f "$workpath/sslcerts/fullchain.pem" ]] || [[ ! -f "$workpath/sslcerts/privkey.pem" ]]; then
+    # Create SSL Certificate
+    sudo openssl req -x509 -nodes -days 36500 -newkey rsa:2048 -keyout "$workpath/sslcerts/privkey.pem" -out "$workpath/sslcerts/fullchain.pem"
+fi
+
+# Checks if SSL Generation was successful.
+if [ $? -ne 0 ]; then
+    echo -e "${LIGHTRED}There was an error generating the SSL Certificate, please generate your certificate manually.${NC}"
+    echo -e "\t- $workpath/sslcerts/privkey.pem"
+    echo -e "\t- $workpath/sslcerts/fullchain.pem"
+fi
+
 cd "$workpath" || ( echo "Could not cd to directory $workpath" && exit 1 )
 
 ##############################################
@@ -401,33 +428,6 @@ catch || {
 # Deactivate VENV
 deactivate 2>/dev/null
 # ! -- End of Stage 2 -- ! #
-
-generateSSLCert=""
-if [[ -f "$workpath/sslcerts/fullchain.pem" ]] && [[ -f "$workpath/sslcerts/privkey.pem" ]]; then
-    until [[ $generateSSLCert == true ]] || [[ $generateSSLCert == false ]]; do
-    read -n 1 -rp "Would you like to re-generate the SSL Certificate? (Y|N) [N]: " generateSSLCert
-        case $generateSSLCert in
-            [Yy] )
-                generateSSLCert=true
-            ;;
-            * )
-                generateSSLCert=false
-            ;;
-        esac
-    done
-fi
-
-if [[ $generateSSLCert == true ]] || [[ ! -f "$workpath/sslcerts/fullchain.pem" ]] || [[ ! -f "$workpath/sslcerts/privkey.pem" ]]; then
-    # Create SSL Certificate
-    sudo openssl req -x509 -nodes -days 36500 -newkey rsa:2048 -keyout "$workpath/sslcerts/privkey.pem" -out "$workpath/sslcerts/fullchain.pem"
-fi
-
-# Checks if SSL Generation was successful.
-if [ $? -ne 0 ]; then
-    echo -e "${LIGHTRED}There was an error generating the SSL Certificate, please generate your certificate manually.${NC}"
-    echo -e "\t- $workpath/sslcerts/privkey.pem"
-    echo -e "\t- $workpath/sslcerts/fullchain.pem"
-fi
 
 # ! -- Beginning of Stage 3 -- ! #
 try
