@@ -65,6 +65,22 @@ workpath="/var/lib/interlock"
 backendPath="$workpath/interlock_backend"
 frontendPath="$workpath/interlock_frontend"
 
+apt update -y
+# Checks if update was successful.
+if [ $? -ne 0 ]; then
+    echo -e "${LIGHTRED}Could not update apt metadata, please check your connectivity or source.list entries${NC}"
+    exit 1
+fi
+
+echo -e "${LIGHTBLUE}Testing gitlab connectivity.${NC}"
+nc -z -v -w5 gitlab.brconsulting.info 22
+
+# Checks if gitlab connectivity works.
+if [ $? -ne 0 ]; then
+    echo -e "${LIGHTRED}Could not connect to gitlab.brconsulting.info${NC}"
+    exit 1
+fi
+
 ADDRESSES=(
     "gitlab.brconsulting.info"
 )
@@ -97,12 +113,12 @@ curl
 nginx
 )
 
+toInstall=()
+
 if [ "$EUID" != 0 ]; then
     sudo "$0" "$@"
     exit $?
 fi
-
-apt update -y
 
 for r in "${reqs[@]}"
 do
@@ -110,16 +126,31 @@ do
 
     # Checks if requirements are met and tries to install.
     if [ $? -ne 0 ]; then
-        echo -e "${LIGHTBLUE}$r is not installed, attempting to install requirement.${NC}"
-        apt-get -qq install $r -y 2>/dev/null
-    fi
-
-    # Checks if install was successful.
-    if [ $? -ne 0 ]; then
-        echo -e "${LIGHTRED}There was an error installing requirement $r, installation cancelled.${NC}"
-        exit $err_req_install
+        echo -e "${LIGHTBLUE}$r is not installed, added to install array.${NC}"
+        toInstall+=("$r")
     fi
 done
+
+toInstall_str=$(printf "%s " "${toInstall[@]}")
+
+echo -e "${LIGHTBLUE}The following requirements will be installed:${NC}"
+printf "\t%s\n" "${toInstall[@]}"
+
+apt-get install $toInstall_str 2>/dev/null
+
+# Checks if install was successful.
+if [ $? != 0 ] && [ $? != 1 ]; then
+    echo -e "${LIGHTRED}There was an error installing the requirements, installation cancelled.${NC}"
+    echo "APT Exit Code: $?"
+    exit $err_req_install
+fi
+
+# Checks if install was aborted.
+if [ $? == 1 ]; then
+    echo -e "${LIGHTBLUE}Interlock cannot be installed without these requirements.${NC}"
+    echo "APT Exit Code: $?"
+    exit $err_req_install
+fi
 
 curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 
@@ -280,6 +311,9 @@ catch || {
 deactivate 2>/dev/null
 # ! -- End of Stage 2 -- ! #
 
+# Create SSL Certificate
+sudo openssl req -x509 -nodes -days 36500 -newkey rsa:2048 -keyout "$workpath/sslcerts/privkey.pem" -out "$workpath/sslcerts/fullchain.crt"
+
 # ! -- Beginning of Stage 3 -- ! #
 try
 (
@@ -394,6 +428,35 @@ server {
         root $frontendPath/dist;
     }
 }" > "/etc/nginx/sites-available/interlock"
+
+# Checks if curl repo add command was successful
+if [ $? -ne 0 ]; then
+    echo -e "${LIGHTRED}Error creating Front-end NGINX Site.${NC}"
+    echo -e "${LIGHTRED}A copy of the site file has been saved in $workpath${NC}"
+echo \
+"server {
+        listen 80;
+        server_name default_server;
+        return 301 https://\$host\$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name default_server;
+    ssl_certificate $workpath/sslcerts/cert.pem;
+    ssl_certificate_key $workpath/sslcerts/privkey.pem;
+
+    add_header Allow \"GET, POST, HEAD, PUT, DELETE\" always;
+    add_header Cache-Control no-cache;
+    if (\$request_method !~ ^(GET|POST|HEAD|PUT|DELETE)$) {
+        return 405;
+    }
+
+    location / {
+        root $frontendPath/dist;
+    }
+}" > "$workpath/interlock-nginx.conf"
+fi
 
 ln -s "/etc/nginx/sites-available/interlock" "/etc/nginx/sites-enabled/interlock"
 
