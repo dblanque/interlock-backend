@@ -5,6 +5,9 @@ if [ ! "$BASH_VERSION" ]; then
 	exit 1
 fi
 
+# Trap Exit Signal
+trap "echo && exit" INT
+
 LIGHTRED='\033[1;31m'
 LIGHTGREEN='\033[1;32m'
 LIGHTYELL='\033[1;33m'
@@ -43,8 +46,10 @@ function ignoreErrors()
 err_req_install=1
 err_yarn_pubkey=2
 err_yarn_repo=3
-err_yarn_install=4
-err_mkdir_interlock=5
+err_node_script=4
+err_node_repo=5
+err_yarnOrNode_install=6
+err_mkdir_interlock=7
 err_back_git_clone=10
 err_back_pwdReplace=11
 err_back_schemaGen=12
@@ -108,7 +113,6 @@ python3-venv
 python3-pip
 libpq-dev
 postgresql
-nodejs
 curl
 nginx
 )
@@ -152,33 +156,74 @@ if [ $? == 1 ]; then
     exit $err_req_install
 fi
 
-curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+compileFrontend=""
+echo -e "${LIGHTYELL}BEWARE: The latest compiled version Front-End is already provided in the dist folder${NC}"
+echo -e "${LIGHTYELL}This will install the required dependencies${NC}"
+until [[ $compileFrontend == true ]] || [[ $compileFrontend == false ]]; do
+read -n 1 -rp "Would you like to re-compile the latest Frontend? (Y|N) [N]: " compileFrontend
+    case $compileFrontend in
+        [Yy] )
+            echo
+            echo -e "Installing dependencies ${LIGHTYELL}(NodeJS and YARN)${NC}."
+            compileFrontend=true
+        ;;
+        * )
+            echo
+            echo "Continuing."
+            compileFrontend=false
+        ;;
+    esac
+done
 
-# Checks if the yarnpkg pubkey add command was successful
-if [ $? -ne 0 ]; then
-    echo -e "${LIGHTRED}Could not fetch Yarn Repository Pubkey.${NC}"
-    echo "To do so manually you may execute the following command:"
-    echo -e "\tcurl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -"
-    exit $err_yarn_pubkey
-fi
+if [[ $compileFrontend == true ]]; then
+    curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 
-echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+    # Checks if the yarnpkg pubkey add command was successful
+    if [ $? -ne 0 ]; then
+        echo -e "${LIGHTRED}Could not fetch Yarn Repository Pubkey.${NC}"
+        echo "To do so manually you may execute the following command:"
+        echo -e "\tcurl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -"
+        exit $err_yarn_pubkey
+    fi
 
-# Checks if curl repo add command was successful
-if [ $? -ne 0 ]; then
-    echo -e "${LIGHTRED}Could not add Yarn repository.${NC}"
-    echo "To do so manually you may execute the following command:"
-    echo -e "\techo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list"
-    exit $err_yarn_repo
-fi
+    echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
-apt update -y
-apt-get -qq install yarn -y 2>/dev/null
+    # Checks if curl repo add command was successful
+    if [ $? -ne 0 ]; then
+        echo -e "${LIGHTRED}Could not add Yarn repository.${NC}"
+        echo "To do so manually you may execute the following command:"
+        echo -e "\techo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list"
+        exit $err_yarn_repo
+    fi
 
-# Checks if YARN install was successful.
-if [ $? -ne 0 ]; then
-    echo -e "${LIGHTRED}There was an error installing YARN, installation cancelled.${NC}"
-    exit $err_yarn_install
+    curl -sL https://deb.nodesource.com/setup_16.x -o "$workpath/nodesource_setup.sh"
+
+    # Checks if the yarnpkg pubkey add command was successful
+    if [ $? -ne 0 ]; then
+        echo -e "${LIGHTRED}Could not fetch NodeJS Repository Install Script.${NC}"
+        echo "To do so manually you may execute the following command:"
+        echo -e "\tcurl -sL https://deb.nodesource.com/setup_16.x -o $workpath/nodesource_setup.sh"
+        exit $err_node_script
+    fi
+
+    bash "$workpath/nodesource_setup.sh"
+
+    # Checks if curl repo add command was successful
+    if [ $? -ne 0 ]; then
+        echo -e "${LIGHTRED}Could not add NodeJS Repository.${NC}"
+        echo "To do so manually you may execute the following command:"
+        echo -e "\tbash $workpath/nodesource_setup.sh"
+        exit $err_node_repo
+    fi
+
+    apt update -y
+    apt-get -qq install yarn nodejs -y 2>/dev/null
+
+    # Checks if YARN and NodeJS installs were successful.
+    if [ $? -ne 0 ]; then
+        echo -e "${LIGHTRED}There was an error installing YARN and/or NodeJS, installation cancelled.${NC}"
+        exit $err_yarnOrNode_install
+    fi
 fi
 
 if [[ ! -d "$workpath/sslcerts" ]]; then
@@ -218,14 +263,60 @@ db_pwd="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 13 ; echo '')"
 # Replace Password in Local DB Settings File
 sed -i "s/'PASSWORD':.*/'PASSWORD':'$db_pwd',/g" "$backendPath/interlock_backend/local_django_settings.py" || throw $err_back_pwdReplace
 
+keepDB=""
+until [[ $keepDB == true ]] || [[ $keepDB == false ]]; do
+read -n 1 -rp "Do you wish to preserve the Database if it exists? (Y|N) [Y]: " keepDB
+    case $keepDB in
+        [Yy] )
+            echo
+            echo -e "${LIGHTYELL}Preserving Interlock Database${NC}."
+            keepDB=true
+        ;;
+        * )
+            echo
+            echo -e "${LIGHTRED}Resetting Interlock Database${NC}."
+            keepDB=false
+        ;;
+    esac
+done
+
+
 # Create and import initial schema to DB
-# TODO - Add 
+if [[ $keepDB == true ]]; then
+echo "-- Interlock PGSQL Create DB File
+
+DO
+\$do\$
+BEGIN
+   IF NOT EXISTS (SELECT * FROM pg_user WHERE usename = 'interlockadmin') THEN
+        CREATE USER interlockadmin WITH ENCRYPTED PASSWORD '$db_pwd';
+    ELSE
+        ALTER USER interlockadmin WITH PASSWORD '$db_pwd';
+   END IF;
+END
+\$do\$;
+
+DO
+\$do\$
+BEGIN
+   IF EXISTS (SELECT FROM pg_database WHERE datname = 'interlockdb') THEN
+      RAISE NOTICE 'Database already exists';  -- optional
+   ELSE
+      PERFORM dblink_exec('dbname=' || current_database()  -- current db
+                        , 'CREATE DATABASE interlockdb');
+   END IF;
+END
+\$do\$;
+
+GRANT ALL PRIVILEGES ON DATABASE interlockdb TO interlockadmin;" > "$backendPath/install/initial_schema.sql" || throw $err_back_schemaGen
+else
 echo "-- Interlock PGSQL Create DB File
 DROP DATABASE interlockdb;
 DROP USER interlockadmin;
 CREATE DATABASE interlockdb;
 CREATE USER interlockadmin WITH ENCRYPTED PASSWORD '$db_pwd';
 GRANT ALL PRIVILEGES ON DATABASE interlockdb TO interlockadmin;" > "$backendPath/install/initial_schema.sql" || throw $err_back_schemaGen
+fi
 
 sudo -u postgres psql < "$backendPath/install/initial_schema.sql" || throw $err_back_schemaInstall
 )
@@ -311,8 +402,25 @@ catch || {
 deactivate 2>/dev/null
 # ! -- End of Stage 2 -- ! #
 
-# Create SSL Certificate
-sudo openssl req -x509 -nodes -days 36500 -newkey rsa:2048 -keyout "$workpath/sslcerts/privkey.pem" -out "$workpath/sslcerts/fullchain.pem"
+generateSSLCert=""
+if [[ -f "$workpath/sslcerts/fullchain.pem" ]] && [[ -f "$workpath/sslcerts/privkey.pem" ]]; then
+    until [[ $generateSSLCert == true ]] || [[ $generateSSLCert == false ]]; do
+    read -n 1 -rp "Would you like to re-generate the SSL Certificate? (Y|N) [N]: " generateSSLCert
+        case $generateSSLCert in
+            [Yy] )
+                generateSSLCert=true
+            ;;
+            * )
+                generateSSLCert=false
+            ;;
+        esac
+    done
+fi
+
+if [[ $generateSSLCert == true ]] || [[ ! -f "$workpath/sslcerts/fullchain.pem" ]] || [[ ! -f "$workpath/sslcerts/privkey.pem" ]]; then
+    # Create SSL Certificate
+    sudo openssl req -x509 -nodes -days 36500 -newkey rsa:2048 -keyout "$workpath/sslcerts/privkey.pem" -out "$workpath/sslcerts/fullchain.pem"
+fi
 
 # Checks if SSL Generation was successful.
 if [ $? -ne 0 ]; then
@@ -386,9 +494,10 @@ cd $frontendPath
 
 try
 (
-yarn install || throw $err_front_yarn_install
-
-yarn build || throw $err_front_yarn_build
+    if [[ $compileFrontend == true ]]; then
+        yarn install || throw $err_front_yarn_install
+        yarn build || throw $err_front_yarn_build
+    fi
 )
 catch || {
     # now you can handle
@@ -408,7 +517,7 @@ catch || {
     esac
 }
 
-if [ test -e "/etc/nginx/sites-enabled/default" ]; then
+if [ -e "/etc/nginx/sites-enabled/default" ]; then
     rm "/etc/nginx/sites-enabled/default"
 fi
 
@@ -422,35 +531,7 @@ echo \
 server {
     listen 443 ssl http2;
     server_name default_server;
-    ssl_certificate $workpath/sslcerts/cert.pem;
-    ssl_certificate_key $workpath/sslcerts/privkey.pem;
-
-    add_header Allow \"GET, POST, HEAD, PUT, DELETE\" always;
-    add_header Cache-Control no-cache;
-    if (\$request_method !~ ^(GET|POST|HEAD|PUT|DELETE)$) {
-        return 405;
-    }
-
-    location / {
-        root $frontendPath/dist;
-    }
-}" > "/etc/nginx/sites-available/interlock"
-
-# Checks if curl repo add command was successful
-if [ $? -ne 0 ]; then
-    echo -e "${LIGHTRED}Error creating Front-end NGINX Site.${NC}"
-    echo -e "${LIGHTRED}A copy of the site file has been saved in $workpath${NC}"
-echo \
-"server {
-        listen 80;
-        server_name default_server;
-        return 301 https://\$host\$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name default_server;
-    ssl_certificate $workpath/sslcerts/cert.pem;
+    ssl_certificate $workpath/sslcerts/fullchain.pem;
     ssl_certificate_key $workpath/sslcerts/privkey.pem;
 
     add_header Allow \"GET, POST, HEAD, PUT, DELETE\" always;
@@ -463,11 +544,19 @@ server {
         root $frontendPath/dist;
     }
 }" > "$workpath/interlock-nginx.conf"
+
+cp "$workpath/interlock-nginx.conf" "/etc/nginx/sites-available/interlock"
+
+# Checks if curl repo add command was successful
+if [ $? -ne 0 ]; then
+    echo -e "${LIGHTRED}Error creating Front-end NGINX Site.${NC}"
+    echo -e "${LIGHTRED}A copy of the site file has been saved in $workpath${NC}"
 fi
 
 ln -s "/etc/nginx/sites-available/interlock" "/etc/nginx/sites-enabled/interlock"
 
 systemctl enable nginx
+systemctl restart nginx
 
 # Advise Administrator to change the SSL Cert
 echo -e "${LIGHTBLUE}-------------------------------------------------------------------------------------------------------${NC}"
