@@ -14,6 +14,12 @@ LIGHTYELL='\033[1;33m'
 LIGHTBLUE='\033[1;34m'
 NC='\033[0m' # No Color
 
+if [[ ! $scriptname ]]; then
+    scriptname="`echo $BASH_SOURCE|awk -F "/" '{print $NF}'`"
+fi
+
+compileFront=false
+
 function try()
 {
     [[ $- = *e* ]]; SAVED_OPT_E=$?
@@ -86,6 +92,31 @@ err_front_yarn_build=42
 workpath="/var/lib/interlock"
 backendPath="$workpath/interlock_backend"
 frontendPath="$workpath/interlock_frontend"
+
+# COPIES ALL ARGUMENTS TO ARRAY
+argv_a=($@)
+
+#GETS COMMAND ARGS
+for i in "${!argv_a[@]}"; 
+    do
+        j=`expr $i + 1`
+
+        case "${argv_a[i]}" in
+            --help|--h|-h )
+                echo "Script Options:"
+                echo -e "\t --compile | Installs dependencies and recompiles the front-end source"
+                exit
+                ;;
+            --compile|--c|-c )
+                compileFront=true
+                ;;
+            * )
+                echo "Invalid argument. (`echo ${i}`)"
+                echo "Usage: $scriptname --option"
+                exit
+                ;;
+        esac
+    done
 
 apt update -y
 # Checks if update was successful.
@@ -202,53 +233,55 @@ if [[ ! -d "$workpath/sslcerts" ]]; then
     fi
 fi
 
-curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+if [ $compileFront == true ]; then
+    curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 
-# Checks if the yarnpkg pubkey add command was successful
-if [ $? -ne 0 ]; then
-    echo -e "${LIGHTRED}Could not fetch Yarn Repository Pubkey.${NC}"
-    echo "To do so manually you may execute the following command:"
-    echo -e "\tcurl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -"
-    exit $err_yarn_pubkey
-fi
+    # Checks if the yarnpkg pubkey add command was successful
+    if [ $? -ne 0 ]; then
+        echo -e "${LIGHTRED}Could not fetch Yarn Repository Pubkey.${NC}"
+        echo "To do so manually you may execute the following command:"
+        echo -e "\tcurl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -"
+        exit $err_yarn_pubkey
+    fi
 
-echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+    echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
-# Checks if curl repo add command was successful
-if [ $? -ne 0 ]; then
-    echo -e "${LIGHTRED}Could not add Yarn repository.${NC}"
-    echo "To do so manually you may execute the following command:"
-    echo -e "\techo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list"
-    exit $err_yarn_repo
-fi
+    # Checks if curl repo add command was successful
+    if [ $? -ne 0 ]; then
+        echo -e "${LIGHTRED}Could not add Yarn repository.${NC}"
+        echo "To do so manually you may execute the following command:"
+        echo -e "\techo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list"
+        exit $err_yarn_repo
+    fi
 
-curl -sL https://deb.nodesource.com/setup_16.x -o "$workpath/nodesource_setup.sh"
+    curl -sL https://deb.nodesource.com/setup_16.x -o "$workpath/nodesource_setup.sh"
 
-# Checks if the yarnpkg pubkey add command was successful
-if [ $? -ne 0 ]; then
-    echo -e "${LIGHTRED}Could not fetch NodeJS Repository Install Script.${NC}"
-    echo "To do so manually you may execute the following command:"
-    echo -e "\tcurl -sL https://deb.nodesource.com/setup_16.x -o $workpath/nodesource_setup.sh"
-    exit $err_node_script
-fi
+    # Checks if the yarnpkg pubkey add command was successful
+    if [ $? -ne 0 ]; then
+        echo -e "${LIGHTRED}Could not fetch NodeJS Repository Install Script.${NC}"
+        echo "To do so manually you may execute the following command:"
+        echo -e "\tcurl -sL https://deb.nodesource.com/setup_16.x -o $workpath/nodesource_setup.sh"
+        exit $err_node_script
+    fi
 
-bash "$workpath/nodesource_setup.sh"
+    bash "$workpath/nodesource_setup.sh"
 
-# Checks if curl repo add command was successful
-if [ $? -ne 0 ]; then
-    echo -e "${LIGHTRED}Could not add NodeJS Repository.${NC}"
-    echo "To do so manually you may execute the following command:"
-    echo -e "\tbash $workpath/nodesource_setup.sh"
-    exit $err_node_repo
-fi
+    # Checks if curl repo add command was successful
+    if [ $? -ne 0 ]; then
+        echo -e "${LIGHTRED}Could not add NodeJS Repository.${NC}"
+        echo "To do so manually you may execute the following command:"
+        echo -e "\tbash $workpath/nodesource_setup.sh"
+        exit $err_node_repo
+    fi
 
-apt update -y
-apt-get -qq install yarn nodejs -y 2>/dev/null
+    apt update -y
+    apt-get -qq install yarn nodejs -y 2>/dev/null
 
-# Checks if YARN and NodeJS installs were successful.
-if [ $? -ne 0 ]; then
-    echo -e "${LIGHTRED}There was an error installing YARN and/or NodeJS, installation cancelled.${NC}"
-    exit $err_yarnOrNode_install
+    # Checks if YARN and NodeJS installs were successful.
+    if [ $? -ne 0 ]; then
+        echo -e "${LIGHTRED}There was an error installing YARN and/or NodeJS, installation cancelled.${NC}"
+        exit $err_yarnOrNode_install
+    fi
 fi
 
 generateSSLCert=""
@@ -514,9 +547,12 @@ try
     cd $frontendPath
 
     sed -i "s/const ssl.*/const ssl = true/g" "$frontendPath/src/providers/interlock_backend/config.js"
-    sed -i "s/backend_url:.*/backend_url: \"${backendURL}\",/g" "$frontendPath/src/providers/interlock_backend/local_settings.js"
-    yarn install || throw $err_front_yarn_install
-    yarn build || throw $err_front_yarn_build
+    sed -i "s/backend_url:.*/backend_url: \"${backendURL}\",/g" "$frontendPath/public/js/local_settings.js"
+    
+    if [ $compileFront == true ]; then
+        yarn install || throw $err_front_yarn_install
+        yarn build || throw $err_front_yarn_build
+    fi
 )
 catch || {
     # now you can handle
