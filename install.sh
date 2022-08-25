@@ -541,8 +541,8 @@ try
         git clone interlock-fe:dblanque/interlock-frontend $frontendPath || throw $err_front_git_clone
     else
         cd $frontendPath
-        git stash
         rm -r "$frontendPath/dist"
+        git stash
         git pull || throw $err_front_git_clone
     fi
 
