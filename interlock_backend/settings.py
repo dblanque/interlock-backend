@@ -39,7 +39,7 @@ FERNET_KEY = b'7HWX7ZH2k-7KrdPkCtaAC8lAjZ8gaz0HrJTeWTthm24='
 DJANGO_SUPERUSER_USERNAME = 'admin'
 DJANGO_SUPERUSER_PASSWORD = 'interlock'
 
-# SECURITY WARNING: don't run with debug turned on in production!
+#// SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOW_ALL_HOSTS = ['*']
