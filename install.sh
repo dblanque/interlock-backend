@@ -108,6 +108,7 @@ for i in "${!argv_a[@]}";
                 exit
                 ;;
             --compile|--c|-c )
+                echo -e "${LIGHTBLUE}Compile flag detected${NC}"
                 compileFront=true
                 ;;
             * )
