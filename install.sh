@@ -510,7 +510,7 @@ cd $frontendPath
 try
 (
     sed -i "s/const ssl.*/const ssl = true/g" "$frontendPath/src/providers/interlock_backend/config.js"
-    sed -i "s/backend_url:.*/backend_url: \"${backendURL}:8000\",/g" "$frontendPath/src/providers/interlock_backend/local_settings.js"
+    sed -i "s/backend_url:.*/backend_url: \"${backendURL}\",/g" "$frontendPath/src/providers/interlock_backend/local_settings.js"
     yarn install || throw $err_front_yarn_install
     yarn build || throw $err_front_yarn_build
 )
@@ -614,7 +614,7 @@ echo -e "${LIGHTBLUE}-----------------------------------------------------------
 echo "Interlock requires the following ports open on this server:"
 echo -e "\t- 80 (HTTP)"
 echo -e "\t- 443 (HTTPS)"
-echo -e "\t- 8000 (Django Backend)"
+# echo -e "\t- 8000 (Django Backend)"
 echo
 echo "Please add the following entries to your Internal DNS:"
 echo -e "\t- $backendURL"
