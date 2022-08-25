@@ -191,6 +191,16 @@ if [[ ! -d $workpath ]]; then
     fi
 fi
 
+if [[ ! -d "$workpath/sslcerts" ]]; then
+    echo -e "${LIGHTRED}$workpath ${NC}directory does not exist, creating it."
+    mkdir -p "$workpath/sslcerts"
+    # Checks if curl repo add command was successful
+    if [ $? -ne 0 ]; then
+        echo -e "${LIGHTRED}Could not create Interlock SSL Certs Directory.${NC}"
+        exit $err_mkdir_interlock
+    fi
+fi
+
 cd "$workpath" || ( echo "Could not cd to directory $workpath" && exit 1 )
 
 ##############################################
