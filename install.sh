@@ -42,6 +42,22 @@ function ignoreErrors()
     set +e
 }
 
+valid_ip () {
+    local  ip=$1
+    local  stat=1
+
+    if [[ $ip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+        OIFS=$IFS
+        IFS='.'
+        ip=($ip)
+        IFS=$OIFS
+        [[ ${ip[0]} -le 255 && ${ip[1]} -le 255 && ${ip[2]} -le 255 && ${ip[3]} -le 255 ]]
+        stat=$?
+    fi
+    echo $stat
+    return $stat
+}
+
 ## Errors
 err_req_install=1
 err_yarn_pubkey=2
@@ -98,6 +114,25 @@ for address in $ADDRESSES; do
     fi
     ssh-keyscan -t rsa -T 10 $address >> ~/.ssh/known_hosts
 done
+
+backendURL=""
+domainPattern='(?=^.{4,253}$)(^(?:[a-zA-Z0-9](?:(?:[a-zA-Z0-9\-]){0,61}[a-zA-Z0-9])?(\.)?)+([a-zA-Z]{2,}|xn--[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])$)'
+
+backendURL_valid=false
+until [[ $backendURL_valid == true ]]; do
+    read -rp "Please enter the back-end URL to be used (Must be a Valid TLD or IP, Single Label is allowed): " backendURL
+    
+    # Test if Backend URL is a valid IP or TLD
+    backendIsIP=`valid_ip $backendURL`
+    if [[ $backendIsIP != 0 ]] && [[ ! `echo $backendURL | grep -P $domainPattern` ]];
+    then
+        echo "Invalid Back-end URL"
+        exit 190
+    else
+        backendURL_valid=true
+    fi
+done
+
 
 ##############################################
 ##############################################
@@ -156,74 +191,53 @@ if [ $? == 1 ]; then
     exit $err_req_install
 fi
 
-compileFrontend=""
-echo -e "${LIGHTYELL}BEWARE: The latest compiled version Front-End is already provided in the dist folder${NC}"
-echo -e "${LIGHTYELL}This will install the required dependencies${NC}"
-until [[ $compileFrontend == true ]] || [[ $compileFrontend == false ]]; do
-read -n 1 -rp "Would you like to re-compile the latest Frontend? (Y|N) [N]: " compileFrontend
-    case $compileFrontend in
-        [Yy] )
-            echo
-            echo -e "Installing dependencies ${LIGHTYELL}(NodeJS and YARN)${NC}."
-            compileFrontend=true
-        ;;
-        * )
-            echo
-            echo "Continuing."
-            compileFrontend=false
-        ;;
-    esac
-done
+curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 
-if [[ $compileFrontend == true ]]; then
-    curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+# Checks if the yarnpkg pubkey add command was successful
+if [ $? -ne 0 ]; then
+    echo -e "${LIGHTRED}Could not fetch Yarn Repository Pubkey.${NC}"
+    echo "To do so manually you may execute the following command:"
+    echo -e "\tcurl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -"
+    exit $err_yarn_pubkey
+fi
 
-    # Checks if the yarnpkg pubkey add command was successful
-    if [ $? -ne 0 ]; then
-        echo -e "${LIGHTRED}Could not fetch Yarn Repository Pubkey.${NC}"
-        echo "To do so manually you may execute the following command:"
-        echo -e "\tcurl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -"
-        exit $err_yarn_pubkey
-    fi
+echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
-    echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+# Checks if curl repo add command was successful
+if [ $? -ne 0 ]; then
+    echo -e "${LIGHTRED}Could not add Yarn repository.${NC}"
+    echo "To do so manually you may execute the following command:"
+    echo -e "\techo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list"
+    exit $err_yarn_repo
+fi
 
-    # Checks if curl repo add command was successful
-    if [ $? -ne 0 ]; then
-        echo -e "${LIGHTRED}Could not add Yarn repository.${NC}"
-        echo "To do so manually you may execute the following command:"
-        echo -e "\techo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list"
-        exit $err_yarn_repo
-    fi
+curl -sL https://deb.nodesource.com/setup_16.x -o "$workpath/nodesource_setup.sh"
 
-    curl -sL https://deb.nodesource.com/setup_16.x -o "$workpath/nodesource_setup.sh"
+# Checks if the yarnpkg pubkey add command was successful
+if [ $? -ne 0 ]; then
+    echo -e "${LIGHTRED}Could not fetch NodeJS Repository Install Script.${NC}"
+    echo "To do so manually you may execute the following command:"
+    echo -e "\tcurl -sL https://deb.nodesource.com/setup_16.x -o $workpath/nodesource_setup.sh"
+    exit $err_node_script
+fi
 
-    # Checks if the yarnpkg pubkey add command was successful
-    if [ $? -ne 0 ]; then
-        echo -e "${LIGHTRED}Could not fetch NodeJS Repository Install Script.${NC}"
-        echo "To do so manually you may execute the following command:"
-        echo -e "\tcurl -sL https://deb.nodesource.com/setup_16.x -o $workpath/nodesource_setup.sh"
-        exit $err_node_script
-    fi
+bash "$workpath/nodesource_setup.sh"
 
-    bash "$workpath/nodesource_setup.sh"
+# Checks if curl repo add command was successful
+if [ $? -ne 0 ]; then
+    echo -e "${LIGHTRED}Could not add NodeJS Repository.${NC}"
+    echo "To do so manually you may execute the following command:"
+    echo -e "\tbash $workpath/nodesource_setup.sh"
+    exit $err_node_repo
+fi
 
-    # Checks if curl repo add command was successful
-    if [ $? -ne 0 ]; then
-        echo -e "${LIGHTRED}Could not add NodeJS Repository.${NC}"
-        echo "To do so manually you may execute the following command:"
-        echo -e "\tbash $workpath/nodesource_setup.sh"
-        exit $err_node_repo
-    fi
+apt update -y
+apt-get -qq install yarn nodejs -y 2>/dev/null
 
-    apt update -y
-    apt-get -qq install yarn nodejs -y 2>/dev/null
-
-    # Checks if YARN and NodeJS installs were successful.
-    if [ $? -ne 0 ]; then
-        echo -e "${LIGHTRED}There was an error installing YARN and/or NodeJS, installation cancelled.${NC}"
-        exit $err_yarnOrNode_install
-    fi
+# Checks if YARN and NodeJS installs were successful.
+if [ $? -ne 0 ]; then
+    echo -e "${LIGHTRED}There was an error installing YARN and/or NodeJS, installation cancelled.${NC}"
+    exit $err_yarnOrNode_install
 fi
 
 if [[ ! -d "$workpath/sslcerts" ]]; then
@@ -494,10 +508,10 @@ cd $frontendPath
 
 try
 (
-    if [[ $compileFrontend == true ]]; then
-        yarn install || throw $err_front_yarn_install
-        yarn build || throw $err_front_yarn_build
-    fi
+    sed -i "s/const ssl.*/const ssl = true/g" "$frontendPath/src/providers/interlock_backend/config.js"
+    sed -i "s/backend_url:.*/backend_url: \"${backendURL}:8000\",/g" "$frontendPath/src/providers/interlock_backend/local_settings.js"
+    yarn install || throw $err_front_yarn_install
+    yarn build || throw $err_front_yarn_build
 )
 catch || {
     # now you can handle
@@ -560,19 +574,27 @@ systemctl restart nginx
 
 # Advise Administrator to change the SSL Cert
 echo -e "${LIGHTBLUE}-------------------------------------------------------------------------------------------------------${NC}"
-echo -e "Don't forget to add your full chain and private key .pem files to ${LIGHTBLUE}$workpath/sslcerts/${NC}"
+echo -e "If you have a Valid signed SSL Certificate, don't forget to add your full chain and private key .pem files to ${LIGHTBLUE}$workpath/sslcerts/${NC}"
 echo -e "\t- fullchain.pem"
 echo -e "\t- privkey.pem"
 echo
-echo -e "To run SSL on the Back-end modify the systemd service file at ${LIGHTBLUE}/etc/systemd/system/interlock_backend.service${NC}"
+echo -e "${LIGHTYELLOW}To run the backend without SSL${NC} modify the systemd service file at ${LIGHTBLUE}/etc/systemd/system/interlock_backend.service${NC}"
+echo -e "That will require you to also disable ssl on ${LIGHTBLUE}$frontendPath/src/providers/interlock_backend/config.js${NC}"
+echo -e "And re-build the front-end with the following command: ${LIGHTBLUE}cd $frontendPath && yarn build${NC}"
 echo -e "${LIGHTBLUE}-------------------------------------------------------------------------------------------------------${NC}"
 
 echo "Interlock requires the following ports open on this server:"
 echo -e "\t- 80 (HTTP)"
 echo -e "\t- 443 (HTTPS)"
-echo -e "\t- 8008 (Django Backend)"
+echo -e "\t- 8000 (Django Backend)"
 echo
-echo "Do not forget to open the LDAP port on your LDAP/AD Server(s):"
+echo "Please add the following entries to your Internal DNS:"
+echo -e "\t- $backendURL"
+echo -e "\t- Whatever URL you wish the Front-end to be in"
+echo "To add an entry through CLI on your Samba AD do:"
+echo -e "\t samba-tool dns add <Your-AD-DNS-Server-IP-or-hostname> samdom.example.com demo A 192.168.0.24"
+echo
+echo "Do not forget to open the LDAP port on your LDAP/AD Server(s)!:"
 echo -e "\t- 389 (Default LDAP)"
 echo -e "\t- 636 (Default LDAPS)"
 
