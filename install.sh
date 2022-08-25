@@ -558,10 +558,10 @@ server {
         root $frontendPath/dist;
 
         index index.html index.htm index.nginx-debian.html;
-        try_files $uri /index.html;
+        try_files \$uri /index.html;
 
         # kill cache
-        add_header Last-Modified $date_gmt;
+        add_header Last-Modified \$date_gmt;
         # add_header Cache-Control 'no-store, no-cache';
         add_header Cache-Control 'max-age=900';
         if_modified_since off;
