@@ -79,8 +79,9 @@ err_back_migrate=30
 err_back_create_superuser=31
 err_back_venv_deactivate=32
 err_back_service=33
-err_front_yarn_install=40
-err_front_yarn_build=41
+err_front_git_clone=40
+err_front_yarn_install=41
+err_front_yarn_build=42
 
 workpath="/var/lib/interlock"
 backendPath="$workpath/interlock_backend"
@@ -295,6 +296,7 @@ if [[ ! -d $backendPath ]]; then
     git clone interlock-be:dblanque/interlock-backend $backendPath || throw $err_back_git_clone
 else
     cd $backendPath
+    git stash
     git pull || throw $err_back_git_clone
 fi
 
@@ -449,6 +451,8 @@ try
 (
 source "$backendPath/bin/activate" || throw $err_back_venv_activate
 
+sed -i "s/ALLOWED_HOSTS = \[.*/ALLOWED_HOSTS = ['$backendURL']/g" "$backendPath/interlock_backend/settings.py"
+
 # Apply migrations
 "$backendPath/bin/python3" "$backendPath/manage.py" migrate || throw $err_back_migrate
 
@@ -498,17 +502,18 @@ cd $workpath
 ########### FRONT-END INSTALLATION ###########
 ##############################################
 ##############################################
-if [[ ! -d $frontendPath ]]; then
-    git clone interlock-fe:dblanque/interlock-frontend $frontendPath
-else
-    cd $frontendPath
-    git pull
-fi
-
-cd $frontendPath
-
 try
 (
+    if [[ ! -d $frontendPath ]]; then
+        git clone interlock-fe:dblanque/interlock-frontend $frontendPath || throw $err_front_git_clone
+    else
+        cd $frontendPath
+        git stash
+        git pull || throw $err_front_git_clone
+    fi
+
+    cd $frontendPath
+
     sed -i "s/const ssl.*/const ssl = true/g" "$frontendPath/src/providers/interlock_backend/config.js"
     sed -i "s/backend_url:.*/backend_url: \"${backendURL}\",/g" "$frontendPath/src/providers/interlock_backend/local_settings.js"
     yarn install || throw $err_front_yarn_install
@@ -553,6 +558,15 @@ server {
         root $frontendPath/dist;
 
         index index.html index.htm index.nginx-debian.html;
+        try_files $uri /index.html;
+
+        # kill cache
+        add_header Last-Modified $date_gmt;
+        # add_header Cache-Control 'no-store, no-cache';
+        add_header Cache-Control 'max-age=900';
+        if_modified_since off;
+        expires off;
+        etag off;
     }
 }" > "$workpath/interlock.conf"
 
