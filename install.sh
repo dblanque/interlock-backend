@@ -542,6 +542,7 @@ try
     else
         cd $frontendPath
         git stash
+        rm "$frontendPath/dist"
         git pull || throw $err_front_git_clone
     fi
 
