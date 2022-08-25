@@ -587,9 +587,9 @@ server {
     ssl_certificate $workpath/sslcerts/fullchain.pem;
     ssl_certificate_key $workpath/sslcerts/privkey.pem;
 
-    add_header Allow \"GET, POST, HEAD, PUT, DELETE\" always;
+    add_header Allow \"GET, POST, HEAD, PUT, DELETE, OPTIONS\" always;
     add_header Cache-Control no-cache;
-    if (\$request_method !~ ^(GET|POST|HEAD|PUT|DELETE)$) {
+    if (\$request_method !~ ^(GET|POST|HEAD|PUT|DELETE|OPTIONS)$) {
         return 405;
     }
 
