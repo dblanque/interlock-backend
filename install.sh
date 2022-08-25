@@ -181,22 +181,12 @@ if [ $? -ne 0 ]; then
     exit $err_yarn_install
 fi
 
-if [[ ! -d $workpath ]]; then
-    echo -e "${LIGHTRED}$workpath ${NC}directory does not exist, creating it."
-    mkdir -p $workpath
-    # Checks if curl repo add command was successful
-    if [ $? -ne 0 ]; then
-        echo -e "${LIGHTRED}Could not create Interlock Installation Directory.${NC}"
-        exit $err_mkdir_interlock
-    fi
-fi
-
 if [[ ! -d "$workpath/sslcerts" ]]; then
     echo -e "${LIGHTRED}$workpath ${NC}directory does not exist, creating it."
     mkdir -p "$workpath/sslcerts"
     # Checks if curl repo add command was successful
     if [ $? -ne 0 ]; then
-        echo -e "${LIGHTRED}Could not create Interlock SSL Certs Directory.${NC}"
+        echo -e "${LIGHTRED}Could not create Interlock Installation Directories.${NC}"
         exit $err_mkdir_interlock
     fi
 fi
