@@ -588,7 +588,7 @@ server {
 
     add_header Allow \"GET, POST, HEAD, PUT, DELETE, OPTIONS\" always;
     add_header Cache-Control no-cache;
-    if (\$request_method !~ ^(GET|POST|HEAD|PUT|DELETE|OPTIONS)$) {
+    if (\$request_method !~ ^(GET|POST|HEAD|PUT|DELETE|OPTIONS)\$) {
         return 405;
     }
 
