@@ -59,7 +59,6 @@ else:
 #    'http://localhost:3030',
 #]
 
-
 # Application definition
 
 INSTALLED_APPS = [
