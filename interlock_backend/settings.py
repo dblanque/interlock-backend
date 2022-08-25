@@ -40,18 +40,17 @@ DJANGO_SUPERUSER_USERNAME = 'admin'
 DJANGO_SUPERUSER_PASSWORD = 'interlock'
 
 #// SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOW_ALL_HOSTS = ['*']
 
 # Allows requests from all origins.
 # If this is used then `CORS_ORIGIN_WHITELIST` will not have any effect
-if DEBUG == True:
-    CORS_ORIGIN_ALLOW_ALL = True
-    CORS_ALLOW_CREDENTIALS = True
-    ALLOWED_HOSTS = ALLOW_ALL_HOSTS # CHANGE ON PRODUCTION
-else:
-    ALLOWED_HOSTS = ['127.0.0.1']
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_CREDENTIALS = True
+ALLOWED_HOSTS = ALLOW_ALL_HOSTS # CHANGE ON PRODUCTION
+
+# ALLOWED_HOSTS = ['127.0.0.1']
 
 # If this is used, then not need to use `CORS_ORIGIN_ALLOW_ALL = True`
 #CORS_ORIGIN_WHITELIST = [
