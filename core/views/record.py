@@ -24,7 +24,6 @@ from core.exceptions import (
 )
 
 ### Mixins
-from .mixins.domain import DomainViewMixin
 from .mixins.record import DNSRecordMixin
 
 ### REST Framework

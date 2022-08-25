@@ -30,9 +30,10 @@ from core.views.mixins.utils import convert_string_to_bytes
 ### Interlock
 from interlock_backend.ldap.settings_func import SettingsList
 from interlock_backend.ldap.connector import LDAPConnector
+from core.views.mixins.domain import DomainViewMixin
 ################################################################################
 
-class DNSRecordMixin(viewsets.ViewSetMixin):
+class DNSRecordMixin(DomainViewMixin):
     def deleteRecord(self, record, user):
         recordValues = record
 
