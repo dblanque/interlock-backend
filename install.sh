@@ -549,14 +549,10 @@ server {
     ssl_certificate $workpath/sslcerts/fullchain.pem;
     ssl_certificate_key $workpath/sslcerts/privkey.pem;
 
-    add_header Allow \"GET, POST, HEAD, PUT, DELETE\" always;
-    add_header Cache-Control no-cache;
-    if (\$request_method !~ ^(GET|POST|HEAD|PUT|DELETE)$) {
-        return 405;
-    }
-
     location / {
         root $frontendPath/dist;
+
+        index index.html index.htm index.nginx-debian.html;
     }
 }" > "$workpath/interlock.conf"
 
@@ -576,6 +572,12 @@ server {
 
     ssl_certificate $workpath/sslcerts/fullchain.pem;
     ssl_certificate_key $workpath/sslcerts/privkey.pem;
+
+    add_header Allow \"GET, POST, HEAD, PUT, DELETE\" always;
+    add_header Cache-Control no-cache;
+    if (\$request_method !~ ^(GET|POST|HEAD|PUT|DELETE)$) {
+        return 405;
+    }
 
     location / {
         proxy_pass https://127.0.0.1:8000;

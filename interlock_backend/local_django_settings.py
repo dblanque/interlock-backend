@@ -13,10 +13,10 @@ DATABASES = {
 logging_file_path = "/var/log/interlock/backend.log"
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:443",
-    "https://localhost:443",
+    "http://localhost:8080",
+    "https://localhost:8080",
 ]
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:443",
-    "https://localhost:443",
+    "http://localhost:8080",
+    "https://localhost:8080",
 ]
