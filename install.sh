@@ -312,7 +312,14 @@ deactivate 2>/dev/null
 # ! -- End of Stage 2 -- ! #
 
 # Create SSL Certificate
-sudo openssl req -x509 -nodes -days 36500 -newkey rsa:2048 -keyout "$workpath/sslcerts/privkey.pem" -out "$workpath/sslcerts/fullchain.crt"
+sudo openssl req -x509 -nodes -days 36500 -newkey rsa:2048 -keyout "$workpath/sslcerts/privkey.pem" -out "$workpath/sslcerts/fullchain.pem"
+
+# Checks if SSL Generation was successful.
+if [ $? -ne 0 ]; then
+    echo -e "${LIGHTRED}There was an error generating the SSL Certificate, please generate your certificate manually.${NC}"
+    echo -e "\t- $workpath/sslcerts/privkey.pem"
+    echo -e "\t- $workpath/sslcerts/fullchain.pem"
+fi
 
 # ! -- Beginning of Stage 3 -- ! #
 try
