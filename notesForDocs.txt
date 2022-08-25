@@ -1,0 +1,2 @@
+min requirements
+1 thread/vCPU, 2GB RAM

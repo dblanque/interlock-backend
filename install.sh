@@ -558,9 +558,35 @@ server {
     location / {
         root $frontendPath/dist;
     }
-}" > "$workpath/interlock-nginx.conf"
+}" > "$workpath/interlock.conf"
 
-cp "$workpath/interlock-nginx.conf" "/etc/nginx/sites-available/interlock"
+echo \
+"server {
+    listen 80;
+    server_name $backendURL;
+    return 301 https://$backendURL\$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name $backendURL;
+    server_name_in_redirect off;
+    access_log  /var/log/nginx/access.log;
+    error_log  /var/log/nginx/error.log debug;
+
+    ssl_certificate $workpath/sslcerts/fullchain.pem;
+    ssl_certificate_key $workpath/sslcerts/privkey.pem;
+
+    location / {
+        proxy_pass https://127.0.0.1:8000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}" > "$workpath/interlock-backend.conf"
+
+cp "$workpath/interlock.conf" "/etc/nginx/sites-available/interlock"
+cp "$workpath/interlock-backend.conf" "/etc/nginx/sites-available/interlock-backend"
 
 # Checks if curl repo add command was successful
 if [ $? -ne 0 ]; then
@@ -568,7 +594,8 @@ if [ $? -ne 0 ]; then
     echo -e "${LIGHTRED}A copy of the site file has been saved in $workpath${NC}"
 fi
 
-ln -s "/etc/nginx/sites-available/interlock" "/etc/nginx/sites-enabled/interlock"
+ln -s "/etc/nginx/sites-available/interlock" "/etc/nginx/sites-enabled/"
+ln -s "/etc/nginx/sites-available/interlock-backend" "/etc/nginx/sites-enabled/"
 
 systemctl enable nginx
 systemctl restart nginx
