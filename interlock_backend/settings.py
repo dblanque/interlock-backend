@@ -44,8 +44,12 @@ DEBUG = True
 
 # Allows requests from all origins.
 # If this is used then `CORS_ORIGIN_WHITELIST` will not have any effect
-CORS_ORIGIN_ALLOW_ALL = True
-CORS_ALLOW_CREDENTIALS = True
+if DEBUG == True:
+    CORS_ORIGIN_ALLOW_ALL = True
+    CORS_ALLOW_CREDENTIALS = True
+    ALLOWED_HOSTS = ['*'] # CHANGE ON PRODUCTION
+else:
+    ALLOWED_HOSTS = ['127.0.0.1']
 
 # If this is used, then not need to use `CORS_ORIGIN_ALLOW_ALL = True`
 #CORS_ORIGIN_WHITELIST = [
@@ -55,7 +59,6 @@ CORS_ALLOW_CREDENTIALS = True
 #    'http://localhost:3030',
 #]
 
-ALLOWED_HOSTS = ['*'] # CHANGE ON PRODUCTION
 
 # Application definition
 
