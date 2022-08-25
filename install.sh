@@ -191,6 +191,17 @@ if [ $? == 1 ]; then
     exit $err_req_install
 fi
 
+# Create required Directory
+if [[ ! -d "$workpath/sslcerts" ]]; then
+    echo -e "${LIGHTRED}$workpath/sslcerts ${NC}directory does not exist, creating it."
+    mkdir -p "$workpath/sslcerts"
+    # Checks if curl repo add command was successful
+    if [ $? -ne 0 ]; then
+        echo -e "${LIGHTRED}Could not create Interlock Installation Directories.${NC}"
+        exit $err_mkdir_interlock
+    fi
+fi
+
 curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 
 # Checks if the yarnpkg pubkey add command was successful
@@ -238,16 +249,6 @@ apt-get -qq install yarn nodejs -y 2>/dev/null
 if [ $? -ne 0 ]; then
     echo -e "${LIGHTRED}There was an error installing YARN and/or NodeJS, installation cancelled.${NC}"
     exit $err_yarnOrNode_install
-fi
-
-if [[ ! -d "$workpath/sslcerts" ]]; then
-    echo -e "${LIGHTRED}$workpath/sslcerts ${NC}directory does not exist, creating it."
-    mkdir -p "$workpath/sslcerts"
-    # Checks if curl repo add command was successful
-    if [ $? -ne 0 ]; then
-        echo -e "${LIGHTRED}Could not create Interlock Installation Directories.${NC}"
-        exit $err_mkdir_interlock
-    fi
 fi
 
 generateSSLCert=""
@@ -306,7 +307,7 @@ sed -i "s/'PASSWORD':.*/'PASSWORD':'$db_pwd',/g" "$backendPath/interlock_backend
 
 keepDB=""
 until [[ $keepDB == true ]] || [[ $keepDB == false ]]; do
-read -n 1 -rp "Do you wish to preserve the Database if it exists? (Y|N) [Y]: " keepDB
+read -n 1 -rp "Do you wish to preserve the Database if it exists? (Y|N) [N]: " keepDB
     case $keepDB in
         [Yy] )
             echo
