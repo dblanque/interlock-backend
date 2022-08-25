@@ -182,7 +182,7 @@ if [ $? -ne 0 ]; then
 fi
 
 if [[ ! -d "$workpath/sslcerts" ]]; then
-    echo -e "${LIGHTRED}$workpath ${NC}directory does not exist, creating it."
+    echo -e "${LIGHTRED}$workpath/sslcerts ${NC}directory does not exist, creating it."
     mkdir -p "$workpath/sslcerts"
     # Checks if curl repo add command was successful
     if [ $? -ne 0 ]; then
