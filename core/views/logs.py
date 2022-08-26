@@ -11,7 +11,6 @@
 from core.exceptions.logs import LogTruncateMinmaxNotFound
 
 ### Models
-from core.models.settings_model import Setting
 from core.models.log import Log
 
 ### Mixins
@@ -33,7 +32,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 class LogsViewSet(BaseViewSet, LogMixin):
-    queryset = Setting.objects.all()
 
     def list(self, request, pk=None):
         user = request.user

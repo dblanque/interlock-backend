@@ -12,7 +12,6 @@ from core.exceptions.ldap import ConnectionTestFailed
 
 ### Models
 from core.models.log import logToDB
-from core.models.settings_model import Setting
 
 ### Mixins
 from .mixins.settings_mixin import SettingsViewMixin
@@ -43,7 +42,6 @@ import ssl
 logger = logging.getLogger(__name__)
 
 class SettingsViewSet(BaseViewSet, SettingsViewMixin):
-    queryset = Setting.objects.all()
 
     def list(self, request, pk=None):
         user = request.user

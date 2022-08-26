@@ -15,7 +15,6 @@ from rest_framework import viewsets
 
 ### Core
 #### Models
-from core.models.settings_model import Setting
 from core.models.user import User
 
 #### Exceptions

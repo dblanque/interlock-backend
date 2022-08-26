@@ -35,6 +35,7 @@ from rest_framework.decorators import action
 ### Others
 from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.constants_cache import *
+from interlock_backend.settings import DEBUG
 from interlock_backend.ldap import adsi as ldap_adsi
 from interlock_backend.ldap.countries import LDAP_COUNTRIES
 from interlock_backend.ldap.accountTypes import LDAP_ACCOUNT_TYPES
@@ -1242,27 +1243,3 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 'code_msg': code_msg,
              }
         )
-
-    # # def list(self, request, pk=None):
-    # #     raise NotFound
-
-    # def create(self, request, pk=None):
-    #     raise NotFound
-
-    # def put(self, request, pk=None):
-    #     raise NotFound
-
-    # def patch(self, request, pk=None):
-    #     raise NotFound
-        
-    # def retrieve(self, request, pk=None):
-    #     raise NotFound
-
-    # # def update(self, request, pk=None):
-    # #     raise NotFound
-
-    # def partial_update(self, request, pk=None):
-    #     raise NotFound
-
-    # def destroy(self, request, pk=None):
-    #     raise NotFound
