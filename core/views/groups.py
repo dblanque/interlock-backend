@@ -652,7 +652,10 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
             c.delete(distinguishedName)
         except:
             c.unbind()
-            raise exc_groups.GroupDelete
+            data = {
+                "ldap_response": c.result
+            }
+            raise exc_groups.GroupDelete(data=data)
 
         if ldap_settings_list.LDAP_LOG_DELETE == True:
             # Log this action to DB
