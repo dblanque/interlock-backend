@@ -1,6 +1,4 @@
-from enum import Enum
 from interlock_backend.ldap import constants
-from interlock_backend.ldap import constants_cache
 from interlock_backend.settings import BASE_DIR
 from json import dumps
 from interlock_backend.ldap.settings_func import normalizeValues

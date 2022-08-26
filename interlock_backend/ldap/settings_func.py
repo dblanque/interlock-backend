@@ -26,11 +26,9 @@ def normalizeValues(settingKey, settingDict):
 
     Arguments
 
-    :self: (Object, the mixin)
+    settingKey (STRING) - (The key for the Setting Constant or DB Override)
 
-    :settingKey: (The key for the Setting Constant or DB Override)
-
-    :settingDict: (The dict to normalize)
+    settingDict (DICT) - (The dict to normalize)
     """
 
     try:
