@@ -302,7 +302,7 @@ fi
 
 if [[ $generateSSLCert == true ]] || [[ ! -f "$workpath/sslcerts/fullchain.pem" ]] || [[ ! -f "$workpath/sslcerts/privkey.pem" ]]; then
     # Create SSL Certificate
-    sudo openssl req -x509 -nodes -days 36500 -newkey rsa:2048 -keyout "$workpath/sslcerts/privkey.pem" -out "$workpath/sslcerts/fullchain.pem"
+    sudo openssl req -x509 -subj "/CN=$(hostname)/" -nodes -days 36500 -newkey rsa:2048 -keyout "$workpath/sslcerts/privkey.pem" -out "$workpath/sslcerts/fullchain.pem"
 fi
 
 # Checks if SSL Generation was successful.
