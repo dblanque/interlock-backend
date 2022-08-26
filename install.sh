@@ -549,7 +549,10 @@ try
     cd $frontendPath
 
     sed -i "s/const ssl.*/const ssl = true/g" "$frontendPath/src/providers/interlock_backend/config.js"
-    sed -i "s/{backend_url:.*}/{backend_url:\"$backendURL\"}/g" $frontendPath/dist/js/app*.js
+    sed -i "s/\"127.0.0.1:8000\"/\"$backendURL\"/g" $frontendPath/dist/js/app*.js
+    sed -i "s/\"127.0.0.1:8000\"/\"$backendURL\"/g" $frontendPath/dist/js/app*.map.js
+    sed -i "s/ssl:!1/ssl:!0/g" $frontendPath/dist/js/app*.js
+    sed -i "s/ssl:!1/ssl:!0/g" $frontendPath/dist/js/app*.map.js
     sed -i "s/backend_url:.*/backend_url: \"${backendURL}\",/g" "$frontendPath/src/providers/interlock_backend/local_settings.js"
     
     if [ $compileFront == true ]; then
