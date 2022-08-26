@@ -9,4 +9,3 @@ def date_str_to_date(string) -> datetime.date:
 
 def date_str_to_datetime(string) -> datetime:
     return tz.datetime.strptime(string, "%Y-%m-%d %H:%M:%S")
-

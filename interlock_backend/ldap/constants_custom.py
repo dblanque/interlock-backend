@@ -1,10 +1,10 @@
 ### LDAP SETTINGS
 
 # The URL of the LDAP server(s).  List multiple servers for high availability ServerPool connection.
-LDAP_AUTH_URL = ["ldap://localhost:389"]
+LDAP_AUTH_URL = ["ldap://10.10.10.13:389"]
 
 # This variable is used by the Interlock back-end to respond the correct domain info to the Front-end
-LDAP_DOMAIN = "example.com"
+LDAP_DOMAIN = "brconsulting"
 
 # Initiate TLS on connection.
 LDAP_AUTH_USE_TLS = False
@@ -14,24 +14,20 @@ import ssl
 LDAP_AUTH_TLS_VERSION = ssl.PROTOCOL_TLSv1_2
 
 # The LDAP search base for looking up users.
-LDAP_AUTH_SEARCH_BASE = "dc=example,dc=com"
+LDAP_AUTH_SEARCH_BASE = "dc=brconsulting"
+
+# The Schema Naming Context, you shouldn't need to change this
+LDAP_SCHEMA_NAMING_CONTEXT = "CN=Schema,CN=Configuration"
 
 # The LDAP class that represents a user.
 LDAP_AUTH_OBJECT_CLASS = "person"
 
-
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
-# ! Don't change the values below or Group Type/Scope changes will break ! #
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
-# Group Type Value Mapping
 LDAP_GROUP_TYPES = {
     # Distribution Group
     0:0,
     # Security Group
     1:-2147483648
 }
-
-# Group Scope Value Mapping
 LDAP_GROUP_SCOPES = {
     # Global Scope
     0:2,
@@ -40,7 +36,6 @@ LDAP_GROUP_SCOPES = {
     # Universal Scope
     2:8
 }
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
 
 # Set this to False if you wish to include Computer Accounts in User Listings
 EXCLUDE_COMPUTER_ACCOUNTS = True
@@ -49,15 +44,16 @@ EXCLUDE_COMPUTER_ACCOUNTS = True
 # Overrides will stop having an effect on system calls
 DISABLE_SETTING_OVERRIDES = False
 
-# User model fields mapped to the LDAP attributes that represent them.
+# User model fields mapped to the LDAP
+# attributes that represent them.
 LDAP_AUTH_USER_FIELDS = {
     "username": "sAMAccountName",
     "first_name": "givenName",
     "last_name": "sn",
-    "email": "mail"
+    "email": "mail",
+    "dn": "distinguishedName"
 }
 
-# Normalize to the standard LDAP string if it's sAMAccountName just in case
 if str(LDAP_AUTH_USER_FIELDS["username"]).lower() == 'samaccountname':
     LDAP_AUTH_USERNAME_IDENTIFIER = "sAMAccountName"
 else:
@@ -66,6 +62,7 @@ else:
 # A tuple of django model fields used to uniquely identify a user.
 LDAP_AUTH_USER_LOOKUP_FIELDS = (
     "username",
+    "email"
 )
 
 # Path to a callable that takes a dict of {model_field_name: value},
@@ -96,44 +93,16 @@ LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN = "BRCONS"
 # The LDAP username and password of a user for querying the LDAP database for user
 # details. If None, then the authenticated user will be used for querying, and
 # the `ldap_sync_users` command will perform an anonymous query.
-# This is used when the local Interlock Admin is logged in.
-LDAP_AUTH_CONNECTION_USER_DN = "CN=user,OU=Service Accounts,DC=example,DC=com"
+LDAP_AUTH_CONNECTION_USER_DN = "CN=s-ldapsync,OU=Service Accounts,DC=brconsulting"
 
 LDAP_AUTH_CONNECTION_USERNAME = LDAP_AUTH_CONNECTION_USER_DN.split(',')[0].split('CN=')[1]
-LDAP_AUTH_CONNECTION_PASSWORD = "ChangeThis"
+LDAP_AUTH_CONNECTION_PASSWORD = "!kDZladKxt-Ed2QI7P2eN5"
 
 # Set connection/receive timeouts (in seconds) on the underlying `ldap3` library.
 LDAP_AUTH_CONNECT_TIMEOUT = 5
 LDAP_AUTH_RECEIVE_TIMEOUT = 5
 
-ADMIN_GROUP_TO_SEARCH = "CN=admins,OU=Administrators,DC=example,DC=com"
-
-def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
-    GROUP_TO_SEARCH = ADMIN_GROUP_TO_SEARCH
-    if 'Administrator' in ldap_attributes[LDAP_AUTH_USER_FIELDS["username"]]:
-        user.is_staff = True
-        user.is_superuser = True
-        user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
-        user.save()
-        pass
-    elif 'memberOf' in ldap_attributes and GROUP_TO_SEARCH in ldap_attributes['memberOf']:
-        # Do staff shit here
-        user.is_staff = True
-        user.is_superuser = True
-        if user.email is not None:
-            user.email = str(ldap_attributes['mail']).lstrip("['").rstrip("']") or ""
-        user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
-        user.save()
-    else:
-        user.is_staff = True
-        user.is_superuser = False
-        if user.email is not None:
-            user.email = str(ldap_attributes['mail']).lstrip("['").rstrip("']") or ""
-        user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
-        user.save()
-    pass
-
-LDAP_AUTH_SYNC_USER_RELATIONS = sync_user_relations
+ADMIN_GROUP_TO_SEARCH = "CN=admins,OU=Administrators,DC=brconsulting"
 
 LDAP_DIRTREE_OU_FILTER = {
     "organizationalUnit" : "objectCategory",
