@@ -20,7 +20,7 @@ from .base import BaseManager
 from .choices.log import ACTION_CHOICES, CLASS_CHOICES
 
 ### Interlock
-from interlock_backend.ldap.settings_func import SettingsList
+from interlock_backend.ldap.constants_cache import *
 # ---------------------------------------------------------------------------- #
 class BaseLogModel(models.Model):
 
@@ -63,8 +63,7 @@ class Log(BaseLogModel):
 
 def logToDB(**kwargs):
     # This function rotates logs based on a Maximum Limit Setting
-    ldap_settings_list = SettingsList(**{"search":{ 'LDAP_LOG_MAX' }})
-    logLimit = ldap_settings_list.LDAP_LOG_MAX
+    logLimit = LDAP_LOG_MAX
 
     # Truncate Logs if necessary
     if Log.objects.count() > logLimit:

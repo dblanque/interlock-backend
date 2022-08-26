@@ -28,7 +28,7 @@ from core.models import dnsRecordFieldValidators as dnsValidators
 from core.views.mixins.utils import convert_string_to_bytes
 
 ### Interlock
-from interlock_backend.ldap.settings_func import SettingsList
+from interlock_backend.ldap.constants_cache import *
 from interlock_backend.ldap.connector import LDAPConnector
 from core.views.mixins.domain import DomainViewMixin
 ################################################################################
@@ -79,13 +79,6 @@ class DNSRecordMixin(DomainViewMixin):
                         }
                         raise exc_dns.DNSFieldValidatorFailed(data=data)
 
-        ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_DOMAIN',
-            'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_LOG_DELETE'
-        }})
-
         # Open LDAP Connection
         try:
             connector = LDAPConnector(user.dn, user.encryptedPassword, user)
@@ -114,7 +107,7 @@ class DNSRecordMixin(DomainViewMixin):
         else:
             affectedObject = recordName + "." + recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"
 
-        if ldap_settings_list.LDAP_LOG_DELETE == True:
+        if LDAP_LOG_DELETE == True:
             # Log this action to DB
             logToDB(
                 user_id=user.id,

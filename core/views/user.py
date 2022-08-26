@@ -34,7 +34,7 @@ from rest_framework.decorators import action
 
 ### Others
 from interlock_backend.ldap.connector import LDAPConnector
-from interlock_backend.ldap.settings_func import SettingsList
+from interlock_backend.ldap.constants_cache import *
 from interlock_backend.ldap import adsi as ldap_adsi
 from interlock_backend.ldap.countries import LDAP_COUNTRIES
 from interlock_backend.ldap.accountTypes import LDAP_ACCOUNT_TYPES
@@ -63,17 +63,10 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         code_msg = 'ok'
 
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_AUTH_USERNAME_IDENTIFIER',
-            'LDAP_AUTH_OBJECT_CLASS',
-            'LDAP_AUTH_SEARCH_BASE',
-            'EXCLUDE_COMPUTER_ACCOUNTS',
-            'LDAP_LOG_READ'
-        }})
-        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
-        authObjectClass = ldap_settings_list.LDAP_AUTH_OBJECT_CLASS
-        authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
-        excludeComputerAccounts = ldap_settings_list.EXCLUDE_COMPUTER_ACCOUNTS
+        authUsernameIdentifier = LDAP_AUTH_USERNAME_IDENTIFIER
+        authObjectClass = LDAP_AUTH_OBJECT_CLASS
+        authSearchBase = LDAP_AUTH_SEARCH_BASE
+        excludeComputerAccounts = EXCLUDE_COMPUTER_ACCOUNTS
         ########################################################################
 
         # Open LDAP Connection
@@ -105,7 +98,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         )
         list = c.entries
 
-        if ldap_settings_list.LDAP_LOG_READ == True:
+        if LDAP_LOG_READ == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -176,17 +169,10 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         userToSearch = data["username"]
 
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_AUTH_USERNAME_IDENTIFIER',
-            'LDAP_AUTH_OBJECT_CLASS',
-            'LDAP_AUTH_SEARCH_BASE',
-            'EXCLUDE_COMPUTER_ACCOUNTS',
-            'LDAP_LOG_READ'
-        }})
-        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
-        authObjectClass = ldap_settings_list.LDAP_AUTH_OBJECT_CLASS
-        authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
-        excludeComputerAccounts = ldap_settings_list.EXCLUDE_COMPUTER_ACCOUNTS
+        authUsernameIdentifier = LDAP_AUTH_USERNAME_IDENTIFIER
+        authObjectClass = LDAP_AUTH_OBJECT_CLASS
+        authSearchBase = LDAP_AUTH_SEARCH_BASE
+        excludeComputerAccounts = EXCLUDE_COMPUTER_ACCOUNTS
         ########################################################################
 
         # Open LDAP Connection
@@ -243,7 +229,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         user_entry = user_obj.entry
         user_dict = user_obj.attributes
 
-        if ldap_settings_list.LDAP_LOG_READ == True:
+        if LDAP_LOG_READ == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -320,17 +306,10 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         userToSearch = data["username"]
 
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_AUTH_USERNAME_IDENTIFIER',
-            'LDAP_AUTH_OBJECT_CLASS',
-            'LDAP_DOMAIN',
-            'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_LOG_CREATE'
-        }})
-        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
-        authObjectClass = ldap_settings_list.LDAP_AUTH_OBJECT_CLASS
-        authDomain = ldap_settings_list.LDAP_DOMAIN
-        authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+        authUsernameIdentifier = LDAP_AUTH_USERNAME_IDENTIFIER
+        authObjectClass = LDAP_AUTH_OBJECT_CLASS
+        authDomain = LDAP_DOMAIN
+        authSearchBase = LDAP_AUTH_SEARCH_BASE
         ########################################################################
 
         # Open LDAP Connection
@@ -424,7 +403,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             print(userDN)
             raise exc_user.UserUpdateError
 
-        if ldap_settings_list.LDAP_LOG_CREATE == True:
+        if LDAP_LOG_CREATE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -452,11 +431,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         data = data['user']
 
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_AUTH_USERNAME_IDENTIFIER',
-            'LDAP_LOG_UPDATE'
-        }})
-        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
+        authUsernameIdentifier = LDAP_AUTH_USERNAME_IDENTIFIER
         ########################################################################
 
         excludeKeys = [
@@ -594,7 +569,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
 
         logger.debug(c.result)
 
-        if ldap_settings_list.LDAP_LOG_UPDATE == True:
+        if LDAP_LOG_UPDATE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -622,17 +597,10 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         data = request.data
 
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_AUTH_USERNAME_IDENTIFIER',
-            'LDAP_AUTH_OBJECT_CLASS',
-            'EXCLUDE_COMPUTER_ACCOUNTS',
-            'LDAP_LOG_UPDATE'
-        }})
-        authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
-        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
-        authObjectClass = ldap_settings_list.LDAP_AUTH_OBJECT_CLASS
-        excludeComputerAccounts = ldap_settings_list.EXCLUDE_COMPUTER_ACCOUNTS
+        authSearchBase = LDAP_AUTH_SEARCH_BASE
+        authUsernameIdentifier = LDAP_AUTH_USERNAME_IDENTIFIER
+        authObjectClass = LDAP_AUTH_OBJECT_CLASS
+        excludeComputerAccounts = EXCLUDE_COMPUTER_ACCOUNTS
         ########################################################################
 
         userToDisable = data['username']
@@ -678,7 +646,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             c.unbind()
             raise exc_user.UserPermissionError
 
-        if ldap_settings_list.LDAP_LOG_UPDATE == True:
+        if LDAP_LOG_UPDATE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -713,17 +681,10 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         data = request.data
 
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_AUTH_USERNAME_IDENTIFIER',
-            'LDAP_AUTH_OBJECT_CLASS',
-            'EXCLUDE_COMPUTER_ACCOUNTS',
-            'LDAP_LOG_UPDATE'
-        }})
-        authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
-        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
-        authObjectClass = ldap_settings_list.LDAP_AUTH_OBJECT_CLASS
-        excludeComputerAccounts = ldap_settings_list.EXCLUDE_COMPUTER_ACCOUNTS
+        authSearchBase = LDAP_AUTH_SEARCH_BASE
+        authUsernameIdentifier = LDAP_AUTH_USERNAME_IDENTIFIER
+        authObjectClass = LDAP_AUTH_OBJECT_CLASS
+        excludeComputerAccounts = EXCLUDE_COMPUTER_ACCOUNTS
         ########################################################################
 
         userToEnable = data['username']
@@ -769,7 +730,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             c.unbind()
             raise exc_user.UserPermissionError
 
-        if ldap_settings_list.LDAP_LOG_UPDATE == True:
+        if LDAP_LOG_UPDATE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -801,10 +762,6 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         code = 0
         code_msg = 'ok'
         data = request.data
-
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_LOG_DELETE'
-        }})
 
         # Open LDAP Connection
         try:
@@ -838,7 +795,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 raise exc_user.UserDoesNotExist
             c.delete(dn)
 
-        if ldap_settings_list.LDAP_LOG_DELETE == True:
+        if LDAP_LOG_DELETE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -864,10 +821,6 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         code = 0
         code_msg = 'ok'
         data = request.data
-
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_LOG_UPDATE'
-        }})
 
         # Open LDAP Connection
         try:
@@ -900,7 +853,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             c.unbind()
             raise exc_user.UserPasswordsDontMatch
 
-        if ldap_settings_list.LDAP_LOG_UPDATE == True:
+        if LDAP_LOG_UPDATE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -930,10 +883,6 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         code_msg = 'ok'
         data = request.data
 
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_LOG_UPDATE'
-        }})
-
         # Open LDAP Connection
         try:
             c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
@@ -960,7 +909,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             c.unbind()
             raise exc_user.UserDoesNotExist
 
-        if ldap_settings_list.LDAP_LOG_UPDATE == True:
+        if LDAP_LOG_UPDATE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -996,10 +945,6 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         code = 0
         code_msg = 'ok'
         data = request.data
-
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_LOG_UPDATE'
-        }})
 
         if data['username'] != user.username:
             raise PermissionDenied
@@ -1037,7 +982,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
 
         c.extend.microsoft.modify_password(distinguishedName, data['password'])
 
-        if ldap_settings_list.LDAP_LOG_UPDATE == True:
+        if LDAP_LOG_UPDATE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -1069,11 +1014,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             raise PermissionDenied
 
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_AUTH_USERNAME_IDENTIFIER',
-            'LDAP_LOG_UPDATE'
-        }})
-        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
+        authUsernameIdentifier = LDAP_AUTH_USERNAME_IDENTIFIER
         ########################################################################
 
         excludeKeys = [
@@ -1162,7 +1103,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
 
         logger.debug(c.result)
 
-        if ldap_settings_list.LDAP_LOG_UPDATE == True:
+        if LDAP_LOG_UPDATE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -1211,14 +1152,9 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         userToSearch = user.username
 
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_AUTH_USERNAME_IDENTIFIER',
-            'LDAP_AUTH_OBJECT_CLASS',
-            'LDAP_AUTH_SEARCH_BASE'
-        }})
-        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
-        authObjectClass = ldap_settings_list.LDAP_AUTH_OBJECT_CLASS
-        authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+        authUsernameIdentifier = LDAP_AUTH_USERNAME_IDENTIFIER
+        authObjectClass = LDAP_AUTH_OBJECT_CLASS
+        authSearchBase = LDAP_AUTH_SEARCH_BASE
         ########################################################################
 
         # Open LDAP Connection
@@ -1292,11 +1228,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         code = 0
         code_msg = 'ok'
 
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_LOG_LOGOUT'
-        }})
-
-        if ldap_settings_list.LDAP_LOG_LOGOUT == True:
+        if LDAP_LOG_LOGOUT == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,

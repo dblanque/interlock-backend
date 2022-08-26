@@ -36,7 +36,7 @@ from core.utils import dnstool
 from core.utils.dnstool import record_to_dict
 from interlock_backend.ldap.adsi import addSearchFilter
 from interlock_backend.ldap.encrypt import validateUser
-from interlock_backend.ldap.settings_func import SettingsList
+from interlock_backend.ldap.constants_cache import *
 from interlock_backend.ldap.connector import LDAPConnector
 import logging
 ################################################################################
@@ -51,10 +51,9 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         validateUser(request=request, requireAdmin=False)
         data = {}
         code = 0
-        ldap_settings_list = SettingsList(**{"search":{'LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN', 'LDAP_DOMAIN', 'LDAP_AUTH_SEARCH_BASE'}})
-        data["realm"] = ldap_settings_list.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN or ""
-        data["name"] = ldap_settings_list.LDAP_DOMAIN or ""
-        data["basedn"] = ldap_settings_list.LDAP_AUTH_SEARCH_BASE or ""
+        data["realm"] = LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN or ""
+        data["name"] = LDAP_DOMAIN or ""
+        data["basedn"] = LDAP_AUTH_SEARCH_BASE or ""
         return Response(
              data={
                 'code': code,
@@ -79,13 +78,6 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         if zoneFilter is not None:
             if zoneFilter == "" or len(zoneFilter) == 0:
                 zoneFilter = None
-
-        ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_DOMAIN',
-            'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_LOG_READ'
-        }})
 
         # Open LDAP Connection
         try:
@@ -116,7 +108,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         if zoneFilter is not None:
             target_zone = zoneFilter
         else:
-            target_zone = ldap_settings_list.LDAP_DOMAIN
+            target_zone = LDAP_DOMAIN
         search_target = 'DC=%s,%s' % (target_zone, dnsList.dnsroot)
         ldapConnection.search(
             search_base=search_target,
@@ -169,7 +161,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
             if zoneName == 'RootDNSServers':
                 dnsZones[i] = "Root DNS Servers"
 
-        if ldap_settings_list.LDAP_LOG_READ == True:
+        if LDAP_LOG_READ == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -210,14 +202,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
             }
             raise exc_dns.DNSFieldValidatorFailed(data=data)
 
-        ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_DOMAIN',
-            'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_LOG_CREATE'
-        }})
-
-        if target_zone == ldap_settings_list.LDAP_DOMAIN or target_zone == 'RootDNSServers':
+        if target_zone == LDAP_DOMAIN or target_zone == 'RootDNSServers':
             raise exc_dns.DNSZoneNotDeletable
 
         # Open LDAP Connection
@@ -318,7 +303,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 
         ldapConnection.unbind()
 
-        if ldap_settings_list.LDAP_LOG_CREATE == True:
+        if LDAP_LOG_CREATE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -362,14 +347,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
             }
             raise exc_dns.DNSFieldValidatorFailed(data=data)
 
-        ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_DOMAIN',
-            'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_LOG_DELETE'
-        }})
-
-        if target_zone == ldap_settings_list.LDAP_DOMAIN or target_zone == 'RootDNSServers':
+        if target_zone == LDAP_DOMAIN or target_zone == 'RootDNSServers':
             raise exc_dns.DNSZoneNotDeletable
 
         # Open LDAP Connection
@@ -418,7 +396,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 
         ldapConnection.unbind()
 
-        if ldap_settings_list.LDAP_LOG_DELETE == True:
+        if LDAP_LOG_DELETE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,

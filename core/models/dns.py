@@ -15,7 +15,6 @@ from core.exceptions import dns as exc_dns
 from core.models.dnsRecordClasses import *
 
 ### Interlock
-from interlock_backend.ldap.settings_func import SettingsList
 from interlock_backend.ldap.adsi import addSearchFilter
 
 ### Utils
@@ -33,24 +32,18 @@ from ldap3 import (
     MODIFY_REPLACE
 )
 import logging
+from interlock_backend.ldap.constants_cache import *
 ################################################################################
 
 logger = logging.getLogger(__name__)
 class LDAPDNS():
     def __init__(self, connection, legacy=False):
-        ######################## Get Latest Settings ###########################
-        self.ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_DOMAIN',
-            'LDAP_SCHEMA_NAMING_CONTEXT'
-        }})
-
         if legacy == True:
-            self.dnsroot = 'CN=MicrosoftDNS,CN=System,%s' % self.ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+            self.dnsroot = 'CN=MicrosoftDNS,CN=System,%s' % LDAP_AUTH_SEARCH_BASE
         else:
-            self.dnsroot = 'CN=MicrosoftDNS,DC=DomainDnsZones,%s' % self.ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+            self.dnsroot = 'CN=MicrosoftDNS,DC=DomainDnsZones,%s' % LDAP_AUTH_SEARCH_BASE
         
-        self.forestroot = 'CN=MicrosoftDNS,DC=ForestDnsZones,%s' % self.ldap_settings_list.LDAP_AUTH_SEARCH_BASE  
+        self.forestroot = 'CN=MicrosoftDNS,DC=ForestDnsZones,%s' % LDAP_AUTH_SEARCH_BASE  
         self.connection = connection
         self.list_dns_zones()
         self.list_forest_zones()
@@ -84,7 +77,7 @@ class LDAPRecord(LDAPDNS):
     ):
         super().__init__(connection=connection, legacy=legacy)
 
-        self.schemaNamingContext = "%s,%s" % (self.ldap_settings_list.LDAP_SCHEMA_NAMING_CONTEXT, self.ldap_settings_list.LDAP_AUTH_SEARCH_BASE)
+        self.schemaNamingContext = "%s,%s" % (LDAP_SCHEMA_NAMING_CONTEXT, LDAP_AUTH_SEARCH_BASE)
 
         if rName is None:
             raise ValueError("Name cannot be none (LDAPRecord Object Class)")
@@ -166,8 +159,7 @@ class LDAPRecord(LDAPDNS):
         excludedKeys = [
             'rawEntry',
             'connection',
-            'ldap_info',
-            'ldap_settings_list'
+            'ldap_info'
         ]
         return [v for v in self.__dict__.keys() if v not in excludedKeys]
 

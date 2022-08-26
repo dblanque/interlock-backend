@@ -12,7 +12,7 @@ from rest_framework import viewsets
 
 ### Interlock
 from interlock_backend.ldap.adsi import addSearchFilter
-from interlock_backend.ldap.settings_func import SettingsList
+from interlock_backend.ldap.constants_cache import *
 
 ### Models
 from core.models.ldapObject import LDAPObject
@@ -20,14 +20,9 @@ from core.models.ldapObject import LDAPObject
 
 class UserViewMixin(viewsets.ViewSetMixin):
     def getUserObjectFilter(self, username):
-        ldap_settings_list = SettingsList(**{"search":{
-                "LDAP_AUTH_USERNAME_IDENTIFIER",
-                "LDAP_AUTH_OBJECT_CLASS",
-                "EXCLUDE_COMPUTER_ACCOUNTS"
-            }})
-        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
-        authObjectClass = ldap_settings_list.LDAP_AUTH_OBJECT_CLASS
-        excludeComputerAccounts = ldap_settings_list.EXCLUDE_COMPUTER_ACCOUNTS
+        authUsernameIdentifier = LDAP_AUTH_USERNAME_IDENTIFIER
+        authObjectClass = LDAP_AUTH_OBJECT_CLASS
+        excludeComputerAccounts = EXCLUDE_COMPUTER_ACCOUNTS
 
         objectClassFilter = "(objectclass=" + authObjectClass + ")"
 
@@ -42,7 +37,7 @@ class UserViewMixin(viewsets.ViewSetMixin):
             )
         return objectClassFilter
 
-    def getUserObject(self, connection, username, attributes=[SettingsList().LDAP_AUTH_USERNAME_IDENTIFIER, 'distinguishedName'], objectClassFilter=None):
+    def getUserObject(self, connection, username, attributes=[LDAP_AUTH_USERNAME_IDENTIFIER, 'distinguishedName'], objectClassFilter=None):
         """ Default: Search for the dn from a username string param.
         
         Can also be used to fetch entire object from that username string or filtered attributes.
@@ -61,14 +56,11 @@ class UserViewMixin(viewsets.ViewSetMixin):
 
         Returns the connection.
         """
-        ldap_settings_list = SettingsList(**{"search":{
-                "LDAP_AUTH_SEARCH_BASE"
-            }})
         if objectClassFilter == None:
             objectClassFilter = self.getUserObjectFilter(username)
 
         connection.search(
-            ldap_settings_list.LDAP_AUTH_SEARCH_BASE, 
+            LDAP_AUTH_SEARCH_BASE, 
             objectClassFilter, 
             attributes=attributes
         )

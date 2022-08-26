@@ -7,7 +7,7 @@
 ###############################################################################
 # Originally Created by Dylan Blanqué and BR Consulting S.R.L. (2022)
 
-from interlock_backend.ldap.settings_func import SettingsList
+from interlock_backend.ldap.constants_cache import *
 import logging
 
 logger = logging.getLogger(__name__)
@@ -213,9 +213,8 @@ def list_user_perms(user, permissionToSearch=None, isObject=True):
         rawUserPerms = bin_as_str(user['userAccountControl'])
     UserPerms = []
     i = 0
-    ldap_settings_list = SettingsList()
 
-    authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
+    authUsernameIdentifier = LDAP_AUTH_USERNAME_IDENTIFIER
     for n in range(0, 32): # Loop for each bit in 0-32
         i += 1
         if rawUserPerms[n] == "1": # If permission matches enter for loop to 

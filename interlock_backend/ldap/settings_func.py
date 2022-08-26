@@ -1,75 +1,21 @@
 # Core Imports
-from typing import Literal
-from core.models.settings_model import Setting
-from core.exceptions import settings_exc as exc_settings
 from core.models.user import User
 
 # Interlock Imports
 from interlock_backend.ldap.constants import (
-    SETTINGS_WITH_ALLOWABLE_OVERRIDE,
-    DISABLE_SETTING_OVERRIDES,
+    CMAPS,    
     __dict__ as constantDictionary
 )
+from interlock_backend.ldap import constants_cache
 # Full imports
 import logging
-import ssl
-import inspect
-from django.db import connection
 
 logger = logging.getLogger(__name__)
 
-def settings_table_exists():
-    db_tables = connection.introspection.table_names()
-    if 'core_setting' in db_tables:
-        return True
-    return False
-
-def getSetting(settingKey):
-    valueFields = [
-        'value',
-        'value_bool',
-        'value_json',
-        'value_int',
-        'value_float'
-    ]
-
-    if not settings_table_exists():
-        return constantDictionary[settingKey]
-
-    try:
-        querySet = Setting.objects.filter(id = settingKey).exclude(deleted=True)
-    except Exception as e:
-        print("EXCEPTION FOR DB FILTER:" + settingKey)
-        print(e)
-    if querySet.count() != 0 and querySet.count() != None and DISABLE_SETTING_OVERRIDES != True:
-        logger.debug("Fetching value for "+ settingKey+' from DB')
-        try:
-            setting = querySet[0]
-            # setting = normalizeValues(settingKey, setting.__dict__)
-
-            if settingKey == 'LDAP_AUTH_TLS_VERSION':
-                return getattr(ssl, setting.value)
-            else:
-                for field in valueFields:
-                    fieldValue = getattr(setting, field)
-                    if fieldValue is not None and fieldValue != "":
-                        if settingKey == 'LDAP_AUTH_SEARCH_BASE':
-                            normalizedSearchBase = fieldValue.replace('dc=', 'DC=')
-                            normalizedSearchBase = normalizedSearchBase.replace('cn=', 'CN=')
-                            return normalizedSearchBase
-                        else:
-                            return fieldValue
-        except Exception as e:
-            print("EXCEPTION FOR DB FETCH:" + settingKey)
-            print(e)
-    else:
-        logger.debug("Fetching value for "+ settingKey +' from Constants')
-        return constantDictionary[settingKey]
-
 def getSettingType(settingKey):
     # Set the Type for the Front-end based on Types in List
-    if 'type' in SETTINGS_WITH_ALLOWABLE_OVERRIDE[settingKey]:
-        type = SETTINGS_WITH_ALLOWABLE_OVERRIDE[settingKey]['type']
+    if 'type' in CMAPS[settingKey]:
+        type = CMAPS[settingKey]['type']
     else:
         type = 'string'
     return type
@@ -87,21 +33,29 @@ def normalizeValues(settingKey, settingDict):
     :settingDict: (The dict to normalize)
     """
 
-    settingDict['type'] = getSettingType(settingKey)
+    try:
+        settingDict['type'] = getSettingType(settingKey)
+    except Exception as e:
+        print(e)
+        print(settingKey)
+
     listTypes = [ 'list', 'object', 'ldap_uri', 'array', 'tuple' ]
 
     # INT
     if settingDict['type'] == 'integer':
-        settingDict['value_int'] = settingDict['value']
+        settingDict['value'] = int(settingDict['value'])
     # FLOAT
     elif settingDict['type'] == 'float':
-        settingDict['value_float'] = settingDict['value']
+        settingDict['value'] = float(settingDict['value'])
     # LIST/ARRAY OR OBJECT
     elif (settingDict['type'] in listTypes):
-        settingDict['value_json'] = settingDict['value']
+        settingDict['value'] = settingDict['value']
     # BOOLEAN
     elif settingDict['type'] == 'boolean':
-        settingDict['value_bool'] = settingDict['value']
+        if settingDict['value'] == "1" or settingDict['value'] == 1 or settingDict['value'] == 'true' or settingDict['value'] == 'True':
+            settingDict['value'] = True
+        else:
+            settingDict['value'] = False
     # TODO - TUPLE
     # elif settingDict['type'] == 'tuple':
     #     print(settingDict)
@@ -110,12 +64,12 @@ def normalizeValues(settingKey, settingDict):
         settingDict['value'] = str(settingDict['value']).split('.')[-1]
     return settingDict
 
-def getSettingsList(settingList=SETTINGS_WITH_ALLOWABLE_OVERRIDE):
+def getSettingsList(settingList=CMAPS):
     """Returns a Dictionary with the current setting values in the system
 
         Arguments:
 
-        settingList (STRING) - Default is SETTINGS_WITH_ALLOWABLE_OVERRIDE
+        settingList (STRING) - Default is CMAPS
 
         listFormat (STRING) - frontend or backend
 
@@ -139,73 +93,10 @@ def getSettingsList(settingList=SETTINGS_WITH_ALLOWABLE_OVERRIDE):
             data[c] = {}
 
             data[c]['type'] = getSettingType(c)
-            data[c]['value'] = getSetting(c)
+            data[c]['value'] = getattr(constants_cache, c)
 
             if c == 'LDAP_AUTH_TLS_VERSION':
                 data[c]['value'] = str(data[c]['value'])
                 data[c]['value'] = data[c]['value'].split('.')[-1]
 
     return data
-class SettingsList(object):
-    LDAP_AUTH_URL: str
-    LDAP_DOMAIN: str
-    LDAP_AUTH_USE_TLS: str
-    LDAP_AUTH_TLS_VERSION: str
-    LDAP_AUTH_SEARCH_BASE: str
-    LDAP_SCHEMA_NAMING_CONTEXT: str
-    LDAP_AUTH_OBJECT_CLASS: str
-    LDAP_GROUP_TYPES: dict
-    LDAP_GROUP_SCOPES: dict
-    EXCLUDE_COMPUTER_ACCOUNTS: bool
-    LDAP_AUTH_USER_FIELDS: dict
-    LDAP_AUTH_USERNAME_IDENTIFIER: str
-    LDAP_AUTH_USER_LOOKUP_FIELDS: tuple
-    LDAP_AUTH_CLEAN_USER_DATA: callable
-    LDAP_AUTH_SYNC_USER_RELATIONS: callable
-    LDAP_AUTH_FORMAT_SEARCH_FILTERS: callable
-    LDAP_AUTH_FORMAT_USERNAME: callable
-    LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN: str
-    LDAP_AUTH_CONNECTION_USER_DN: str
-    LDAP_AUTH_CONNECTION_USERNAME: str
-    LDAP_AUTH_CONNECTION_PASSWORD: str
-    LDAP_AUTH_CONNECT_TIMEOUT: str
-    LDAP_AUTH_RECEIVE_TIMEOUT: str
-    ADMIN_GROUP_TO_SEARCH: str
-    LDAP_DIRTREE_OU_FILTER: dict
-    LDAP_DIRTREE_CN_FILTER: dict
-    LDAP_DIRTREE_ATTRIBUTES: list
-    LDAP_LOG_READ: bool
-    LDAP_LOG_CREATE: bool
-    LDAP_LOG_UPDATE: bool
-    LDAP_LOG_DELETE: bool
-    LDAP_LOG_OPEN_CONNECTION: bool
-    LDAP_LOG_CLOSE_CONNECTION: bool
-    LDAP_LOG_LOGIN: bool
-    LDAP_LOG_LOGOUT: bool
-    LDAP_LOG_MAX: int
-
-    def __init__(self,**kwargs):
-        self.name = 'SettingsList'
-        if 'search' in kwargs:
-            for arg in kwargs['search']:
-                if arg in SETTINGS_WITH_ALLOWABLE_OVERRIDE:
-                    setattr(self, arg, getSetting(arg))
-                else:
-                    setattr(self, arg, constantDictionary[arg])
-        else:
-            for setting in constantDictionary:
-                if setting in SETTINGS_WITH_ALLOWABLE_OVERRIDE:
-                    setattr(self, setting, getSetting(setting))
-                else:
-                    setattr(self, setting, constantDictionary[setting])
-
-    def __getattribute__(self, attr):
-        result = super(SettingsList, self).__getattribute__(attr)
-        if result == Literal:
-            message = "%s could not be fetched as it's not in the search list" % (attr)
-            caller = inspect.getframeinfo(inspect.stack()[1][0])
-            print(message)
-            print("Traceback: %s at line %s" % (caller.filename, caller.lineno + 1))
-            raise exc_settings.SettingNotInList
-        else:
-            return result

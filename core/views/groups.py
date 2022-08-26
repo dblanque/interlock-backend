@@ -37,9 +37,9 @@ from ldap3 import (
 from interlock_backend.ldap.encrypt import validateUser
 from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.adsi import addSearchFilter
-from interlock_backend.ldap.settings_func import SettingsList
 from interlock_backend.ldap.securityIdentifier import SID
-from interlock_backend.ldap.constants import LDAP_GROUP_TYPES, LDAP_GROUP_SCOPES
+from interlock_backend.ldap.constants import LDAP_GROUP_TYPE_MAPPING, LDAP_GROUP_SCOPE_MAPPING
+from interlock_backend.ldap.constants_cache import *
 import logging
 import traceback
 ################################################################################
@@ -56,12 +56,8 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         code_msg = 'ok'
 
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_LOG_READ'
-        }})
         groupObjectClass = 'group'
-        authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+        authSearchBase = LDAP_AUTH_SEARCH_BASE
         ########################################################################
 
         # Open LDAP Connection
@@ -128,7 +124,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
         valid_attributes.append('hasMembers')
 
-        if ldap_settings_list.LDAP_LOG_READ == True:
+        if LDAP_LOG_READ == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -159,14 +155,9 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         groupDnSearch = request.data['group']
 
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_AUTH_USERNAME_IDENTIFIER',
-            'LDAP_LOG_READ'
-        }})
         groupObjectClass = 'group'
-        authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
-        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
+        authSearchBase = LDAP_AUTH_SEARCH_BASE
+        authUsernameIdentifier = LDAP_AUTH_USERNAME_IDENTIFIER
         ########################################################################
 
         # Open LDAP Connection
@@ -257,7 +248,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
             # Add entry DN to response dictionary
             group_dict['distinguishedName'] = str(group[0].entry_dn)
 
-        if ldap_settings_list.LDAP_LOG_READ == True:
+        if LDAP_LOG_READ == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -286,15 +277,9 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         data = request.data
 
         ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_AUTH_USERNAME_IDENTIFIER',
-            'LDAP_DOMAIN',
-            'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_LOG_CREATE'
-        }})
-        authUsernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
-        authDomain = ldap_settings_list.LDAP_DOMAIN
-        authSearchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+        authUsernameIdentifier = LDAP_AUTH_USERNAME_IDENTIFIER
+        authDomain = LDAP_DOMAIN
+        authSearchBase = LDAP_AUTH_SEARCH_BASE
         ########################################################################
 
         # Open LDAP Connection
@@ -353,8 +338,8 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
             }
             raise exc_groups.GroupScopeOrTypeMissing(data=data)
 
-        sum = LDAP_GROUP_TYPES[int(groupToCreate['groupType'])]
-        sum += LDAP_GROUP_SCOPES[int(groupToCreate['groupScope'])]
+        sum = LDAP_GROUP_TYPE_MAPPING[int(groupToCreate['groupType'])]
+        sum += LDAP_GROUP_SCOPE_MAPPING[int(groupToCreate['groupScope'])]
         groupToCreate['groupType'] = sum
         groupToCreate.pop('groupScope')
 
@@ -392,7 +377,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                 print(e)
                 raise exc_groups.GroupMembersAdd
 
-        if ldap_settings_list.LDAP_LOG_CREATE == True:
+        if LDAP_LOG_CREATE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -417,14 +402,6 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         code = 0
         code_msg = 'ok'
         data = request.data
-
-        ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_DOMAIN',
-            'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_LOG_UPDATE'
-        }})
-        ########################################################################
 
         # Open LDAP Connection
         try:
@@ -478,8 +455,8 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
         castGroupType = int(groupToUpdate['groupType'])
         castGroupScope = int(groupToUpdate['groupScope'])
-        sum = LDAP_GROUP_TYPES[castGroupType]
-        sum += LDAP_GROUP_SCOPES[castGroupScope]
+        sum = LDAP_GROUP_TYPE_MAPPING[castGroupType]
+        sum += LDAP_GROUP_SCOPE_MAPPING[castGroupScope]
         groupToUpdate['groupType'] = sum
         groupToUpdate.pop('groupScope')
 
@@ -533,8 +510,8 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                             # We need to make it universal first, otherwise the LDAP server denies the update request
                             # Sucks but we have to do this :/
                             if ('GROUP_GLOBAL' in previousGroupTypes and castGroupScope == 1) or ('GROUP_DOMAIN_LOCAL' in previousGroupTypes and castGroupScope == 0):
-                                passthroughSum = LDAP_GROUP_TYPES[castGroupType]
-                                passthroughSum += LDAP_GROUP_SCOPES[2]
+                                passthroughSum = LDAP_GROUP_TYPE_MAPPING[castGroupType]
+                                passthroughSum += LDAP_GROUP_SCOPE_MAPPING[2]
                                 print(passthroughSum)
                                 print(group_dict[key])
                                 # Change to Universal Scope
@@ -595,7 +572,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                     print(e)
                     raise exc_groups.GroupMembersRemove
 
-        if ldap_settings_list.LDAP_LOG_UPDATE == True:
+        if LDAP_LOG_UPDATE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -622,10 +599,6 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         code_msg = 'ok'
         data = request.data
         groupToDelete = data['group']
-
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_LOG_DELETE'
-        }})
 
         if 'cn' not in groupToDelete:
             print(groupToDelete)
@@ -657,7 +630,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
             }
             raise exc_groups.GroupDelete(data=data)
 
-        if ldap_settings_list.LDAP_LOG_DELETE == True:
+        if LDAP_LOG_DELETE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,

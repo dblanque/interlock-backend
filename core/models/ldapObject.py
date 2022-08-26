@@ -11,7 +11,7 @@
 from django.utils.translation import gettext_lazy as _
 
 ### Interlock
-from interlock_backend.ldap.settings_func import SettingsList
+from interlock_backend.ldap.constants_cache import *
 from interlock_backend.ldap.adsi import LDAP_BUILTIN_OBJECTS, addSearchFilter
 from interlock_backend.ldap.securityIdentifier import SID
 ################################################################################
@@ -43,19 +43,11 @@ class LDAPObject():
         if 'dn' not in kwargs and 'ldapFilter' not in kwargs:
             raise Exception("LDAP Object requires a distinguishedName or a valid ldapFilter to search for the object")
 
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_AUTH_USERNAME_IDENTIFIER',
-            'LDAP_DIRTREE_OU_FILTER',
-            'LDAP_DIRTREE_CN_FILTER',
-            'LDAP_DIRTREE_ATTRIBUTES',
-        }})
-
         # Set LDAPTree Default Values
-        self.name = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
-        self.searchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+        self.name = LDAP_AUTH_SEARCH_BASE
+        self.searchBase = LDAP_AUTH_SEARCH_BASE
         self.connection = kwargs.pop('connection')
-        self.usernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
+        self.usernameIdentifier = LDAP_AUTH_USERNAME_IDENTIFIER
         self.subobjectId = 0
         self.excludedLdapAttributes = [
             'objectGUID',
@@ -77,7 +69,7 @@ class LDAPObject():
         ]
         self.recursive = False
         self.testFetch = False
-        self.ldapAttributes = ldap_settings_list.LDAP_DIRTREE_ATTRIBUTES
+        self.ldapAttributes = LDAP_DIRTREE_ATTRIBUTES
         if 'dn' in kwargs:
             self.ldapFilter = addSearchFilter("", "distinguishedName=" + str(kwargs['dn']))
 

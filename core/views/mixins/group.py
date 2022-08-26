@@ -15,7 +15,7 @@ from interlock_backend.ldap.adsi import bin_as_hex, addSearchFilter
 from interlock_backend.ldap.groupTypes import LDAP_GROUP_TYPES
 from interlock_backend.ldap.securityIdentifier import SID
 from interlock_backend.ldap.connector import LDAPConnector
-from interlock_backend.ldap.settings_func import SettingsList
+from interlock_backend.ldap.constants_cache import *
 
 ### Core
 from core.exceptions.ldap import CouldNotOpenConnection
@@ -41,14 +41,6 @@ class GroupViewMixin(viewsets.ViewSetMixin):
             print(e)
             raise ValueError("RID To Search must be an Integer")
 
-        ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_AUTH_USERNAME_IDENTIFIER',
-            'LDAP_AUTH_OBJECT_CLASS',
-            'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_LOG_READ'
-        }})
-
         # Open LDAP Connection
         try:
             ldapConnection = LDAPConnector().connection
@@ -59,7 +51,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
         searchFilter = addSearchFilter("", "objectClass=group")
 
         ldapConnection.search(
-            ldap_settings_list.LDAP_AUTH_SEARCH_BASE,
+            LDAP_AUTH_SEARCH_BASE,
             search_filter=searchFilter,
             search_scope=ldap3.SUBTREE,
             attributes=attributes,

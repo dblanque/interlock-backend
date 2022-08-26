@@ -17,9 +17,11 @@ from core.models.settings_model import Setting
 ### Mixins
 from .mixins.settings_mixin import SettingsViewMixin
 
+### Viewsets
+from .base import BaseViewSet
+
 ### REST Framework
 from rest_framework.response import Response
-from rest_framework import viewsets
 from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
 
@@ -27,10 +29,10 @@ from rest_framework.decorators import action
 from interlock_backend.ldap.constants import (
     __dict__ as constantDictionary
 )
+from interlock_backend.ldap.cacher import saveToCache, resetCacheToDefaults
 from interlock_backend.ldap.encrypt import validateUser
-from interlock_backend.ldap import constants as ldap_constants
+from interlock_backend.ldap.constants_cache import *
 from interlock_backend.ldap.settings_func import (
-    SettingsList,
     getSettingsList,
     normalizeValues
 )
@@ -40,7 +42,7 @@ import ssl
 
 logger = logging.getLogger(__name__)
 
-class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
+class SettingsViewSet(BaseViewSet, SettingsViewMixin):
     queryset = Setting.objects.all()
 
     def list(self, request, pk=None):
@@ -49,15 +51,11 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
         data = {}
         code = 0
 
-        ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{ 'LDAP_LOG_READ' }})
-        ########################################################################
-
         # Gets front-end parsed settings
         data = getSettingsList()
         data['DEFAULT_ADMIN_ENABLED'] = self.getAdminStatus()
 
-        if ldap_settings_list.LDAP_LOG_READ == True:
+        if LDAP_LOG_READ == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -82,59 +80,21 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
         data = request.data
         code = 0
 
-        ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{ 'LDAP_LOG_UPDATE' }})
-        ########################################################################
-
         adminEnabled = data.pop('DEFAULT_ADMIN_ENABLED')
         adminPassword = data.pop('DEFAULT_ADMIN_PWD')
         self.setAdminStatus(status=adminEnabled, password=adminPassword)
 
-        valueFields = [
-            'value',
-            'value_bool',
-            'value_json',
-            'value_int',
-            'value_float'
-        ]
-
         affectedObjects = list()
 
-        for setting in data:
-            data[setting] = normalizeValues(setting, data[setting])
-            if setting in constantDictionary:
-                dictValue = getattr(ldap_constants, setting)
-                if dictValue not in data[setting].values():
-                    logger.debug("Located in: "+__name__+'.save')
-                    logger.debug('Value in data for ' + setting)
-                    logger.debug(data[setting]['value'])
-                    logger.debug('Type in data for ' + setting)
-                    logger.debug(type(data[setting]['value']))
-                    logger.debug('Value in constants dict for ' + setting)
-                    logger.debug(dictValue)
-                    logger.debug('Type in constants dict for ' + setting)
-                    logger.debug(type(dictValue))
-                    code = self.update_or_create_setting(setting, data[setting])
-                    if code == "UPDATE_SUCCESS" or code == "CREATE_SUCCESS":
-                        affectedObjects.append({
-                            'name': setting,
-                            'objectInstance': data[setting]
-                        })
-                else:
-                    for field in valueFields:
-                        if field in data[setting]:
-                            if dictValue == data[setting][field]:
-                                code = self.delete_setting(setting, data[setting])
-                                if code == "DELETE_SUCCESS":
-                                    affectedObjects.append( setting )
+        saveToCache(newValues=data)
 
-        if ldap_settings_list.LDAP_LOG_UPDATE == True:
+        if LDAP_LOG_UPDATE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
                 actionType="UPDATE",
                 objectClass="SET",
-                affectedObject=affectedObjects
+                # affectedObject=affectedObjects
             )
 
         return Response(
@@ -152,7 +112,7 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
         data = request.data
         code = 0
 
-        data = self.resetSettings()
+        data = resetCacheToDefaults()
 
         return Response(
              data={
@@ -181,30 +141,3 @@ class SettingsViewSet(viewsets.ViewSet, SettingsViewMixin):
                 'data': data
              }
         )
-
-    # def list(self, request, pk=None):
-    #     raise NotFound
-
-    def create(self, request, pk=None):
-        raise NotFound
-
-    def put(self, request, pk=None):
-        raise NotFound
-
-    def patch(self, request, pk=None):
-        raise NotFound
-        
-    def retrieve(self, request, pk=None):
-        raise NotFound
-
-    def update(self, request, pk=None):
-        raise NotFound
-
-    def partial_update(self, request, pk=None):
-        raise NotFound
-
-    def destroy(self, request, pk=None):
-        raise NotFound
-
-    def delete(self, request, pk=None):
-        raise NotFound

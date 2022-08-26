@@ -15,10 +15,7 @@ from interlock_backend.ldap.encrypt import (
     encrypt
 )
 from interlock_backend.ldap.adsi import addSearchFilter
-from interlock_backend.ldap.settings_func import (
-    SettingsList,
-    getSetting
-)
+from interlock_backend.ldap.constants_cache import *
 import ldap3
 from ldap3.core.exceptions import LDAPException
 from core.exceptions import ldap as exc_ldap
@@ -29,12 +26,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
-    ldap_settings_list = SettingsList(**{"search":{
-        'ADMIN_GROUP_TO_SEARCH',
-        'LDAP_AUTH_USER_FIELDS',
-    }})
-    GROUP_TO_SEARCH = ldap_settings_list.ADMIN_GROUP_TO_SEARCH
-    if 'Administrator' in ldap_attributes[ldap_settings_list.LDAP_AUTH_USER_FIELDS["username"]]:
+    GROUP_TO_SEARCH = ADMIN_GROUP_TO_SEARCH
+    if 'Administrator' in ldap_attributes[LDAP_AUTH_USER_FIELDS["username"]]:
         user.is_staff = True
         user.is_superuser = True
         user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
@@ -65,12 +58,9 @@ def authenticate(*args, **kwargs):
     The user identifier should be keyword arguments matching the fields
     in settings.LDAP_AUTH_USER_LOOKUP_FIELDS, plus a `password` argument.
     """
-    ldap_settings_list = SettingsList(**{"search":{
-        'LDAP_AUTH_USER_LOOKUP_FIELDS',
-    }})
     username = kwargs["username"]
     password = kwargs.pop("password", None)
-    auth_user_lookup_fields = frozenset(ldap_settings_list.LDAP_AUTH_USER_LOOKUP_FIELDS)
+    auth_user_lookup_fields = frozenset(LDAP_AUTH_USER_LOOKUP_FIELDS)
     ldap_kwargs = {
         key: value for (key, value) in kwargs.items()
         if key in auth_user_lookup_fields
@@ -97,8 +87,8 @@ def authenticate(*args, **kwargs):
     return user
 
 class LDAPConnector(object):
-    defaultUserDn = getSetting('LDAP_AUTH_CONNECTION_USER_DN')
-    defaultUserPassword = getSetting('LDAP_AUTH_CONNECTION_PASSWORD')
+    defaultUserDn = LDAP_AUTH_CONNECTION_USER_DN
+    defaultUserPassword = LDAP_AUTH_CONNECTION_PASSWORD
 
     def __init__(self,
         user_dn=None,
@@ -108,28 +98,12 @@ class LDAPConnector(object):
         plainPassword=False,
         getInfo=ldap3.NONE
         ):
-        self.ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_AUTH_USER_FIELDS',
-            'LDAP_AUTH_CLEAN_USER_DATA',
-            'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_AUTH_USER_LOOKUP_FIELDS',
-            'LDAP_AUTH_SYNC_USER_RELATIONS',
-            'LDAP_AUTH_URL',
-            'LDAP_AUTH_CONNECTION_USER_DN',
-            'LDAP_AUTH_CONNECTION_PASSWORD',
-            'LDAP_AUTH_CONNECT_TIMEOUT',
-            'LDAP_AUTH_RECEIVE_TIMEOUT',
-            'LDAP_AUTH_USE_TLS',
-            'LDAP_AUTH_TLS_VERSION',
-            'LDAP_AUTH_FORMAT_USERNAME',
-            'LDAP_LOG_OPEN_CONNECTION'
-        }})
-        ldapAuthURL = self.ldap_settings_list.LDAP_AUTH_URL
-        ldapAuthConnectionPassword = self.ldap_settings_list.LDAP_AUTH_CONNECTION_PASSWORD
-        ldapAuthConnectTimeout = self.ldap_settings_list.LDAP_AUTH_CONNECT_TIMEOUT
-        ldapAuthReceiveTimeout = self.ldap_settings_list.LDAP_AUTH_RECEIVE_TIMEOUT
-        ldapAuthUseTLS = self.ldap_settings_list.LDAP_AUTH_USE_TLS
-        ldapAuthTLSVersion = self.ldap_settings_list.LDAP_AUTH_TLS_VERSION
+        ldapAuthURL = LDAP_AUTH_URL
+        ldapAuthConnectionPassword = LDAP_AUTH_CONNECTION_PASSWORD
+        ldapAuthConnectTimeout = LDAP_AUTH_CONNECT_TIMEOUT
+        ldapAuthReceiveTimeout = LDAP_AUTH_RECEIVE_TIMEOUT
+        ldapAuthUseTLS = LDAP_AUTH_USE_TLS
+        ldapAuthTLSVersion = LDAP_AUTH_TLS_VERSION
 
         # If no user_dn and no user assume it's initial auth
         if user_dn is None:
@@ -141,7 +115,7 @@ class LDAPConnector(object):
         if initialAuth == True or user is not None:
             # If initial auth or user is local interlock superadmin
             if initialAuth == True or (user.username == 'admin' and user.is_local == True):
-                user_dn = self.ldap_settings_list.LDAP_AUTH_CONNECTION_USER_DN
+                user_dn = LDAP_AUTH_CONNECTION_USER_DN
                 password = ldapAuthConnectionPassword
 
         logger.debug("Connection Parameters: ")
@@ -193,7 +167,7 @@ class LDAPConnector(object):
         # Connect.
         try:
             # LOG Open Connection Events
-            if user is not None and self.ldap_settings_list.LDAP_LOG_OPEN_CONNECTION == True:
+            if user is not None and LDAP_LOG_OPEN_CONNECTION == True:
                 logToDB(
                     user_id=user.id,
                     actionType="OPEN",
@@ -258,10 +232,10 @@ class LDAPConnector(object):
         The user identifier should be keyword arguments matching the fields
         in settings.LDAP_AUTH_USER_LOOKUP_FIELDS.
         """
-        ldapAuthSearchBase = self.ldap_settings_list.LDAP_AUTH_SEARCH_BASE
-        ldapAuthUserFields = self.ldap_settings_list.LDAP_AUTH_USER_FIELDS
+        ldapAuthSearchBase = LDAP_AUTH_SEARCH_BASE
+        ldapAuthUserFields = LDAP_AUTH_USER_FIELDS
         searchFilter = ""
-        for i in self.ldap_settings_list.LDAP_AUTH_USER_LOOKUP_FIELDS:
+        for i in LDAP_AUTH_USER_LOOKUP_FIELDS:
             searchFilter = addSearchFilter(searchFilter, ldapAuthUserFields[i]+"="+kwargs['username'], '|')
         # Search the LDAP database.
         if self.connection.search(
@@ -298,16 +272,16 @@ class LDAPConnector(object):
                 attributes[attribute_name]
             )
             for field_name, attribute_name
-            in self.ldap_settings_list.LDAP_AUTH_USER_FIELDS.items()
+            in LDAP_AUTH_USER_FIELDS.items()
             if attribute_name in attributes
         }
-        user_fields = import_func(self.ldap_settings_list.LDAP_AUTH_CLEAN_USER_DATA)(user_fields)
+        user_fields = import_func(LDAP_AUTH_CLEAN_USER_DATA)(user_fields)
         # ! Removed this because it broke user updating
         # Create the user lookup.
         # user_lookup = {
         #     field_name: user_fields.pop(field_name, "")
         #     for field_name
-        #     in self.ldap_settings_list.LDAP_AUTH_USER_LOOKUP_FIELDS
+        #     in LDAP_AUTH_USER_LOOKUP_FIELDS
         # }
         user_lookup = {
             'username': user_fields['username']
@@ -322,7 +296,7 @@ class LDAPConnector(object):
             user.set_unusable_password()
             user.save()
         # Update relations
-        # sync_user_relations_func = import_func(self.ldap_settings_list.LDAP_AUTH_SYNC_USER_RELATIONS)
+        # sync_user_relations_func = import_func(LDAP_AUTH_SYNC_USER_RELATIONS)
         sync_user_relations_func = sync_user_relations
         sync_user_relations_arginfo = getfullargspec(sync_user_relations_func)
         args = {}  # additional keyword arguments
@@ -392,10 +366,7 @@ def testLDAPConnection(
         ldapAuthUseTLS,
         ldapAuthTLSVersion
     ):
-    ldap_settings_list = SettingsList(**{"search":{
-        'LDAP_AUTH_FORMAT_USERNAME'
-    }})
-    format_username = import_func(ldap_settings_list.LDAP_AUTH_FORMAT_USERNAME)
+    format_username = import_func(LDAP_AUTH_FORMAT_USERNAME)
 
     if password != ldapAuthConnectionPassword and username != 'admin':
         password = str(decrypt(password))

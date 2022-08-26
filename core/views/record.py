@@ -39,7 +39,7 @@ from core.models.dnsRecordFieldValidators import FIELD_VALIDATORS as DNS_FIELD_V
 from core.models import dnsRecordFieldValidators as dnsValidators
 from interlock_backend.ldap.adsi import addSearchFilter
 from interlock_backend.ldap.encrypt import validateUser
-from interlock_backend.ldap.settings_func import SettingsList
+from interlock_backend.ldap.constants_cache import *
 from interlock_backend.ldap.connector import LDAPConnector
 import logging
 ################################################################################
@@ -100,13 +100,6 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
                         }
                         raise exc_dns.DNSFieldValidatorFailed(data=data)
 
-        ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_DOMAIN',
-            'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_LOG_CREATE'
-        }})
-
         # Open LDAP Connection
         try:
             connector = LDAPConnector(user.dn, user.encryptedPassword, request.user)
@@ -140,7 +133,7 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
         else:
             affectedObject = recordName + "." + recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"
 
-        if ldap_settings_list.LDAP_LOG_CREATE == True:
+        if LDAP_LOG_CREATE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -162,13 +155,6 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
         validateUser(request=request)
         data = {}
         code = 0
-
-        ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_DOMAIN',
-            'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_LOG_UPDATE'
-        }})
 
         if 'record' not in request.data or 'oldRecord' not in request.data:
             raise exc_dns.DNSRecordNotInRequest
@@ -250,7 +236,7 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
         else:
             affectedObject = recordName + "." + recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"
 
-        if ldap_settings_list.LDAP_LOG_UPDATE == True:
+        if LDAP_LOG_UPDATE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,

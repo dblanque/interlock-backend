@@ -37,7 +37,7 @@ from time import perf_counter
 from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.adsi import buildFilterFromDict
 from interlock_backend.ldap.encrypt import validateUser
-from interlock_backend.ldap.settings_func import SettingsList
+from interlock_backend.ldap.constants_cache import *
 from ldap3.utils.dn import safe_rdn
 import logging
 ################################################################################
@@ -52,11 +52,6 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
         data = request.data
         code = 0
         code_msg = 'ok'
-
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_LOG_READ',
-            'LDAP_DIRTREE_OU_FILTER'
-        }})
 
         # Open LDAP Connection
         try:
@@ -80,7 +75,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
         ]
 
         # Read-only end-point, build filters from default dictionary
-        filterDict = ldap_settings_list.LDAP_DIRTREE_OU_FILTER
+        filterDict = LDAP_DIRTREE_OU_FILTER
         ldapFilter = buildFilterFromDict(filterDict)
 
         try:
@@ -97,7 +92,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
             print(e)
             raise exc_ldap.CouldNotFetchDirtree
 
-        if ldap_settings_list.LDAP_LOG_READ == True:
+        if LDAP_LOG_READ == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -124,9 +119,6 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
         code = 0
         code_msg = 'ok'
 
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_LOG_READ'
-        }})
         try:
             ldapFilter = self.processFilter(data)
         except Exception as e:
@@ -172,7 +164,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
             c.unbind()
             raise exc_ldap.CouldNotFetchDirtree
 
-        if ldap_settings_list.LDAP_LOG_READ == True:
+        if LDAP_LOG_READ == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -198,10 +190,6 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
         data = request.data
         code = 0
         code_msg = 'ok'
-
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_LOG_UPDATE'
-        }})
 
         ldapObject = data['ldapObject']
         newPath = ldapObject['destination']
@@ -243,7 +231,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
             c.unbind()
             raise exception
 
-        if ldap_settings_list.LDAP_LOG_UPDATE == True:
+        if LDAP_LOG_UPDATE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -270,10 +258,6 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
         data = request.data
         code = 0
         code_msg = 'ok'
-
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_LOG_UPDATE'
-        }})
 
         ldapObject = data['ldapObject']
         distinguishedName = ldapObject['distinguishedName']
@@ -317,7 +301,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
             c.unbind()
             raise exception
 
-        if ldap_settings_list.LDAP_LOG_UPDATE == True:
+        if LDAP_LOG_UPDATE == True:
             if objectName != ldapObject['name']:
                 affectedObject = "%s -> %s" % (objectName, ldapObject['name'])
             else:
@@ -348,10 +332,6 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
         data = request.data
         code = 0
         code_msg = 'ok'
-
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_LOG_CREATE'
-        }})
 
         ldapObject = data['ldapObject']
 
@@ -409,7 +389,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
             c.unbind()
             raise exception
 
-        if ldap_settings_list.LDAP_LOG_CREATE == True:
+        if LDAP_LOG_CREATE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,
@@ -436,10 +416,6 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
         code_msg = 'ok'
         data = request.data
 
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_LOG_DELETE'
-        }})
-
         # Open LDAP Connection
         try:
             c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
@@ -454,7 +430,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
             raise exc_ldap.LDAPObjectDoesNotExist
         c.delete(objectToDelete)
 
-        if ldap_settings_list.LDAP_LOG_DELETE == True:
+        if LDAP_LOG_DELETE == True:
             # Log this action to DB
             logToDB(
                 user_id=request.user.id,

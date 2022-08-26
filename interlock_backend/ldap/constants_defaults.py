@@ -1,10 +1,11 @@
 ### LDAP SETTINGS
 
 # The URL of the LDAP server(s).  List multiple servers for high availability ServerPool connection.
-LDAP_AUTH_URL = ["ldap://10.10.10.13:389"]
+# ! Change the prefix to ldaps:// if using TLS
+LDAP_AUTH_URL = ["ldap://localhost:389"]
 
 # This variable is used by the Interlock back-end to respond the correct domain info to the Front-end
-LDAP_DOMAIN = "brconsulting"
+LDAP_DOMAIN = "example.com"
 
 # Initiate TLS on connection.
 LDAP_AUTH_USE_TLS = False
@@ -14,7 +15,7 @@ import ssl
 LDAP_AUTH_TLS_VERSION = ssl.PROTOCOL_TLSv1_2
 
 # The LDAP search base for looking up users.
-LDAP_AUTH_SEARCH_BASE = "dc=brconsulting"
+LDAP_AUTH_SEARCH_BASE = "dc=example,dc=com"
 
 # The Schema Naming Context, you shouldn't need to change this
 LDAP_SCHEMA_NAMING_CONTEXT = "CN=Schema,CN=Configuration"
@@ -22,13 +23,19 @@ LDAP_SCHEMA_NAMING_CONTEXT = "CN=Schema,CN=Configuration"
 # The LDAP class that represents a user.
 LDAP_AUTH_OBJECT_CLASS = "person"
 
-LDAP_GROUP_TYPE_MAPPING = {
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
+# ! Don't change the values below or Group Type/Scope changes will break ! #
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
+# Group Type Value Mapping
+LDAP_GROUP_TYPES = {
     # Distribution Group
     0:0,
     # Security Group
     1:-2147483648
 }
-LDAP_GROUP_SCOPE_MAPPING = {
+
+# Group Scope Value Mapping
+LDAP_GROUP_SCOPES = {
     # Global Scope
     0:2,
     # Domain Local Scope
@@ -36,6 +43,7 @@ LDAP_GROUP_SCOPE_MAPPING = {
     # Universal Scope
     2:8
 }
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
 
 # Set this to False if you wish to include Computer Accounts in User Listings
 EXCLUDE_COMPUTER_ACCOUNTS = True
@@ -54,6 +62,7 @@ LDAP_AUTH_USER_FIELDS = {
     "dn": "distinguishedName"
 }
 
+# Normalize to the standard LDAP string if it's sAMAccountName just in case
 if str(LDAP_AUTH_USER_FIELDS["username"]).lower() == 'samaccountname':
     LDAP_AUTH_USERNAME_IDENTIFIER = "sAMAccountName"
 else:
@@ -88,22 +97,22 @@ LDAP_AUTH_FORMAT_SEARCH_FILTERS = "django_python3_ldap.utils.format_search_filte
 LDAP_AUTH_FORMAT_USERNAME = "django_python3_ldap.utils.format_username_active_directory"
 
 # Sets the login domain for Active Directory users.
-LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN = "BRCONS"
+LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN = "EXAMPLE"
 
 # The LDAP username and password of a user for querying the LDAP database for user
 # details. If None, then the authenticated user will be used for querying, and
 # the `ldap_sync_users` command will perform an anonymous query.
-LDAP_AUTH_CONNECTION_USER_DN = "CN=s-ldapsync,OU=Service Accounts,DC=brconsulting"
+# This is used when the local Interlock Admin is logged in.
+LDAP_AUTH_CONNECTION_USER_DN = "CN=user,OU=Service Accounts,DC=example,DC=com"
 
 LDAP_AUTH_CONNECTION_USERNAME = LDAP_AUTH_CONNECTION_USER_DN.split(',')[0].split('CN=')[1]
-LDAP_AUTH_CONNECTION_PASSWORD = "!kDZladKxt-Ed2QI7P2eN5"
+LDAP_AUTH_CONNECTION_PASSWORD = "ChangeThis"
 
 # Set connection/receive timeouts (in seconds) on the underlying `ldap3` library.
 LDAP_AUTH_CONNECT_TIMEOUT = 5
 LDAP_AUTH_RECEIVE_TIMEOUT = 5
 
-ADMIN_GROUP_TO_SEARCH = "CN=admins,OU=Administrators,DC=brconsulting"
-
+ADMIN_GROUP_TO_SEARCH = "CN=admins,OU=Administrators,DC=example,DC=com"
 LDAP_DIRTREE_OU_FILTER = {
     "organizationalUnit" : "objectCategory",
     "top" : "objectCategory",

@@ -23,11 +23,11 @@ from core.exceptions.ldap import CouldNotOpenConnection
 from core.exceptions import dns as exc_dns
 from interlock_backend.ldap.connector import LDAPConnector, LDAPInfo
 from interlock_backend.ldap.adsi import addSearchFilter, buildFilterFromDict
-from interlock_backend.ldap.settings_func import SettingsList
 from core.utils import dnstool
 from core.utils.dnstool import record_to_dict, RECORD_MAPPINGS
 from core.models.dnsRecordTypes import *
 from core.models.dns import LDAPDNS, LDAPRecord
+from interlock_backend.ldap import constants_cache
 ################################################################################
 
 logger = logging.getLogger(__name__)
@@ -40,14 +40,10 @@ class TestViewSet(BaseViewSet):
         data = {}
         code = 0
 
-        ######################## Get Latest Settings ###########################
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_DOMAIN',
-            'LDAP_AUTH_USERNAME_IDENTIFIER',
-            'LDAP_AUTH_OBJECT_CLASS',
-            'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_LOG_READ'
-        }})
+        for i in constants_cache.__dict__:
+            if not i.startswith("_"):
+                value = getattr(constants_cache, i)
+                print("%s (%s): %s" % (i, type(value), value))
 
         # Open LDAP Connection
         try:

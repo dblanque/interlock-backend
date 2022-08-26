@@ -11,12 +11,12 @@
 from django.utils.translation import gettext_lazy as _
 
 ### Interlock
-from interlock_backend.ldap.settings_func import SettingsList
 from interlock_backend.ldap.adsi import (
     buildFilterFromDict,
     LDAP_BUILTIN_OBJECTS
 )
 from interlock_backend.ldap.securityIdentifier import SID
+from interlock_backend.ldap.constants_cache import *
 ################################################################################
 class LDAPTree():
     """
@@ -45,19 +45,11 @@ class LDAPTree():
         if 'connection' not in kwargs:
             raise Exception("LDAPTree object requires an LDAP Connection to Initialize")
 
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_AUTH_SEARCH_BASE',
-            'LDAP_AUTH_USERNAME_IDENTIFIER',
-            'LDAP_DIRTREE_OU_FILTER',
-            'LDAP_DIRTREE_CN_FILTER',
-            'LDAP_DIRTREE_ATTRIBUTES',
-        }})
-
         # Set LDAPTree Default Values
-        self.name = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
-        self.searchBase = ldap_settings_list.LDAP_AUTH_SEARCH_BASE
+        self.name = LDAP_AUTH_SEARCH_BASE
+        self.searchBase = LDAP_AUTH_SEARCH_BASE
         self.connection = kwargs.pop('connection')
-        self.usernameIdentifier = ldap_settings_list.LDAP_AUTH_USERNAME_IDENTIFIER
+        self.usernameIdentifier = LDAP_AUTH_USERNAME_IDENTIFIER
         self.subobjectId = 0
         self.excludedLdapAttributes = [
             'objectGUID',
@@ -74,8 +66,8 @@ class LDAPTree():
         ]
         self.recursive = False
         self.testFetch = False        
-        self.ldapFilter = buildFilterFromDict({**ldap_settings_list.LDAP_DIRTREE_CN_FILTER, **ldap_settings_list.LDAP_DIRTREE_OU_FILTER})
-        self.ldapAttributes = ldap_settings_list.LDAP_DIRTREE_ATTRIBUTES
+        self.ldapFilter = buildFilterFromDict({**LDAP_DIRTREE_CN_FILTER, **LDAP_DIRTREE_OU_FILTER})
+        self.ldapAttributes = LDAP_DIRTREE_ATTRIBUTES
         self.childrenObjectType = 'array'
 
         # Set passed kwargs from Object Call

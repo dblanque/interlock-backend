@@ -12,7 +12,7 @@ from rest_framework import viewsets
 
 ### Interlock
 from interlock_backend.ldap.adsi import addSearchFilter, buildFilterFromDict
-from interlock_backend.ldap.settings_func import SettingsList
+from interlock_backend.ldap.constants_cache import *
 
 ### Others
 import logging
@@ -21,10 +21,6 @@ import logging
 logger = logging.getLogger(__name__)
 class OrganizationalUnitMixin(viewsets.ViewSetMixin):
     def processFilter(self, data, filterDict=None):
-        ldap_settings_list = SettingsList(**{"search":{
-            'LDAP_DIRTREE_CN_FILTER',
-            'LDAP_DIRTREE_OU_FILTER',
-        }})
         ldapFilter = ""
 
         if 'filter' in data and 'iexact' in data['filter']:
@@ -54,7 +50,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
         else:
             logger.debug("Dirtree fetching with Standard Exclusion Filter")
             if filterDict is None:
-                filterDict = {**ldap_settings_list.LDAP_DIRTREE_CN_FILTER, **ldap_settings_list.LDAP_DIRTREE_OU_FILTER}
+                filterDict = {**LDAP_DIRTREE_CN_FILTER, **LDAP_DIRTREE_OU_FILTER}
             if 'filter' in data and 'exclude' in data['filter']:
                 if len(data['filter']['exclude']) > 0:
                     for f in data['filter']['exclude']:
