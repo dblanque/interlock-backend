@@ -1,4 +1,5 @@
 ### LDAP SETTINGS
+# ! DO NOT IMPORT THIS FILE, IMPORT constants_cache.py INSTEAD
 
 # The URL of the LDAP server(s).  List multiple servers for high availability ServerPool connection.
 # ! Change the prefix to ldaps:// if using TLS
