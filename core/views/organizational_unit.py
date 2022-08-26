@@ -428,7 +428,15 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
         if not objectToDelete or objectToDelete == "":
             c.unbind()
             raise exc_ldap.LDAPObjectDoesNotExist
-        c.delete(objectToDelete)
+        try:
+            c.delete(objectToDelete)
+        except Exception as e:
+            c.unbind()
+            print(e)
+            data = {
+                "ldap_response": c.result
+            }
+            raise exc_ldap.BaseException(data=data)
 
         if LDAP_LOG_DELETE == True:
             # Log this action to DB

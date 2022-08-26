@@ -394,7 +394,10 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             c.unbind()
             print(e)
             print(userDN)
-            raise exc_user.UserCreate
+            data = {
+                "ldap_response": c.result
+            }
+            raise exc_user.UserCreate(data=data)
 
         try:
             c.extend.microsoft.modify_password(userDN, data['password'])
@@ -781,7 +784,15 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             if not distinguishedName or distinguishedName == "":
                 c.unbind()
                 raise exc_user.UserDoesNotExist
-            c.delete(distinguishedName)
+            try:
+                c.delete(distinguishedName)
+            except Exception as e:
+                c.unbind()
+                print(e)
+                data = {
+                    "ldap_response": c.result
+                }
+                raise exc_ldap.BaseException(data=data)
         # Else, search for username dn
         else:
             logger.debug('Deleting with user dn search method')
@@ -794,7 +805,15 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             if not dn or dn == "":
                 c.unbind()
                 raise exc_user.UserDoesNotExist
-            c.delete(dn)
+            try:
+                c.delete(dn)
+            except Exception as e:
+                c.unbind()
+                print(e)
+                data = {
+                    "ldap_response": c.result
+                }
+                raise exc_ldap.BaseException(data=data)
 
         if LDAP_LOG_DELETE == True:
             # Log this action to DB

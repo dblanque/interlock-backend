@@ -366,15 +366,28 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         except Exception as e:
             c.unbind()
             print(e)
-            raise exc_groups.GroupCreate
+            data = {
+                "ldap_response": c.result
+            }
+            raise exc_groups.GroupCreate(data=data)
 
         if len(membersToAdd) > 0:
             try:
                 c.extend.microsoft.add_members_to_groups(membersToAdd, distinguishedName)
             except Exception as e:
-                c.delete(distinguishedName)
+                try:
+                    c.delete(distinguishedName)
+                    data = {
+                        "ldap_response": c.result
+                    }
+                    raise exc_groups.GroupMembersAdd
+                except Exception as e:
+                    c.unbind()
                 c.unbind()
                 print(e)
+                data = {
+                    "ldap_response": c.result
+                }
                 raise exc_groups.GroupMembersAdd
 
         if LDAP_LOG_CREATE == True:
