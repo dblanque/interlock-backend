@@ -306,8 +306,8 @@ if [[ $generateSSLCert == true ]] || [[ ! -f "$workpath/sslcerts/fullchain.pem" 
 fi
 
 # Checks if SSL Generation was successful.
-if [ $? -ne 0 ]; then
-    echo -e "${LIGHTRED}There was an error generating the SSL Certificate, please generate your certificate manually.${NC}"
+if [ $? -ne 0 ] || [[ ! -f "$workpath/sslcerts/privkey.pem" ]] || [[ ! -f "$workpath/sslcerts/fullchain.pem" ]]; then
+    echo -e "${LIGHTRED}There was an error generating the SSL Certificate. \nPlease generate your certificate manually in the following paths:${NC}"
     echo -e "\t- $workpath/sslcerts/privkey.pem"
     echo -e "\t- $workpath/sslcerts/fullchain.pem"
 fi
