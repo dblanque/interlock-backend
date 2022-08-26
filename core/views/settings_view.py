@@ -61,7 +61,6 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
                 objectClass="SET",
                 affectedObject="ALL"
             )
-        # TODO - Convert Tuple for LDAP_AUTH_USER_LOOKUP_FIELDS to ARRAY for Front-End
 
         return Response(
              data={
@@ -84,6 +83,8 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
         affectedObjects = list()
 
+        data['LDAP_AUTH_CONNECTION_USERNAME'] = dict()
+        data['LDAP_AUTH_CONNECTION_USERNAME']['value'] = data['LDAP_AUTH_CONNECTION_USER_DN']['value'].split(',')[0].split('CN=')[1].lower()
         saveToCache(newValues=data)
 
         if LDAP_LOG_UPDATE == True:
