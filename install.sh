@@ -90,6 +90,7 @@ err_front_yarn_install=41
 err_front_yarn_build=42
 
 workpath="/var/lib/interlock"
+configPath="/etc/interlock"
 backendPath="$workpath/interlock_backend"
 frontendPath="$workpath/interlock_frontend"
 
@@ -234,6 +235,17 @@ if [[ ! -d "$workpath/sslcerts" ]]; then
     fi
 fi
 
+# Create required Config Directory
+if [[ ! -d "$configPath" ]]; then
+    echo -e "${LIGHTRED}$configPath ${NC}directory does not exist, creating it."
+    mkdir -p "$configPath"
+    # Checks if curl repo add command was successful
+    if [ $? -ne 0 ]; then
+        echo -e "${LIGHTRED}Could not create Interlock Config Directory.${NC}"
+        exit $err_mkdir_interlock
+    fi
+fi
+
 if [ $compileFront == true ]; then
     curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 
@@ -335,7 +347,21 @@ fi
 
 cd $backendPath
 
-db_pwd="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 13 ; echo '')"
+if [ ! -f "$configPath/db_config.conf" ]; then
+    db_pwd="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 13 ; echo '')"
+    touch "$configPath/db_config.conf"
+    echo "db_pwd=\"$db_pwd\"" > "$configPath/db_config.conf"
+else
+    source "$configPath/db_config.conf"
+fi
+
+if [ ! -f "$configPath/ldap_settings.py" ]; then
+    ln -s "$backendPath/interlock_backend/ldap/constants.py" "$configPath/ldap_settings.py"
+fi
+
+if [ ! -f "$configPath/django_settings.py" ]; then
+    ln -s "$backendPath/interlock_backend/settings.py" "$configPath/django_settings.py"
+fi
 
 # Replace Password in Local DB Settings File
 sed -i "s/'PASSWORD':.*/'PASSWORD':'$db_pwd',/g" "$backendPath/interlock_backend/local_django_settings.py" || throw $err_back_pwdReplace
