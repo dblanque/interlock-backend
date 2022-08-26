@@ -36,32 +36,32 @@ def normalizeValues(settingKey, settingDict):
     try:
         settingDict['type'] = getSettingType(settingKey)
     except Exception as e:
-        print(e)
         print(settingKey)
+        raise e
 
     listTypes = [ 'list', 'object', 'ldap_uri', 'array', 'tuple' ]
 
-    # INT
-    if settingDict['type'] == 'integer':
-        settingDict['value'] = int(settingDict['value'])
-    # FLOAT
-    elif settingDict['type'] == 'float':
-        settingDict['value'] = float(settingDict['value'])
-    # LIST/ARRAY OR OBJECT
-    elif (settingDict['type'] in listTypes):
-        settingDict['value'] = settingDict['value']
-    # BOOLEAN
-    elif settingDict['type'] == 'boolean':
-        if settingDict['value'] == "1" or settingDict['value'] == 1 or settingDict['value'] == 'true' or settingDict['value'] == 'True':
-            settingDict['value'] = True
-        else:
-            settingDict['value'] = False
-    # TODO - TUPLE
-    # elif settingDict['type'] == 'tuple':
-    #     print(settingDict)
+    try:
+        # INT
+        if settingDict['type'] == 'integer':
+            settingDict['value'] = int(settingDict['value'])
+        # FLOAT
+        elif settingDict['type'] == 'float':
+            settingDict['value'] = float(settingDict['value'])
+        # LIST/ARRAY OR OBJECT
+        elif (settingDict['type'] in listTypes):
+            settingDict['value'] = settingDict['value']
+        # BOOLEAN
+        elif settingDict['type'] == 'boolean':
+            if settingDict['value'] == "1" or settingDict['value'] == 1 or settingDict['value'] == 'true' or settingDict['value'] == 'True':
+                settingDict['value'] = True
+            else:
+                settingDict['value'] = False
 
-    if settingKey == "LDAP_AUTH_TLS_VERSION":
-        settingDict['value'] = str(settingDict['value']).split('.')[-1]
+        if settingKey == "LDAP_AUTH_TLS_VERSION":
+            settingDict['value'] = str(settingDict['value']).split('.')[-1]
+    except:
+        raise ValueError("Invalid value for %s: %s (%s)" % (settingKey, settingDict['value'], type(settingDict['value'])))
     return settingDict
 
 def getSettingsList(settingList=CMAPS):
