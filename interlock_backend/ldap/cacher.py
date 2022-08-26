@@ -23,8 +23,8 @@ def saveToCache(newValues):
             set_obj = normalizeValues(setting, newValues[setting])
             set_val = set_obj['value']
             if set_val != default_val:
-                print(set_val)
-                print(default_val)
+                # print(set_val)
+                # print(default_val)
                 affectedSettings.append(setting)
         else:
             set_val = default_val
