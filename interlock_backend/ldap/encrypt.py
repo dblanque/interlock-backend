@@ -1,6 +1,15 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: interlock_backend.ldap.accountTypes
+
+#---------------------------------- IMPORTS -----------------------------------#
 from cryptography.fernet import Fernet
 from interlock_backend.settings import FERNET_KEY
 from django.core.exceptions import PermissionDenied
+################################################################################
 
 # KNOWLEDGE SOURCE: geeksforgeeks.org | Thank you guys!
 key = FERNET_KEY

@@ -1,12 +1,16 @@
-# ldap_adsi.py
-###############################################################################
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: interlock_backend.ldap.adsi
 # Contains:
 # - LDAP Permission Dictionary
 # - LDAP Manual Built-In Object Dictionary
 # - Important LDAP Query Functions
 ###############################################################################
-# Originally Created by Dylan Blanqué and BR Consulting S.R.L. (2022)
 
+#---------------------------------- IMPORTS -----------------------------------#
 from interlock_backend.ldap.constants_cache import *
 import logging
 

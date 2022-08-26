@@ -1,3 +1,11 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: interlock_backend.ldap.accountTypes
+
+#---------------------------------- IMPORTS -----------------------------------#
 LDAP_ACCOUNT_TYPES = {
     "SAM_DOMAIN_OBJECT": int(0x0),
     "SAM_GROUP_OBJECT": int(0x10000000),

@@ -1,3 +1,11 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: interlock_backend.ldap.settings_func
+
+#---------------------------------- IMPORTS -----------------------------------#
 # Core Imports
 from core.models.user import User
 
@@ -9,6 +17,7 @@ from interlock_backend.ldap.constants import (
 from interlock_backend.ldap import constants_cache
 # Full imports
 import logging
+################################################################################
 
 logger = logging.getLogger(__name__)
 

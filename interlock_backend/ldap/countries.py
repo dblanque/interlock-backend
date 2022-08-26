@@ -1,3 +1,9 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: interlock_backend.ldap.countries
 # Source: https://ldapwiki.com/wiki/Country%20Code
 # Transcription / Conversion by Dylan Blanqué
 

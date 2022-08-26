@@ -1,3 +1,10 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: interlock_backend.ldap.groupTypes
+
 LDAP_GROUP_TYPES = {
     "GROUP_DISTRIBUTION": 0,
     "GROUP_SYSTEM": 1,

@@ -1,10 +1,17 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: interlock_backend.ldap.auth
+
+#---------------------------------- IMPORTS -----------------------------------#
+from django.contrib.auth.backends import ModelBackend
+import interlock_backend.ldap.connector as ldap
+################################################################################
 """
 Django authentication backend.
 """
-
-from django.contrib.auth.backends import ModelBackend
-import interlock_backend.ldap.connector as ldap
-
 class LDAPBackend(ModelBackend):
 
     """

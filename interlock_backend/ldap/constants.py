@@ -1,3 +1,10 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: interlock_backend.ldap.constants
+
 ### LDAP SETTINGS
 # ! DO NOT IMPORT THIS FILE, IMPORT constants_cache.py INSTEAD
 

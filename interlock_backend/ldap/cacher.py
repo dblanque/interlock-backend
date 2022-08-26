@@ -1,13 +1,23 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: interlock_backend.ldap.cacher
+# This module saves new settings to constants_cache.py
+
+#---------------------------------- IMPORTS -----------------------------------#
 from interlock_backend.ldap import constants
 from interlock_backend.settings import BASE_DIR
 from json import dumps
 from interlock_backend.ldap.settings_func import normalizeValues
+################################################################################
 
 def createFileData():
     filedata =  "# This file is generated automatically by Interlock when saving settings"
     filedata += "\n# Manual changes to it might be lost"
     filedata += "\n################################################################################"
-    filedata += "\n#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################"
+    filedata += "\n#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################"
     filedata += "\n################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################"
     filedata += "\n########################## AND BR CONSULTING S.R.L. ############################"
     filedata += "\n################################################################################"

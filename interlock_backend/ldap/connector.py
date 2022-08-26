@@ -1,11 +1,14 @@
-# ldap_connector.py
-###############################################################################
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: interlock_backend.ldap.accountTypes
 # Contains:
 # - Bind User connector for Administrative Privilege Operations
 # - Recursive directory listing functions
-###############################################################################
-# Originally Created by Dylan Blanqué and BR Consulting S.R.L. (2022)
 
+#---------------------------------- IMPORTS -----------------------------------#
 from enum import Enum
 from django_python3_ldap.utils import import_func
 from inspect import getfullargspec
@@ -22,6 +25,7 @@ from core.exceptions import ldap as exc_ldap
 from core.models.log import logToDB
 import ssl
 import logging
+###############################################################################
 
 logger = logging.getLogger(__name__)
 
