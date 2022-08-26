@@ -9,8 +9,20 @@ def saveToCache(newValues):
 
     cacheFile = BASE_DIR+'/interlock_backend/ldap/constants_cache.py'
 
-    filedata = "from interlock_backend.ldap.constants import *"
+    filedata =  "# This file is generated automatically by Interlock when saving settings"
+    filedata += "\n# Manual changes to it might be lost"
+    filedata += "\n################################################################################"
+    filedata += "\n#################### INTERLOCK IS LICENSED UNDER GNU GPLv3 #####################"
+    filedata += "\n################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################"
+    filedata += "\n########################## AND BR CONSULTING S.R.L. ############################"
+    filedata += "\n################################################################################"
+    filedata += "\n# Module: constants_cache.py"
+    filedata += "\n# Contains the latest setting constants for Interlock"
+    filedata += "\n"
+    filedata += "\n#---------------------------------- IMPORTS -----------------------------------#"
+    filedata += "\nfrom interlock_backend.ldap.constants import *"
     filedata += "\nimport ssl"
+    filedata += "\n################################################################################"
     filedata += "\n"
 
     affectedSettings = list()
