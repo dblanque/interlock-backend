@@ -3,12 +3,7 @@ from interlock_backend.settings import BASE_DIR
 from json import dumps
 from interlock_backend.ldap.settings_func import normalizeValues
 
-def saveToCache(newValues):
-    if not isinstance(newValues, dict):
-        raise ValueError("saveToCache(): newValues must be a dictionary")
-
-    cacheFile = BASE_DIR+'/interlock_backend/ldap/constants_cache.py'
-
+def createFileData():
     filedata =  "# This file is generated automatically by Interlock when saving settings"
     filedata += "\n# Manual changes to it might be lost"
     filedata += "\n################################################################################"
@@ -24,6 +19,15 @@ def saveToCache(newValues):
     filedata += "\nimport ssl"
     filedata += "\n################################################################################"
     filedata += "\n"
+    return filedata
+
+def saveToCache(newValues):
+    if not isinstance(newValues, dict):
+        raise ValueError("saveToCache(): newValues must be a dictionary")
+
+    cacheFile = BASE_DIR+'/interlock_backend/ldap/constants_cache.py'
+
+    filedata = createFileData()
 
     affectedSettings = list()
     for setting in constants.CMAPS:
@@ -76,9 +80,7 @@ def resetCacheToDefaults(newValues):
 
     cacheFile = BASE_DIR+'/interlock_backend/ldap/constants_cache.py'
 
-    filedata = "from interlock_backend.ldap.constants import *"
-    filedata += "\nimport ssl"
-    filedata += "\n"
+    filedata = createFileData()
 
     # # Write the file
     with open(cacheFile, 'w') as file:
