@@ -1,5 +1,6 @@
 from enum import Enum
-import interlock_backend.ldap.constants as constants
+from interlock_backend.ldap import constants
+from interlock_backend.ldap import constants_cache
 from interlock_backend.settings import BASE_DIR
 from json import dumps
 from interlock_backend.ldap.settings_func import normalizeValues
@@ -14,39 +15,50 @@ def saveToCache(newValues):
     filedata += "\nimport ssl"
     filedata += "\n"
 
-    for variable in constants.CMAPS:
-        if variable in newValues and 'value' in newValues[variable]:
-            var_obj = normalizeValues(variable, newValues[variable])
-            var_value = var_obj['value']
+    affectedSettings = list()
+    for setting in constants.CMAPS:
+        default_val = getattr(constants, setting)
+        if setting == 'LDAP_AUTH_TLS_VERSION':
+            default_val = str(default_val).split('.')[-1]
+
+        if setting in newValues and 'value' in newValues[setting]:
+            set_obj = normalizeValues(setting, newValues[setting])
+            set_val = set_obj['value']
+            if set_val != default_val:
+                print(set_val)
+                print(default_val)
+                affectedSettings.append(setting)
         else:
-            var_value = getattr(constants, variable)
+            set_val = default_val
 
-        # Replace the target string with new value
-        if isinstance(var_value, str):
-            if variable == 'LDAP_AUTH_TLS_VERSION':
-                print(var_value)
-                line = "%s=ssl.%s" % (variable, var_value)
-            else:
-                line = "%s=\"%s\"" % (variable, var_value)
-        if isinstance(var_value, int):
-            line = "%s=%s" % (variable, var_value)
-        elif isinstance(var_value, dict):
-            line = "%s=%s" % (variable, dumps(var_value, indent=4))
-        elif isinstance(var_value, list) or isinstance(var_value, tuple):
-            line = "%s=%s" % (variable, var_value)
-        elif not isinstance(var_value, str):
-            line = "%s=\"%s\"" % (variable, str(var_value))
+        if setting in affectedSettings:
+            # Replace the target string with new value
+            if isinstance(set_val, str):
+                if setting == 'LDAP_AUTH_TLS_VERSION':
+                    line = "%s=ssl.%s" % (setting, set_val)
+                else:
+                    line = "%s=\"%s\"" % (setting, set_val)
+            if isinstance(set_val, int):
+                line = "%s=%s" % (setting, set_val)
+            elif isinstance(set_val, dict):
+                line = "%s=%s" % (setting, dumps(set_val, indent=4))
+            elif isinstance(set_val, list) or isinstance(set_val, tuple):
+                line = "%s=%s" % (setting, set_val)
+            elif not isinstance(set_val, str):
+                line = "%s=\"%s\"" % (setting, str(set_val))
 
-        # print("\n")
-        # print(variable)
-        # print(var_value)
-        # print(type(var_value))
-        # print(line)
-        filedata += "\n" + line
+            # print("\n")
+            # print(variable)
+            # print(var_value)
+            # print(type(var_value))
+            # print(line)
+            filedata += "\n" + line
 
     # # Write the file
     with open(cacheFile, 'w') as file:
         file.write(filedata)
+
+    return affectedSettings
 
 def resetCacheToDefaults(newValues):
     if not isinstance(newValues, dict):

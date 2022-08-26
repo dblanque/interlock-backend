@@ -81,11 +81,9 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
         adminPassword = data.pop('DEFAULT_ADMIN_PWD')
         self.setAdminStatus(status=adminEnabled, password=adminPassword)
 
-        affectedObjects = list()
-
         data['LDAP_AUTH_CONNECTION_USERNAME'] = dict()
         data['LDAP_AUTH_CONNECTION_USERNAME']['value'] = data['LDAP_AUTH_CONNECTION_USER_DN']['value'].split(',')[0].split('CN=')[1].lower()
-        saveToCache(newValues=data)
+        affectedObjects = saveToCache(newValues=data)
 
         if LDAP_LOG_UPDATE == True:
             # Log this action to DB
@@ -93,7 +91,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
                 user_id=request.user.id,
                 actionType="UPDATE",
                 objectClass="SET",
-                # affectedObject=affectedObjects
+                affectedObject=affectedObjects
             )
 
         return Response(
