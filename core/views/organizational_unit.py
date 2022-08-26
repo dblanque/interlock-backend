@@ -216,14 +216,18 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
             c.modify_dn(distinguishedName, relativeDistinguishedName, new_superior=newPath)
         except Exception as e:
             print(e)
-            ldapError = str(e).split(" - ")
-            ldapErrorCode = ldapError[2] or ldapError[0] or ldapError
+            try:
+                ldapError = str(e).split(" - ")
+                ldapErrorCode = ldapError[2] or ldapError[0] or ldapError
+            except Exception as e:
+                print(c.result)
+                print(e)
             exception = exc_dirtree.DirtreeMove
             if ldapErrorCode == "entryAlreadyExists":
                 exception.status_code = 409
             data = {
                 "code": exception.default_code,
-                "code_ext": ldapErrorCode,
+                "ldap_response": ldapErrorCode or c.result,
                 "ldapObject": objectName,
                 "message": e
             }
@@ -286,14 +290,18 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
             c.modify_dn(distinguishedName, newRDN)
         except Exception as e:
             print(e)
-            ldapError = str(e).split(" - ")
-            ldapErrorCode = ldapError[2] or ldapError[0] or ldapError
+            try:
+                ldapError = str(e).split(" - ")
+                ldapErrorCode = ldapError[2] or ldapError[0] or ldapError
+            except Exception as e:
+                print(c.result)
+                print(e)
             exception = exc_dirtree.DirtreeMove
             if ldapErrorCode == "entryAlreadyExists":
                 exception.default_code = 409
             data = {
                 "code": exception.status_code,
-                "code_ext": ldapErrorCode,
+                "ldap_response": ldapErrorCode or c.result,
                 "ldapObject": objectName,
                 "message": e
             }
@@ -375,13 +383,17 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
             print(ldapObject)
             print(objectDistinguishedName)
             print(e)
-            ldapErrorCode = str(e).split(" - ")[2]
+            try:
+                ldapErrorCode = str(e).split(" - ")[2]
+            except Exception as e:
+                print(c.result)
+                print(e)
             exception = exc_ou.OUCreate
             if ldapErrorCode == "entryAlreadyExists":
                 exception.status_code = 409
             data = {
                 "code": exception.default_code,
-                "code_ext": ldapErrorCode,
+                "ldap_response": ldapErrorCode,
                 "ldapObject": objectName,
                 "message": e
             }
