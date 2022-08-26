@@ -484,7 +484,8 @@ try
 (
 source "$backendPath/bin/activate" || throw $err_back_venv_activate
 
-sed -i "s/ALLOWED_HOSTS = \[.*/ALLOWED_HOSTS = ['$backendURL']/g" "$backendPath/interlock_backend/settings.py"
+# Not necessary, we're not using basic CORS stuff
+# sed -i "s/ALLOWED_HOSTS = \[.*/ALLOWED_HOSTS = ['$backendURL']/g" "$backendPath/interlock_backend/settings.py"
 
 # Apply migrations
 "$backendPath/bin/python3" "$backendPath/manage.py" migrate || throw $err_back_migrate
