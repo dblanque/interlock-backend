@@ -229,7 +229,6 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
                 "code": exception.default_code,
                 "ldap_response": ldapErrorCode or c.result,
                 "ldapObject": objectName,
-                "message": e
             }
             exception.setDetail(exception, data)
             c.unbind()
@@ -303,7 +302,6 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
                 "code": exception.status_code,
                 "ldap_response": ldapErrorCode or c.result,
                 "ldapObject": objectName,
-                "message": e
             }
             exception.setDetail(exception, data)
             c.unbind()
@@ -388,16 +386,13 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
             except Exception as e:
                 print(c.result)
                 print(e)
-            exception = exc_ou.OUCreate
-            if ldapErrorCode == "entryAlreadyExists":
-                exception.status_code = 409
             data = {
-                "code": exception.default_code,
                 "ldap_response": ldapErrorCode,
                 "ldapObject": objectName,
-                "message": e
             }
-            exception.setDetail(exception, data)
+            exception = exc_ou.OUCreate(data=data)
+            if ldapErrorCode == "entryAlreadyExists":
+                exception.status_code = 409
             c.unbind()
             raise exception
 
