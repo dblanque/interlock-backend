@@ -373,6 +373,19 @@ class LDAPRecord(LDAPDNS):
         # ! Check if the record with the new values exists, if true raise exception
         # Exclude SOA from condition as that record is unique in Zone.
         if self.type != DNS_RECORD_TYPE_SOA:
+            # ! Check if record exists in Entry
+            exists = self.checkRecordExistsInEntry(mainField=mainField, mainFieldValue=values[mainField])
+            if exists != False:
+                print("%s Record already exists in an LDAP Entry (Conflicting value: %s)" % (RECORD_MAPPINGS[self.type]['name'], values[mainField]))
+                self.connection.unbind()
+                data = {
+                    "typeName": RECORD_MAPPINGS[self.type]['name'],
+                    "typeCode": self.type,
+                    "name": self.name,
+                    "conflictValue": values[mainField],
+                    "conflictField": mainField
+                }
+                raise exc_dns.DNSRecordTypeConflict(data=data)
             # Check Multi-Record eligibility
             if self.recordExistsByType() != False:
                 raise exc_dns.DNSRecordExistsConflict
