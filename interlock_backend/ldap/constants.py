@@ -120,7 +120,7 @@ LDAP_AUTH_CONNECTION_PASSWORD = "ChangeThis"
 LDAP_AUTH_CONNECT_TIMEOUT = 5
 LDAP_AUTH_RECEIVE_TIMEOUT = 5
 
-ADMIN_GROUP_TO_SEARCH = "CN=admins,OU=Administrators," + LDAP_AUTH_SEARCH_BASE
+ADMIN_GROUP_TO_SEARCH = "CN=admins,OU=Administrators,DC=example,DC=com"
 LDAP_DIRTREE_OU_FILTER = {
     "organizationalUnit" : "objectCategory",
     "top" : "objectCategory",
