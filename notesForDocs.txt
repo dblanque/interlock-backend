@@ -1,2 +1,10 @@
 min requirements
 1 thread/vCPU, 2GB RAM
+
+create doc for:
+ - compiling manually from git repo
+ - installing from deb
+ - models
+ - views
+ - ldap connector
+ - etc?

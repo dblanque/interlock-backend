@@ -30,7 +30,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
-    GROUP_TO_SEARCH = ADMIN_GROUP_TO_SEARCH
+    GROUP_TO_SEARCH = "%s,%s" % (ADMIN_GROUP_TO_SEARCH, LDAP_AUTH_SEARCH_BASE)
     if 'Administrator' in ldap_attributes[LDAP_AUTH_USER_FIELDS["username"]]:
         user.is_staff = True
         user.is_superuser = True
