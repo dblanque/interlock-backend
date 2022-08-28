@@ -373,10 +373,6 @@ class LDAPRecord(LDAPDNS):
         # ! Check if the record with the new values exists, if true raise exception
         # Exclude SOA from condition as that record is unique in Zone.
         if self.type != DNS_RECORD_TYPE_SOA:
-            exists = self.checkRecordExistsInEntry(mainField=mainField, mainFieldValue=values[mainField])
-            if exists != True:
-                print(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
-                raise exc_dns.DNSRecordEntryDoesNotExist
             # Check Multi-Record eligibility
             if self.recordExistsByType() != False:
                 raise exc_dns.DNSRecordExistsConflict
