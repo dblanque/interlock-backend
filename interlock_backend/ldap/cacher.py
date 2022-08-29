@@ -45,6 +45,7 @@ def saveToCache(newValues):
     filedata = createFileData()
 
     affectedSettings = list()
+    loggableSettings = list()
     for setting in constants.CMAPS:
         old_val = getattr(constants_cache, setting)
         default_val = getattr(constants, setting)
@@ -55,7 +56,7 @@ def saveToCache(newValues):
         if setting in newValues and 'value' in newValues[setting]:
             set_obj = normalizeValues(setting, newValues[setting])
             set_val = set_obj['value']
-            if set_val != old_val:
+            if set_val != default_val or set_val != old_val:
                 set_dict = dict()
                 set_dict['name'] = setting
                 if "password" in setting.lower():
@@ -64,15 +65,17 @@ def saveToCache(newValues):
                 else:
                     set_dict['old_value'] = old_val
                     set_dict['new_value'] = set_val
-                # print(set_val)
-                # print(default_val)
+
+                # If new value differs then add it to the log
                 affectedSettings.append(set_dict)
+                if set_val != old_val:
+                    loggableSettings.append(set_dict)
         else:
             set_val = default_val
 
         if setting == 'LDAP_AUTH_CONNECTION_PASSWORD' and constants.PLAIN_TEXT_BIND_PASSWORD != True:
             set_val = encrypt(set_val)
-
+        
         if setting in map(lambda v: v['name'], affectedSettings):
             # Replace the target string with new value
             if isinstance(set_val, str):
@@ -100,7 +103,7 @@ def saveToCache(newValues):
     with open(cacheFile, 'w') as file:
         file.write(filedata)
 
-    return affectedSettings
+    return loggableSettings
 
 def resetCacheToDefaults(newValues):
     if not isinstance(newValues, dict):
