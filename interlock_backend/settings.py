@@ -53,9 +53,6 @@ if FERNET_KEY is None or len(str(FERNET_KEY)) < 1:
     with open(fernetFile, 'w') as file:
         file.write("FERNET_KEY = " + str(FERNET_KEY))
 
-print("Initialized with Encryption Key: ")
-print(FERNET_KEY)
-
 # Default admin username and password
 DJANGO_SUPERUSER_USERNAME = 'admin'
 DJANGO_SUPERUSER_PASSWORD = 'interlock'
