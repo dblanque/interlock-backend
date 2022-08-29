@@ -39,11 +39,13 @@ class TestViewSet(BaseViewSet):
         validateUser(request=request)
         data = {}
         code = 0
+        printSettings = False
 
-        for i in constants_cache.__dict__:
-            if not i.startswith("_"):
-                value = getattr(constants_cache, i)
-                print("%s (%s): %s" % (i, type(value), value))
+        if printSettings == True:
+            for i in constants_cache.__dict__:
+                if not i.startswith("_"):
+                    value = getattr(constants_cache, i)
+                    print("%s (%s): %s" % (i, type(value), value))
 
         # Open LDAP Connection
         try:
@@ -53,14 +55,15 @@ class TestViewSet(BaseViewSet):
             print(e)
             raise CouldNotOpenConnection
 
-        ### DNS RECORD TEST
-
-        dnsList = LDAPDNS(ldapConnection)
-        dnsZones = dnsList.dnszones
-        forestZones = dnsList.forestzones
 
         currentLDAPServer = ldapConnection.server_pool.get_current_server(ldapConnection)
         print(currentLDAPServer.host)
+
+        ### DNS RECORD TEST
+
+        # dnsList = LDAPDNS(ldapConnection)
+        # dnsZones = dnsList.dnszones
+        # forestZones = dnsList.forestzones
         # testRecord = "A"
         # values_soa = {
         #     # SOA TEST

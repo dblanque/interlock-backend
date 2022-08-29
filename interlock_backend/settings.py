@@ -17,6 +17,7 @@ from datetime import timedelta
 from interlock_backend.ldap.constants import *
 from interlock_backend.local_django_settings import *
 import base64
+from importlib import util as importutils
 
 # A little easter egg for you :)
 # from this import d
@@ -30,12 +31,29 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'in2tfy@bhej(5i@h!_04+kes__58rd9mh$=1!o_6ky236d-ue)'
 
-# Dynamic Encrypt / Decrypt KEY, changes when the app is restarted
-# ALL users will loose their sessions when this happens.
-# ! MAKE IT DYNAMIC WHEN IN PRODUCTION
+# Decryption KEY, this is automatically generated in relative path:
+# - interlock_backend/enc_key.py
+# ! If the key changes you will need to re-save your LDAP Bind Password
+# ! and all your users will be required to login again
+# To MANUALLY generate a new key run and paste that value into enc_key.py
+# python3 <<< "import base64; import os; key = base64.urlsafe_b64encode(os.urandom(32)); print(key)"
 # FERNET_KEY = base64.urlsafe_b64encode(os.urandom(32))
-FERNET_KEY = b'7HWX7ZH2k-7KrdPkCtaAC8lAjZ8gaz0HrJTeWTthm24='
 
+FERNET_KEY = None
+fernetFile = BASE_DIR+'/interlock_backend/enc_key.py'
+enc_spec = importutils.find_spec("interlock_backend.enc_key", package="enc_spec")
+if enc_spec is not None:
+    from interlock_backend import enc_key
+    if 'FERNET_KEY' in enc_key.__dict__ and enc_key.FERNET_KEY is not None and len(enc_key.FERNET_KEY) > 0:
+        from interlock_backend.enc_key import FERNET_KEY
+
+if FERNET_KEY is None or len(FERNET_KEY) < 1:
+    FERNET_KEY = base64.urlsafe_b64encode(os.urandom(32))
+    # Write the file
+    with open(fernetFile, 'w') as file:
+        file.write("FERNET_KEY = " + str(FERNET_KEY))
+
+# Default admin username and password
 DJANGO_SUPERUSER_USERNAME = 'admin'
 DJANGO_SUPERUSER_PASSWORD = 'interlock'
 

@@ -8,8 +8,13 @@
 
 #---------------------------------- IMPORTS -----------------------------------#
 from interlock_backend.ldap import constants
+from interlock_backend.ldap import constants_cache
 from interlock_backend.settings import BASE_DIR
 from json import dumps
+from interlock_backend.ldap.encrypt import (
+    decrypt,
+    encrypt
+)
 from interlock_backend.ldap.settings_func import normalizeValues
 ################################################################################
 
@@ -41,6 +46,7 @@ def saveToCache(newValues):
 
     affectedSettings = list()
     for setting in constants.CMAPS:
+        prev_val = getattr(constants_cache, setting)
         default_val = getattr(constants, setting)
         if setting == 'LDAP_AUTH_TLS_VERSION':
             default_val = str(default_val).split('.')[-1]
@@ -48,14 +54,25 @@ def saveToCache(newValues):
         if setting in newValues and 'value' in newValues[setting]:
             set_obj = normalizeValues(setting, newValues[setting])
             set_val = set_obj['value']
-            if set_val != default_val:
+            if set_val != default_val or set_val != prev_val:
+                set_dict = dict()
+                set_dict['name'] = setting
+                if "password" in setting.lower():
+                    set_dict['previous_value'] = "Encrypted Password"
+                    set_dict['value'] = "Encrypted Password"
+                else:
+                    set_dict['previous_value'] = prev_val
+                    set_dict['value'] = set_val
                 # print(set_val)
                 # print(default_val)
-                affectedSettings.append(setting)
+                affectedSettings.append(set_dict)
         else:
             set_val = default_val
 
-        if setting in affectedSettings:
+        if "password" in setting.lower():
+            set_val = encrypt(set_val)
+
+        if setting in map(lambda v: v['name'], affectedSettings):
             # Replace the target string with new value
             if isinstance(set_val, str):
                 if setting == 'LDAP_AUTH_TLS_VERSION':
@@ -69,16 +86,16 @@ def saveToCache(newValues):
             elif isinstance(set_val, list) or isinstance(set_val, tuple):
                 line = "%s=%s" % (setting, set_val)
             elif not isinstance(set_val, str):
-                line = "%s=\"%s\"" % (setting, str(set_val))
+                line = "%s=%s" % (setting, str(set_val))
 
             # print("\n")
-            # print(variable)
-            # print(var_value)
-            # print(type(var_value))
+            # print(setting)
+            # print(set_val)
+            # print(type(set_val))
             # print(line)
             filedata += "\n" + line
 
-    # # Write the file
+    # Write the file
     with open(cacheFile, 'w') as file:
         file.write(filedata)
 

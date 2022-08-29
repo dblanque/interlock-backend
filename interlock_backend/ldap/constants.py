@@ -8,6 +8,11 @@
 ### LDAP SETTINGS
 # ! DO NOT IMPORT THIS FILE, IMPORT constants_cache.py INSTEAD
 
+# If this is set to True then the LDAP Connector will not attempt
+# to decrypt your LDAP Bind Password
+# ! Not recommended
+PLAIN_TEXT_BIND_PASSWORD = False
+
 # The URL of the LDAP server(s).  List multiple servers for high availability ServerPool connection.
 # ! Change the prefix to ldaps:// if using TLS
 LDAP_AUTH_URL = ["ldap://localhost:389"]
@@ -120,7 +125,7 @@ LDAP_AUTH_CONNECTION_PASSWORD = "ChangeThis"
 LDAP_AUTH_CONNECT_TIMEOUT = 5
 LDAP_AUTH_RECEIVE_TIMEOUT = 5
 
-ADMIN_GROUP_TO_SEARCH = "CN=admins,OU=Administrators,DC=example,DC=com"
+ADMIN_GROUP_TO_SEARCH = "CN=Administrators,CN=Builtin,DC=example,DC=com"
 LDAP_DIRTREE_OU_FILTER = {
     "organizationalUnit" : "objectCategory",
     "top" : "objectCategory",

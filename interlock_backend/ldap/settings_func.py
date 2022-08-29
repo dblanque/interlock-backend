@@ -15,6 +15,7 @@ from interlock_backend.ldap.constants import (
     __dict__ as constantDictionary
 )
 from interlock_backend.ldap import constants_cache
+from interlock_backend.ldap.encrypt import decrypt
 # Full imports
 import logging
 ################################################################################
@@ -105,5 +106,7 @@ def getSettingsList(settingList=CMAPS):
             if c == 'LDAP_AUTH_TLS_VERSION':
                 data[c]['value'] = str(data[c]['value'])
                 data[c]['value'] = data[c]['value'].split('.')[-1]
+            if "password" in c.lower():
+                data[c]['value'] = decrypt(data[c]['value'])
 
     return data

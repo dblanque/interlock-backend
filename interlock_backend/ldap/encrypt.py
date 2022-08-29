@@ -21,8 +21,9 @@ def encrypt(stringToEncrypt):
     # To encrypt the string string must
     # be encoded to byte string before encryption
     encMessage = fernet.encrypt(stringToEncrypt.encode())
+    encMessage = str(encMessage).lstrip("b'").rstrip("'")
     return encMessage
-    
+
 def decrypt(stringToDecrypt):
     stringToDecrypt = bytes(stringToDecrypt, encoding='utf-8')
     fernet = Fernet(key)

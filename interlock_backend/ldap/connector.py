@@ -71,7 +71,6 @@ def authenticate(*args, **kwargs):
     }
 
     encryptedPass = encrypt(password)
-    encryptedPass = str(encryptedPass).strip("b'").rstrip("'")
 
     # Check that this is valid login data.
     if not password or 'username' not in frozenset(ldap_kwargs.keys()):
@@ -103,7 +102,10 @@ class LDAPConnector(object):
         getInfo=ldap3.NONE
         ):
         ldapAuthURL = LDAP_AUTH_URL
-        ldapAuthConnectionPassword = LDAP_AUTH_CONNECTION_PASSWORD
+        if PLAIN_TEXT_BIND_PASSWORD:
+            ldapAuthConnectionPassword = self.defaultUserPassword
+        else:
+            ldapAuthConnectionPassword = decrypt(self.defaultUserPassword)
         ldapAuthConnectTimeout = LDAP_AUTH_CONNECT_TIMEOUT
         ldapAuthReceiveTimeout = LDAP_AUTH_RECEIVE_TIMEOUT
         ldapAuthUseTLS = LDAP_AUTH_USE_TLS
@@ -113,7 +115,7 @@ class LDAPConnector(object):
         if user_dn is None:
             user_dn = self.defaultUserDn
         if password is None:
-            password = self.defaultUserPassword
+            password = ldapAuthConnectionPassword
 
         # If it's an Initial Authentication we need to use the bind user first
         if initialAuth == True or user is not None:
