@@ -102,10 +102,10 @@ class LDAPConnector(object):
         getInfo=ldap3.NONE
         ):
         ldapAuthURL = LDAP_AUTH_URL
-        if PLAIN_TEXT_BIND_PASSWORD:
-            ldapAuthConnectionPassword = self.defaultUserPassword
-        else:
+        if PLAIN_TEXT_BIND_PASSWORD != True:
             ldapAuthConnectionPassword = decrypt(self.defaultUserPassword)
+        else:
+            ldapAuthConnectionPassword = self.defaultUserPassword
         ldapAuthConnectTimeout = LDAP_AUTH_CONNECT_TIMEOUT
         ldapAuthReceiveTimeout = LDAP_AUTH_RECEIVE_TIMEOUT
         ldapAuthUseTLS = LDAP_AUTH_USE_TLS

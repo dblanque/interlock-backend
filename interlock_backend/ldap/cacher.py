@@ -46,30 +46,31 @@ def saveToCache(newValues):
 
     affectedSettings = list()
     for setting in constants.CMAPS:
-        prev_val = getattr(constants_cache, setting)
+        old_val = getattr(constants_cache, setting)
         default_val = getattr(constants, setting)
         if setting == 'LDAP_AUTH_TLS_VERSION':
+            old_val = str(default_val).split('.')[-1]
             default_val = str(default_val).split('.')[-1]
 
         if setting in newValues and 'value' in newValues[setting]:
             set_obj = normalizeValues(setting, newValues[setting])
             set_val = set_obj['value']
-            if set_val != default_val or set_val != prev_val:
+            if set_val != default_val or set_val != old_val:
                 set_dict = dict()
                 set_dict['name'] = setting
                 if "password" in setting.lower():
-                    set_dict['previous_value'] = "Encrypted Password"
-                    set_dict['value'] = "Encrypted Password"
+                    set_dict['old_value'] = "********"
+                    set_dict['value'] = "********"
                 else:
-                    set_dict['previous_value'] = prev_val
-                    set_dict['value'] = set_val
+                    set_dict['old_value'] = old_val
+                    set_dict['new_value'] = set_val
                 # print(set_val)
                 # print(default_val)
                 affectedSettings.append(set_dict)
         else:
             set_val = default_val
 
-        if "password" in setting.lower():
+        if setting == 'LDAP_AUTH_CONNECTION_PASSWORD' and constants.PLAIN_TEXT_BIND_PASSWORD != True:
             set_val = encrypt(set_val)
 
         if setting in map(lambda v: v['name'], affectedSettings):

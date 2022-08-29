@@ -45,13 +45,16 @@ enc_spec = importutils.find_spec("interlock_backend.enc_key", package="enc_spec"
 if enc_spec is not None:
     from interlock_backend import enc_key
     if 'FERNET_KEY' in enc_key.__dict__ and enc_key.FERNET_KEY is not None and len(enc_key.FERNET_KEY) > 0:
-        from interlock_backend.enc_key import FERNET_KEY
+        FERNET_KEY = enc_key.FERNET_KEY
 
-if FERNET_KEY is None or len(FERNET_KEY) < 1:
+if FERNET_KEY is None or len(str(FERNET_KEY)) < 1:
     FERNET_KEY = base64.urlsafe_b64encode(os.urandom(32))
     # Write the file
     with open(fernetFile, 'w') as file:
         file.write("FERNET_KEY = " + str(FERNET_KEY))
+
+print("Initialized with Encryption Key: ")
+print(FERNET_KEY)
 
 # Default admin username and password
 DJANGO_SUPERUSER_USERNAME = 'admin'
