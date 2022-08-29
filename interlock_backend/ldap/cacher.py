@@ -60,7 +60,7 @@ def saveToCache(newValues):
                 set_dict['name'] = setting
                 if "password" in setting.lower():
                     set_dict['old_value'] = "********"
-                    set_dict['value'] = "********"
+                    set_dict['new_value'] = "********"
                 else:
                     set_dict['old_value'] = old_val
                     set_dict['new_value'] = set_val
