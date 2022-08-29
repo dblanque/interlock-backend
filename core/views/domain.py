@@ -110,11 +110,16 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         else:
             target_zone = LDAP_DOMAIN
         search_target = 'DC=%s,%s' % (target_zone, dnsList.dnsroot)
-        ldapConnection.search(
-            search_base=search_target,
-            search_filter=searchFilter,
-            attributes=attributes
-            )
+        try:
+            ldapConnection.search(
+                search_base=search_target,
+                search_filter=searchFilter,
+                attributes=attributes
+                )
+        except Exception as e:
+            print(search_target)
+            print(searchFilter)
+            print(e)
 
         result = list()
 
