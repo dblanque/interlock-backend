@@ -55,7 +55,7 @@ def saveToCache(newValues):
         if setting in newValues and 'value' in newValues[setting]:
             set_obj = normalizeValues(setting, newValues[setting])
             set_val = set_obj['value']
-            if set_val != default_val or set_val != old_val:
+            if set_val != old_val:
                 set_dict = dict()
                 set_dict['name'] = setting
                 if "password" in setting.lower():
