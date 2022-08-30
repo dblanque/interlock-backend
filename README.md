@@ -2,13 +2,13 @@
 
 1. Install the following dependencies
 ```bash
-apt-get install git python3 python3-venv python3-pip postgresql
+apt-get install git python3 python3-virtualenv python3-pip postgresql
 ```
 
 2. Once you’ve installed all the requirements, you can pull the latest repo.
 
 ```bash
-git clone https://gitlab.brconsulting.info/dblanque/interlock-backend.git
+git clone https://github.com/dblanque/interlock-backend.git
 ```
 
 3. Add the basic schema to the database
@@ -42,25 +42,13 @@ echo "
 DATABASES = {
     \"default\": {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'syndb',
-        'USER': 'synadmin',
+        'NAME': 'interlockdb',
+        'USER': 'interlockadmin',
         'PASSWORD': 'password',
         'HOST': '127.0.0.1',  # Or an IP Address that your DB is hosted on
         'PORT': '5432',
     }
-}
-
-logging_file_path = \"/var/log/interlock/backend.log\"
-
-CORS_ALLOWED_ORIGINS = [
-    \"http://localhost:8080\",
-    \"https://localhost:8080\",
-]
-CSRF_TRUSTED_ORIGINS = [
-    \"http://localhost:8080\",
-    \"https://localhost:8080\",
-]
-" >> /opt/interlock-backend/interlock_backend/local_settings.py
+}" >> /opt/interlock-backend/interlock_backend/local_settings.py
 ```
 
 5. Create the Log Directory and file
