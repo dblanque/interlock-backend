@@ -102,7 +102,7 @@ class LDAPConnector(object):
         getInfo=ldap3.NONE
         ):
         ldapAuthURL = LDAP_AUTH_URL
-        if PLAIN_TEXT_BIND_PASSWORD != True:
+        if PLAIN_TEXT_BIND_PASSWORD != True and self.defaultUserPassword is not None:
             ldapAuthConnectionPassword = decrypt(self.defaultUserPassword)
         else:
             ldapAuthConnectionPassword = self.defaultUserPassword
