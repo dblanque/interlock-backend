@@ -53,6 +53,9 @@ if FERNET_KEY is None or len(str(FERNET_KEY)) < 1:
     with open(fernetFile, 'w') as file:
         file.write("FERNET_KEY = " + str(FERNET_KEY))
 
+if FERNET_KEY is None or len(str(FERNET_KEY)) < 1:
+    raise ImproperlyConfigured("Fernet Key is invalid (None or len < 1)")
+
 # Default admin username and password
 DJANGO_SUPERUSER_USERNAME = 'admin'
 DJANGO_SUPERUSER_PASSWORD = 'interlock'
