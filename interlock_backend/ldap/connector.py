@@ -103,7 +103,11 @@ class LDAPConnector(object):
         ):
         ldapAuthURL = LDAP_AUTH_URL
         if PLAIN_TEXT_BIND_PASSWORD != True and self.defaultUserPassword is not None:
-            ldapAuthConnectionPassword = decrypt(self.defaultUserPassword)
+            try:
+                ldapAuthConnectionPassword = decrypt(self.defaultUserPassword)
+            except Exception as e:
+                print(e)
+                ldapAuthConnectionPassword = self.defaultUserPassword
         else:
             ldapAuthConnectionPassword = self.defaultUserPassword
         ldapAuthConnectTimeout = LDAP_AUTH_CONNECT_TIMEOUT
