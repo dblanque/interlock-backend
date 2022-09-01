@@ -106,7 +106,7 @@ def getSettingsList(settingList=CMAPS):
             if c == 'LDAP_AUTH_TLS_VERSION':
                 data[c]['value'] = str(data[c]['value'])
                 data[c]['value'] = data[c]['value'].split('.')[-1]
-            if c == "LDAP_AUTH_CONNECTION_PASSWORD":
+            if c == "LDAP_AUTH_CONNECTION_PASSWORD" and data[c]['value'] is not None:
                 data[c]['value'] = decrypt(data[c]['value'])
 
     return data
