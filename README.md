@@ -1,9 +1,9 @@
 # Interlock Documentation
 
 For information and official Interlock Documentation go to:
-[https://docs.brconsulting.info/sphinx/en/docs/Development/Interlock/00-ilck-overview.html](https://docs.brconsulting.info/sphinx/en/docs/Development/Interlock/00-ilck-overview.html)
+[BR Consulting S.R.L. Documentation - Interlock](https://docs.brconsulting.info/sphinx/en/docs/Development/Interlock/00-ilck-overview.html)
 
-# Interlock Back-end Installation
+# Installation from Source
 
 1. Install the following dependencies
 ```bash
