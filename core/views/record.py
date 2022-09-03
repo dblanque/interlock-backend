@@ -100,6 +100,13 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
                         }
                         raise exc_dns.DNSFieldValidatorFailed(data=data)
 
+        if recordType == DNS_RECORD_TYPE_SOA and recordName != "@":
+            raise exc_dns.SOARecordRootOnly
+
+        if 'stringData' in recordValues:
+            if len(recordValues['stringData']) > 255:
+                raise exc_dns.DNSStringDataLimit
+
         # Open LDAP Connection
         try:
             connector = LDAPConnector(user.dn, user.encryptedPassword, request.user)
@@ -107,9 +114,6 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
         except Exception as e:
             print(e)
             raise exc_ldap.CouldNotOpenConnection
-
-        if recordType == DNS_RECORD_TYPE_SOA and recordName != "@":
-            raise exc_dns.SOARecordRootOnly
 
         dnsRecord = LDAPRecord(
             connection=ldapConnection,
@@ -205,6 +209,10 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
                             'value': recordValues[f]
                         }
                         raise exc_dns.DNSFieldValidatorFailed(data=data)
+
+        if 'stringData' in recordValues:
+            if len(recordValues['stringData']) > 255:
+                raise exc_dns.DNSStringDataLimit
 
         # Open LDAP Connection
         try:

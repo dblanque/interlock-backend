@@ -96,3 +96,8 @@ class DNSFieldValidatorFailed(BaseException):
     status_code = 400
     default_detail = 'A Field in the DNS Record has failed validation'
     default_code = 'dns_field_validator_failed'
+
+class DNSStringDataLimit(BaseException):
+    status_code = 400
+    default_detail = 'DNS String Data cannot contain more than 255 characters'
+    default_code = 'dns_string_data_limit'
