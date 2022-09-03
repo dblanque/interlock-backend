@@ -10,3 +10,8 @@ class SettingNotInList(BaseException):
     status_code = 400
     default_detail = 'The Requested Setting is not in the current search list'
     default_code = 'setting_not_in_list'
+
+class SettingLogMaxLimit(BaseException):
+    status_code = 400
+    default_detail = 'You cannot save more than 10000 logs'
+    default_code = 'setting_max_log'

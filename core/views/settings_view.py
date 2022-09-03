@@ -9,6 +9,7 @@
 #---------------------------------- IMPORTS -----------------------------------#
 ### Exceptions
 from core.exceptions.ldap import ConnectionTestFailed
+from core.exceptions import settings_exc as exc_set
 
 ### Models
 from core.models.log import logToDB
@@ -80,6 +81,10 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
         adminEnabled = data.pop('DEFAULT_ADMIN_ENABLED')
         adminPassword = data.pop('DEFAULT_ADMIN_PWD')
         self.setAdminStatus(status=adminEnabled, password=adminPassword)
+
+        if 'LDAP_LOG_MAX' in data:
+            if int(data['LDAP_LOG_MAX']['value']) > 10000:
+                raise exc_set.SettingLogMaxLimit
 
         data['LDAP_AUTH_CONNECTION_USERNAME'] = dict()
         data['LDAP_AUTH_CONNECTION_USERNAME']['value'] = data['LDAP_AUTH_CONNECTION_USER_DN']['value'].split(',')[0].split('CN=')[1].lower()
