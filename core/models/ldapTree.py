@@ -190,7 +190,11 @@ class LDAPTree():
             currentObject['name'] = str(entry['dn']).split(',')[0].split('=')[1]
             currentObject['distinguishedName'] = entry['dn']
             currentObject['type'] = str(entry['attributes']['objectCategory']).split(',')[0].split('=')[1]
-            if currentObject['name'] in LDAP_BUILTIN_OBJECTS or 'builtinDomain' in entry['attributes']['objectClass'] or self.__getCN__(distinguishedName) in LDAP_BUILTIN_OBJECTS:
+            if (currentObject['name'] in LDAP_BUILTIN_OBJECTS 
+            or 'builtinDomain' in entry['attributes']['objectClass'] 
+            or self.__getCN__(distinguishedName) in LDAP_BUILTIN_OBJECTS
+            or self.__getCN__(distinguishedName) == 'Domain Controllers'
+            ) and self.__getCN__(distinguishedName).lower() != 'computers':
                 currentObject['builtin'] = True
             # Set the sub-object children
             if self.childrenObjectType == 'array' and 'children' not in currentObject:
