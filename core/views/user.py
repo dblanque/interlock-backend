@@ -977,20 +977,21 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             raise exc_ldap.CouldNotOpenConnection
 
         userToUpdate = user.username
+        c = self.getUserObject(c, userToUpdate, attributes=[LDAP_AUTH_USERNAME_IDENTIFIER, 'distinguishedName', 'userAccountControl'])
+        ldapUser = c.entries
 
-        # If data request for deletion has user DN
         if 'distinguishedName' in data.keys() and data['distinguishedName'] != "":
             logger.debug('Updating with distinguishedName obtained from front-end')
             logger.debug(data['distinguishedName'])
             distinguishedName = data['distinguishedName']
-        # Else, search for username dn
         else:
             logger.debug('Updating with user dn search method')
-            c = self.getUserObject(c, userToUpdate)
             
-            user = c.entries
-            distinguishedName = str(user[0].distinguishedName)
+            distinguishedName = str(ldapUser[0].distinguishedName)
             logger.debug(distinguishedName)
+
+        if ldap_adsi.list_user_perms(ldapUser[0], permissionToSearch="LDAP_UF_PASSWD_CANT_CHANGE") == True:
+            raise PermissionDenied
 
         if not distinguishedName or distinguishedName == "":
             c.unbind()
@@ -1204,7 +1205,8 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             'whenChanged',
             'lastLogon',
             'badPwdCount',
-            'pwdLastSet'
+            'pwdLastSet',
+            'userAccountControl'
         ]
 
         objectClassFilter = "(objectclass=" + authObjectClass + ")"
@@ -1218,6 +1220,8 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         )
         user = c.entries
 
+        attributes.remove('userAccountControl')
+
         # For each attribute in user object attributes
         user_dict = {}
         for attr_key in attributes:
@@ -1230,6 +1234,11 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                     user_dict[str_key] = str_value
             if attr_key == authUsernameIdentifier:
                 user_dict['username'] = str_value
+
+            if ldap_adsi.list_user_perms(user[0], permissionToSearch="LDAP_UF_PASSWD_CANT_CHANGE") == True:
+                user_dict['can_change_pwd'] = False
+            else:
+                user_dict['can_change_pwd'] = True
 
         # Close / Unbind LDAP Connection
         c.unbind()
