@@ -116,7 +116,7 @@ LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN = "EXAMPLE"
 # details. If None, then the authenticated user will be used for querying, and
 # the `ldap_sync_users` command will perform an anonymous query.
 # This is used when the local Interlock Admin is logged in.
-LDAP_AUTH_CONNECTION_USER_DN = "CN=user,OU=Service Accounts,DC=example,DC=com"
+LDAP_AUTH_CONNECTION_USER_DN = "CN=Administrator,OU=Users,DC=example,DC=com"
 
 LDAP_AUTH_CONNECTION_USERNAME = LDAP_AUTH_CONNECTION_USER_DN.split(',')[0].split('CN=')[1]
 LDAP_AUTH_CONNECTION_PASSWORD = None
