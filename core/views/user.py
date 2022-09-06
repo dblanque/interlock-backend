@@ -384,8 +384,8 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 logger.debug("Value for key above: " + data[key])
                 arguments[key] = data[key]
 
-        arguments['givenName'] = arguments['givenName'].capitalize()
-        arguments['sn'] = arguments['sn'].capitalize()
+        arguments['givenName'] = arguments['givenName']
+        arguments['sn'] = arguments['sn']
 
         logger.debug('Creating user in DN Path: ' + userDN)
         try:

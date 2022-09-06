@@ -354,7 +354,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
                 logger.debug("Removing key from dictionary: " + key)
                 group_dict.pop(key)
 
-        group_dict['cn'] = group_dict['cn'].capitalize()
+        group_dict['cn'] = group_dict['cn']
         if 'membersToAdd' in group_dict:
             membersToAdd = group_dict.pop('membersToAdd')
         else:
