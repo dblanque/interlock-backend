@@ -6,6 +6,11 @@ class BaseException(APIException):
         super().__init__()
         if data is not None:
             self.setDetail(data)
+        else:
+            self.detail = {
+                "code": self.default_code,
+                "detail": self.default_detail
+            }
 
     def setDetail(self, data):
         self.detail = data

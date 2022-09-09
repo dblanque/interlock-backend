@@ -101,3 +101,8 @@ class DNSStringDataLimit(BaseException):
     status_code = 400
     default_detail = 'DNS String Data cannot contain more than 255 characters'
     default_code = 'dns_string_data_limit'
+
+class DNSListEmpty(BaseException):
+    status_code = 500
+    default_detail = 'DNS List in LDAP Response is empty, is this Legacy or Standard DNS Mode?'
+    default_code = 'dns_list_response_empty'

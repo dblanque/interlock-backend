@@ -102,9 +102,6 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         attributes=['dnsRecord','dNSTombstoned','name']
 
         dnsList = LDAPDNS(ldapConnection)
-        if not dnsList:
-            print("Could not fetch Zone List")
-            raise exc_dns.DNSZoneDoesNotExist
         dnsZones = dnsList.dnszones
         forestZones = dnsList.forestzones
 
@@ -130,6 +127,9 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
             'ForestDnsZones',
             'DomainDnsZones'
         ]
+
+        if not ldapConnection.response:
+            raise exc_dns.DNSListEmpty
 
         record_id = 0
         for entry in ldapConnection.response:
@@ -181,6 +181,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         responseData['dnsZones'] = dnsZones
         responseData['forestZones'] = forestZones
         responseData['records'] = result
+        responseData['legacy'] = LDAP_DNS_LEGACY or False
 
         return Response(
              data={
