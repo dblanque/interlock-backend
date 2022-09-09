@@ -143,10 +143,9 @@ AUTH_USER_MODEL = "core.User"
 
 LOG_FILE_PATH = f'{BASE_DIR}/logs/interlock.drf.log'
 
-LOG_FILE = Path(LOG_FILE_PATH)
-LOG_FILE.touch(exist_ok=True)
-LOG_EXISTS = open(LOG_FILE)
-LOG_EXISTS.close()
+if os.path.exists(LOG_FILE_PATH) != True:
+    LOG_EXISTS = open(LOG_FILE_PATH, "w")
+    LOG_EXISTS.close()
 
 if not LOG_FILE_PATH:
     raise ImproperlyConfigured("No LOG_FILE_PATH found.")
