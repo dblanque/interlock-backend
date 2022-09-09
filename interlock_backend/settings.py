@@ -141,9 +141,13 @@ AUTHENTICATION_BACKENDS = (
 
 AUTH_USER_MODEL = "core.User"
 
-LOG_FILE_PATH = f'{BASE_DIR}/logs/interlock.drf.log'
+LOG_FILE_FOLDER = f'{BASE_DIR}/logs'
+LOG_FILE_PATH = f'{LOG_FILE_FOLDER}/interlock.drf.log'
 
-if os.path.exists(LOG_FILE_PATH) != True:
+if not os.path.exists(LOG_FILE_FOLDER):
+    os.makedirs(LOG_FILE_FOLDER)
+
+if not os.path.exists(LOG_FILE_PATH):
     LOG_EXISTS = open(LOG_FILE_PATH, "w")
     LOG_EXISTS.close()
 
