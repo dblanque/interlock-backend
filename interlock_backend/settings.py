@@ -18,6 +18,7 @@ from interlock_backend.ldap.constants import *
 from interlock_backend.local_django_settings import *
 import base64
 from importlib import util as importutils
+from pathlib import Path
 
 # A little easter egg for you :)
 # from this import d
@@ -140,15 +141,40 @@ AUTHENTICATION_BACKENDS = (
 
 AUTH_USER_MODEL = "core.User"
 
+LOG_FILE_PATH = './logs/interlock.drf.log'
+
+LOG_FILE = Path(LOG_FILE_PATH)
+LOG_FILE.touch(exist_ok=True)
+
+if not LOG_FILE_PATH:
+    raise ImproperlyConfigured("No LOG_FILE_PATH found.")
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    'formatters': {
+        'timestamp': {
+            'format': '{asctime} [{levelname}] - {message}',
+            'style': '{',
+        },
+    },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
         },
+        'file': {
+            'level': "WARNING",
+            'class': "logging.FileHandler",
+            'formatter': 'timestamp',
+            'filename': LOG_FILE_PATH
+        }
     },
     "loggers": {
+        '': {
+            'handlers': ['console', 'file'],
+            'propagate': True,
+            'level': 'INFO',
+        },
         "django_python3_ldap": {
             "handlers": ["console"],
             "level": "INFO",

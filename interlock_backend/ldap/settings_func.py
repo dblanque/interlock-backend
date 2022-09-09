@@ -24,11 +24,10 @@ logger = logging.getLogger(__name__)
 
 def getSettingType(settingKey):
     # Set the Type for the Front-end based on Types in List
-    if 'type' in CMAPS[settingKey]:
-        type = CMAPS[settingKey]['type']
-    else:
-        type = 'string'
-    return type
+    settingType = CMAPS[settingKey]
+    if not settingType:
+        settingType = 'string'
+    return settingType
 
 def normalizeValues(settingKey, settingDict):
     """

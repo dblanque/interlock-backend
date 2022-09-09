@@ -37,7 +37,8 @@ from interlock_backend.ldap.constants_cache import *
 
 logger = logging.getLogger(__name__)
 class LDAPDNS():
-    def __init__(self, connection, legacy=False):
+    def __init__(self, connection):
+        legacy = LDAP_DNS_LEGACY
         if legacy == True:
             self.dnsroot = 'CN=MicrosoftDNS,CN=System,%s' % LDAP_AUTH_SEARCH_BASE
         else:
@@ -75,7 +76,7 @@ class LDAPRecord(LDAPDNS):
         rType=None,
         zoneType="fwdLookup",
     ):
-        super().__init__(connection=connection, legacy=legacy)
+        super().__init__(connection=connection)
 
         self.schemaNamingContext = "%s,%s" % (LDAP_SCHEMA_NAMING_CONTEXT, LDAP_AUTH_SEARCH_BASE)
 

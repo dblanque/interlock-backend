@@ -36,6 +36,9 @@ LDAP_SCHEMA_NAMING_CONTEXT = "CN=Schema,CN=Configuration"
 # The LDAP class that represents a user.
 LDAP_AUTH_OBJECT_CLASS = "person"
 
+# Whether the DNS Zones are in the Legacy Location
+LDAP_DNS_LEGACY = False
+
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
 # ! Don't change the values below or Group Type/Scope changes will break ! #
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
@@ -189,94 +192,32 @@ LDAP_LOG_LOGOUT = False
 LDAP_LOG_MAX = 100
 
 CMAPS = {
-    "LDAP_AUTH_URL":{ 
-        "type": "ldap_uri", 
-        "value": "" 
-    },
-    "LDAP_DOMAIN":{
-        "value": "" 
-    },
-    "LDAP_LOG_MAX":{
-        "type": "integer",
-    },
-    "LDAP_LOG_READ":{
-        "type": "boolean",
-    },
-    "LDAP_LOG_CREATE":{
-        "type": "boolean",
-    },
-    "LDAP_LOG_UPDATE":{
-        "type": "boolean",
-    },
-    "LDAP_LOG_DELETE":{
-        "type": "boolean",
-    },
-    "LDAP_LOG_OPEN_CONNECTION":{
-        "type": "boolean",
-    },
-    "LDAP_LOG_CLOSE_CONNECTION":{
-        "type": "boolean",
-    },
-    "LDAP_LOG_LOGIN":{
-        "type": "boolean",
-    },
-    "LDAP_LOG_LOGOUT":{
-        "type": "boolean",
-    },
-    "LDAP_AUTH_USE_TLS":{ 
-        "type": "boolean", 
-        "value": "" 
-    },
-    "LDAP_AUTH_TLS_VERSION":{
-        "value": "" ,
-        "type": "select"
-    },
-    "LDAP_AUTH_SEARCH_BASE":{
-        "value": "" 
-    },
-    "LDAP_AUTH_OBJECT_CLASS":{ 
-        "value": "" 
-    },
-    "EXCLUDE_COMPUTER_ACCOUNTS":{ 
-        "type": "boolean", 
-        "value": "" 
-    },
-    "LDAP_AUTH_USER_FIELDS":{ 
-        "type": "object", 
-        "value": "" 
-    },
-    "LDAP_DIRTREE_OU_FILTER":{ 
-        "type": "object"
-    },
-    "LDAP_DIRTREE_CN_FILTER":{ 
-        "type": "object"
-    },
-    "LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN":{ 
-        "value": ""
-    },
-    "LDAP_AUTH_CONNECTION_USER_DN":{ 
-        "value": ""
-    },
-    "LDAP_AUTH_CONNECTION_USERNAME":{ 
-        "value": ""
-    },
-    "LDAP_AUTH_CONNECTION_PASSWORD":{ 
-        "type": "password",
-        "value": ""
-    },
-    "LDAP_AUTH_CONNECT_TIMEOUT":{ 
-        "type": "integer", 
-        "value": ""
-    },
-    "LDAP_AUTH_RECEIVE_TIMEOUT":{ 
-        "type": "integer", 
-        "value": ""
-    },
-    "LDAP_AUTH_RECEIVE_TIMEOUT":{ 
-        "type": "integer", 
-        "value": ""
-    },
-    "ADMIN_GROUP_TO_SEARCH":{
-        "value": ""
-    }
+    "LDAP_AUTH_URL":"ldap_uri",
+    "LDAP_DOMAIN":"string",
+    "LDAP_LOG_MAX":"integer",
+    "LDAP_LOG_READ":"boolean",
+    "LDAP_LOG_CREATE":"boolean",
+    "LDAP_LOG_UPDATE":"boolean",
+    "LDAP_LOG_DELETE":"boolean",
+    "LDAP_LOG_OPEN_CONNECTION":"boolean",
+    "LDAP_LOG_CLOSE_CONNECTION":"boolean",
+    "LDAP_LOG_LOGIN":"boolean",
+    "LDAP_LOG_LOGOUT":"boolean",
+    "LDAP_AUTH_USE_TLS": "boolean", 
+    "LDAP_AUTH_TLS_VERSION": "select",
+    "LDAP_AUTH_SEARCH_BASE":"string",
+    "LDAP_DNS_LEGACY": "boolean",
+    "LDAP_AUTH_OBJECT_CLASS":"string",
+    "EXCLUDE_COMPUTER_ACCOUNTS": "boolean",
+    "LDAP_AUTH_USER_FIELDS": "object",
+    "LDAP_DIRTREE_OU_FILTER": "object",
+    "LDAP_DIRTREE_CN_FILTER": "object",
+    "LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN": "string",
+    "LDAP_AUTH_CONNECTION_USER_DN":"string",
+    "LDAP_AUTH_CONNECTION_USERNAME":"string",
+    "LDAP_AUTH_CONNECTION_PASSWORD": "password",
+    "LDAP_AUTH_CONNECT_TIMEOUT": "integer",
+    "LDAP_AUTH_RECEIVE_TIMEOUT": "integer",
+    "LDAP_AUTH_RECEIVE_TIMEOUT": "integer",
+    "ADMIN_GROUP_TO_SEARCH": "string"
 }

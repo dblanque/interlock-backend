@@ -102,6 +102,9 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         attributes=['dnsRecord','dNSTombstoned','name']
 
         dnsList = LDAPDNS(ldapConnection)
+        if not dnsList:
+            print("Could not fetch Zone List")
+            raise exc_dns.DNSZoneDoesNotExist
         dnsZones = dnsList.dnszones
         forestZones = dnsList.forestzones
 
@@ -139,12 +142,12 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
                 record_name += "." + target_zone
             else:
                 record_name = target_zone
-            logger.info(record_name)
+            logger.debug(record_name)
 
             # Set Record Data
             for record in entry['raw_attributes']['dnsRecord']:
                 dr = dnstool.DNS_RECORD(record)
-                logger.info(dr)
+                logger.debug(dr)
                 record_dict = record_to_dict(dr, entry['attributes']['dNSTombstoned'])
                 record_dict['id'] = record_id
                 record_dict['record_bytes'] = str(record)

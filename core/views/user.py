@@ -91,6 +91,9 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         # Exclude Computer Accounts if settings allow it
         if excludeComputerAccounts == True:
             objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "!(objectclass=computer)")
+        
+        # Exclude Contacts
+        objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "!(objectclass=contact)")
 
         c.search(
             authSearchBase,
@@ -142,10 +145,13 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             user_dict['distinguishedName'] = user.entry_dn
 
             # Check if user is disabled
-            if ldap_adsi.list_user_perms(user, permissionToSearch="LDAP_UF_ACCOUNT_DISABLE") == True:
-                user_dict['is_enabled'] = False
-            else:
-                user_dict['is_enabled'] = True
+            user_dict['is_enabled'] = True
+            try:
+                if ldap_adsi.list_user_perms(user, permissionToSearch="LDAP_UF_ACCOUNT_DISABLE"):
+                    user_dict['is_enabled'] = False
+            except Exception as e:
+                print(e)
+                print(f"Could not get user status for DN: {user_dict['distinguishedName']}")
 
             data.append(user_dict)
 
@@ -261,14 +267,21 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         del memberOfObjects
 
         # Check if user is disabled
-        if ldap_adsi.list_user_perms(user_entry, permissionToSearch="LDAP_UF_ACCOUNT_DISABLE", isObject=False) == True:
-            user_dict['is_enabled'] = False
-        else:
-            user_dict['is_enabled'] = True
+        user_dict['is_enabled'] = True
+        try:
+            if ldap_adsi.list_user_perms(user_entry, permissionToSearch="LDAP_UF_ACCOUNT_DISABLE", isObject=False):
+                user_dict['is_enabled'] = False
+        except Exception as e:
+            print(e)
+            print(user_dict['distinguishedName'])
 
         # Check if user is disabled
-        userPermissions = ldap_adsi.list_user_perms(user_entry, permissionToSearch=None, isObject=False)
-        user_dict['permission_list'] = userPermissions
+        try:
+            userPermissions = ldap_adsi.list_user_perms(user_entry, permissionToSearch=None, isObject=False)
+            user_dict['permission_list'] = userPermissions
+        except Exception as e:
+            print(e)
+            print(user_dict['distinguishedName'])
 
         # Replace sAMAccountType Value with String Corresponding
         userAccountType = int(user_dict['sAMAccountType'])
@@ -990,7 +1003,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             distinguishedName = str(ldapUser[0].distinguishedName)
             logger.debug(distinguishedName)
 
-        if ldap_adsi.list_user_perms(ldapUser[0], permissionToSearch="LDAP_UF_PASSWD_CANT_CHANGE") == True:
+        if ldap_adsi.list_user_perms(ldapUser[0], permissionToSearch="LDAP_UF_PASSWD_CANT_CHANGE"):
             raise PermissionDenied
 
         if not distinguishedName or distinguishedName == "":
@@ -1235,9 +1248,9 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             if attr_key == authUsernameIdentifier:
                 user_dict['username'] = str_value
 
-            if ldap_adsi.list_user_perms(user[0], permissionToSearch="LDAP_UF_PASSWD_CANT_CHANGE") == True:
-                user_dict['can_change_pwd'] = False
-            else:
+            # Check if user can change password based on perms
+            user_dict['can_change_pwd'] = False
+            if not ldap_adsi.list_user_perms(user[0], permissionToSearch="LDAP_UF_PASSWD_CANT_CHANGE"):
                 user_dict['can_change_pwd'] = True
 
         # Close / Unbind LDAP Connection

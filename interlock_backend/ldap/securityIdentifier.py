@@ -40,9 +40,9 @@ class SID(object):
             sid_byte_array = sid_byte_array.raw_values[0]
 
         logger.debug("Class SID() in: "+__name__)
-        logger.info("SID Byte Array")
+        logger.debug("SID Byte Array")
         logger.debug(type(sid_byte_array))
-        logger.info(sid_byte_array)
+        logger.debug(sid_byte_array)
 
         self.sid_byte_array = sid_byte_array
         self.revision_level = self.sid_byte_array[0]
@@ -95,9 +95,9 @@ class SID(object):
 
         :return: SID string in standard format
         """
-        logger.info("SID Revision Level: " + str(self.revision_level))
-        logger.info("SID Identifier Authority: " + str(self.identifier_authority))
-        logger.info("SID Subauthorities: " + str(self.subauthorities))
+        logger.debug("SID Revision Level: " + str(self.revision_level))
+        logger.debug("SID Identifier Authority: " + str(self.identifier_authority))
+        logger.debug("SID Subauthorities: " + str(self.subauthorities))
         sid = "S-{0}-{1}".format(self.revision_level, self.subauthority_count)
         for rid in self.subauthorities:
             sid += "-{0}".format(str(rid))

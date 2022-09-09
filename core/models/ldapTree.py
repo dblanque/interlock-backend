@@ -194,7 +194,10 @@ class LDAPTree():
             or 'builtinDomain' in entry['attributes']['objectClass'] 
             or self.__getCN__(distinguishedName) in LDAP_BUILTIN_OBJECTS
             or self.__getCN__(distinguishedName) == 'Domain Controllers'
-            ) and self.__getCN__(distinguishedName).lower() != 'computers':
+            ) and (
+                self.__getCN__(distinguishedName).lower() != 'computers' and
+                self.__getCN__(distinguishedName).lower() != 'users'
+            ):
                 currentObject['builtin'] = True
             # Set the sub-object children
             if self.childrenObjectType == 'array' and 'children' not in currentObject:
@@ -206,14 +209,11 @@ class LDAPTree():
             for attr in entry['attributes']:
                 if attr in self.ldapAttributes or self.ldapAttributes == "*":
                     if attr == self.usernameIdentifier and self.usernameIdentifier in entry['attributes']:
-                        allowUsername = False
                         # For class in user classes check if it's in object
                         for cla in userClasses:
-                            if cla in entry['attributes']['objectClass']:
-                                allowUsername = True
-                        if allowUsername == True:
-                            value = entry['attributes'][attr][0]
-                            currentObject['username'] = value
+                            if cla in entry['attributes']['objectClass'] and 'contact' not in entry['attributes']['objectClass']:
+                                value = entry['attributes'][attr][0]
+                                currentObject['username'] = value
                     elif attr == 'cn' and 'group' in entry['attributes']['objectClass']:
                         value = entry['attributes'][attr][0]
                         currentObject['groupname'] = value
@@ -231,16 +231,21 @@ class LDAPTree():
                             print("Could not translate SID Byte Array for " + distinguishedName)
                             print(e)
                     elif attr not in self.excludedLdapAttributes:
-                        if isinstance(entry['attributes'][attr], list) and len(entry['attributes'][attr]) > 1:
-                            value = entry['attributes'][attr]
-                        elif entry['attributes'][attr] != []:
-                            value = entry['attributes'][attr][0]
+                        try:
+                            if isinstance(entry['attributes'][attr], list) and len(entry['attributes'][attr]) > 1:
+                                value = entry['attributes'][attr]
+                            elif entry['attributes'][attr] != []:
+                                value = entry['attributes'][attr][0]
+                        except Exception as e:
+                            print(e)
+                            exc_message = f'Could not set attribute {attr} for {currentObject["distinguishedName"]}'
+                            raise Exception(exc_message)
 
                     try:
                         currentObject[attr] = value
                     except Exception as e:
-                        print("Exception on key: " + attr)
-                        print("Object: " + distinguishedName)
+                        print(f"Exception on key: {attr}")
+                        print(f"Object: {distinguishedName}")
                         print(e)
 
             # Force exclude System folder, has a bunch of objects that aren't useful for administration

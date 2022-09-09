@@ -212,9 +212,13 @@ def list_perms():
 def list_user_perms(user, permissionToSearch=None, isObject=True):
     # Cast raw integer user permissions as string
     if isObject == True:
-        rawUserPerms = bin_as_str(user.userAccountControl)
+        if user.userAccountControl != "[]":
+            rawUserPerms = bin_as_str(user.userAccountControl)
+        else: return None
     else:
-        rawUserPerms = bin_as_str(user['userAccountControl'])
+        if user.userAccountControl != "[]":
+            rawUserPerms = bin_as_str(user['userAccountControl'])
+        else: return None
     UserPerms = []
     i = 0
 
