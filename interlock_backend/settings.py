@@ -141,7 +141,7 @@ AUTHENTICATION_BACKENDS = (
 
 AUTH_USER_MODEL = "core.User"
 
-LOG_FILE_PATH = './logs/interlock.drf.log'
+LOG_FILE_PATH = f'{BASE_DIR}/logs/interlock.drf.log'
 
 LOG_FILE = Path(LOG_FILE_PATH)
 LOG_FILE.touch(exist_ok=True)
