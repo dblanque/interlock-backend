@@ -16,6 +16,7 @@ from rest_framework import viewsets
 ### Core
 #### Models
 from core.models.user import User
+from interlock_backend.ldap.cacher import createFileData
 
 #### Exceptions
 from core.exceptions import (
@@ -60,8 +61,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 
     @transaction.atomic
     def resetSettings(self):
-        # Deletes all setting overrides in DB
-        [setting.delete_permanently() for setting in Setting.objects.all()]
+        fileData = createFileData()
         return True
 
     def testSettings(self, user, data):
@@ -73,6 +73,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
         ldapAuthURL = data['LDAP_AUTH_URL']['value']
         ldapAuthConnectTimeout = int(data['LDAP_AUTH_CONNECT_TIMEOUT']['value'])
         ldapAuthReceiveTimeout = int(data['LDAP_AUTH_RECEIVE_TIMEOUT']['value'])
+        ldapAuthForceSSL = data['LDAP_AUTH_FORCE_SSL']['value']
         ldapAuthUseTLS = data['LDAP_AUTH_USE_TLS']['value']
         ldapAuthTLSVersion = data['LDAP_AUTH_TLS_VERSION']['value']
 
@@ -100,16 +101,16 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
             user_dn = user.dn
 
         logger.info("Test Connection Endpoint Parameters: ")
-        logger.info(username)
-        logger.info(user_dn)
-        logger.info(user.encryptedPassword)
-        logger.info(ldapAuthConnectionUser)
+        logger.info(f'User: {username}')
+        logger.info(f'User DN: {user_dn}')
+        logger.info(f'LDAP Connection User: {ldapAuthConnectionUser}')
         # logger.info(ldapAuthConnectionPassword)
-        logger.info(ldapAuthURL)
-        logger.info(ldapAuthConnectTimeout)
-        logger.info(ldapAuthReceiveTimeout)
-        logger.info(ldapAuthUseTLS)
-        logger.info(ldapAuthTLSVersion)
+        logger.info(f'LDAP URL: {ldapAuthURL}')
+        logger.info(f'LDAP Connect Timeout: {ldapAuthConnectTimeout}')
+        logger.info(f'LDAP Receive Timeout: {ldapAuthReceiveTimeout}')
+        logger.info(f'Force SSL: {ldapAuthForceSSL}')
+        logger.info(f'Use TLS: {ldapAuthUseTLS}')
+        logger.info(f'TLS Version: {ldapAuthTLSVersion}')
 
         # Open LDAP Connection
         try:
@@ -122,6 +123,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
                 ldapAuthURL = ldapAuthURL,
                 ldapAuthConnectTimeout = ldapAuthConnectTimeout,
                 ldapAuthReceiveTimeout = ldapAuthReceiveTimeout,
+                ldapAuthForceSSL = ldapAuthForceSSL,
                 ldapAuthUseTLS = ldapAuthUseTLS,
                 ldapAuthTLSVersion = ldapAuthTLSVersion,
                 )
@@ -135,6 +137,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
         result['user_used'] = username
         result['user_dn_used'] = user_dn
         result['server_pool'] = ldapAuthURL
+        result['ssl'] = ldapAuthForceSSL
         result['tls'] = ldapAuthUseTLS
         result['tls_version'] = ldapAuthTLSVersion
         logger.info("Test Connection Endpoint Result: ")

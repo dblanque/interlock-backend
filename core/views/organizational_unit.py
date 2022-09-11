@@ -64,7 +64,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
             # User Attrs
             'objectClass',
             'objectCategory',
-            'sAMAccountName',
+            LDAP_AUTH_USER_FIELDS['ouname'],
 
             # Group Attrs
             'cn',
@@ -136,7 +136,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
             # User Attrs
             'objectClass',
             'objectCategory',
-            'sAMAccountName',
+            LDAP_AUTH_USER_FIELDS['ouname'],
 
             # Group Attrs
             'cn',

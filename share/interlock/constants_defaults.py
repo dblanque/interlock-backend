@@ -1,4 +1,17 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: interlock_backend.ldap.constants
+
 ### LDAP SETTINGS
+# ! DO NOT IMPORT THIS FILE, IMPORT constants_cache.py INSTEAD
+
+# If this is set to True then the LDAP Connector will not attempt
+# to decrypt your LDAP Bind Password
+# ! Not recommended
+PLAIN_TEXT_BIND_PASSWORD = False
 
 # The URL of the LDAP server(s).  List multiple servers for high availability ServerPool connection.
 # ! Change the prefix to ldaps:// if using TLS
@@ -6,6 +19,9 @@ LDAP_AUTH_URL = ["ldap://localhost:389"]
 
 # This variable is used by the Interlock back-end to respond the correct domain info to the Front-end
 LDAP_DOMAIN = "example.com"
+
+# Use SSL on connection.
+LDAP_AUTH_FORCE_SSL = False
 
 # Initiate TLS on connection.
 LDAP_AUTH_USE_TLS = False
@@ -23,11 +39,14 @@ LDAP_SCHEMA_NAMING_CONTEXT = "CN=Schema,CN=Configuration"
 # The LDAP class that represents a user.
 LDAP_AUTH_OBJECT_CLASS = "person"
 
+# Whether the DNS Zones are in the Legacy Location
+LDAP_DNS_LEGACY = False
+
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
 # ! Don't change the values below or Group Type/Scope changes will break ! #
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
 # Group Type Value Mapping
-LDAP_GROUP_TYPES = {
+LDAP_GROUP_TYPE_MAPPING = {
     # Distribution Group
     0:0,
     # Security Group
@@ -35,7 +54,7 @@ LDAP_GROUP_TYPES = {
 }
 
 # Group Scope Value Mapping
-LDAP_GROUP_SCOPES = {
+LDAP_GROUP_SCOPE_MAPPING = {
     # Global Scope
     0:2,
     # Domain Local Scope
@@ -56,6 +75,8 @@ DISABLE_SETTING_OVERRIDES = False
 # attributes that represent them.
 LDAP_AUTH_USER_FIELDS = {
     "username": "sAMAccountName",
+    "groupname": "sAMAccountName",
+    "ouname": "sAMAccountName",
     "first_name": "givenName",
     "last_name": "sn",
     "email": "mail",
@@ -103,16 +124,16 @@ LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN = "EXAMPLE"
 # details. If None, then the authenticated user will be used for querying, and
 # the `ldap_sync_users` command will perform an anonymous query.
 # This is used when the local Interlock Admin is logged in.
-LDAP_AUTH_CONNECTION_USER_DN = "CN=user,OU=Service Accounts,DC=example,DC=com"
+LDAP_AUTH_CONNECTION_USER_DN = "CN=Administrator,CN=Users,DC=example,DC=com"
 
 LDAP_AUTH_CONNECTION_USERNAME = LDAP_AUTH_CONNECTION_USER_DN.split(',')[0].split('CN=')[1]
-LDAP_AUTH_CONNECTION_PASSWORD = "ChangeThis"
+LDAP_AUTH_CONNECTION_PASSWORD = None
 
 # Set connection/receive timeouts (in seconds) on the underlying `ldap3` library.
 LDAP_AUTH_CONNECT_TIMEOUT = 5
 LDAP_AUTH_RECEIVE_TIMEOUT = 5
 
-ADMIN_GROUP_TO_SEARCH = "CN=admins,OU=Administrators,DC=example,DC=com"
+ADMIN_GROUP_TO_SEARCH = "CN=Administrators,CN=Builtin,DC=example,DC=com"
 LDAP_DIRTREE_OU_FILTER = {
     "organizationalUnit" : "objectCategory",
     "top" : "objectCategory",
@@ -176,94 +197,33 @@ LDAP_LOG_LOGOUT = False
 LDAP_LOG_MAX = 100
 
 CMAPS = {
-    "LDAP_AUTH_URL":{ 
-        "type": "ldap_uri", 
-        "value": "" 
-    },
-    "LDAP_DOMAIN":{
-        "value": "" 
-    },
-    "LDAP_LOG_MAX":{
-        "type": "integer",
-    },
-    "LDAP_LOG_READ":{
-        "type": "boolean",
-    },
-    "LDAP_LOG_CREATE":{
-        "type": "boolean",
-    },
-    "LDAP_LOG_UPDATE":{
-        "type": "boolean",
-    },
-    "LDAP_LOG_DELETE":{
-        "type": "boolean",
-    },
-    "LDAP_LOG_OPEN_CONNECTION":{
-        "type": "boolean",
-    },
-    "LDAP_LOG_CLOSE_CONNECTION":{
-        "type": "boolean",
-    },
-    "LDAP_LOG_LOGIN":{
-        "type": "boolean",
-    },
-    "LDAP_LOG_LOGOUT":{
-        "type": "boolean",
-    },
-    "LDAP_AUTH_USE_TLS":{ 
-        "type": "boolean", 
-        "value": "" 
-    },
-    "LDAP_AUTH_TLS_VERSION":{
-        "value": "" ,
-        "type": "select"
-    },
-    "LDAP_AUTH_SEARCH_BASE":{
-        "value": "" 
-    },
-    "LDAP_AUTH_OBJECT_CLASS":{ 
-        "value": "" 
-    },
-    "EXCLUDE_COMPUTER_ACCOUNTS":{ 
-        "type": "boolean", 
-        "value": "" 
-    },
-    "LDAP_AUTH_USER_FIELDS":{ 
-        "type": "object", 
-        "value": "" 
-    },
-    "LDAP_DIRTREE_OU_FILTER":{ 
-        "type": "object"
-    },
-    "LDAP_DIRTREE_CN_FILTER":{ 
-        "type": "object"
-    },
-    "LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN":{ 
-        "value": ""
-    },
-    "LDAP_AUTH_CONNECTION_USER_DN":{ 
-        "value": ""
-    },
-    "LDAP_AUTH_CONNECTION_USERNAME":{ 
-        "value": ""
-    },
-    "LDAP_AUTH_CONNECTION_PASSWORD":{ 
-        "type": "password",
-        "value": ""
-    },
-    "LDAP_AUTH_CONNECT_TIMEOUT":{ 
-        "type": "integer", 
-        "value": ""
-    },
-    "LDAP_AUTH_RECEIVE_TIMEOUT":{ 
-        "type": "integer", 
-        "value": ""
-    },
-    "LDAP_AUTH_RECEIVE_TIMEOUT":{ 
-        "type": "integer", 
-        "value": ""
-    },
-    "ADMIN_GROUP_TO_SEARCH":{
-        "value": ""
-    }
+    "LDAP_AUTH_URL":"ldap_uri",
+    "LDAP_DOMAIN":"string",
+    "LDAP_LOG_MAX":"integer",
+    "LDAP_LOG_READ":"boolean",
+    "LDAP_LOG_CREATE":"boolean",
+    "LDAP_LOG_UPDATE":"boolean",
+    "LDAP_LOG_DELETE":"boolean",
+    "LDAP_LOG_OPEN_CONNECTION":"boolean",
+    "LDAP_LOG_CLOSE_CONNECTION":"boolean",
+    "LDAP_LOG_LOGIN":"boolean",
+    "LDAP_LOG_LOGOUT":"boolean",
+    "LDAP_AUTH_FORCE_SSL": "boolean", 
+    "LDAP_AUTH_USE_TLS": "boolean", 
+    "LDAP_AUTH_TLS_VERSION": "select",
+    "LDAP_AUTH_SEARCH_BASE":"string",
+    "LDAP_DNS_LEGACY": "boolean",
+    "LDAP_AUTH_OBJECT_CLASS":"string",
+    "EXCLUDE_COMPUTER_ACCOUNTS": "boolean",
+    "LDAP_AUTH_USER_FIELDS": "object",
+    "LDAP_DIRTREE_OU_FILTER": "object",
+    "LDAP_DIRTREE_CN_FILTER": "object",
+    "LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN": "string",
+    "LDAP_AUTH_CONNECTION_USER_DN":"string",
+    "LDAP_AUTH_CONNECTION_USERNAME":"string",
+    "LDAP_AUTH_CONNECTION_PASSWORD": "password",
+    "LDAP_AUTH_CONNECT_TIMEOUT": "integer",
+    "LDAP_AUTH_RECEIVE_TIMEOUT": "integer",
+    "LDAP_AUTH_RECEIVE_TIMEOUT": "integer",
+    "ADMIN_GROUP_TO_SEARCH": "string"
 }

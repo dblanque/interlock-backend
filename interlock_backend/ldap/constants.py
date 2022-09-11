@@ -20,6 +20,9 @@ LDAP_AUTH_URL = ["ldap://localhost:389"]
 # This variable is used by the Interlock back-end to respond the correct domain info to the Front-end
 LDAP_DOMAIN = "example.com"
 
+# Use SSL on connection.
+LDAP_AUTH_FORCE_SSL = False
+
 # Initiate TLS on connection.
 LDAP_AUTH_USE_TLS = False
 
@@ -72,6 +75,8 @@ DISABLE_SETTING_OVERRIDES = False
 # attributes that represent them.
 LDAP_AUTH_USER_FIELDS = {
     "username": "sAMAccountName",
+    "groupname": "sAMAccountName",
+    "ouname": "sAMAccountName",
     "first_name": "givenName",
     "last_name": "sn",
     "email": "mail",
@@ -119,7 +124,7 @@ LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN = "EXAMPLE"
 # details. If None, then the authenticated user will be used for querying, and
 # the `ldap_sync_users` command will perform an anonymous query.
 # This is used when the local Interlock Admin is logged in.
-LDAP_AUTH_CONNECTION_USER_DN = "CN=Administrator,OU=Users,DC=example,DC=com"
+LDAP_AUTH_CONNECTION_USER_DN = "CN=Administrator,CN=Users,DC=example,DC=com"
 
 LDAP_AUTH_CONNECTION_USERNAME = LDAP_AUTH_CONNECTION_USER_DN.split(',')[0].split('CN=')[1]
 LDAP_AUTH_CONNECTION_PASSWORD = None
@@ -203,6 +208,7 @@ CMAPS = {
     "LDAP_LOG_CLOSE_CONNECTION":"boolean",
     "LDAP_LOG_LOGIN":"boolean",
     "LDAP_LOG_LOGOUT":"boolean",
+    "LDAP_AUTH_FORCE_SSL": "boolean", 
     "LDAP_AUTH_USE_TLS": "boolean", 
     "LDAP_AUTH_TLS_VERSION": "select",
     "LDAP_AUTH_SEARCH_BASE":"string",
