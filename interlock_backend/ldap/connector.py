@@ -136,7 +136,7 @@ class LDAPConnector(object):
         logger.debug(f'LDAP URL: {LDAP_AUTH_URL}')
         logger.debug(f'LDAP Connect Timeout: {LDAP_AUTH_CONNECT_TIMEOUT}')
         logger.debug(f'LDAP Receive Timeout: {LDAP_AUTH_RECEIVE_TIMEOUT}')
-        logger.debug(f'LDAP Use SSL: {LDAP_AUTH_FORCE_SSL}')
+        logger.debug(f'LDAP Use SSL: {LDAP_AUTH_USE_SSL}')
         logger.debug(f'LDAP Use TLS: {LDAP_AUTH_USE_TLS}')
         logger.debug(f'LDAP TLS Version: {ldapAuthTLSVersion}')
 
@@ -156,9 +156,9 @@ class LDAPConnector(object):
             self.auth_url = [self.auth_url]
 
         # Include SSL, if requested.
-        server_args['use_ssl'] = LDAP_AUTH_FORCE_SSL
+        server_args['use_ssl'] = LDAP_AUTH_USE_SSL
         # Include TLS, if requested.
-        if LDAP_AUTH_USE_TLS == True:
+        if LDAP_AUTH_USE_TLS:
             self.tlsSettings = ldap3.Tls(
                 ciphers='ALL',
                 version=ldapAuthTLSVersion,
@@ -193,10 +193,13 @@ class LDAPConnector(object):
                 "auto_bind": True,
                 "raise_exceptions": True,
                 "receive_timeout": LDAP_AUTH_RECEIVE_TIMEOUT,
+                "check_names": True,
             }
+
+            # ! LDAP / LDAPS
             c = ldap3.Connection(
                 self.server_pool,
-                **connection_args,
+                **connection_args
             )
         except LDAPException as ex:
             str_ex = "LDAP connect failed: {ex}".format(ex=ex)
@@ -213,7 +216,7 @@ class LDAPConnector(object):
         password = ""
         # Configure.
         try:
-            if LDAP_AUTH_USE_TLS == True:
+            if LDAP_AUTH_USE_TLS:
                 logger.debug(f"Starting TLS (LDAP Use TLS: {LDAP_AUTH_USE_TLS})")
                 c.start_tls()
             c.bind(read_server_info=True)
@@ -380,9 +383,10 @@ def testLDAPConnection(
         ldapAuthURL,
         ldapAuthConnectTimeout,
         ldapAuthReceiveTimeout,
-        ldapAuthForceSSL,
+        ldapAuthUseSSL,
         ldapAuthUseTLS,
-        ldapAuthTLSVersion
+        ldapAuthTLSVersion,
+        ldapAuthUseSASL
     ):
     format_username = import_func(LDAP_AUTH_FORMAT_USERNAME)
 
@@ -414,7 +418,7 @@ def testLDAPConnection(
         ldapAuthTLSVersion = getattr(ssl, ldapAuthTLSVersion)
 
     # Include SSL, if requested.
-    server_args['use_ssl'] = ldapAuthForceSSL
+    server_args['use_ssl'] = ldapAuthUseSSL
     # Include SSL / TLS, if requested.
     if ldapAuthUseTLS == True:
         server_args['tls'] = ldap3.Tls(
@@ -440,9 +444,11 @@ def testLDAPConnection(
             "raise_exceptions": True,
             "receive_timeout": ldapAuthReceiveTimeout,
         }
+        
+        # ! LDAP / LDAPS
         c = ldap3.Connection(
             server_pool,
-            **connection_args,
+            **connection_args
         )
     except LDAPException as ex:
         str_ex = "LDAP connect failed: {ex}".format(ex=ex)
@@ -459,7 +465,7 @@ def testLDAPConnection(
     del password
     # Configure.
     try:
-        if ldapAuthUseTLS == True:
+        if ldapAuthUseTLS or ldapAuthUseSASL:
             logger.debug(f"Starting TLS (LDAP Use TLS: {ldapAuthUseTLS})")
             c.start_tls()
         # Perform initial authentication bind.

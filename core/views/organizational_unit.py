@@ -64,7 +64,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
             # User Attrs
             'objectClass',
             'objectCategory',
-            LDAP_AUTH_USER_FIELDS['ouname'],
+            LDAP_OU_FIELD,
 
             # Group Attrs
             'cn',
@@ -136,7 +136,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
             # User Attrs
             'objectClass',
             'objectCategory',
-            LDAP_AUTH_USER_FIELDS['ouname'],
+            LDAP_OU_FIELD,
 
             # Group Attrs
             'cn',
@@ -216,23 +216,14 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
             c.modify_dn(distinguishedName, relativeDistinguishedName, new_superior=newPath)
         except Exception as e:
             print(e)
-            try:
-                ldapError = str(e).split(" - ")
-                ldapErrorCode = ldapError[2] or ldapError[0] or ldapError
-            except Exception as e:
-                print(c.result)
-                print(e)
-            exception = exc_dirtree.DirtreeMove
-            if ldapErrorCode == "entryAlreadyExists":
-                exception.status_code = 409
             data = {
-                "code": exception.default_code,
-                "ldap_response": ldapErrorCode or c.result,
+                "ldap_response": c.result,
                 "ldapObject": objectName,
             }
-            exception.setDetail(exception, data)
+            if c.result.description == "entryAlreadyExists":
+                data[''] = 409
             c.unbind()
-            raise exception
+            raise exc_dirtree.DirtreeMove(data=data)
 
         if LDAP_LOG_UPDATE == True:
             # Log this action to DB
@@ -289,23 +280,14 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
             c.modify_dn(distinguishedName, newRDN)
         except Exception as e:
             print(e)
-            try:
-                ldapError = str(e).split(" - ")
-                ldapErrorCode = ldapError[2] or ldapError[0] or ldapError
-            except Exception as e:
-                print(c.result)
-                print(e)
-            exception = exc_dirtree.DirtreeMove
-            if ldapErrorCode == "entryAlreadyExists":
-                exception.default_code = 409
             data = {
-                "code": exception.status_code,
-                "ldap_response": ldapErrorCode or c.result,
+                "ldap_response": c.result,
                 "ldapObject": objectName,
             }
-            exception.setDetail(exception, data)
+            if c.result.description == "entryAlreadyExists":
+                data['code'] = 409
             c.unbind()
-            raise exception
+            raise exc_dirtree.DirtreeMove(data=data)
 
         if LDAP_LOG_UPDATE == True:
             if objectName != ldapObject['name']:
@@ -378,23 +360,17 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
         try:
             c.add(objectDistinguishedName, objectType, attributes=attributes)
         except Exception as e:
+            print(f'Could not Add LDAP Object: {objectDistinguishedName}')
             print(ldapObject)
-            print(objectDistinguishedName)
             print(e)
-            try:
-                ldapErrorCode = str(e).split(" - ")[2]
-            except Exception as e:
-                print(c.result)
-                print(e)
             data = {
-                "ldap_response": ldapErrorCode,
+                "ldap_response": c.result,
                 "ldapObject": objectName,
             }
-            exception = exc_ou.OUCreate(data=data)
-            if ldapErrorCode == "entryAlreadyExists":
-                exception.status_code = 409
+            if c.result.description == "entryAlreadyExists":
+                data["code"] = 409
             c.unbind()
-            raise exception
+            raise exc_ou.OUCreate(data=data)
 
         if LDAP_LOG_CREATE == True:
             # Log this action to DB
@@ -440,6 +416,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
         except Exception as e:
             c.unbind()
             print(e)
+            print(f'Could not delete LDAP Object: {objectToDelete}')
             data = {
                 "ldap_response": c.result
             }

@@ -21,7 +21,7 @@ LDAP_AUTH_URL = ["ldap://localhost:389"]
 LDAP_DOMAIN = "example.com"
 
 # Use SSL on connection.
-LDAP_AUTH_FORCE_SSL = False
+LDAP_AUTH_USE_SSL = False
 
 # Initiate TLS on connection.
 LDAP_AUTH_USE_TLS = False
@@ -71,12 +71,14 @@ EXCLUDE_COMPUTER_ACCOUNTS = True
 # Overrides will stop having an effect on system calls
 DISABLE_SETTING_OVERRIDES = False
 
+# Change in OpenLDAP
+LDAP_OU_FIELD = 'sAMAccountName'
+LDAP_GROUP_FIELD = 'sAMAccountName'
+
 # User model fields mapped to the LDAP
 # attributes that represent them.
 LDAP_AUTH_USER_FIELDS = {
     "username": "sAMAccountName",
-    "groupname": "sAMAccountName",
-    "ouname": "sAMAccountName",
     "first_name": "givenName",
     "last_name": "sn",
     "email": "mail",
@@ -208,7 +210,7 @@ CMAPS = {
     "LDAP_LOG_CLOSE_CONNECTION":"boolean",
     "LDAP_LOG_LOGIN":"boolean",
     "LDAP_LOG_LOGOUT":"boolean",
-    "LDAP_AUTH_FORCE_SSL": "boolean", 
+    "LDAP_AUTH_USE_SSL": "boolean", 
     "LDAP_AUTH_USE_TLS": "boolean", 
     "LDAP_AUTH_TLS_VERSION": "select",
     "LDAP_AUTH_SEARCH_BASE":"string",

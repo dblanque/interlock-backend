@@ -406,19 +406,25 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         except Exception as e:
             c.unbind()
             print(e)
-            print(userDN)
+            print(f'Could not create User: {userDN}')
             data = {
                 "ldap_response": c.result
             }
             raise exc_user.UserCreate(data=data)
 
         try:
-            c.extend.microsoft.modify_password(userDN, data['password'])
+            c.extend.microsoft.modify_password(
+                user=userDN, 
+                new_password=data['password']
+            )
         except Exception as e:
             c.unbind()
             print(e)
-            print(userDN)
-            raise exc_user.UserUpdateError
+            print(f'Could not update password for User DN: {userDN}')
+            data = {
+                "ldap_response": c.result
+            }
+            raise exc_user.UserUpdateError(data=data)
 
         if LDAP_LOG_CREATE == True:
             # Log this action to DB
@@ -896,7 +902,23 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 extraMessage="CHANGED_PASSWORD"
             )
 
-        c.extend.microsoft.modify_password(dn, data['password'])
+        try:
+            # ! ADDS does not handle password changing without ldaps
+            # enc_pwd = '"{}"'.format(data['password']).encode('utf-16-le')
+            # c.modify(dn, {'unicodePwd': [(MODIFY_REPLACE, [enc_pwd] )]})
+            # ldap3.extend.microsoft.modifyPassword.ad_modify_password(conn, user_dn, new_password, old_password=None)
+            c.extend.microsoft.modify_password(
+                user=dn, 
+                new_password=data['password']
+            )
+        except Exception as e:
+            c.unbind()
+            print(e)
+            print(f'Could not update password for User DN: {dn}')
+            data = {
+                "ldap_response": c.result
+            }
+            raise exc_user.UserUpdateError(data=data)
 
         # Unbind the connection
         c.unbind()
@@ -1014,7 +1036,19 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             c.unbind()
             raise exc_user.UserPasswordsDontMatch
 
-        c.extend.microsoft.modify_password(distinguishedName, data['password'])
+        try:
+            c.extend.microsoft.modify_password(
+                user=distinguishedName, 
+                new_password=data['password']
+            )
+        except Exception as e:
+            c.unbind()
+            print(e)
+            print(f'Could not update password for User DN: {distinguishedName}')
+            data = {
+                "ldap_response": c.result
+            }
+            raise exc_user.UserUpdateError(data=data)
 
         if LDAP_LOG_UPDATE == True:
             # Log this action to DB

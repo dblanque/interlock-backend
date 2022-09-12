@@ -297,7 +297,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         else:
             distinguishedName = 'CN='+groupToCreate['cn']+',OU=Users,'+authSearchBase
 
-        groupToCreate[LDAP_AUTH_USER_FIELDS['groupname']] = str(groupToCreate['cn']).lower()
+        groupToCreate[LDAP_GROUP_FIELD] = str(groupToCreate['cn']).lower()
         # Send LDAP Query for user being created to see if it exists
         attributes = [
             'cn',
@@ -431,7 +431,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         else:
             distinguishedName = groupToUpdate['distinguishedName']
 
-        groupToUpdate[LDAP_AUTH_USER_FIELDS['groupname']] = str(groupToUpdate['cn']).lower()
+        groupToUpdate[LDAP_GROUP_FIELD] = str(groupToUpdate['cn']).lower()
         # Send LDAP Query for user being created to see if it exists
         attributes = list(groupToUpdate.keys())
         args = {

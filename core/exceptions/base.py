@@ -17,3 +17,5 @@ class BaseException(APIException):
         if isinstance(self.detail, dict):
             if 'code' not in self.detail:
                 self.detail['code'] = self.default_code
+            if 'detail' not in self.detail:
+                self.detail['detail'] = self.default_detail
