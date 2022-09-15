@@ -9,6 +9,7 @@
 #---------------------------------- IMPORTS -----------------------------------#
 from interlock_backend.ldap import constants
 from interlock_backend.ldap import constants_cache
+from core.exceptions import settings_exc as exc_set
 from interlock_backend.settings import BASE_DIR
 from json import dumps
 from interlock_backend.ldap.encrypt import (
@@ -105,14 +106,16 @@ def saveToCache(newValues):
 
     return loggableSettings
 
-def resetCacheToDefaults(newValues):
-    if not isinstance(newValues, dict):
-        raise ValueError("saveToCache(): newValues must be a dictionary")
-
+def resetCacheToDefaults():
     cacheFile = BASE_DIR+'/interlock_backend/ldap/constants_cache.py'
 
     filedata = createFileData()
 
-    # # Write the file
-    with open(cacheFile, 'w') as file:
-        file.write(filedata)
+    # Write the file
+    try:
+        with open(cacheFile, 'w') as file:
+            file.write(filedata)
+    except Exception as e:
+        print(e)
+        raise exc_set.SettingResetFail
+    return

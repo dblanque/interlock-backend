@@ -16,7 +16,6 @@ from rest_framework import viewsets
 ### Core
 #### Models
 from core.models.user import User
-from interlock_backend.ldap.cacher import createFileData
 
 #### Exceptions
 from core.exceptions import (
@@ -58,11 +57,6 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
         if password and password != "":
             defaultAdmin.set_password(password)
             defaultAdmin.save()
-
-    @transaction.atomic
-    def resetSettings(self):
-        fileData = createFileData()
-        return True
 
     def testSettings(self, user, data):
         if user == None:

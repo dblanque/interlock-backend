@@ -15,3 +15,8 @@ class SettingLogMaxLimit(BaseException):
     status_code = 400
     default_detail = 'You cannot save more than 10000 logs'
     default_code = 'setting_max_log'
+
+class SettingResetFail(BaseException):
+    status_code = 500
+    default_detail = 'Could not reset settings to defaults'
+    default_code = 'setting_reset_fail'
