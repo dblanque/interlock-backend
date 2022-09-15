@@ -385,8 +385,7 @@ def testLDAPConnection(
         ldapAuthReceiveTimeout,
         ldapAuthUseSSL,
         ldapAuthUseTLS,
-        ldapAuthTLSVersion,
-        ldapAuthUseSASL
+        ldapAuthTLSVersion
     ):
     format_username = import_func(LDAP_AUTH_FORMAT_USERNAME)
 
@@ -465,7 +464,7 @@ def testLDAPConnection(
     del password
     # Configure.
     try:
-        if ldapAuthUseTLS or ldapAuthUseSASL:
+        if ldapAuthUseTLS:
             logger.debug(f"Starting TLS (LDAP Use TLS: {ldapAuthUseTLS})")
             c.start_tls()
         # Perform initial authentication bind.
