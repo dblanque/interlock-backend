@@ -90,7 +90,8 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         responseData = {}
 
         responseData['headers'] = [
-            'displayName', # Custom Header, attr not in LDAP
+            # 'displayName', # Custom Header, attr not in LDAP
+            'name',
             'value',
             'ttl',
             'typeName',
