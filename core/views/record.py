@@ -33,6 +33,12 @@ from rest_framework.decorators import action
 
 ### Others
 from core.utils import dnstool
+from ldap3 import (
+    MODIFY_ADD,
+    MODIFY_DELETE,
+    MODIFY_INCREMENT,
+    MODIFY_REPLACE
+)
 from core.utils.dnstool import record_to_dict
 from core.views.mixins.utils import convert_string_to_bytes
 from core.models.dnsRecordFieldValidators import FIELD_VALIDATORS as DNS_FIELD_VALIDATORS
@@ -163,6 +169,7 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
         if 'record' not in request.data or 'oldRecord' not in request.data:
             raise exc_dns.DNSRecordNotInRequest
 
+        oldRecordValues = request.data['oldRecord']
         recordValues = request.data['record']
 
         if 'type' not in recordValues:
@@ -189,7 +196,9 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
                 exception.setDetail(exception, data)
                 raise exception
 
+        oldRecordName = oldRecordValues.pop('name').lower()
         recordName = recordValues.pop('name').lower()
+
         recordType = recordValues.pop('type')
         recordZone = recordValues.pop('zone').lower()
         recordIndex = recordValues.pop('index')
@@ -222,22 +231,39 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
             print(e)
             raise exc_ldap.CouldNotOpenConnection
 
-        dnsRecord = LDAPRecord(
-            connection=ldapConnection,
-            rName=recordName,
-            rZone=recordZone,
-            rType=recordType
-        )
-        result = dnsRecord.update(values=recordValues, oldRecordBytes=recordBytes)
+        # ! If Record Name is being changed create the new one and delete the old.
+        if oldRecordName != recordName:
+            dnsRecord = LDAPRecord(
+                connection=ldapConnection,
+                rName=recordName,
+                rZone=recordZone,
+                rType=recordType
+            )
+            # Create new Record
+            result = dnsRecord.create(values=recordValues)
+            if result['result'] == 0:
+                # Delete old DNSR after new one is created
+                dnsRecord.connection.modify(oldRecordValues['distinguishedName'], {'dnsRecord': [( MODIFY_DELETE, recordBytes )]})
+            else:
+                raise exc_dns.BaseException
+        else:
+            dnsRecord = LDAPRecord(
+                connection=ldapConnection,
+                rName=recordName,
+                rZone=recordZone,
+                rType=recordType
+            )
+            result = dnsRecord.update(values=recordValues, oldRecordBytes=recordBytes)
 
+        #########################################
         # Update Start of Authority Record Serial
         if recordType != DNS_RECORD_TYPE_SOA:
             self.incrementSOASerial(ldapConnection=ldapConnection, recordZone=recordZone)
 
+        ldapConnection.unbind()
+
         result = dnsRecord.structure.getData()
         dr = dnstool.DNS_RECORD(result)
-
-        ldapConnection.unbind()
 
         if recordName == "@":
             affectedObject = recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"

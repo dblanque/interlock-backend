@@ -312,8 +312,18 @@ class LDAPRecord(LDAPDNS):
                 raise exc_dns.DNSRecordTypeConflict(data=data)
 
             # Check Multi-Record eligibility
-            if self.recordExistsByType() != False:
-                raise exc_dns.DNSRecordExistsConflict
+            if self.recordExistsByType() == True:
+                print("%s Record already exists in an LDAP Entry (Conflicting value: %s)" % (RECORD_MAPPINGS[self.type]['name'], values[mainField]))
+                print(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
+                self.connection.unbind()
+                data = {
+                    "typeName": RECORD_MAPPINGS[self.type]['name'],
+                    "typeCode": self.type,
+                    "name": self.name,
+                    "conflictValue": values[mainField],
+                    "conflictField": mainField
+                }
+                raise exc_dns.DNSRecordExistsConflict(data=data)
 
             # Check if a SOA Record already Exists
             if self.type == DNS_RECORD_TYPE_SOA:
@@ -356,7 +366,7 @@ class LDAPRecord(LDAPDNS):
 
         Arguments
         - values (dict) | Contains the values for the Record to update
-        - oldRecordBytes (bytes) | Contains the bytes to identify the Record
+        - oldRecordBytes (bytes) | Contains the bytes to identify the Old Record
 
         Returns the connection result
         """
@@ -388,8 +398,18 @@ class LDAPRecord(LDAPDNS):
                 }
                 raise exc_dns.DNSRecordTypeConflict(data=data)
             # Check Multi-Record eligibility
-            if self.recordExistsByType() != False:
-                raise exc_dns.DNSRecordExistsConflict
+            if self.recordExistsByType() == True and self.rawEntry['raw_attributes']['dnsRecord'][0] != oldRecordBytes:
+                print("%s Record already exists in an LDAP Entry (Conflicting value: %s)" % (RECORD_MAPPINGS[self.type]['name'], values[mainField]))
+                print(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
+                self.connection.unbind()
+                data = {
+                    "typeName": RECORD_MAPPINGS[self.type]['name'],
+                    "typeCode": self.type,
+                    "name": self.name,
+                    "conflictValue": values[mainField],
+                    "conflictField": mainField
+                }
+                raise exc_dns.DNSRecordExistsConflict(data=data)
 
         newRecord = self.structure.getData()
 
