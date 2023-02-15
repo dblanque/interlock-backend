@@ -48,7 +48,9 @@ def saveToCache(newValues):
     affectedSettings = list()
     loggableSettings = list()
     for setting in constants.CMAPS:
+        # Imports old value from current constants cache file
         old_val = getattr(constants_cache, setting)
+        # Imports default value from original constants file
         default_val = getattr(constants, setting)
         if setting == 'LDAP_AUTH_TLS_VERSION':
             old_val = str(default_val).split('.')[-1]

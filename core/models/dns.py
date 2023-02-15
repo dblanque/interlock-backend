@@ -101,7 +101,7 @@ class LDAPRecord(LDAPDNS):
     def fetch(self):
         if self.zone not in self.dnszones:
             msg = "Target zone (%s) is not in the LDAP Server DNS List" % (self.zone)
-            print(self.dnszones)
+            logger.debug(self.dnszones)
             raise Exception(msg)
 
         if self.name.endswith(self.zone) or self.zone in self.name:

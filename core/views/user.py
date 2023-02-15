@@ -100,7 +100,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             objectClassFilter,
             attributes=attributes
         )
-        list = c.entries
+        userList = c.entries
 
         if LDAP_LOG_READ == True:
             # Log this action to DB
@@ -124,7 +124,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
 
         valid_attributes.append('is_enabled')
 
-        for user in list:
+        for user in userList:
             # Uncomment line below to see all attributes in user object
             # print(dir(user))
 
