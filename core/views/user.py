@@ -26,6 +26,9 @@ from .mixins.group import GroupViewMixin
 ### ViewSets
 from .base import BaseViewSet
 
+from core.models.dnsRecordFieldValidators import ascii_validator
+from core.serializers.user import ldap_user_validator
+
 ### REST Framework
 from rest_framework.response import Response
 from rest_framework import viewsets
@@ -397,9 +400,6 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 logger.debug("Value for key above: " + data[key])
                 arguments[key] = data[key]
 
-        arguments['givenName'] = arguments['givenName']
-        arguments['sn'] = arguments['sn']
-
         logger.debug('Creating user in DN Path: ' + userDN)
         try:
             c.add(userDN, authObjectClass, attributes=arguments)
@@ -442,6 +442,168 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 'code': code,
                 'code_msg': code_msg,
                 'data': data['username']
+             }
+        )
+
+    @action(detail=False,methods=['post'])
+    def bulkInsert(self, request):
+        user = request.user
+        validateUser(request=request)
+        code = 0
+        code_msg = 'ok'
+        data = request.data
+
+        user_headers = data['headers']
+        user_list = data['users']
+
+        # Translate front-end keys to LDAP Legacy Keys
+        data_map = {
+            "first_name":"givenName",
+            "last_name":"sn",
+            "website":"wWWHomePage",
+            "email":"mail",
+        }
+
+        ######################## Get Latest Settings ###########################
+        authUsernameIdentifier = LDAP_AUTH_USERNAME_IDENTIFIER
+        authObjectClass = LDAP_AUTH_OBJECT_CLASS
+        authDomain = LDAP_DOMAIN
+        authSearchBase = LDAP_AUTH_SEARCH_BASE
+        ########################################################################
+
+        # Validate all usernames before performing operation
+        for row in user_list:
+            print(row)
+            if (
+                not ascii_validator(row['username']) or 
+                not ldap_user_validator(row['username'])
+            ):
+                exception = exc_user.UserCreate
+                data = {
+                    "code": "user_create",
+                    "user": row['username']
+                }
+                exception.setDetail(exception, data)
+                raise exception
+
+        # # Open LDAP Connection
+        # try:
+        #     c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
+        # except Exception as e:
+        #     print(e)
+        #     raise exc_ldap.CouldNotOpenConnection
+
+        # for row in user_list:
+        #     userToSearch = row["username"]
+
+        #     # Send LDAP Query for user being created to see if it exists
+        #     attributes = [
+        #         authUsernameIdentifier,
+        #         'distinguishedName',
+        #         'userPrincipalName',
+        #     ]
+        #     c = self.getUserObject(c, userToSearch, attributes=attributes)
+        #     user = c.entries
+
+        #     # If user exists, return error
+        #     if user != []:
+        #         c.unbind()
+        #         exception = exc_ldap.LDAPObjectExists
+        #         row = {
+        #             "code": "user_exists",
+        #             "user": row['username']
+        #         }
+        #         exception.setDetail(exception, row)
+        #         raise exception
+
+        #     if row['path'] is not None and row['path'] != "":
+        #         userDN = 'CN='+row['username']+','+row['path']
+        #     else:
+        #         userDN = 'CN='+row['username']+',OU=Users,'+authSearchBase
+        #     userPermissions = 0
+
+        #     # Add permissions selected in user creation
+        #     if 'permission_list' in row:
+        #         for perm in row['permission_list']:
+        #             permValue = int(ldap_adsi.LDAP_PERMS[perm]['value'])
+        #             try:
+        #                 userPermissions += permValue
+        #                 logger.debug("Located in: "+__name__+".insert")
+        #                 logger.debug("Permission Value added (cast to string): " + str(permValue))
+        #             except Exception as error:
+        #                 # If there's an error unbind the connection and print traceback
+        #                 c.unbind()
+        #                 print(traceback.format_exc())
+        #                 raise exc_user.UserPermissionError # Return error code to client
+
+        #     # Add Normal Account permission to list
+        #     userPermissions += ldap_adsi.LDAP_PERMS['LDAP_UF_NORMAL_ACCOUNT']['value']
+        #     logger.debug("Final User Permissions Value: " + str(userPermissions))
+
+        #     arguments = dict()
+        #     arguments['userAccountControl'] = userPermissions
+        #     arguments[authUsernameIdentifier] = str(row['username']).lower()
+        #     arguments['objectClass'] = ['top', 'person', 'organizationalPerson', 'user']
+        #     arguments['userPrincipalName'] = row['username'] + '@' + authDomain
+
+        #     excludeKeys = [
+        #         'password', 
+        #         'passwordConfirm',
+        #         'path',
+        #         'permission_list', # This array was parsed and calculated, then changed to userAccountControl
+        #         'distinguishedName', # We don't want the front-end generated DN
+        #         'username' # LDAP Uses sAMAccountName
+        #     ]
+        #     for key in row:
+        #         if key not in excludeKeys:
+        #             logger.debug("Key in data: " + key)
+        #             logger.debug("Value for key above: " + row[key])
+        #             if key in data_map:
+        #                 arguments[data_map[key]] = row[key]
+        #             else:
+        #                 arguments[key] = row[key]
+
+        #     logger.debug('Creating user in DN Path: ' + userDN)
+        #     try:
+        #         c.add(userDN, authObjectClass, attributes=arguments)
+        #     except Exception as e:
+        #         c.unbind()
+        #         print(e)
+        #         print(f'Could not create User: {userDN}')
+        #         row = {
+        #             "ldap_response": c.result
+        #         }
+        #         raise exc_user.UserCreate(data=row)
+
+        #     try:
+        #         c.extend.microsoft.modify_password(
+        #             user=userDN, 
+        #             new_password=row['password']
+        #         )
+        #     except Exception as e:
+        #         c.unbind()
+        #         print(e)
+        #         print(f'Could not update password for User DN: {userDN}')
+        #         row = {
+        #             "ldap_response": c.result
+        #         }
+        #         raise exc_user.UserUpdateError(data=row)
+
+        #     if LDAP_LOG_CREATE == True:
+        #         # Log this action to DB
+        #         logToDB(
+        #             user_id=request.user.id,
+        #             actionType="CREATE",
+        #             objectClass="USER",
+        #             affectedObject=row['username']
+        #         )
+
+        # # Unbind the connection
+        # c.unbind()
+        return Response(
+             data={
+                'code': code,
+                'code_msg': code_msg
              }
         )
 
