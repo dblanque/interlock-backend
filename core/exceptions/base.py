@@ -1,7 +1,6 @@
 from rest_framework.exceptions import APIException
 
 class BaseException(APIException):
-
     def __init__(self, data=None):
         super().__init__()
         if data is not None:
@@ -19,3 +18,8 @@ class BaseException(APIException):
                 self.detail['code'] = self.default_code
             if 'detail' not in self.detail:
                 self.detail['detail'] = self.default_detail
+
+class MissingDataKey(BaseException):
+    status_code = 500
+    default_detail = 'Missing key in data'
+    default_code = 'data_key_missing'

@@ -9,7 +9,10 @@
 #---------------------------------- IMPORTS -----------------------------------#
 ### Exceptions
 from core.exceptions.ldap import ConnectionTestFailed
-from core.exceptions import settings_exc as exc_set
+from core.exceptions import (
+    settings_exc as exc_set,
+    ldap as exc_ldap
+)
 
 ### Models
 from core.models.log import logToDB
@@ -26,6 +29,7 @@ from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
 
 ### Others
+from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.constants import (
     __dict__ as constantDictionary
 )
@@ -116,6 +120,37 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
         data = resetCacheToDefaults()
 
+        return Response(
+             data={
+                'code': code,
+                'code_msg': 'ok',
+                'data': data
+             }
+        )
+
+    # TODO
+    @action(detail=False, methods=['post'])
+    def manualcmd(self, request, pk=None):
+        user = request.user
+        validateUser(request=request)
+        data = request.data
+        code = 0
+
+        operation = data['operation']
+        op_dn = data['dn']
+        op_object = data['op_object']
+        op_filter = data['op_filter']
+        op_attributes = data['op_attributes']
+
+        # Open LDAP Connection
+        try:
+            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
+        except Exception as e:
+            print(e)
+            raise exc_ldap.CouldNotOpenConnection
+
+        # Unbind the connection
+        c.unbind()
         return Response(
              data={
                 'code': code,

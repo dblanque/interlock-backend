@@ -10,9 +10,11 @@
 ### Exceptions
 from django.core.exceptions import PermissionDenied
 from core.exceptions import (
+    base as exc_base,
     users as exc_user, 
     ldap as exc_ldap
 )
+from interlock_backend.settings import SIMPLE_JWT
 
 ### Models
 from core.models import User
@@ -22,6 +24,9 @@ from core.models.ldapObject import LDAPObject
 ### Mixins
 from .mixins.user import UserViewMixin
 from .mixins.group import GroupViewMixin
+
+### Serializers / Validators
+from core.serializers import user as UserValidators
 
 ### ViewSets
 from .base import BaseViewSet
@@ -36,12 +41,14 @@ from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
 
 ### Others
+import datetime
 from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.constants_cache import *
 from interlock_backend.settings import DEBUG
 from interlock_backend.ldap import adsi as ldap_adsi
 from interlock_backend.ldap.countries import LDAP_COUNTRIES
 from interlock_backend.ldap.accountTypes import LDAP_ACCOUNT_TYPES
+from interlock_backend.ldap import user as ldap_user
 from interlock_backend.ldap.encrypt import validateUser
 from ldap3 import (
     MODIFY_ADD,
@@ -311,6 +318,9 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         code_msg = 'ok'
         data = request.data
 
+        if "username" not in data:
+            raise exc_base.MissingDataKey.setDetail({ "key": "username" })
+
         if data['password'] != data['passwordConfirm']:
             exception = exc_user.UserPasswordsDontMatch
             data = {
@@ -400,7 +410,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 logger.debug("Value for key above: " + data[key])
                 arguments[key] = data[key]
 
-        logger.debug('Creating user in DN Path: ' + userDN)
+        logger.debug(f'Creating user in DN Path: {userDN}')
         try:
             c.add(userDN, authObjectClass, attributes=arguments)
         except Exception as e:
@@ -452,17 +462,40 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         code = 0
         code_msg = 'ok'
         data = request.data
+        data_keys = ["headers", "users", "path", "mapping"]
+        imported_users = list()
+        skipped_users = list()
+        failed_users = list()
+
+        for k in data_keys:
+            if k not in data:
+                raise exc_base.MissingDataKey.setDetail({ "key": k })
 
         user_headers = data['headers']
         user_list = data['users']
+        user_path = data['path']
+        user_placeholder_password = None
+        header_mapping = data['mapping']
 
-        # Translate front-end keys to LDAP Legacy Keys
-        data_map = {
-            "first_name":"givenName",
-            "last_name":"sn",
-            "website":"wWWHomePage",
-            "email":"mail",
-        }
+        # Check if data has a requested placeholder_password
+        required_fields = ['username']
+        if 'placeholder_password' in data and data['placeholder_password']:
+            if len(data['placeholder_password']) > 0:
+                user_placeholder_password = data['placeholder_password']
+
+        # Use CSV column if placeholder not requested
+        if not user_placeholder_password:
+            required_fields.append('password')
+
+        # Validate Front-end mapping with CSV Headers
+        for k in required_fields:
+            if k not in header_mapping:
+                exception = exc_user.UserBulkInsertMappingError
+                data = {
+                    "key": k
+                }
+                exception.setDetail(exception, data)
+                raise exception
 
         ######################## Get Latest Settings ###########################
         authUsernameIdentifier = LDAP_AUTH_USERNAME_IDENTIFIER
@@ -471,139 +504,182 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         authSearchBase = LDAP_AUTH_SEARCH_BASE
         ########################################################################
 
-        # Validate all usernames before performing operation
+        # Validate all usernames before opening connection
         for row in user_list:
-            print(row)
-            if (
-                not ascii_validator(row['username']) or 
-                not ldap_user_validator(row['username'])
-            ):
-                exception = exc_user.UserCreate
+            mapped_user_key = header_mapping[ldap_user.USERNAME]
+            if user_placeholder_password:
+                mapped_pwd_key = ldap_user.PASSWORD
+            else:
+                mapped_pwd_key = header_mapping[ldap_user.PASSWORD]
+
+            if len(row) != len(user_headers):
+                exception = exc_user.UserBulkInsertLengthError
                 data = {
-                    "code": "user_create",
-                    "user": row['username']
+                    "user": row[mapped_user_key]
                 }
                 exception.setDetail(exception, data)
                 raise exception
 
-        # # Open LDAP Connection
-        # try:
-        #     c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
-        # except Exception as e:
-        #     print(e)
-        #     raise exc_ldap.CouldNotOpenConnection
+            for f in row.keys():
+                if f in UserValidators.FIELD_VALIDATORS:
+                    if UserValidators.FIELD_VALIDATORS[f] is not None:
+                        validator = UserValidators.FIELD_VALIDATORS[f] + "_validator"
+                        if getattr(UserValidators, validator)(row[f]) == False:
+                            if len(user_list) > 1:
+                                failed_users.append({'username': row[mapped_user_key], 'stage': 'validation'})
+                                user_list.remove(row)
+                            else:
+                                data = {
+                                    'field': f,
+                                    'value': row[f]
+                                }
+                                raise exc_user.UserFieldValidatorFailed(data=data)
 
-        # for row in user_list:
-        #     userToSearch = row["username"]
+        # Open LDAP Connection
+        try:
+            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
+        except Exception as e:
+            print(e)
+            raise exc_ldap.CouldNotOpenConnection
 
-        #     # Send LDAP Query for user being created to see if it exists
-        #     attributes = [
-        #         authUsernameIdentifier,
-        #         'distinguishedName',
-        #         'userPrincipalName',
-        #     ]
-        #     c = self.getUserObject(c, userToSearch, attributes=attributes)
-        #     user = c.entries
+        for row in user_list:
+            userToSearch = row[mapped_user_key]
 
-        #     # If user exists, return error
-        #     if user != []:
-        #         c.unbind()
-        #         exception = exc_ldap.LDAPObjectExists
-        #         row = {
-        #             "code": "user_exists",
-        #             "user": row['username']
-        #         }
-        #         exception.setDetail(exception, row)
-        #         raise exception
+            # Send LDAP Query for user being created to see if it exists
+            attributes = [
+                authUsernameIdentifier,
+                'distinguishedName',
+                'userPrincipalName',
+            ]
+            c = self.getUserObject(c, userToSearch, attributes=attributes)
+            user = c.entries
 
-        #     if row['path'] is not None and row['path'] != "":
-        #         userDN = 'CN='+row['username']+','+row['path']
-        #     else:
-        #         userDN = 'CN='+row['username']+',OU=Users,'+authSearchBase
-        #     userPermissions = 0
+            # If user exists, move to next user
+            if user != []:
+                skipped_users.append(row[mapped_user_key])
+                continue
 
-        #     # Add permissions selected in user creation
-        #     if 'permission_list' in row:
-        #         for perm in row['permission_list']:
-        #             permValue = int(ldap_adsi.LDAP_PERMS[perm]['value'])
-        #             try:
-        #                 userPermissions += permValue
-        #                 logger.debug("Located in: "+__name__+".insert")
-        #                 logger.debug("Permission Value added (cast to string): " + str(permValue))
-        #             except Exception as error:
-        #                 # If there's an error unbind the connection and print traceback
-        #                 c.unbind()
-        #                 print(traceback.format_exc())
-        #                 raise exc_user.UserPermissionError # Return error code to client
+            if user_path is not None and user_path != "":
+                userDN = f"CN={row[mapped_user_key]},{user_path}"
+            else:
+                userDN = f"CN={row[mapped_user_key]},OU=Users,{authSearchBase}"
+            userPermissions = 0
 
-        #     # Add Normal Account permission to list
-        #     userPermissions += ldap_adsi.LDAP_PERMS['LDAP_UF_NORMAL_ACCOUNT']['value']
-        #     logger.debug("Final User Permissions Value: " + str(userPermissions))
+            # Add permissions selected in user creation
+            if 'permission_list' in row:
+                for perm in row['permission_list']:
+                    permValue = int(ldap_adsi.LDAP_PERMS[perm]['value'])
+                    try:
+                        userPermissions += permValue
+                        logger.debug("Located in: "+__name__+".insert")
+                        logger.debug("Permission Value added (cast to string): " + str(permValue))
+                    except Exception as error:
+                        if len(user_list) > 1:
+                            failed_users.append({'username': row[mapped_user_key], 'stage': 'permission'})
+                            continue
+                        else: # If there's an error unbind the connection and print traceback
+                            c.unbind()
+                            print(traceback.format_exc())
+                            raise exc_user.UserPermissionError # Return error code to client
 
-        #     arguments = dict()
-        #     arguments['userAccountControl'] = userPermissions
-        #     arguments[authUsernameIdentifier] = str(row['username']).lower()
-        #     arguments['objectClass'] = ['top', 'person', 'organizationalPerson', 'user']
-        #     arguments['userPrincipalName'] = row['username'] + '@' + authDomain
+            # Add Normal Account permission to list
+            userPermissions += ldap_adsi.LDAP_PERMS['LDAP_UF_NORMAL_ACCOUNT']['value']
+            logger.debug("Final User Permissions Value: " + str(userPermissions))
 
-        #     excludeKeys = [
-        #         'password', 
-        #         'passwordConfirm',
-        #         'path',
-        #         'permission_list', # This array was parsed and calculated, then changed to userAccountControl
-        #         'distinguishedName', # We don't want the front-end generated DN
-        #         'username' # LDAP Uses sAMAccountName
-        #     ]
-        #     for key in row:
-        #         if key not in excludeKeys:
-        #             logger.debug("Key in data: " + key)
-        #             logger.debug("Value for key above: " + row[key])
-        #             if key in data_map:
-        #                 arguments[data_map[key]] = row[key]
-        #             else:
-        #                 arguments[key] = row[key]
+            arguments = dict()
+            arguments['userAccountControl'] = userPermissions
+            arguments[authUsernameIdentifier] = str(row[mapped_user_key]).lower()
+            arguments['objectClass'] = ['top', 'person', 'organizationalPerson', 'user']
+            arguments['userPrincipalName'] = row[mapped_user_key] + '@' + authDomain
 
-        #     logger.debug('Creating user in DN Path: ' + userDN)
-        #     try:
-        #         c.add(userDN, authObjectClass, attributes=arguments)
-        #     except Exception as e:
-        #         c.unbind()
-        #         print(e)
-        #         print(f'Could not create User: {userDN}')
-        #         row = {
-        #             "ldap_response": c.result
-        #         }
-        #         raise exc_user.UserCreate(data=row)
+            excludeKeys = [
+                mapped_user_key, # LDAP Uses sAMAccountName
+                mapped_pwd_key,
+                'permission_list', # This array was parsed and calculated, then changed to userAccountControl
+                'distinguishedName', # We don't want the front-end generated DN
+            ]
+            for key in row:
+                if key not in excludeKeys and len(row[key]) > 0:
+                    logger.debug("Key in data: " + key)
+                    logger.debug("Value for key above: " + row[key])
+                    if key in header_mapping.values():
+                        ldap_key = list(header_mapping.keys())[list(header_mapping.values()).index(key)]
+                        arguments[ldap_key] = row[key]
+                    else:
+                        arguments[key] = row[key]
 
-        #     try:
-        #         c.extend.microsoft.modify_password(
-        #             user=userDN, 
-        #             new_password=row['password']
-        #         )
-        #     except Exception as e:
-        #         c.unbind()
-        #         print(e)
-        #         print(f'Could not update password for User DN: {userDN}')
-        #         row = {
-        #             "ldap_response": c.result
-        #         }
-        #         raise exc_user.UserUpdateError(data=row)
+            if 'co' in arguments and arguments['co'] != "" and arguments['co'] != 0:
+                try:
+                    # Set numeric country code (DCC Standard)
+                    arguments['countryCode'] = LDAP_COUNTRIES[arguments['co']]['dccCode']
+                    # Set ISO Country Code
+                    arguments['c'] = LDAP_COUNTRIES[arguments['co']]['isoCode']
+                except Exception as e:
+                    if len(user_list) > 1:
+                        failed_users.append({'username': row[mapped_user_key], 'stage': 'country'})
+                        continue
+                    else:
+                        c.unbind()
+                        print(data)
+                        print(e)
+                        raise exc_user.UserCountryUpdateError
 
-        #     if LDAP_LOG_CREATE == True:
-        #         # Log this action to DB
-        #         logToDB(
-        #             user_id=request.user.id,
-        #             actionType="CREATE",
-        #             objectClass="USER",
-        #             affectedObject=row['username']
-        #         )
+            logger.debug('Creating user in DN Path: ' + userDN)
+            try:
+                c.add(userDN, authObjectClass, attributes=arguments)
+            except Exception as e:
+                if len(user_list) > 1:
+                    failed_users.append({'username': row[mapped_user_key], 'stage': 'create'})
+                    continue
+                else:
+                    c.unbind()
+                    print(e)
+                    print(f'Could not create User: {userDN}')
+                    row = {
+                        "ldap_response": c.result
+                    }
+                    raise exc_user.UserCreate(data=row)
 
-        # # Unbind the connection
-        # c.unbind()
+            if user_placeholder_password:
+                row[mapped_pwd_key] = user_placeholder_password
+
+            try:
+                c.extend.microsoft.modify_password(
+                    user=userDN, 
+                    new_password=row[mapped_pwd_key]
+                )
+            except Exception as e:
+                if len(user_list) > 1:
+                    failed_users.append({'username': row[mapped_user_key], 'stage': 'password'})
+                    continue
+                else:
+                    c.unbind()
+                    print(f'Could not update password for User DN: {userDN}')
+                    row = {
+                        "ldap_response": c.result
+                    }
+                    raise exc_user.UserUpdateError(data=row)
+
+            imported_users.append(row[mapped_user_key])
+            if LDAP_LOG_CREATE == True:
+                # Log this action to DB
+                logToDB(
+                    user_id=request.user.id,
+                    actionType="CREATE",
+                    objectClass="USER",
+                    affectedObject=row[mapped_user_key]
+                )
+
+        # Unbind the connection
+        c.unbind()
         return Response(
+             status=200,
              data={
                 'code': code,
-                'code_msg': code_msg
+                'code_msg': code_msg,
+                'imported_users': imported_users,
+                'skipped_users': skipped_users,
+                'failed_users': failed_users
              }
         )
 
@@ -1248,6 +1324,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         ########################################################################
 
         excludeKeys = [
+            'can_change_pwd',
             'password', 
             'passwordConfirm',
             'path',
@@ -1326,7 +1403,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 except:
                     print(traceback.format_exc())
                     logger.warn("Unable to update user '" + userToUpdate + "' with attribute '" + key + "'")
-                    logger.warn("Attribute Value:" + data[key])
+                    logger.warn("Attribute Value:" + str(data[key]))
                     logger.warn("Operation Type: " + operation)
                     c.unbind()
                     raise exc_user.UserUpdateError
@@ -1363,7 +1440,10 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         data["first_name"] = request.user.first_name or ""
         data["last_name"] = request.user.last_name or ""
         data["email"] = request.user.email or ""
-        data["admin_allowed"] = request.user.is_superuser or False
+        if request.user.is_superuser:
+            data["admin_allowed"] = True
+        data["access_token_lifetime"] = SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"].total_seconds()
+        data["refresh_token_lifetime"] = SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds()
         return Response(
              data={
                 'code': code,
