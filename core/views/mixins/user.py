@@ -16,7 +16,18 @@ from interlock_backend.ldap.constants_cache import *
 
 ### Models
 from core.models.ldapObject import LDAPObject
+from core.models.log import logToDB
+
+from core.exceptions import (
+    base as exc_base,
+    users as exc_user, 
+    ldap as exc_ldap
+)
+import traceback
+import logging
 ################################################################################
+
+logger = logging.getLogger(__name__)
 
 class UserViewMixin(viewsets.ViewSetMixin):
     def getUserObjectFilter(self, username):
@@ -83,3 +94,63 @@ class UserViewMixin(viewsets.ViewSetMixin):
         }
         group = LDAPObject(**args)
         return group.attributes
+    
+    def delete_ldap_user(self, request, connection, user_object):
+        ######################## Get Latest Settings ###########################
+        authUsernameIdentifier = LDAP_AUTH_USERNAME_IDENTIFIER
+        ########################################################################
+
+        if authUsernameIdentifier in user_object:
+            username = user_object[authUsernameIdentifier]
+        elif 'username' in user_object:
+            username = user_object['username']
+        else:
+            raise exc_user.BaseException
+
+        # If data request for deletion has user DN
+        if 'distinguishedName' in user_object.keys() and user_object['distinguishedName'] != "":
+            logger.debug('Deleting with distinguishedName obtained from front-end')
+            logger.debug(user_object['distinguishedName'])
+            distinguishedName = user_object['distinguishedName']
+            if not distinguishedName or distinguishedName == "":
+                connection.unbind()
+                raise exc_user.UserDoesNotExist
+            try:
+                connection.delete(distinguishedName)
+            except Exception as e:
+                connection.unbind()
+                print(e)
+                data = {
+                    "ldap_response": connection.result
+                }
+                raise exc_ldap.BaseException(data=data)
+        # Else, search for username dn
+        else:
+            logger.debug('Deleting with user dn search method')
+            c = self.getUserObject(c, username)
+
+            user = connection.entries
+            dn = str(user[0].distinguishedName)
+            logger.debug(dn)
+
+            if not dn or dn == "":
+                connection.unbind()
+                raise exc_user.UserDoesNotExist
+            try:
+                connection.delete(dn)
+            except Exception as e:
+                connection.unbind()
+                print(e)
+                data = {
+                    "ldap_response": connection.result
+                }
+                raise exc_ldap.BaseException(data=data)
+
+        if LDAP_LOG_DELETE == True:
+            # Log this action to DB
+            logToDB(
+                user_id=request.user.id,
+                actionType="DELETE",
+                objectClass="USER",
+                affectedObject=username
+            )

@@ -1024,6 +1024,9 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         code_msg = 'ok'
         data = request.data
 
+        if not isinstance(data, dict):
+            raise exc_base.BaseException
+
         # Open LDAP Connection
         try:
             c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
@@ -1031,55 +1034,52 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             print(e)
             raise exc_ldap.CouldNotOpenConnection
 
-        userToDelete = data['username']
-
-        # If data request for deletion has user DN
-        if 'distinguishedName' in data.keys() and data['distinguishedName'] != "":
-            logger.debug('Deleting with distinguishedName obtained from front-end')
-            logger.debug(data['distinguishedName'])
-            distinguishedName = data['distinguishedName']
-            if not distinguishedName or distinguishedName == "":
-                c.unbind()
-                raise exc_user.UserDoesNotExist
-            try:
-                c.delete(distinguishedName)
-            except Exception as e:
-                c.unbind()
-                print(e)
-                data = {
-                    "ldap_response": c.result
-                }
-                raise exc_ldap.BaseException(data=data)
-        # Else, search for username dn
-        else:
-            logger.debug('Deleting with user dn search method')
-            c = self.getUserObject(c, userToDelete)
-
-            user = c.entries
-            dn = str(user[0].distinguishedName)
-            logger.debug(dn)
-
-            if not dn or dn == "":
-                c.unbind()
-                raise exc_user.UserDoesNotExist
-            try:
-                c.delete(dn)
-            except Exception as e:
-                c.unbind()
-                print(e)
-                data = {
-                    "ldap_response": c.result
-                }
-                raise exc_ldap.BaseException(data=data)
-
-        if LDAP_LOG_DELETE == True:
-            # Log this action to DB
-            logToDB(
-                user_id=request.user.id,
-                actionType="DELETE",
-                objectClass="USER",
-                affectedObject=userToDelete
+        try:
+            self.delete_ldap_user(
+                request=request, 
+                connection=c,
+                user_object=data
             )
+        except:
+            raise
+
+        # Unbind the connection
+        c.unbind()
+        return Response(
+             data={
+                'code': code,
+                'code_msg': code_msg,
+                'data': data
+             }
+        )
+
+    @action(detail=False, methods=['post'])
+    def bulkDelete(self, request, pk=None):
+        user = request.user
+        validateUser(request=request)
+        code = 0
+        code_msg = 'ok'
+        data = request.data
+
+        if not isinstance(data, list):
+            raise exc_base.BaseException
+
+        # Open LDAP Connection
+        try:
+            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
+        except Exception as e:
+            print(e)
+            raise exc_ldap.CouldNotOpenConnection
+
+        for user in data:
+            try:
+                self.delete_ldap_user(
+                    request=request, 
+                    connection=c, 
+                    user_object=user
+                )
+            except:
+                raise
 
         # Unbind the connection
         c.unbind()
@@ -1259,7 +1259,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             distinguishedName = data['distinguishedName']
         else:
             logger.debug('Updating with user dn search method')
-            
+
             distinguishedName = str(ldapUser[0].distinguishedName)
             logger.debug(distinguishedName)
 
