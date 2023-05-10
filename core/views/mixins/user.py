@@ -13,10 +13,17 @@ from rest_framework import viewsets
 ### Interlock
 from interlock_backend.ldap.adsi import addSearchFilter
 from interlock_backend.ldap.constants_cache import *
+from interlock_backend.ldap import adsi as ldap_adsi
 
 ### Models
 from core.models.ldapObject import LDAPObject
 from core.models.log import logToDB
+from ldap3 import (
+    MODIFY_ADD,
+    MODIFY_DELETE,
+    MODIFY_INCREMENT,
+    MODIFY_REPLACE
+)
 
 from core.exceptions import (
     base as exc_base,
@@ -94,12 +101,147 @@ class UserViewMixin(viewsets.ViewSetMixin):
         }
         group = LDAPObject(**args)
         return group.attributes
-    
-    def delete_ldap_user(self, request, connection, user_object):
-        ######################## Get Latest Settings ###########################
-        authUsernameIdentifier = LDAP_AUTH_USERNAME_IDENTIFIER
-        ########################################################################
 
+    def enable_ldap_user(self, request, connection, user_object, settings):
+        user_to_enable = user_object['username']
+        authSearchBase = settings["authSearchBase"]
+        authUsernameIdentifier = settings["authUsernameIdentifier"]
+        excludeComputerAccounts = settings["excludeComputerAccounts"]
+        attributes = settings["attributes"]
+        objectClassFilter = settings["objectClassFilter"]
+
+        # Exclude Computer Accounts if settings allow it
+        if excludeComputerAccounts == True:
+            objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "!(objectclass=computer)")
+
+        # Add filter for username
+        objectClassFilter = ldap_adsi.addSearchFilter(
+            objectClassFilter, 
+            authUsernameIdentifier + "=" + user_to_enable
+            )
+
+        connection.search(
+            authSearchBase, 
+            objectClassFilter, 
+            attributes=attributes
+        )
+
+        user = connection.entries
+        dn = str(user[0].distinguishedName)
+        permList = ldap_adsi.list_user_perms(user[0], isObject=False)
+        
+        try:
+            newPermINT = ldap_adsi.calc_permissions(permList, removePerm='LDAP_UF_ACCOUNT_DISABLE')
+        except:
+            print(traceback.format_exc())
+            connection.unbind()
+            raise exc_user.UserPermissionError
+
+        connection.modify(dn,
+            {'userAccountControl':[(MODIFY_REPLACE, [ newPermINT ])]}
+        )
+
+        if LDAP_LOG_UPDATE == True:
+            # Log this action to DB
+            logToDB(
+                user_id=request.user.id,
+                actionType="UPDATE",
+                objectClass="USER",
+                affectedObject=user_to_enable,
+                extraMessage="ENABLE"
+            )
+        
+        logger.debug(connection.result)
+        return connection
+
+    def disable_ldap_user(self, request, connection, user_object, settings):
+        authSearchBase = settings["authSearchBase"]
+        authUsernameIdentifier = settings["authUsernameIdentifier"]
+        authObjectClass = settings["authObjectClass"]
+        excludeComputerAccounts = settings["excludeComputerAccounts"]
+        attributes = settings["attributes"]
+        objectClassFilter = settings["objectClassFilter"]
+
+        user_to_disable = user_object['username']
+
+        # Exclude Computer Accounts if settings allow it
+        if excludeComputerAccounts == True:
+            objectClassFilter = ldap_adsi.addSearchFilter(objectClassFilter, "!(objectclass=computer)")
+
+        # Add filter for username
+        objectClassFilter = ldap_adsi.addSearchFilter(
+            objectClassFilter, 
+            authUsernameIdentifier + "=" + user_to_disable
+            )
+
+        connection.search(
+            authSearchBase, 
+            objectClassFilter, 
+            attributes=attributes
+        )
+
+        user = connection.entries
+        dn = str(user[0].distinguishedName)
+        permList = ldap_adsi.list_user_perms(user[0], isObject=False)
+
+        try:
+            newPermINT = ldap_adsi.calc_permissions(permList, addPerm='LDAP_UF_ACCOUNT_DISABLE')
+        except:
+            print(traceback.format_exc())
+            connection.unbind()
+            raise exc_user.UserPermissionError
+
+        connection.modify(dn,
+            {'userAccountControl':[(MODIFY_REPLACE, [ newPermINT ])]}
+        )
+
+        if LDAP_LOG_UPDATE == True:
+            # Log this action to DB
+            logToDB(
+                user_id=request.user.id,
+                actionType="UPDATE",
+                objectClass="USER",
+                affectedObject=user_to_disable,
+                extraMessage="DISABLE"
+            )
+
+        logger.debug("Located in: "+__name__+".disable")
+        logger.debug(connection.result)
+        return connection
+
+    def unlock_ldap_user(self, request, connection, user_object):
+        userToUpdate = user_object['username']
+        # If data request for deletion has user DN
+        if 'distinguishedName' in user_object.keys() and user_object['distinguishedName'] != "":
+            logger.debug('Updating with distinguishedName obtained from front-end')
+            logger.debug(user_object['distinguishedName'])
+            dn = user_object['distinguishedName']
+        # Else, search for username dn
+        else:
+            logger.debug('Updating with user dn search method')
+            connection = self.getUserObject(connection, userToUpdate)
+            
+            user = connection.entries
+            dn = str(user[0].distinguishedName)
+            logger.debug(dn)
+
+        if not dn or dn == "":
+            connection.unbind()
+            raise exc_user.UserDoesNotExist
+
+        connection.extend.microsoft.unlock_account(dn)
+        if LDAP_LOG_UPDATE == True:
+            # Log this action to DB
+            logToDB(
+                user_id=request.user.id,
+                actionType="UPDATE",
+                objectClass="USER",
+                affectedObject=userToUpdate,
+                extraMessage="UNLOCK"
+            )
+        return connection
+    
+    def delete_ldap_user(self, request, connection, user_object, authUsernameIdentifier):
         if authUsernameIdentifier in user_object:
             username = user_object[authUsernameIdentifier]
         elif 'username' in user_object:
@@ -154,3 +296,5 @@ class UserViewMixin(viewsets.ViewSetMixin):
                 objectClass="USER",
                 affectedObject=username
             )
+
+        return connection
