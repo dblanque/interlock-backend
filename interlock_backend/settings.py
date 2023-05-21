@@ -115,7 +115,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-	"django_otp.middleware.OTPMiddleware",
+	"django_otp.middleware.OTPMiddleware", # Must be after Authentication Middleware
 ]
 
 ROOT_URLCONF = 'interlock_backend.urls'
