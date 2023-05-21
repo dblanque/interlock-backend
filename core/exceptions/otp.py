@@ -9,6 +9,10 @@ class OTPInvalidData(BaseException):
     status_code = 400
     default_detail = 'OTP Data is invalid'
     default_code = 'otp_invalid_data'
+class OTPRequired(BaseException):
+    status_code = 400
+    default_detail = 'OTP Code Required'
+    default_code = 'otp_required'
 class OTPNoDeviceRegistered(BaseException):
     status_code = 400
     default_detail = 'No such device registered'
