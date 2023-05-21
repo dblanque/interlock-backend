@@ -1,9 +1,15 @@
 from rest_framework import serializers as serializers
 from rest_framework_simplejwt import serializers as jwt_serializers
 from interlock_backend.ldap.constants_cache import *
+from core.exceptions import otp as exc_otp
 from core.models.log import logToDB
 from core.views.mixins.token import get_user_totp_device, validate_user_otp
+import re
 class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+
+		self.fields['totp_code'] = serializers.CharField(required=False)
 
 	def validate(self, attrs):
 		data = []
@@ -12,6 +18,11 @@ class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
 
 		# TOTP
 		if get_user_totp_device(user=self.user, confirmed=True):
+			if 'totp_code' not in attrs:
+				raise exc_otp.OTPRequired
+			regex = r"^[0-9]{6}$"
+			if not re.match(regex, attrs['totp_code']):
+				raise exc_otp.OTPInvalidData
 			try:
 				validate_user_otp(user=self.user, data=attrs)
 			except:
