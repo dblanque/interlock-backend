@@ -26,7 +26,7 @@ from rest_framework_simplejwt import views as jwt_views
 from core.views.domain import DomainViewSet
 
 # CORE VIEWS
-from core.views.token import TokenObtainPairView, TokenRefreshView
+from core.views.token import TokenObtainPairView, TokenRefreshView, TOTPViewSet
 from core.views.user import UserViewSet
 from core.views.organizational_unit import OrganizationalUnitViewSet
 from core.views.settings_view import SettingsViewSet
@@ -46,6 +46,7 @@ named_view_sets = {
     r"ou": OrganizationalUnitViewSet,
     r"settings": SettingsViewSet,
     r"logs": LogsViewSet,
+    r"totp": TOTPViewSet
 }
 
 if DEBUG == True:
