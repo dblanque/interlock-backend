@@ -14,6 +14,8 @@ from core.exceptions import otp as exc_otp
 import traceback
 import re
 import logging
+
+from interlock_backend.ldap.constants_cache import LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN
 ################################################################################
 
 logger = logging.getLogger(__name__)
@@ -34,7 +36,7 @@ def parse_config_url(url: str):
 		return url
 	label = "Interlock"
 	regex = r'^(.*totp/)(?!.*:)(.*)(\?.*)$'
-	return re.sub(regex, rf"\1{label}:\2\3", url)
+	return re.sub(regex, rf"\1{label}:\2@{LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN}\3", url)
 
 def create_device_totp_for_user(user):
 	device = get_user_totp_device(user)
