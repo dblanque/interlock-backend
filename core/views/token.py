@@ -19,6 +19,7 @@ from core.views.mixins.token import (
 	create_device_totp_for_user,
 	validate_user_otp,
 	fetch_device_totp_for_user,
+	get_user_totp_device,
 	delete_device_totp_for_user
 )
 from core.exceptions import otp as exc_otp
@@ -53,15 +54,21 @@ class TOTPViewSet(BaseViewSet):
 		code_msg = 'ok'
 
 		try:
-			totp_uri = fetch_device_totp_for_user(user)
-		except: raise
+			totp_device = get_user_totp_device(user)
+		except:
+			raise
+
+		data={
+			'code': code,
+			'code_msg': code_msg
+		}
+
+		if totp_device:
+			data['totp_uri'] = totp_device.config_url
+			data['totp_confirmed'] = totp_device.confirmed
 
 		return Response(
-				data={
-				'code': code,
-				'code_msg': code_msg,
-				'totp_uri': totp_uri
-				}
+				data=data
 		)
 
 	@action(detail=False,methods=['get'])
