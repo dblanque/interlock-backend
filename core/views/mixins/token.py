@@ -31,7 +31,7 @@ def get_user_totp_device(user, confirmed=None):
 def parse_config_url(url: str):
 	# Example URL
 	# otpauth://totp/dblanque?secret=AKDOIJ2509FGJ934GJ3SRG30JRG3G00G&algorithm=SHA1&digits=6&period=30
-	# totp/dblanque?
+	# totp/dblanque? totp is cap group 1 | dblanque is cap group 2 | everything else cap group 3
 	if re.match(r'^.*totp/.*:.*$', url):
 		return url
 	label = "Interlock"
