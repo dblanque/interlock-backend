@@ -18,7 +18,6 @@ from core.serializers.token import (
 from core.views.mixins.token import (
 	create_device_totp_for_user,
 	validate_user_otp,
-	fetch_device_totp_for_user,
 	get_user_totp_device,
 	delete_device_totp_for_user
 )
