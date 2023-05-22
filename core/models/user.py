@@ -193,6 +193,8 @@ class User(BaseUser):
     is_local = models.BooleanField(null=False, default=True)
 
     def get_distinguishedname(self):
+        if self.is_local:
+            return False
         return self.dn
         
     def is_user_local(self):
