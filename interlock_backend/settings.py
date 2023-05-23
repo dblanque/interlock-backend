@@ -62,7 +62,7 @@ DJANGO_SUPERUSER_USERNAME = 'admin'
 DJANGO_SUPERUSER_PASSWORD = 'interlock'
 
 #// SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOW_ALL_HOSTS = ['*']
 
@@ -94,6 +94,10 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_otp",
+    "django_otp.plugins.otp_totp",
+    "django_otp.plugins.otp_hotp",
+    "django_otp.plugins.otp_static",
     "rest_framework.authtoken",
     "rest_framework",
     "drf_yasg",
@@ -111,6 +115,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+	"django_otp.middleware.OTPMiddleware", # Must be after Authentication Middleware
 ]
 
 ROOT_URLCONF = 'interlock_backend.urls'

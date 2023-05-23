@@ -57,112 +57,13 @@ class TestViewSet(BaseViewSet):
 
 
         currentLDAPServer = ldapConnection.server_pool.get_current_server(ldapConnection)
-        print(currentLDAPServer.host)
-
-        ### DNS RECORD TEST
-
-        # dnsList = LDAPDNS(ldapConnection)
-        # dnsZones = dnsList.dnszones
-        # forestZones = dnsList.forestzones
-        # testRecord = "A"
-        # values_soa = {
-        #     # SOA TEST
-        #     'dwSerialNo': 82,
-        #     'dwRefresh': 900,
-        #     'dwRetry': 600,
-        #     'dwExpire': 86400,
-        #     'dwMinimumTtl': 3600,
-        #     'namePrimaryServer': 'vm113-ldap.brconsulting.info.',
-        #     'zoneAdminEmail': 'dylan.brconsulting.info.'
-        # }
-        # values_a = {
-        #     # A TEST
-        #     'address': '10.10.10.1',
-        #     'ttl': 900,
-        #     'serial': 1
-        # }
-        # values_txt = {
-        #     # TXT TEST
-        #     'stringData': '"v=spf1 mx a ip4:190.183.222.180 ip4:190.183.222.179 ip4:190.183.222.178 ~all"'
-        # }
-        # values_cname = {
-        #     # CNAME TEST
-        #     'nameNode': 'front.brconsulting.info.',
-        # }
-        # values_mx = {
-        #     # MX TEST
-        #     'wPreference': 10,
-        #     'nameExchange': 'front.brconsulting.info.',
-        # }
-        # values_srv = {
-        #     # SRV TEST
-        #     'wPriority': 10,
-        #     'wWeight': 5,
-        #     'wPort': 3306,
-        #     'nameTarget': 'psql.brconsulting.info.',
-        # }
-
-        # if testRecord == 'A' or testRecord == 'ALL':
-        #     dnsRecord = LDAPRecord(
-        #         connection=ldapConnection,
-        #         rName="@",
-        #         rZone="brconsulting.info",
-        #         rType=DNS_RECORD_TYPE_A
-        #     )
-        #     print(dnsRecord.create(values=values_a, debugMode=True))
-
-        # if testRecord == 'CNAME' or testRecord == 'ALL':
-        #     dnsRecord = LDAPRecord(
-        #         connection=ldapConnection, 
-        #         rName="javier", 
-        #         rZone="brconsulting.info",
-        #         rType=DNS_RECORD_TYPE_CNAME
-        #     )
-        #     print(dnsRecord.create(values=values_cname, debugMode=True))
-
-        # if testRecord == 'MX' or testRecord == 'ALL':
-        #     dnsRecord = LDAPRecord(
-        #         connection=ldapConnection, 
-        #         rName="mail", 
-        #         rZone="brconsulting.info",
-        #         rType=DNS_RECORD_TYPE_MX
-        #     )
-        #     print(dnsRecord.create(values=values_mx, debugMode=True))
-
-        # if testRecord == 'TXT' or testRecord == 'ALL':
-        #     dnsRecord = LDAPRecord(
-        #         connection=ldapConnection, 
-        #         rName="@", 
-        #         rZone="brconsulting.info",
-        #         rType=DNS_RECORD_TYPE_TXT
-        #     )
-        #     print(dnsRecord.create(values=values_txt, debugMode=True))
-
-        # if testRecord == 'SOA' or testRecord == 'ALL':
-        #     dnsRecord = LDAPRecord(
-        #         connection=ldapConnection, 
-        #         rName="@", 
-        #         rZone="brconsulting.info",
-        #         rType=DNS_RECORD_TYPE_SOA
-        #     )
-        #     print(dnsRecord.create(values=values_soa, debugMode=True))
-
-        # if testRecord == 'SRV' or testRecord == 'ALL':
-        #     dnsRecord = LDAPRecord(
-        #         connection=ldapConnection, 
-        #         rName="@", 
-        #         rZone="brconsulting.info",
-        #         rType=DNS_RECORD_TYPE_SRV
-        #     )
-        #     print(dnsRecord.create(values=values_srv, debugMode=True))
-
-        ###
 
         ldapConnection.unbind()
         return Response(
              data={
                 'code': code,
                 'code_msg': 'ok',
-                'data' : ldapConnection.result
+                'data' : ldapConnection.result,
+                'active_server': currentLDAPServer.host
              }
         )
