@@ -23,3 +23,7 @@ class MissingDataKey(BaseException):
     status_code = 500
     default_detail = 'Missing key in data'
     default_code = 'data_key_missing'
+class MissingDataKey(BaseException):
+    status_code = 502
+    default_detail = 'LDAP Server Unreachable'
+    default_code = 'ldap_unreachable'

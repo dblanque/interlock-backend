@@ -836,6 +836,21 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 affectedObject=userToUpdate
             )
 
+        try:
+            django_user = User.objects.get(username=userToUpdate)
+        except:
+            django_user = None
+            pass
+
+        if django_user:
+            for key in LDAP_AUTH_USER_FIELDS:
+                mapped_key = LDAP_AUTH_USER_FIELDS[key]
+                if mapped_key in data:
+                    setattr(django_user, key, data[mapped_key])
+                if 'mail' not in data:
+                    django_user.email = None
+            django_user.save()
+
         # Unbind the connection
         c.unbind()
         return Response(
@@ -1033,7 +1048,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         except Exception as e:
             print(e)
             raise exc_ldap.CouldNotOpenConnection
-
+            
         try:
             self.delete_ldap_user(
                 request=request, 
@@ -1043,6 +1058,13 @@ class UserViewSet(BaseViewSet, UserViewMixin):
             )
         except:
             raise
+
+        username = data['username']
+        if LDAP_AUTH_USERNAME_IDENTIFIER in data:
+            username = data[LDAP_AUTH_USERNAME_IDENTIFIER]
+        userToDelete = User.objects.get(username=username)
+        if userToDelete:
+            userToDelete.delete()
 
         # Unbind the connection
         c.unbind()
@@ -1447,6 +1469,21 @@ class UserViewSet(BaseViewSet, UserViewMixin):
                 extraMessage="END_USER_UPDATED"
             )
 
+        try:
+            django_user = User.objects.get(username=userToUpdate)
+        except:
+            django_user = None
+            pass
+
+        if django_user:
+            for key in LDAP_AUTH_USER_FIELDS:
+                mapped_key = LDAP_AUTH_USER_FIELDS[key]
+                if mapped_key in data:
+                    setattr(django_user, key, data[mapped_key])
+                if 'mail' not in data:
+                    django_user.email = None
+            django_user.save()
+
         # Unbind the connection
         c.unbind()
         return Response(
@@ -1479,7 +1516,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
              }
         )
 
-    @action(detail=False,methods=['post'])
+    @action(detail=False,methods=['get'])
     def fetchme(self, request):
         user = request.user
         validateUser(request=request, requireAdmin=False)

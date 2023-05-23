@@ -11,7 +11,8 @@
 from core.exceptions import otp as exc_otp
 
 ### Others
-import traceback
+import random
+import string as mod_string
 import re
 import logging
 
@@ -38,10 +39,23 @@ def parse_config_url(url: str):
 	regex = r'^(.*totp/)(?!.*:)(.*)(\?.*)$'
 	return re.sub(regex, rf"\1{label}:\2@{LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN}\3", url)
 
+def get_random_string(length):
+    # With combination of lower and upper case
+    result_str = ''.join(random.choice(mod_string.ascii_letters) for i in range(length))
+    return result_str
+
+def generate_recovery_codes(amount):
+	codes = list()
+	for i in range(amount):
+		codes.append(f"{get_random_string(4)}-{get_random_string(4)}-{get_random_string(4)}")
+	return codes
+
 def create_device_totp_for_user(user):
 	device = get_user_totp_device(user)
 	if not device:
 		device = user.totpdevice_set.create(confirmed=False)
+		user.recovery_codes = generate_recovery_codes(5)
+		user.save()
 	return parse_config_url(device.config_url)
 
 def fetch_device_totp_for_user(user):
@@ -55,6 +69,8 @@ def delete_device_totp_for_user(user):
 	if not device:
 		return True
 	totp_device = TOTPDevice.objects.get(user_id=user.id)
+	user.recovery_codes = list()
+	user.save()
 	return totp_device.delete()
 
 def validate_user_otp(user, data):
