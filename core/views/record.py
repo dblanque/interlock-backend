@@ -112,6 +112,15 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
         if 'stringData' in recordValues:
             if len(recordValues['stringData']) > 255:
                 raise exc_dns.DNSStringDataLimit
+            
+        if 'nameNode' in recordValues:
+            label = str(recordValues['nameNode'])
+            split_labels = label.split('.')
+            if len(split_labels[-1]) > 1:
+                raise exc_dns.DNSRecordTypeConflict
+            if recordZone not in label:
+                print(recordZone)
+                raise exc_dns.DNSZoneNotInRequest
 
         # Open LDAP Connection
         try:
