@@ -10,6 +10,7 @@ class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
 		super().__init__(*args, **kwargs)
 
 		self.fields['totp_code'] = serializers.CharField(required=False)
+		self.fields['recovery_code'] = serializers.CharField(required=False)
 
 	def validate(self, attrs):
 		data = []
@@ -18,15 +19,22 @@ class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
 
 		# TOTP
 		if get_user_totp_device(user=self.user, confirmed=True):
-			if 'totp_code' not in attrs:
-				raise exc_otp.OTPRequired
-			regex = r"^[0-9]{6}$"
-			if not re.match(regex, attrs['totp_code']):
-				raise exc_otp.OTPInvalidData
-			try:
-				validate_user_otp(user=self.user, data=attrs)
-			except:
-				raise
+			if 'recovery_code' in attrs:
+				r_code = attrs['recovery_code']
+				if r_code not in self.user.recovery_codes:
+					raise exc_otp.OTPInvalidRecoveryCode
+				self.user.recovery_codes.remove(r_code)
+				self.user.save()
+			else:
+				if 'totp_code' not in attrs:
+					raise exc_otp.OTPRequired
+				regex = r"^[0-9]{6}$"
+				if not re.match(regex, attrs['totp_code']):
+					raise exc_otp.OTPInvalidData
+				try:
+					validate_user_otp(user=self.user, data=attrs)
+				except:
+					raise
 
 		data["first_name"] = self.user.first_name or ""
 		data["last_name"] = self.user.last_name or ""

@@ -15,10 +15,12 @@ from django.contrib.auth.hashers import (
     check_password,
     is_password_usable,
 )
+from django.contrib.postgres.fields import ArrayField
 from django.contrib.auth.models import PermissionsMixin
 from django.db import models
 from django.utils.crypto import salted_hmac
 from django.utils.translation import gettext_lazy as _
+
 from .base import BaseModel
 from interlock_backend.settings import (
     DJANGO_SUPERUSER_USERNAME,
@@ -182,7 +184,6 @@ class BaseUser(BaseModel, PermissionsMixin):
 
 
 class User(BaseUser):
-
     class Meta:
         verbose_name = _('User')
         verbose_name_plural = _('Users')
@@ -191,6 +192,7 @@ class User(BaseUser):
     email = models.EmailField(_("Email"), null=True, blank=True)
     dn = models.CharField(_("distinguishedName"), max_length=128, null=True, blank=True)
     is_local = models.BooleanField(null=False, default=True)
+    recovery_codes = ArrayField(models.CharField(max_length=32), verbose_name="Recovery Codes", null=True, blank=True)
 
     def get_distinguishedname(self):
         if self.is_local:

@@ -21,6 +21,7 @@ from core.views.mixins.token import (
 	get_user_totp_device,
 	delete_device_totp_for_user
 )
+from core.models.user import User
 from core.exceptions import otp as exc_otp
 from interlock_backend.ldap.encrypt import validateUser
 ### ViewSets
@@ -64,7 +65,8 @@ class TOTPViewSet(BaseViewSet):
 
 		if totp_device:
 			data['totp_uri'] = totp_device.config_url
-			data['totp_confirmed'] = totp_device.confirmed
+			data['totp_confirmed'] = totp_device.confirmed,
+			data['recovery_codes'] = user.recovery_codes
 
 		return Response(
 				data=data
@@ -89,7 +91,8 @@ class TOTPViewSet(BaseViewSet):
 				data={
 				'code': code,
 				'code_msg': code_msg,
-				'totp_uri': totp_uri
+				'totp_uri': totp_uri,
+				'recovery_codes': user.recovery_codes
 				}
 		)
 
