@@ -19,7 +19,8 @@ from core.views.mixins.token import (
 	create_device_totp_for_user,
 	validate_user_otp,
 	get_user_totp_device,
-	delete_device_totp_for_user
+	delete_device_totp_for_user,
+	parse_config_url
 )
 from core.models.user import User
 from core.exceptions import otp as exc_otp
@@ -64,7 +65,7 @@ class TOTPViewSet(BaseViewSet):
 		}
 
 		if totp_device:
-			data['totp_uri'] = totp_device.config_url
+			data['totp_uri'] = parse_config_url(totp_device.config_url)
 			data['totp_confirmed'] = totp_device.confirmed,
 			data['recovery_codes'] = user.recovery_codes
 
