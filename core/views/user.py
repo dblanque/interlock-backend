@@ -1062,7 +1062,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         username = data['username']
         if LDAP_AUTH_USERNAME_IDENTIFIER in data:
             username = data[LDAP_AUTH_USERNAME_IDENTIFIER]
-        userToDelete = User.all_objects.get(username=username)
+        userToDelete = User.objects.get(username=username)
         if userToDelete:
             userToDelete.delete_permanently()
 
