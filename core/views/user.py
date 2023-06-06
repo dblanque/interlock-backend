@@ -1063,6 +1063,7 @@ class UserViewSet(BaseViewSet, UserViewMixin):
         if LDAP_AUTH_USERNAME_IDENTIFIER in data:
             username = data[LDAP_AUTH_USERNAME_IDENTIFIER]
         
+        userToDelete = None
         try:
             userToDelete = User.objects.get(username=username)
         except:
