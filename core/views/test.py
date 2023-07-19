@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
-from interlock_backend.ldap.encrypt import validateUser
+from interlock_backend.ldap.encrypt import validate_request_user
 import logging
 import json
 ################################################################################
@@ -22,7 +22,7 @@ from core.views.mixins.group import GroupViewMixin
 from core.exceptions.ldap import CouldNotOpenConnection
 from core.exceptions import dns as exc_dns
 from interlock_backend.ldap.connector import LDAPConnector, LDAPInfo
-from interlock_backend.ldap.adsi import addSearchFilter, buildFilterFromDict
+from interlock_backend.ldap.adsi import search_filter_add, search_filter_from_dict
 from core.utils import dnstool
 from core.utils.dnstool import record_to_dict, RECORD_MAPPINGS
 from core.models.dnsRecordTypes import *
@@ -36,7 +36,7 @@ class TestViewSet(BaseViewSet):
 
     def list(self, request, pk=None):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = {}
         code = 0
         printSettings = False

@@ -17,7 +17,7 @@ from interlock_backend.ldap.encrypt import (
     decrypt,
     encrypt
 )
-from interlock_backend.ldap.adsi import addSearchFilter
+from interlock_backend.ldap.adsi import search_filter_add
 from interlock_backend.ldap.constants_cache import *
 import ldap3
 from ldap3.core.exceptions import LDAPException
@@ -209,7 +209,7 @@ class LDAPConnector(object):
                 "code": exception.default_code,
                 "message": str_ex
             }
-            exception.setDetail(exception, data)
+            exception.set_detail(exception, data)
             raise exception
 
         # ! Unset Password ! #
@@ -231,7 +231,7 @@ class LDAPConnector(object):
                 "code": exception.default_code,
                 "message": str_ex
             }
-            exception.setDetail(exception, data)
+            exception.set_detail(exception, data)
             raise exception
 
     def rebind(self, user, password):
@@ -256,7 +256,7 @@ class LDAPConnector(object):
         ldapAuthUserFields = LDAP_AUTH_USER_FIELDS
         searchFilter = ""
         for i in LDAP_AUTH_USER_LOOKUP_FIELDS:
-            searchFilter = addSearchFilter(searchFilter, ldapAuthUserFields[i]+"="+kwargs['username'], '|')
+            searchFilter = search_filter_add(searchFilter, ldapAuthUserFields[i]+"="+kwargs['username'], '|')
         # Search the LDAP database.
         if self.connection.search(
             search_base=ldapAuthSearchBase,
@@ -374,7 +374,7 @@ class LDAPInfo(LDAPConnector):
             print(e)
         return forestRoot
 
-def testLDAPConnection(
+def test_ldap_connection(
         username,
         user_dn, # Actually this is user_dn
         password,
@@ -457,7 +457,7 @@ def testLDAPConnection(
             "code": exception.default_code,
             "message": str_ex
         }
-        exception.setDetail(exception, data)
+        exception.set_detail(exception, data)
         raise exception
 
     # ! Unset Password ! #
@@ -480,5 +480,5 @@ def testLDAPConnection(
             "code": exception.default_code,
             "message": str_ex
         }
-        exception.setDetail(exception, data)
+        exception.set_detail(exception, data)
         raise exception

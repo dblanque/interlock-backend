@@ -12,7 +12,7 @@ from django.utils.translation import gettext_lazy as _
 
 ### Interlock
 from interlock_backend.ldap.adsi import (
-    buildFilterFromDict,
+    search_filter_from_dict,
     LDAP_BUILTIN_OBJECTS
 )
 from interlock_backend.ldap.securityIdentifier import SID
@@ -66,7 +66,7 @@ class LDAPTree():
         ]
         self.recursive = False
         self.testFetch = False        
-        self.ldapFilter = buildFilterFromDict({**LDAP_DIRTREE_CN_FILTER, **LDAP_DIRTREE_OU_FILTER})
+        self.ldapFilter = search_filter_from_dict({**LDAP_DIRTREE_CN_FILTER, **LDAP_DIRTREE_OU_FILTER})
         self.ldapAttributes = LDAP_DIRTREE_ATTRIBUTES
         self.childrenObjectType = 'array'
 
@@ -142,7 +142,7 @@ class LDAPTree():
             count += 1
             if 'children' in self.children[k]:
                 count += self.__getChildCount__(self.children[k]['children'])
-            
+
         return count
 
     def __getChildCount__(self, child):

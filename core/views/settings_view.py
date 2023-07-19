@@ -34,7 +34,7 @@ from interlock_backend.ldap.constants import (
     __dict__ as constantDictionary
 )
 from interlock_backend.ldap.cacher import saveToCache, resetCacheToDefaults
-from interlock_backend.ldap.encrypt import validateUser
+from interlock_backend.ldap.encrypt import validate_request_user
 from interlock_backend.ldap.constants_cache import *
 from interlock_backend.ldap.settings_func import (
     getSettingsList,
@@ -50,13 +50,13 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
     def list(self, request, pk=None):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = {}
         code = 0
 
         # Gets front-end parsed settings
         data = getSettingsList()
-        data['DEFAULT_ADMIN_ENABLED'] = self.getAdminStatus()
+        data['DEFAULT_ADMIN_ENABLED'] = self.get_admin_status()
 
         if LDAP_LOG_READ == True:
             # Log this action to DB
@@ -78,13 +78,13 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
     @action(detail=False, methods=['post'])
     def save(self, request, pk=None):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = request.data
         code = 0
 
         adminEnabled = data.pop('DEFAULT_ADMIN_ENABLED')
         adminPassword = data.pop('DEFAULT_ADMIN_PWD')
-        self.setAdminStatus(status=adminEnabled, password=adminPassword)
+        self.set_admin_status(status=adminEnabled, password=adminPassword)
 
         if 'LDAP_LOG_MAX' in data:
             if int(data['LDAP_LOG_MAX']['value']) > 10000:
@@ -114,7 +114,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
     @action(detail=False, methods=['get'])
     def reset(self, request, pk=None):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = request.data
         code = 0
 
@@ -132,7 +132,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
     @action(detail=False, methods=['post'])
     def manualcmd(self, request, pk=None):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = request.data
         code = 0
 
@@ -162,11 +162,11 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
     @action(detail=False, methods=['post'])
     def test(self, request, pk=None):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = request.data
         code = 0
 
-        data = self.testSettings(user, data)
+        data = self.test_ldap_settings(user, data)
 
         if not data:
             raise ConnectionTestFailed

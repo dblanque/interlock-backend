@@ -24,7 +24,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
-from interlock_backend.ldap.encrypt import validateUser
+from interlock_backend.ldap.encrypt import validate_request_user
 import logging
 ################################################################################
 
@@ -35,7 +35,7 @@ class LogsViewSet(BaseViewSet, LogMixin):
 
     def list(self, request, pk=None):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = {}
         code = 0
         headers = [
@@ -74,7 +74,7 @@ class LogsViewSet(BaseViewSet, LogMixin):
     @action(detail=False, methods=['get'])
     def reset(self, request, pk=None):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = request.data
         code = 0
 
@@ -91,7 +91,7 @@ class LogsViewSet(BaseViewSet, LogMixin):
     @action(detail=False, methods=['post'])
     def truncate(self, request, pk=None):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = request.data
         code = 0
 

@@ -31,7 +31,7 @@ def decrypt(stringToDecrypt):
     decMessage = fernet.decrypt(stringToDecrypt).decode()
     return decMessage
 
-def validateUser(request, requireAdmin=True):
+def validate_request_user(request, requireAdmin=True):
     user = request.user
     if requireAdmin == True or requireAdmin is None:
         # Check user is_staff for any user that is not local default admin

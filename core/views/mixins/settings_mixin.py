@@ -24,10 +24,10 @@ from core.exceptions import (
 )
 
 #### Mixins
-from core.views.mixins.utils import testPort
+from core.views.mixins.utils import net_port_test
 
 ### Others
-from interlock_backend.ldap.connector import testLDAPConnection
+from interlock_backend.ldap.connector import test_ldap_connection
 import logging
 ################################################################################
 
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 class SettingsViewMixin(viewsets.ViewSetMixin):
 
-    def getAdminStatus(self):
+    def get_admin_status(self):
         userQuerySet = User.objects.filter(username = 'admin')
         if userQuerySet.count() > 0:
             status = userQuerySet.get(username = 'admin').deleted
@@ -44,7 +44,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
             return False
 
     @transaction.atomic
-    def setAdminStatus(self, status, password=None):
+    def set_admin_status(self, status, password=None):
         userQuerySet = User.objects.get_full_queryset().filter(username = 'admin')
         if status == True and userQuerySet.count() == 0:
             defaultAdmin = User.objects.create_default_superuser()
@@ -58,7 +58,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
             defaultAdmin.set_password(password)
             defaultAdmin.save()
 
-    def testSettings(self, user, data):
+    def test_ldap_settings(self, user, data):
         if user == None:
             raise exc_user.UserPermissionError
 
@@ -77,14 +77,14 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
             port = server.split(":")[2]
             logger.info("IP to Test: " + ip)
             logger.info("Port to Test: " + port)
-            if not testPort(ip, port, ldapAuthConnectTimeout):
+            if not net_port_test(ip, port, ldapAuthConnectTimeout):
                 exception = exc_ldap.PortUnreachable
                 data = {
                     "code": "ldap_port_err",
                     "ipAddress": ip,
                     "port": port,
                 }
-                exception.setDetail(exception, data)
+                exception.set_detail(exception, data)
                 raise exception
             logger.info("Test successful")
 
@@ -108,7 +108,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 
         # Open LDAP Connection
         try:
-            c = testLDAPConnection(
+            c = test_ldap_connection(
                 username = username,
                 user_dn = user_dn,
                 password = user.encryptedPassword,

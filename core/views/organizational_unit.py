@@ -35,8 +35,8 @@ from rest_framework.decorators import action
 ### Others
 from time import perf_counter
 from interlock_backend.ldap.connector import LDAPConnector
-from interlock_backend.ldap.adsi import buildFilterFromDict
-from interlock_backend.ldap.encrypt import validateUser
+from interlock_backend.ldap.adsi import search_filter_from_dict
+from interlock_backend.ldap.encrypt import validate_request_user
 from interlock_backend.ldap.constants_cache import *
 from ldap3.utils.dn import safe_rdn
 import logging
@@ -48,7 +48,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 
     def list(self, request):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = request.data
         code = 0
         code_msg = 'ok'
@@ -76,7 +76,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 
         # Read-only end-point, build filters from default dictionary
         filterDict = LDAP_DIRTREE_OU_FILTER
-        ldapFilter = buildFilterFromDict(filterDict)
+        ldapFilter = search_filter_from_dict(filterDict)
 
         try:
             debugTimerStart = perf_counter()
@@ -114,7 +114,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
     @action(detail=False,methods=['post'])
     def dirtree(self, request):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = request.data
         code = 0
         code_msg = 'ok'
@@ -186,7 +186,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
     @action(detail=False,methods=['post'])
     def move(self, request):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = request.data
         code = 0
         code_msg = 'ok'
@@ -248,7 +248,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
     @action(detail=False,methods=['post'])
     def rename(self, request):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = request.data
         code = 0
         code_msg = 'ok'
@@ -316,7 +316,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
     @action(detail=False,methods=['post'])
     def insert(self, request):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = request.data
         code = 0
         code_msg = 'ok'
@@ -394,7 +394,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
     @action(detail=False, methods=['post'])
     def delete(self, request, pk=None):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         code = 0
         code_msg = 'ok'
         data = request.data

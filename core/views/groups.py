@@ -34,9 +34,9 @@ from ldap3 import (
     MODIFY_INCREMENT,
     MODIFY_REPLACE
 )
-from interlock_backend.ldap.encrypt import validateUser
+from interlock_backend.ldap.encrypt import validate_request_user
 from interlock_backend.ldap.connector import LDAPConnector
-from interlock_backend.ldap.adsi import addSearchFilter
+from interlock_backend.ldap.adsi import search_filter_add
 from interlock_backend.ldap.securityIdentifier import SID
 from interlock_backend.ldap.constants import LDAP_GROUP_TYPE_MAPPING, LDAP_GROUP_SCOPE_MAPPING
 from interlock_backend.ldap.constants_cache import *
@@ -50,7 +50,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
     def list(self, request):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = []
         code = 0
         code_msg = 'ok'
@@ -74,7 +74,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         ]
 
         objectClassFilter = ""
-        objectClassFilter = addSearchFilter(objectClassFilter, "objectclass=" + groupObjectClass)
+        objectClassFilter = search_filter_add(objectClassFilter, "objectclass=" + groupObjectClass)
 
         c.search(
             authSearchBase, 
@@ -147,7 +147,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
     @action(detail=False,methods=['post'])
     def fetch(self, request):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = []
         code = 0
         code_msg = 'ok'
@@ -176,8 +176,8 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         ]
 
         objectClassFilter = ""
-        objectClassFilter = addSearchFilter(objectClassFilter, "objectclass=" + groupObjectClass)
-        objectClassFilter = addSearchFilter(objectClassFilter, "distinguishedName=" + groupDnSearch)
+        objectClassFilter = search_filter_add(objectClassFilter, "objectclass=" + groupObjectClass)
+        objectClassFilter = search_filter_add(objectClassFilter, "distinguishedName=" + groupDnSearch)
 
         c.search(
             authSearchBase, 
@@ -271,7 +271,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
     @action(detail=False,methods=['post'])
     def insert(self, request):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -306,8 +306,8 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
         ]
         
         #Make sure Group doesn't exist check with CN and authUserField
-        ldapFilter = addSearchFilter("", "cn="+groupToCreate['cn'])
-        ldapFilter = addSearchFilter(ldapFilter, authUsernameIdentifier+"="+groupToCreate['cn'], "|")
+        ldapFilter = search_filter_add("", "cn="+groupToCreate['cn'])
+        ldapFilter = search_filter_add(ldapFilter, authUsernameIdentifier+"="+groupToCreate['cn'], "|")
         args = {
             "connection": c,
             "ldapFilter": ldapFilter,
@@ -411,7 +411,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
     def update(self, request, pk=None):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         code = 0
         code_msg = 'ok'
         data = request.data
@@ -607,7 +607,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
     @action(detail=False, methods=['post'])
     def delete(self, request, pk=None):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         code = 0
         code_msg = 'ok'
         data = request.data

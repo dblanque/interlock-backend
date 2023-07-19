@@ -11,7 +11,7 @@
 from rest_framework import viewsets
 
 ### Interlock
-from interlock_backend.ldap.adsi import addSearchFilter, buildFilterFromDict
+from interlock_backend.ldap.adsi import search_filter_add, search_filter_from_dict
 from interlock_backend.ldap.constants_cache import *
 
 ### Others
@@ -43,10 +43,10 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
                             operator = "|"
                         else:
                             operator = "&"
-                        ldapFilter = addSearchFilter(ldapFilter, fType + "=" + f, operator=operator, negate=fExclude)
+                        ldapFilter = search_filter_add(ldapFilter, fType + "=" + f, operator=operator, negate=fExclude)
                     else:
                         fType = fVal
-                        ldapFilter = addSearchFilter(ldapFilter, fType + "=" + f)
+                        ldapFilter = search_filter_add(ldapFilter, fType + "=" + f)
         else:
             logger.debug("Dirtree fetching with Standard Exclusion Filter")
             if filterDict is None:
@@ -58,7 +58,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
                         if f in filterDict:
                             del filterDict[f]
 
-            ldapFilter = buildFilterFromDict(filterDict)
+            ldapFilter = search_filter_from_dict(filterDict)
 
             # Where f is Filter Value, fType is the filter Type (not a Jaguar)
             # Example: objectClass=computer
@@ -68,7 +68,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
                 if len(data['filter']['exclude']) > 0:
                     for f in data['filter']['exclude']:
                         fType = data['filter']['exclude'][f]
-                        ldapFilter = addSearchFilter(ldapFilter, fType + "=" + f, negate=True)
+                        ldapFilter = search_filter_add(ldapFilter, fType + "=" + f, negate=True)
 
         logger.debug("LDAP Filter for Dirtree: ")
         logger.debug(ldapFilter)

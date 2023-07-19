@@ -26,7 +26,7 @@ def convert_string_to_bytes(string):
             bytes += struct.pack("B", ord(i))
     return bytes.decode('unicode_escape').encode('raw_unicode_escape')
 
-def testPort(ip , port, timeout=5):
+def net_port_test(ip , port, timeout=5):
   s = socket.socket(socket.AF_INET , socket.SOCK_STREAM)
   s.settimeout(timeout)
   try:

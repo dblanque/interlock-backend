@@ -4,14 +4,14 @@ class BaseException(APIException):
     def __init__(self, data=None):
         super().__init__()
         if data is not None:
-            self.setDetail(data)
+            self.set_detail(data)
         else:
             self.detail = {
                 "code": self.default_code,
                 "detail": self.default_detail
             }
 
-    def setDetail(self, data):
+    def set_detail(self, data):
         self.detail = data
         if isinstance(self.detail, dict):
             if 'code' not in self.detail:

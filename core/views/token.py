@@ -24,7 +24,7 @@ from core.views.mixins.token import (
 )
 from core.models.user import User
 from core.exceptions import otp as exc_otp
-from interlock_backend.ldap.encrypt import validateUser
+from interlock_backend.ldap.encrypt import validate_request_user
 ### ViewSets
 from .base import BaseViewSet
 ################################################################################
@@ -50,7 +50,7 @@ token_refresh = TokenRefreshView.as_view()
 class TOTPViewSet(BaseViewSet):
 	def list(self, request):
 		user = request.user
-		validateUser(request=request)
+		validate_request_user(request=request)
 		code = 0
 		code_msg = 'ok'
 
@@ -77,7 +77,7 @@ class TOTPViewSet(BaseViewSet):
 	def create_device(self, request):
 		user = request.user
 		data = request.data
-		validateUser(request=request)
+		validate_request_user(request=request)
 		code = 0
 		code_msg = 'ok'
 
@@ -101,7 +101,7 @@ class TOTPViewSet(BaseViewSet):
 	def validate_device(self, request):
 		user = request.user
 		data = request.data
-		validateUser(request=request)
+		validate_request_user(request=request)
 		code = 0
 		code_msg = 'ok'
 
@@ -122,7 +122,7 @@ class TOTPViewSet(BaseViewSet):
 	@action(detail=False,methods=['post', 'delete'])
 	def delete_device(self, request):
 		user = request.user
-		validateUser(request=request)
+		validate_request_user(request=request)
 		code = 0
 		code_msg = 'ok'
 

@@ -11,7 +11,7 @@
 from rest_framework import viewsets
 
 ### Interlock
-from interlock_backend.ldap.adsi import bin_as_hex, addSearchFilter
+from interlock_backend.ldap.adsi import bin_as_hex, search_filter_add
 from interlock_backend.ldap.groupTypes import LDAP_GROUP_TYPES
 from interlock_backend.ldap.securityIdentifier import SID
 from interlock_backend.ldap.connector import LDAPConnector
@@ -48,7 +48,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
             print(e)
             raise CouldNotOpenConnection
 
-        searchFilter = addSearchFilter("", "objectClass=group")
+        searchFilter = search_filter_add("", "objectClass=group")
 
         ldapConnection.search(
             LDAP_AUTH_SEARCH_BASE,

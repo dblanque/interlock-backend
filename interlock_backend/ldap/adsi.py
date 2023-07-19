@@ -144,7 +144,7 @@ LDAP_BUILTIN_OBJECTS = [
     "Managed Service Accounts"
 ]
 
-def addSearchFilter(originalFilter, filterToAdd, operator="&", negate=False):
+def search_filter_add(originalFilter, filterToAdd, operator="&", negate=False):
     """ Adds search filter to LDAP Filter string
 
     ARGUMENTS
@@ -179,10 +179,10 @@ def addSearchFilter(originalFilter, filterToAdd, operator="&", negate=False):
     newFilter = "(" + operator + originalFilter + filterPrefix + filterToAdd + filterSuffix + ")"
     return newFilter
 
-def buildFilterFromDict(dictArray, operator="|"):
+def search_filter_from_dict(dictArray, operator="|"):
     search_filter = ""
     for key, objectType in dictArray.items():
-        search_filter = addSearchFilter(search_filter, objectType + "=" + key, operator)
+        search_filter = search_filter_add(search_filter, objectType + "=" + key, operator)
     return search_filter
 
 def bin_as_str(value):
@@ -244,7 +244,7 @@ def list_user_perms(user, permissionToSearch=None, isObject=True):
         return check_perm_in_list(permissionToSearch, UserPerms)
     return UserPerms
 
-def calc_permissions(permissionArray, addPerm='', removePerm=''):
+def calc_permissions(permissionArray, addPerm=None, removePerm=None):
     """ Calculates permissions INT based on a desired array of Permission String Keys
 
     ARGUMENTS
