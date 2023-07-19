@@ -27,6 +27,10 @@ class DNSZoneDoesNotExist(BaseException):
     default_detail = 'The Zone you wish to delete does not exist'
     default_code = 'dns_zone_does_not_exist'
 
+class DNSRecordCreate(BaseException):
+    status_code = 400
+    default_detail = 'Could not create DNS Record'
+    default_code = 'dns_record_create'
 class DNSRecordNotInRequest(BaseException):
     status_code = 400
     default_detail = 'DNS Record is not present in request'
@@ -96,6 +100,10 @@ class DNSFieldValidatorFailed(BaseException):
     status_code = 400
     default_detail = 'A Field in the DNS Record has failed validation'
     default_code = 'dns_field_validator_failed'
+class DNSFieldValidatorException(BaseException):
+    status_code = 500
+    default_detail = 'DNS Field Validator Exception'
+    default_code = 'dns_field_validator_exception'
 
 class DNSStringDataLimit(BaseException):
     status_code = 400
