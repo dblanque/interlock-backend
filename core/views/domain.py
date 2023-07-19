@@ -27,15 +27,18 @@ from .mixins.domain import DomainViewMixin
 
 ### REST Framework
 from rest_framework.response import Response
-from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
 
 ### Others
-from core.models.dnsRecordFieldValidators import domain_validator
+from core.models.dnsRecordFieldValidators import (
+    domain_validator,
+    ipv4_validator,
+    ipv6_validator
+)
 from core.utils import dnstool
 from core.utils.dnstool import record_to_dict
-from interlock_backend.ldap.adsi import addSearchFilter
-from interlock_backend.ldap.encrypt import validateUser
+from interlock_backend.ldap.adsi import search_filter_add
+from interlock_backend.ldap.encrypt import validate_request_user
 from interlock_backend.ldap.constants_cache import *
 from interlock_backend.ldap.connector import LDAPConnector
 import logging
@@ -48,7 +51,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
     @action(detail=False, methods=['get'])
     def details(self, request):
         user = request.user
-        validateUser(request=request, requireAdmin=False)
+        validate_request_user(request=request, requireAdmin=False)
         data = {}
         code = 0
         data["realm"] = LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN or ""
@@ -65,7 +68,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
     @action(detail=False, methods=['post'])
     def zones(self, request):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = {}
         code = 0
 
@@ -99,7 +102,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
             # 'ts',
         ]
 
-        searchFilter = addSearchFilter("", "objectClass=dnsNode")
+        searchFilter = search_filter_add("", "objectClass=dnsNode")
         attributes=['dnsRecord','dNSTombstoned','name']
 
         dnsList = LDAPDNS(ldapConnection)
@@ -143,12 +146,11 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
                 record_name += "." + target_zone
             else:
                 record_name = target_zone
-            logger.debug(record_name)
+            logger.debug(f'{__name__} [DEBUG] - {record_name}')
 
             # Set Record Data
             for record in entry['raw_attributes']['dnsRecord']:
                 dr = dnstool.DNS_RECORD(record)
-                logger.debug(dr)
                 record_dict = record_to_dict(dr, entry['attributes']['dNSTombstoned'])
                 record_dict['id'] = record_id
                 record_dict['record_bytes'] = str(record)
@@ -157,7 +159,8 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
                 record_dict['name'] = orig_name
                 record_dict['ttl'] = dr.__getTTL__()
                 record_dict['distinguishedName'] = entry['dn']
-                logger.debug('Record: %s, Starts With Underscore: %s, Exclude Entry: %s' % (record_name, record_name.startswith("_"), record_name in excludeEntries))
+                logger.debug(f'{__name__} [DEBUG] - Record: {record_name}, Starts With Underscore: {record_name.startswith("_")}, Exclude Entry: {record_name in excludeEntries}')
+                logger.debug(f'{__name__} [DEBUG] - {dr}')
                 if not record_name.startswith("_") and orig_name not in excludeEntries:
                     result.append(record_dict)
                 record_id += 1
@@ -195,7 +198,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
     @action(detail=False, methods=['post'])
     def insert(self, request):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = {}
         code = 0
 
@@ -247,39 +250,71 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         forestCreateResult = ldapConnection.result
 
         currentLDAPServer = ldapConnection.server_pool.get_current_server(ldapConnection)
+        currentLDAPServer_IP = currentLDAPServer.host
+        # LDAP Server IP Address
+        if ipv4_validator(currentLDAPServer_IP):
+            values_a = {
+                'address': currentLDAPServer.host,
+                'ttl': 900,
+                'serial': 1
+            }
+            base_aRecord = LDAPRecord(
+                connection=ldapConnection,
+                rName="@",
+                rZone=target_zone,
+                rType=DNS_RECORD_TYPE_A
+            )
+            base_aRecord.create(values=values_a)
 
-        values_a = {
-            'address': currentLDAPServer.host,
-            'ttl': 900,
-            'serial': 1
-        }
-        base_aRecord = LDAPRecord(
-            connection=ldapConnection,
-            rName="@",
-            rZone=target_zone,
-            rType=DNS_RECORD_TYPE_A
-        )
-        base_aRecord.create(values=values_a)
+            aCreateResult = ldapConnection.result
 
-        aCreateResult = ldapConnection.result
+            values_a_ns = {
+                'address': currentLDAPServer.host,
+                'ttl': 900,
+                'serial': 1
+            }
+            a_nsRecord = LDAPRecord(
+                connection=ldapConnection,
+                rName="ns1",
+                rZone=target_zone,
+                rType=DNS_RECORD_TYPE_A
+            )
+            a_nsRecord.create(values=values_a_ns)
 
-        values_a_ns = {
-            'address': currentLDAPServer.host,
-            'ttl': 900,
-            'serial': 1
-        }
-        a_nsRecord = LDAPRecord(
-            connection=ldapConnection,
-            rName="ns1",
-            rZone=target_zone,
-            rType=DNS_RECORD_TYPE_A
-        )
-        a_nsRecord.create(values=values_a_ns)
+            a_nsCreateResult = ldapConnection.result
+        elif ipv6_validator(currentLDAPServer_IP):
+            values_aaaa = {
+                'address': currentLDAPServer.host,
+                'ttl': 900,
+                'serial': 1
+            }
+            base_aaaaRecord = LDAPRecord(
+                connection=ldapConnection,
+                rName="@",
+                rZone=target_zone,
+                rType=DNS_RECORD_TYPE_AAAA
+            )
+            base_aaaaRecord.create(values=values_aaaa)
 
-        a_nsCreateResult = ldapConnection.result
+            aaaaCreateResult = ldapConnection.result
+
+            values_aaaa_ns = {
+                'address': currentLDAPServer.host,
+                'ttl': 900,
+                'serial': 1
+            }
+            aaaa_nsRecord = LDAPRecord(
+                connection=ldapConnection,
+                rName="ns1",
+                rZone=target_zone,
+                rType=DNS_RECORD_TYPE_AAAA
+            )
+            aaaa_nsRecord.create(values=values_aaaa_ns)
+
+            aaaa_nsCreateResult = ldapConnection.result
 
         values_ns = {
-            'nameNode':'ns1.%s.' % (target_zone)
+            'nameNode':f'ns1.{target_zone}.'
         }
         base_nsRecord = LDAPRecord(
             connection=ldapConnection,
@@ -304,8 +339,8 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
             'dwRetry': 600,
             'dwExpire': 86400,
             'dwMinimumTtl': 3600,
-            'namePrimaryServer': 'ns.%s.' % (target_zone),
-            'zoneAdminEmail': 'hostmaster.%s' % (target_zone)
+            'namePrimaryServer': f'ns.{target_zone}.',
+            'zoneAdminEmail': f'hostmaster.{target_zone}'
         }
         base_soaRecord.create(values=values_soa)
 
@@ -340,7 +375,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
     @action(detail=False, methods=['post'])
     def delete(self, request):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = {}
         code = 0
 
@@ -386,7 +421,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
         attributes_forest['dc'] = forest_dc
 
         search_target = 'DC=%s,%s' % (target_zone, dnsList.dnsroot)
-        searchFilter = addSearchFilter("", "objectClass=dnsNode")
+        searchFilter = search_filter_add("", "objectClass=dnsNode")
         attributes=['dnsRecord','dNSTombstoned','name']
         records = ldapConnection.extend.standard.paged_search(
             search_base=search_target,

@@ -8,13 +8,17 @@
 
 #---------------------------------- IMPORTS -----------------------------------#
 import sys
+import logging
 import re
 import socket
+from core.utils.ipv6 import ipv6_to_integer
 thismodule = sys.modules[__name__]
+logger = logging.getLogger(__name__)
 
 FIELD_VALIDATORS = {
     'tstime': None,
-    'address': 'ip',
+    'address': 'ipv4',
+    'ipv6Address': 'ipv6',
     'nameNode': 'canonicalHostname',
     'dwSerialNo': 'natural',
     'dwRefresh': 'natural',
@@ -64,12 +68,19 @@ def domain_validator(value):
         raise e
     return False
 
-def ip_validator(value):
+def ipv4_validator(value):
     try:
         socket.inet_aton(str(value))
-        return True
     except socket.error:
         return False
+    return True
+
+def ipv6_validator(value):
+    try:
+        ipv6_to_integer(value)
+    except socket.error:
+        return False
+    return True
 
 def ascii_validator(value):
     # https://stackoverflow.com/questions/35889505/check-that-a-string-contains-only-ascii-characters

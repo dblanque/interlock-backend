@@ -14,11 +14,11 @@ from core.models.dns import LDAPRecord
 ################################################################################
 
 class DomainViewMixin(viewsets.ViewSetMixin):
-    def incrementSOASerial(self, ldapConnection, recordZone):
+    def incrementSOASerial(self, ldapConnection, record_zone):
         soaRecord = LDAPRecord(
             connection=ldapConnection,
             rName='@',
-            rZone=recordZone,
+            rZone=record_zone,
             rType=DNS_RECORD_TYPE_SOA
         )
         nextSoa = None

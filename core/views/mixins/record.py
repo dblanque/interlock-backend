@@ -31,10 +31,88 @@ from core.views.mixins.utils import convert_string_to_bytes
 from interlock_backend.ldap.constants_cache import *
 from interlock_backend.ldap.connector import LDAPConnector
 from core.views.mixins.domain import DomainViewMixin
+import logging
 ################################################################################
 
+logger = logging.getLogger(__name__)
+
 class DNSRecordMixin(DomainViewMixin):
-    def deleteRecord(self, record, user):
+    def validate_record_data(self, record_data):
+        valid = False
+        # For each field in the Record Value Dictionary
+        for f_key in record_data.keys():
+            if f_key in DNS_FIELD_VALIDATORS:
+                validator = DNS_FIELD_VALIDATORS[f_key]
+                f_value = record_data[f_key]
+                if validator is not None:
+                    # If a list of validators is used, validate with OR
+                    if isinstance(validator, list):
+                        for v_type in validator:
+                            v_func = v_type + "_validator"
+                            if valid:
+                                break
+                            try:
+                                valid = self.validate_field(
+                                    validator=v_func,
+                                    field_name=f_key,
+                                    field_value=f_value,
+                                    except_on_fail=False
+                                )
+                            except Exception as e:
+                                logger.error(f"Validator: '{v_type}' ({type(v_type)})")
+                                logger.error(f"Field Name: '{f_key}' ({type(f_key)})")
+                                logger.error(f"Field Value: '{f_value}' ({type(f_value)})")
+                                logger.error(e)
+                                raise exc_dns.DNSFieldValidatorException
+                    elif isinstance(validator, str):
+                        validator = validator + "_validator"
+                        try:
+                            valid = self.validate_field(
+                                validator=validator,
+                                field_name=f_key,
+                                field_value=f_value
+                            )
+                        except:
+                            logger.error(f"Validator: '{validator}' ({type(validator)})")
+                            logger.error(f"Field Name: '{f_key}' ({type(f_key)})")
+                            logger.error(f"Field Value: '{f_value}' ({type(f_value)})")
+                            logger.error(e)
+                            raise exc_dns.DNSFieldValidatorException
+
+                    if not valid:
+                        data = {
+                            'field': f_key,
+                            'value': f_value
+                        }
+                        raise exc_dns.DNSFieldValidatorFailed(data)
+        return True
+
+    def validate_field(
+            self, 
+            validator: str, 
+            field_name: str, 
+            field_value,
+            except_on_fail=True,
+        ):
+        """ DNS Validator Function
+        * self
+        * validator: Validator Type for Value
+        * field_name: DNS Record Field Name (e.g.: address, ttl, etc.)
+        * field_value: DNS Record Field Value
+        * except_on_fail: Raise exception on failure
+        """
+        valid = getattr(dnsValidators, validator)(field_value)
+        if not valid and except_on_fail:
+            data = {
+                'field': field_name,
+                'value': field_value
+            }
+            raise exc_dns.DNSFieldValidatorFailed(data=data)
+        elif not valid:
+            return False
+        return True
+
+    def delete_record(self, record, user):
         recordValues = record
 
         if 'type' not in recordValues:
@@ -58,26 +136,18 @@ class DNSRecordMixin(DomainViewMixin):
                 }
                 raise exc_dns.DNSRecordDataMissing(data=data)
 
-        recordName = recordValues.pop('name')
-        recordType = recordValues.pop('type')
-        recordZone = recordValues.pop('zone')
-        recordIndex = recordValues.pop('index')
-        recordBytes = recordValues.pop('record_bytes')
-        recordBytes = convert_string_to_bytes(recordBytes)
+        record_name = recordValues.pop('name')
+        record_type = recordValues.pop('type')
+        record_zone = recordValues.pop('zone')
+        record_index = recordValues.pop('index')
+        record_bytes = recordValues.pop('record_bytes')
+        record_bytes = convert_string_to_bytes(record_bytes)
 
-        if recordZone == 'Root DNS Servers':
+        if record_zone == 'Root DNS Servers':
             raise exc_dns.DNSRootServersOnlyCLI
 
-        for f in recordValues.keys():
-            if f in DNS_FIELD_VALIDATORS:
-                if DNS_FIELD_VALIDATORS[f] is not None:
-                    validator = DNS_FIELD_VALIDATORS[f] + "_validator"
-                    if getattr(dnsValidators, validator)(recordValues[f]) == False:
-                        data = {
-                            'field': f,
-                            'value': recordValues[f]
-                        }
-                        raise exc_dns.DNSFieldValidatorFailed(data=data)
+        # ! Test record validation with the Mix-in
+        DNSRecordMixin.validate_record_data(self, record_data=recordValues)
 
         # Open LDAP Connection
         try:
@@ -89,23 +159,23 @@ class DNSRecordMixin(DomainViewMixin):
 
         dnsRecord = LDAPRecord(
             connection=ldapConnection,
-            rName=recordName,
-            rZone=recordZone,
-            rType=recordType
+            rName=record_name,
+            rZone=record_zone,
+            rType=record_type
         )
 
         try:
-            result = dnsRecord.delete(recordBytes=recordBytes)
+            result = dnsRecord.delete(record_bytes=record_bytes)
         except Exception as e:
             ldapConnection.unbind()
             raise e
 
         ldapConnection.unbind()
 
-        if recordName == "@":
-            affectedObject = recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"
+        if record_name == "@":
+            affectedObject = record_zone + " (" + RECORD_MAPPINGS[record_type]['name'] + ")"
         else:
-            affectedObject = recordName + "." + recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"
+            affectedObject = record_name + "." + record_zone + " (" + RECORD_MAPPINGS[record_type]['name'] + ")"
 
         if LDAP_LOG_DELETE == True:
             # Log this action to DB

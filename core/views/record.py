@@ -43,8 +43,8 @@ from core.utils.dnstool import record_to_dict
 from core.views.mixins.utils import convert_string_to_bytes
 from core.models.dnsRecordFieldValidators import FIELD_VALIDATORS as DNS_FIELD_VALIDATORS
 from core.models import dnsRecordFieldValidators as dnsValidators
-from interlock_backend.ldap.adsi import addSearchFilter
-from interlock_backend.ldap.encrypt import validateUser
+from interlock_backend.ldap.adsi import search_filter_add
+from interlock_backend.ldap.encrypt import validate_request_user
 from interlock_backend.ldap.constants_cache import *
 from interlock_backend.ldap.connector import LDAPConnector
 import logging
@@ -57,7 +57,7 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
     @action(detail=False,methods=['post'])
     def insert(self, request):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = {}
         code = 0
 
@@ -85,28 +85,20 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
                     "code": exception.default_code,
                     "attribute": a,
                 }
-                exception.setDetail(exception, data)
+                exception.set_detail(exception, data)
                 raise exception
 
-        recordName = recordValues.pop('name').lower()
-        recordType = recordValues.pop('type')
-        recordZone = recordValues.pop('zone').lower()
+        record_name = recordValues.pop('name').lower()
+        record_type = recordValues.pop('type')
+        record_zone = recordValues.pop('zone').lower()
 
-        if recordZone == 'Root DNS Servers':
+        if record_zone == 'Root DNS Servers':
             raise exc_dns.DNSRootServersOnlyCLI
 
-        for f in recordValues.keys():
-            if f in DNS_FIELD_VALIDATORS:
-                if DNS_FIELD_VALIDATORS[f] is not None:
-                    validator = DNS_FIELD_VALIDATORS[f] + "_validator"
-                    if getattr(dnsValidators, validator)(recordValues[f]) == False:
-                        data = {
-                            'field': f,
-                            'value': recordValues[f]
-                        }
-                        raise exc_dns.DNSFieldValidatorFailed(data=data)
+        # ! Test record validation with the Mix-in
+        DNSRecordMixin.validate_record_data(self, record_data=recordValues)
 
-        if recordType == DNS_RECORD_TYPE_SOA and recordName != "@":
+        if record_type == DNS_RECORD_TYPE_SOA and record_name != "@":
             raise exc_dns.SOARecordRootOnly
 
         if 'stringData' in recordValues:
@@ -118,8 +110,8 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
             split_labels = label.split('.')
             if len(split_labels[-1]) > 1:
                 raise exc_dns.DNSRecordTypeConflict
-            if recordZone not in label:
-                print(recordZone)
+            if record_zone not in label:
+                print(record_zone)
                 raise exc_dns.DNSZoneNotInRequest
 
         # Open LDAP Connection
@@ -132,25 +124,26 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
 
         dnsRecord = LDAPRecord(
             connection=ldapConnection,
-            rName=recordName,
-            rZone=recordZone,
-            rType=recordType
+            rName=record_name,
+            rZone=record_zone,
+            rType=record_type
         )
+
         dnsRecord.create(values=recordValues)
 
         # Update Start of Authority Record Serial
-        if recordType != DNS_RECORD_TYPE_SOA:
-            self.incrementSOASerial(ldapConnection=ldapConnection, recordZone=recordZone)
+        if record_type != DNS_RECORD_TYPE_SOA:
+            self.incrementSOASerial(ldapConnection=ldapConnection, record_zone=record_zone)
 
         # result = dnsRecord.structure.getData()
         # dr = dnstool.DNS_RECORD(result)
 
         ldapConnection.unbind()
 
-        if recordName == "@":
-            affectedObject = recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"
+        if record_name == "@":
+            affectedObject = record_zone + " (" + RECORD_MAPPINGS[record_type]['name'] + ")"
         else:
-            affectedObject = recordName + "." + recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"
+            affectedObject = record_name + "." + record_zone + " (" + RECORD_MAPPINGS[record_type]['name'] + ")"
 
         if LDAP_LOG_CREATE == True:
             # Log this action to DB
@@ -171,14 +164,14 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
 
     def update(self, request, pk=None):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = {}
         code = 0
 
         if 'record' not in request.data or 'oldRecord' not in request.data:
             raise exc_dns.DNSRecordNotInRequest
 
-        oldRecordValues = request.data['oldRecord']
+        old_record_values = request.data['oldRecord']
         recordValues = request.data['record']
 
         if 'type' not in recordValues:
@@ -202,19 +195,19 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
                     "code": exception.default_code,
                     "attribute": a,
                 }
-                exception.setDetail(exception, data)
+                exception.set_detail(exception, data)
                 raise exception
 
-        oldRecordName = oldRecordValues.pop('name').lower()
-        recordName = recordValues.pop('name').lower()
+        old_record_name = old_record_values.pop('name').lower()
+        record_name = recordValues.pop('name').lower()
 
-        recordType = recordValues.pop('type')
-        recordZone = recordValues.pop('zone').lower()
-        recordIndex = recordValues.pop('index')
-        recordBytes = recordValues.pop('record_bytes')
-        recordBytes = convert_string_to_bytes(recordBytes)
+        record_type = recordValues.pop('type')
+        record_zone = recordValues.pop('zone').lower()
+        record_index = recordValues.pop('index')
+        record_bytes = recordValues.pop('record_bytes')
+        record_bytes = convert_string_to_bytes(record_bytes)
 
-        if recordZone == 'Root DNS Servers':
+        if record_zone == 'Root DNS Servers':
             raise exc_dns.DNSRootServersOnlyCLI
 
         for f in recordValues.keys():
@@ -241,43 +234,43 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
             raise exc_ldap.CouldNotOpenConnection
 
         # ! If Record Name is being changed create the new one and delete the old.
-        if oldRecordName != recordName:
+        if old_record_name != record_name:
             dnsRecord = LDAPRecord(
                 connection=ldapConnection,
-                rName=recordName,
-                rZone=recordZone,
-                rType=recordType
+                rName=record_name,
+                rZone=record_zone,
+                rType=record_type
             )
             # Create new Record
             result = dnsRecord.create(values=recordValues)
             if result['result'] == 0:
                 # Delete old DNSR after new one is created
-                dnsRecord.connection.modify(oldRecordValues['distinguishedName'], {'dnsRecord': [( MODIFY_DELETE, recordBytes )]})
+                dnsRecord.connection.modify(old_record_values['distinguishedName'], {'dnsRecord': [( MODIFY_DELETE, record_bytes )]})
             else:
                 raise exc_dns.BaseException
         else:
             dnsRecord = LDAPRecord(
                 connection=ldapConnection,
-                rName=recordName,
-                rZone=recordZone,
-                rType=recordType
+                rName=record_name,
+                rZone=record_zone,
+                rType=record_type
             )
-            result = dnsRecord.update(values=recordValues, oldRecordBytes=recordBytes)
+            result = dnsRecord.update(values=recordValues, oldRecordBytes=record_bytes)
 
         #########################################
         # Update Start of Authority Record Serial
-        if recordType != DNS_RECORD_TYPE_SOA:
-            self.incrementSOASerial(ldapConnection=ldapConnection, recordZone=recordZone)
+        if record_type != DNS_RECORD_TYPE_SOA:
+            self.incrementSOASerial(ldapConnection=ldapConnection, record_zone=record_zone)
 
         ldapConnection.unbind()
 
         result = dnsRecord.structure.getData()
         dr = dnstool.DNS_RECORD(result)
 
-        if recordName == "@":
-            affectedObject = recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"
+        if record_name == "@":
+            affectedObject = record_zone + " (" + RECORD_MAPPINGS[record_type]['name'] + ")"
         else:
-            affectedObject = recordName + "." + recordZone + " (" + RECORD_MAPPINGS[recordType]['name'] + ")"
+            affectedObject = record_name + "." + record_zone + " (" + RECORD_MAPPINGS[record_type]['name'] + ")"
 
         if LDAP_LOG_UPDATE == True:
             # Log this action to DB
@@ -299,7 +292,7 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
     @action(detail=False, methods=['post'])
     def delete(self, request):
         user = request.user
-        validateUser(request=request)
+        validate_request_user(request=request)
         data = {}
         code = 0
 
@@ -330,12 +323,12 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
                 raise exc_dns.DNSRecordDataMalformed
 
         if isinstance(recordValues, dict):
-            result = self.deleteRecord(recordValues, user)
+            result = self.delete_record(recordValues, user)
         elif isinstance(recordValues, list):
             result = list()
             for r in recordValues:
                 print(r)
-                result.append(self.deleteRecord(r, user))
+                result.append(self.delete_record(r, user))
 
         return Response(
              data={
