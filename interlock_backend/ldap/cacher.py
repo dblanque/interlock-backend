@@ -62,6 +62,7 @@ def saveToCache(newValues):
             if set_val != default_val or set_val != old_val:
                 set_dict = dict()
                 set_dict['name'] = setting
+                # ! Do not save passwords to logs
                 if "password" in setting.lower():
                     set_dict['old_value'] = "********"
                     set_dict['new_value'] = "********"
