@@ -15,7 +15,7 @@ from core.exceptions import dns as exc_dns
 from core.models.dnsRecordClasses import *
 
 ### Interlock
-from interlock_backend.ldap.adsi import addSearchFilter
+from interlock_backend.ldap.adsi import search_filter_add
 
 ### Utils
 from core.utils.dns import *
@@ -107,8 +107,8 @@ class LDAPRecord(LDAPDNS):
         if self.name.endswith(self.zone) or self.zone in self.name:
             raise exc_dns.DNSZoneInRecord
 
-        searchFilter = addSearchFilter("", "objectClass=dnsNode")
-        searchFilter = addSearchFilter(searchFilter, "distinguishedName=" + self.distinguishedName)
+        searchFilter = search_filter_add("", "objectClass=dnsNode")
+        searchFilter = search_filter_add(searchFilter, "distinguishedName=" + self.distinguishedName)
         attributes=['dnsRecord','dNSTombstoned','name']
 
         search_target = 'DC=%s,%s' % (self.zone, self.dnsroot)
@@ -137,16 +137,16 @@ class LDAPRecord(LDAPDNS):
             # Set Record Name
             record_name = self.rawEntry['raw_attributes']['name'][0]
             record_name = str(record_name)[2:-1]
-            logger.debug(record_name)
+            logger.debug(f'{__name__} [DEBUG] - Record Name: {record_name}')
 
             # Set Record Data
             for record in self.rawEntry['raw_attributes']['dnsRecord']:
                 dr = dnstool.DNS_RECORD(record)
-                logger.debug(dr)
                 record_dict = record_to_dict(dr, self.rawEntry['attributes']['dNSTombstoned'])
                 record_dict['name'] = record_name
                 record_dict['ttl'] = dr.__getTTL__()
-                logger.debug('Record: %s, Starts With Underscore: %s, Exclude Entry: %s' % (record_name, record_name.startswith("_"), record_name in excludeEntries))
+                logger.debug(f'{__name__} [DEBUG] - Record: {record_name}, Starts With Underscore: {record_name.startswith("_")}, Exclude Entry: {record_name in excludeEntries}')
+                logger.debug(f'{__name__} [DEBUG] {dr}')
                 if (not record_name.startswith("_")
                     and record_name not in excludeEntries):
                     result.append(record_dict)
@@ -217,7 +217,11 @@ class LDAPRecord(LDAPDNS):
 
                 # Additional Operations based on special case type
                 for field in RECORD_MAPPINGS[self.type]['fields']:
-                    if RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_A":
+                    if (
+                        RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_A"
+                        or
+                        RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_AAAA"
+                        ):
                         record['Data'].fromCanonical(values[field])
 
                     if RECORD_MAPPINGS[self.type]['class'] == "DNS_RPC_RECORD_NODE_NAME":
@@ -266,17 +270,23 @@ class LDAPRecord(LDAPDNS):
         """
         if 'ttl' not in values:
             values['ttl'] = 900
-        self.structure = self.makeRecord(values, ttl=values['ttl'])
+        try:
+            self.structure = self.makeRecord(values, ttl=values['ttl'])
+        except:
+            raise exc_dns.DNSRecordCreate
 
         # ! For debugging, do the decoding process to see if it's not a broken entry
-        result = self.structure.getData()
+        try:
+            result = self.structure.getData()
+        except:
+            raise exc_dns.DNSRecordCreate
 
         ## Check if LDAP Entry Exists ##
         # LDAP Entry does not exist
         if self.rawEntry is None:
             # If Entry does not exist create it with the record in it
             logger.info("Create Entry for %s" % (self.name))
-            # logger.debug(record_to_dict(dnstool.DNS_RECORD(result), ts=False))
+            logger.debug(record_to_dict(dnstool.DNS_RECORD(result), ts=False))
             node_data = {
                 'objectCategory': 'CN=Dns-Node,%s' % self.schemaNamingContext,
                 'dNSTombstoned': 'FALSE',
@@ -284,7 +294,8 @@ class LDAPRecord(LDAPDNS):
                 'dnsRecord': [ result ]
             }
             try:
-                self.connection.add(self.distinguishedName, ['top', 'dnsNode'], node_data)
+                if not debugMode:
+                    self.connection.add(self.distinguishedName, ['top', 'dnsNode'], node_data)
             except Exception as e:
                 print(e)
                 print(record_to_dict(dnstool.DNS_RECORD(result), ts=False))
@@ -298,7 +309,7 @@ class LDAPRecord(LDAPDNS):
                 mainField = RECORD_MAPPINGS[self.type]['fields'][0]
 
             # ! Check if record exists in Entry
-            exists = self.checkRecordExistsInEntry(mainField=mainField, mainFieldValue=values[mainField])
+            exists = self.record_exists_in_entry(mainField=mainField, mainFieldValue=values[mainField])
             if exists != False:
                 print("%s Record already exists in an LDAP Entry (Conflicting value: %s)" % (RECORD_MAPPINGS[self.type]['name'], values[mainField]))
                 self.connection.unbind()
@@ -312,7 +323,7 @@ class LDAPRecord(LDAPDNS):
                 raise exc_dns.DNSRecordTypeConflict(data=data)
 
             # Check Multi-Record eligibility
-            if self.recordExistsByType() == True:
+            if self.record_of_type_exists() == True:
                 print("%s Record already exists in an LDAP Entry (Conflicting value: %s)" % (RECORD_MAPPINGS[self.type]['name'], values[mainField]))
                 print(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
                 self.connection.unbind()
@@ -327,7 +338,7 @@ class LDAPRecord(LDAPDNS):
 
             # Check if a SOA Record already Exists
             if self.type == DNS_RECORD_TYPE_SOA:
-                if self.checkSOAExists() == True:
+                if self.record_soa_exists() == True:
                     print("%s Record already exists in an LDAP Entry and must be unique in Zone (Conflicting value: %s)" % (RECORD_MAPPINGS[self.type]['name'], values[mainField]))
                     print(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
                     self.connection.unbind()
@@ -342,7 +353,7 @@ class LDAPRecord(LDAPDNS):
 
             # Check for record type conflicts in Entry
             try:
-                self.checkRecordTypeCollision()
+                self.record_has_collision()
             except Exception as e:
                 print(e)
                 self.connection.unbind()
@@ -356,7 +367,7 @@ class LDAPRecord(LDAPDNS):
             # logger.info(record_to_dict(dnstool.DNS_RECORD(result), ts=False))
 
             # If all checks passed
-            if debugMode != True:
+            if not debugMode:
                 self.connection.modify(self.distinguishedName, {'dnsRecord': [( MODIFY_ADD, self.structure.getData() )]})
         return self.connection.result
 
@@ -385,7 +396,7 @@ class LDAPRecord(LDAPDNS):
         # Exclude SOA from condition as that record is unique in Zone.
         if self.type != DNS_RECORD_TYPE_SOA:
             # ! Check if record exists in Entry
-            exists = self.checkRecordExistsInEntry(mainField=mainField, mainFieldValue=values[mainField])
+            exists = self.record_exists_in_entry(mainField=mainField, mainFieldValue=values[mainField])
             if exists != False:
                 print("%s Record already exists in an LDAP Entry (Conflicting value: %s)" % (RECORD_MAPPINGS[self.type]['name'], values[mainField]))
                 self.connection.unbind()
@@ -398,7 +409,7 @@ class LDAPRecord(LDAPDNS):
                 }
                 raise exc_dns.DNSRecordTypeConflict(data=data)
             # Check Multi-Record eligibility
-            if self.recordExistsByType() == True and self.rawEntry['raw_attributes']['dnsRecord'][0] != oldRecordBytes:
+            if self.record_of_type_exists() == True and self.rawEntry['raw_attributes']['dnsRecord'][0] != oldRecordBytes:
                 print("%s Record already exists in an LDAP Entry (Conflicting value: %s)" % (RECORD_MAPPINGS[self.type]['name'], values[mainField]))
                 print(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
                 self.connection.unbind()
@@ -415,7 +426,7 @@ class LDAPRecord(LDAPDNS):
 
         # Check for record type conflicts in Entry
         try:
-            self.checkRecordTypeCollision()
+            self.record_has_collision()
         except Exception as e:
             print(e)
             self.connection.unbind()
@@ -428,17 +439,17 @@ class LDAPRecord(LDAPDNS):
         self.connection.modify(self.distinguishedName, {'dnsRecord': [( MODIFY_ADD, newRecord )]})
         return self.connection.result
 
-    def delete(self, recordBytes):
+    def delete(self, record_bytes):
         """
         Delete a Record in the LDAP Entry identified by it's Bytes
 
         Arguments
-        - recordBytes (bytes)
+        - record_bytes (bytes)
 
         Returns the connection result
         """
         # Check if Record exists in Entry
-        if self.rawEntry is None or recordBytes not in self.rawEntry['raw_attributes']['dnsRecord']:
+        if self.rawEntry is None or record_bytes not in self.rawEntry['raw_attributes']['dnsRecord']:
             self.connection.unbind()
             raise exc_dns.DNSRecordEntryDoesNotExist
 
@@ -446,7 +457,7 @@ class LDAPRecord(LDAPDNS):
         # More than one record -> Delete Record Byte Data
         if len(self.rawEntry['raw_attributes']['dnsRecord']) >= 2:
             try:
-                self.connection.modify(self.distinguishedName, {'dnsRecord': [( MODIFY_DELETE, recordBytes )]})
+                self.connection.modify(self.distinguishedName, {'dnsRecord': [( MODIFY_DELETE, record_bytes )]})
             except Exception as e:
                 print(e)
                 self.connection.unbind()
@@ -455,12 +466,12 @@ class LDAPRecord(LDAPDNS):
                 self.connection.delete(self.distinguishedName)
             except Exception as e:
                 print(e)
-                print(record_to_dict(dnstool.DNS_RECORD(recordBytes)))
+                print(record_to_dict(dnstool.DNS_RECORD(record_bytes)))
                 self.connection.unbind()
         # Only record in Entry -> Delete entire Entry
         return self.connection.result
 
-    def checkRecordExistsInEntry(self, mainField, mainFieldValue):
+    def record_exists_in_entry(self, mainField, mainFieldValue):
         """
         Checks if the record exists in the current LDAP Entry
 
@@ -480,7 +491,7 @@ class LDAPRecord(LDAPDNS):
                             return True
         return False
 
-    def recordExistsByType(self):
+    def record_of_type_exists(self):
         """
         Checks if a record of this type exists in the LDAP Entry,
         if multiRecord is not allowed for self.type
@@ -500,7 +511,7 @@ class LDAPRecord(LDAPDNS):
                             return True
         return False
 
-    def checkSOAExists(self):
+    def record_soa_exists(self):
         if self.data is not None:
             if len(self.data) > 0:
                 for record in self.data:
@@ -508,7 +519,7 @@ class LDAPRecord(LDAPDNS):
                         return True
         return False
 
-    def checkRecordTypeCollision(self):
+    def record_has_collision(self):
         """
         Checks if a record of this type conflicts with another record type
         in this entry
