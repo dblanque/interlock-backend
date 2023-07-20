@@ -1,3 +1,11 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.decorators.login
+# Contains Login and Authentication related decorators
+
 from django.core.exceptions import PermissionDenied
 from functools import wraps
 
