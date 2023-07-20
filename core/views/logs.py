@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 class LogsViewSet(BaseViewSet, LogMixin):
 
-	@auth_required(require_admin=True)
+	@auth_required()
 	def list(self, request, pk=None):
 		user = request.user
 		data = {}
@@ -72,7 +72,7 @@ class LogsViewSet(BaseViewSet, LogMixin):
 		)
 
 	@action(detail=False, methods=['get'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def reset(self, request, pk=None):
 		user = request.user
 		data = request.data
@@ -89,7 +89,7 @@ class LogsViewSet(BaseViewSet, LogMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def truncate(self, request, pk=None):
 		user = request.user
 		data = request.data

@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 class TestViewSet(BaseViewSet):
 
-	@auth_required(require_admin=True)
+	@auth_required()
 	def list(self, request, pk=None):
 		user = request.user
 		data = {}

@@ -66,7 +66,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def zones(self, request):
 		user = request.user
 		data = {}
@@ -196,7 +196,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def insert(self, request):
 		user = request.user
 		data = {}
@@ -373,7 +373,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def delete(self, request):
 		user = request.user
 		data = {}

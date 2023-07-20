@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class LivenessViewSet(BaseViewSet):
 
 	@action(detail=False, methods=['get'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def check(self, request, pk=None):
 		user = request.user
 		data = {}

@@ -55,7 +55,7 @@ logger = logging.getLogger(__name__)
 class RecordViewSet(BaseViewSet, DNSRecordMixin):
 
 	@action(detail=False,methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def insert(self, request):
 		user = request.user
 		data = {}
@@ -162,7 +162,7 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
 			 }
 		)
 
-	@auth_required(require_admin=True)
+	@auth_required()
 	def update(self, request, pk=None):
 		user = request.user
 		data = {}
@@ -290,7 +290,7 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def delete(self, request):
 		user = request.user
 		data = {}

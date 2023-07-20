@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 
-	@auth_required(require_admin=True)
+	@auth_required()
 	def list(self, request):
 		user = request.user
 		data = request.data
@@ -112,7 +112,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		)
 
 	@action(detail=False,methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def dirtree(self, request):
 		user = request.user
 		data = request.data
@@ -184,7 +184,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		)
 
 	@action(detail=False,methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def move(self, request):
 		user = request.user
 		data = request.data
@@ -246,7 +246,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		)
 
 	@action(detail=False,methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def rename(self, request):
 		user = request.user
 		data = request.data
@@ -314,7 +314,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		)
 
 	@action(detail=False,methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def insert(self, request):
 		user = request.user
 		data = request.data
@@ -392,7 +392,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def delete(self, request, pk=None):
 		user = request.user
 		code = 0

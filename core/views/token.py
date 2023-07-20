@@ -49,7 +49,7 @@ token_refresh = TokenRefreshView.as_view()
 
 class TOTPViewSet(BaseViewSet):
 
-	@auth_required(require_admin=True)
+	@auth_required()
 	def list(self, request):
 		user = request.user
 		code = 0
@@ -75,7 +75,7 @@ class TOTPViewSet(BaseViewSet):
 		)
 
 	@action(detail=False,methods=['get'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def create_device(self, request):
 		user = request.user
 		data = request.data
@@ -99,7 +99,7 @@ class TOTPViewSet(BaseViewSet):
 		)
 
 	@action(detail=False,methods=['put', 'post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def validate_device(self, request):
 		user = request.user
 		data = request.data
@@ -121,7 +121,7 @@ class TOTPViewSet(BaseViewSet):
 		)
 
 	@action(detail=False,methods=['post', 'delete'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def delete_device(self, request):
 		user = request.user
 		code = 0

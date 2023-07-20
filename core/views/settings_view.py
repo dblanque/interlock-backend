@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 
 class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
-	@auth_required(require_admin=True)
+	@auth_required()
 	def list(self, request, pk=None):
 		user = request.user
 		data = {}
@@ -76,7 +76,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def save(self, request, pk=None):
 		user = request.user
 		data = request.data
@@ -112,7 +112,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		)
 
 	@action(detail=False, methods=['get'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def reset(self, request, pk=None):
 		user = request.user
 		data = request.data
@@ -130,7 +130,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 	# TODO
 	@action(detail=False, methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def manualcmd(self, request, pk=None):
 		user = request.user
 		data = request.data
@@ -160,7 +160,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def test(self, request, pk=None):
 		user = request.user
 		data = request.data

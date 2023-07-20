@@ -48,7 +48,7 @@ logger = logging.getLogger(__name__)
 
 class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
-	@auth_required(require_admin=True)
+	@auth_required()
 	def list(self, request):
 		user = request.user
 		data = []
@@ -145,7 +145,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 		)
 
 	@action(detail=False,methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def fetch(self, request):
 		user = request.user
 		data = []
@@ -269,7 +269,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 		)
 
 	@action(detail=False,methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def insert(self, request):
 		user = request.user
 		code = 0
@@ -409,7 +409,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 			 }
 		)
 
-	@auth_required(require_admin=True)
+	@auth_required()
 	def update(self, request, pk=None):
 		user = request.user
 		code = 0
@@ -605,7 +605,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def delete(self, request, pk=None):
 		user = request.user
 		code = 0

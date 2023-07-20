@@ -9,7 +9,7 @@
 from django.core.exceptions import PermissionDenied
 from functools import wraps
 
-def auth_required(require_admin: bool):
+def auth_required(require_admin: bool = True):
 	def decorator(view_func):
 		@wraps(view_func)
 		def _wrapped(request, *args, **kwargs):

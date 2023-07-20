@@ -56,7 +56,7 @@ logger = logging.getLogger(__name__)
 class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	queryset = User.objects.all()
 
-	@auth_required(require_admin=True)
+	@auth_required()
 	def list(self, request):
 		user = request.user
 		data = []
@@ -98,7 +98,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		)
 
 	@action(detail=False,methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def fetch(self, request):
 		user = request.user
 		code = 0
@@ -158,7 +158,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		)
 
 	@action(detail=False,methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def insert(self, request):
 		user = request.user
 		code = 0
@@ -213,7 +213,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		)
 
 	@action(detail=False,methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def bulkInsert(self, request):
 		user = request.user
 		code = 0
@@ -433,7 +433,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			 }
 		)
 
-	@auth_required(require_admin=True)
+	@auth_required()
 	def update(self, request, pk=None):
 		user = request.user
 		code = 0
@@ -509,7 +509,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		)
 
 	@action(detail=False,methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def bulkAccountStatusChange(self, request):
 		user = request.user
 		code = 0
@@ -567,7 +567,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		)
 
 	@action(detail=False,methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def disable(self, request):
 		user = request.user
 		code = 0
@@ -607,7 +607,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		)
 
 	@action(detail=False,methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def enable(self, request):
 		user = request.user
 		code = 0
@@ -647,7 +647,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def delete(self, request, pk=None):
 		user = request.user
 		code = 0
@@ -694,7 +694,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def bulkDelete(self, request, pk=None):
 		user = request.user
 		code = 0
@@ -733,7 +733,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def changePassword(self, request, pk=None):
 		user = request.user
 		code = 0
@@ -810,7 +810,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def unlock(self, request, pk=None):
 		user = request.user
 		code = 0
@@ -848,7 +848,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required(require_admin=True)
+	@auth_required()
 	def bulkUnlock(self, request, pk=None):
 		user = request.user
 		code = 0
