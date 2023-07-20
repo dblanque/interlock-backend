@@ -24,7 +24,7 @@ from core.views.mixins.token import (
 )
 from core.models.user import User
 from core.exceptions import otp as exc_otp
-from interlock_backend.ldap.encrypt import validate_request_user
+from core.decorators.login import auth_required
 ### ViewSets
 from .base import BaseViewSet
 ################################################################################
@@ -48,9 +48,10 @@ class TokenRefreshView(jwt_views.TokenViewBase):
 token_refresh = TokenRefreshView.as_view()
 
 class TOTPViewSet(BaseViewSet):
+
+	@auth_required(require_admin=True)
 	def list(self, request):
 		user = request.user
-		validate_request_user(request=request)
 		code = 0
 		code_msg = 'ok'
 
@@ -74,10 +75,10 @@ class TOTPViewSet(BaseViewSet):
 		)
 
 	@action(detail=False,methods=['get'])
+	@auth_required(require_admin=True)
 	def create_device(self, request):
 		user = request.user
 		data = request.data
-		validate_request_user(request=request)
 		code = 0
 		code_msg = 'ok'
 
@@ -98,10 +99,10 @@ class TOTPViewSet(BaseViewSet):
 		)
 
 	@action(detail=False,methods=['put', 'post'])
+	@auth_required(require_admin=True)
 	def validate_device(self, request):
 		user = request.user
 		data = request.data
-		validate_request_user(request=request)
 		code = 0
 		code_msg = 'ok'
 
@@ -120,9 +121,9 @@ class TOTPViewSet(BaseViewSet):
 		)
 
 	@action(detail=False,methods=['post', 'delete'])
+	@auth_required(require_admin=True)
 	def delete_device(self, request):
 		user = request.user
-		validate_request_user(request=request)
 		code = 0
 		code_msg = 'ok'
 

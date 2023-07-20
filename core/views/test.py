@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
-from interlock_backend.ldap.encrypt import validate_request_user
+from core.decorators.login import auth_required
 import logging
 import json
 ################################################################################
@@ -34,36 +34,36 @@ logger = logging.getLogger(__name__)
 
 class TestViewSet(BaseViewSet):
 
-    def list(self, request, pk=None):
-        user = request.user
-        validate_request_user(request=request)
-        data = {}
-        code = 0
-        printSettings = False
+	@auth_required(require_admin=True)
+	def list(self, request, pk=None):
+		user = request.user
+		data = {}
+		code = 0
+		printSettings = False
 
-        if printSettings == True:
-            for i in constants_cache.__dict__:
-                if not i.startswith("_"):
-                    value = getattr(constants_cache, i)
-                    print("%s (%s): %s" % (i, type(value), value))
+		if printSettings == True:
+			for i in constants_cache.__dict__:
+				if not i.startswith("_"):
+					value = getattr(constants_cache, i)
+					print("%s (%s): %s" % (i, type(value), value))
 
-        # Open LDAP Connection
-        try:
-            connector = LDAPConnector()
-            ldapConnection = connector.connection
-        except Exception as e:
-            print(e)
-            raise CouldNotOpenConnection
+		# Open LDAP Connection
+		try:
+			connector = LDAPConnector()
+			ldapConnection = connector.connection
+		except Exception as e:
+			print(e)
+			raise CouldNotOpenConnection
 
 
-        currentLDAPServer = ldapConnection.server_pool.get_current_server(ldapConnection)
+		currentLDAPServer = ldapConnection.server_pool.get_current_server(ldapConnection)
 
-        ldapConnection.unbind()
-        return Response(
-             data={
-                'code': code,
-                'code_msg': 'ok',
-                'data' : ldapConnection.result,
-                'active_server': currentLDAPServer.host
-             }
-        )
+		ldapConnection.unbind()
+		return Response(
+			 data={
+				'code': code,
+				'code_msg': 'ok',
+				'data' : ldapConnection.result,
+				'active_server': currentLDAPServer.host
+			 }
+		)

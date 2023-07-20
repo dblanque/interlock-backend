@@ -10,8 +10,8 @@
 ### Exceptions
 from core.exceptions.ldap import ConnectionTestFailed
 from core.exceptions import (
-    settings_exc as exc_set,
-    ldap as exc_ldap
+	settings_exc as exc_set,
+	ldap as exc_ldap
 )
 
 ### Models
@@ -31,14 +31,14 @@ from rest_framework.decorators import action
 ### Others
 from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.constants import (
-    __dict__ as constantDictionary
+	__dict__ as constantDictionary
 )
 from interlock_backend.ldap.cacher import saveToCache, resetCacheToDefaults
-from interlock_backend.ldap.encrypt import validate_request_user
+from core.decorators.login import auth_required
 from interlock_backend.ldap.constants_cache import *
 from interlock_backend.ldap.settings_func import (
-    getSettingsList,
-    normalizeValues
+	getSettingsList,
+	normalizeValues
 )
 import logging
 import ssl
@@ -48,133 +48,133 @@ logger = logging.getLogger(__name__)
 
 class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
-    def list(self, request, pk=None):
-        user = request.user
-        validate_request_user(request=request)
-        data = {}
-        code = 0
+	@auth_required(require_admin=True)
+	def list(self, request, pk=None):
+		user = request.user
+		data = {}
+		code = 0
 
-        # Gets front-end parsed settings
-        data = getSettingsList()
-        data['DEFAULT_ADMIN_ENABLED'] = self.get_admin_status()
+		# Gets front-end parsed settings
+		data = getSettingsList()
+		data['DEFAULT_ADMIN_ENABLED'] = self.get_admin_status()
 
-        if LDAP_LOG_READ == True:
-            # Log this action to DB
-            logToDB(
-                user_id=request.user.id,
-                actionType="READ",
-                objectClass="SET",
-                affectedObject="ALL"
-            )
+		if LDAP_LOG_READ == True:
+			# Log this action to DB
+			logToDB(
+				user_id=request.user.id,
+				actionType="READ",
+				objectClass="SET",
+				affectedObject="ALL"
+			)
 
-        return Response(
-             data={
-                'code': code,
-                'code_msg': 'ok',
-                'settings': data
-             }
-        )
+		return Response(
+			 data={
+				'code': code,
+				'code_msg': 'ok',
+				'settings': data
+			 }
+		)
 
-    @action(detail=False, methods=['post'])
-    def save(self, request, pk=None):
-        user = request.user
-        validate_request_user(request=request)
-        data = request.data
-        code = 0
+	@action(detail=False, methods=['post'])
+	@auth_required(require_admin=True)
+	def save(self, request, pk=None):
+		user = request.user
+		data = request.data
+		code = 0
 
-        adminEnabled = data.pop('DEFAULT_ADMIN_ENABLED')
-        adminPassword = data.pop('DEFAULT_ADMIN_PWD')
-        self.set_admin_status(status=adminEnabled, password=adminPassword)
+		adminEnabled = data.pop('DEFAULT_ADMIN_ENABLED')
+		adminPassword = data.pop('DEFAULT_ADMIN_PWD')
+		self.set_admin_status(status=adminEnabled, password=adminPassword)
 
-        if 'LDAP_LOG_MAX' in data:
-            if int(data['LDAP_LOG_MAX']['value']) > 10000:
-                raise exc_set.SettingLogMaxLimit
+		if 'LDAP_LOG_MAX' in data:
+			if int(data['LDAP_LOG_MAX']['value']) > 10000:
+				raise exc_set.SettingLogMaxLimit
 
-        data['LDAP_AUTH_CONNECTION_USERNAME'] = dict()
-        data['LDAP_AUTH_CONNECTION_USERNAME']['value'] = data['LDAP_AUTH_CONNECTION_USER_DN']['value'].split(',')[0].split('CN=')[1].lower()
-        affectedObjects = saveToCache(newValues=data)
+		data['LDAP_AUTH_CONNECTION_USERNAME'] = dict()
+		data['LDAP_AUTH_CONNECTION_USERNAME']['value'] = data['LDAP_AUTH_CONNECTION_USER_DN']['value'].split(',')[0].split('CN=')[1].lower()
+		affectedObjects = saveToCache(newValues=data)
 
-        if LDAP_LOG_UPDATE == True:
-            # Log this action to DB
-            logToDB(
-                user_id=request.user.id,
-                actionType="UPDATE",
-                objectClass="SET",
-                affectedObject=affectedObjects
-            )
+		if LDAP_LOG_UPDATE == True:
+			# Log this action to DB
+			logToDB(
+				user_id=request.user.id,
+				actionType="UPDATE",
+				objectClass="SET",
+				affectedObject=affectedObjects
+			)
 
-        return Response(
-             data={
-                'code': code,
-                'code_msg': 'ok',
-                'settings': data
-             }
-        )
+		return Response(
+			 data={
+				'code': code,
+				'code_msg': 'ok',
+				'settings': data
+			 }
+		)
 
-    @action(detail=False, methods=['get'])
-    def reset(self, request, pk=None):
-        user = request.user
-        validate_request_user(request=request)
-        data = request.data
-        code = 0
+	@action(detail=False, methods=['get'])
+	@auth_required(require_admin=True)
+	def reset(self, request, pk=None):
+		user = request.user
+		data = request.data
+		code = 0
 
-        data = resetCacheToDefaults()
+		data = resetCacheToDefaults()
 
-        return Response(
-             data={
-                'code': code,
-                'code_msg': 'ok',
-                'data': data
-             }
-        )
+		return Response(
+			 data={
+				'code': code,
+				'code_msg': 'ok',
+				'data': data
+			 }
+		)
 
-    # TODO
-    @action(detail=False, methods=['post'])
-    def manualcmd(self, request, pk=None):
-        user = request.user
-        validate_request_user(request=request)
-        data = request.data
-        code = 0
+	# TODO
+	@action(detail=False, methods=['post'])
+	@auth_required(require_admin=True)
+	def manualcmd(self, request, pk=None):
+		user = request.user
+		data = request.data
+		code = 0
 
-        operation = data['operation']
-        op_dn = data['dn']
-        op_object = data['op_object']
-        op_filter = data['op_filter']
-        op_attributes = data['op_attributes']
+		operation = data['operation']
+		op_dn = data['dn']
+		op_object = data['op_object']
+		op_filter = data['op_filter']
+		op_attributes = data['op_attributes']
 
-        # Open LDAP Connection
-        try:
-            c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
-        except Exception as e:
-            print(e)
-            raise exc_ldap.CouldNotOpenConnection
+		# Open LDAP Connection
+		try:
+			c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
+		except Exception as e:
+			print(e)
+			raise exc_ldap.CouldNotOpenConnection
 
-        # Unbind the connection
-        c.unbind()
-        return Response(
-             data={
-                'code': code,
-                'code_msg': 'ok',
-                'data': data
-             }
-        )
+		# Unbind the connection
+		c.unbind()
+		return Response(
+			 data={
+				'code': code,
+				'code_msg': 'ok',
+				'data': data
+			 }
+		)
 
-    @action(detail=False, methods=['post'])
-    def test(self, request, pk=None):
-        user = request.user
-        validate_request_user(request=request)
-        data = request.data
-        code = 0
+	@action(detail=False, methods=['post'])
+	@auth_required(require_admin=True)
+	def test(self, request, pk=None):
+		user = request.user
+		data = request.data
+		code = 0
 
-        data = self.test_ldap_settings(user, data)
+		data = self.test_ldap_settings(user, data)
 
-        if not data:
-            raise ConnectionTestFailed
+		if not data:
+			raise ConnectionTestFailed
 
-        return Response(
-             data={
-                'code': code,
-                'code_msg': 'ok',
-                'data': data
-             }
-        )
+		return Response(
+			 data={
+				'code': code,
+				'code_msg': 'ok',
+				'data': data
+			 }
+		)
