@@ -144,7 +144,7 @@ LDAP_BUILTIN_OBJECTS = [
     "Managed Service Accounts"
 ]
 
-def search_filter_add(originalFilter, filterToAdd, operator="&", negate=False):
+def search_filter_add(filter_string, filter_to_add, operator="&", negate=False):
     """ Adds search filter to LDAP Filter string
 
     ARGUMENTS
@@ -159,24 +159,24 @@ def search_filter_add(originalFilter, filterToAdd, operator="&", negate=False):
     if operator == 'and':
         operator = '&'
 
-    if operator == '|' and originalFilter.startswith('(!('):
-        logger.warn(filterToAdd)
+    if operator == '|' and filter_string.startswith('(!('):
+        logger.warn(filter_to_add)
         logger.warn('Changed operator to & since you are comparing to a negation with an or')
         operator = '&'
 
     if negate == True:
-        filterPrefix = "(!("
-        filterSuffix = "))"
+        prefix = "(!("
+        suffix = "))"
     else:
-        filterPrefix = "("
-        filterSuffix = ")"
+        prefix = "("
+        suffix = ")"
 
-    if operator != "&" and operator != "|" and originalFilter != "":
+    if operator != "&" and operator != "|" and filter_string != "":
         raise Exception
-    if not originalFilter or originalFilter == "":
-        newFilter = filterPrefix + filterToAdd + filterSuffix
+    if not filter_string or filter_string == "":
+        newFilter = prefix + filter_to_add + suffix
         return newFilter
-    newFilter = "(" + operator + originalFilter + filterPrefix + filterToAdd + filterSuffix + ")"
+    newFilter = "(" + operator + filter_string + prefix + filter_to_add + suffix + ")"
     return newFilter
 
 def search_filter_from_dict(dictArray, operator="|"):
