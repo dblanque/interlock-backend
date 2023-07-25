@@ -18,7 +18,6 @@ from core.models.ldapObject import LDAPObject
 
 ### Mixins
 from .mixins.group import GroupViewMixin
-from core.views.mixins.user import UserViewMixin
 
 ### ViewSets
 from .base import BaseViewSet
@@ -55,36 +54,29 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 		code = 0
 		code_msg = 'ok'
 
-		######################## Get Latest Settings ###########################
-		groupObjectClass = 'group'
-		authSearchBase = LDAP_AUTH_SEARCH_BASE
-		########################################################################
-
 		# Open LDAP Connection
 		try:
-			c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
+			self.ldap_connection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
 		except Exception as e:
 			print(e)
 			raise exc_ldap.CouldNotOpenConnection
-		attributes = [
+		self.ldap_filter_object = search_filter_add("", "objectclass=" + 'group')
+		self.ldap_filter_attr = [
 			'cn',
 			'distinguishedName',
 			'groupType',
 			'member'
 		]
 
-		objectClassFilter = ""
-		objectClassFilter = search_filter_add(objectClassFilter, "objectclass=" + groupObjectClass)
-
-		c.search(
-			authSearchBase, 
-			objectClassFilter,
-			attributes=attributes
+		self.ldap_connection.search(
+			LDAP_AUTH_SEARCH_BASE, 
+			self.ldap_filter_object,
+			attributes=self.ldap_filter_attr
 		)
-		list = c.entries
+		list = self.ldap_connection.entries
 
 		# Remove attributes to return as table headers
-		valid_attributes = attributes
+		valid_attributes = self.ldap_filter_attr
 		remove_attributes = [
 			'distinguishedName',
 			'member'
@@ -134,7 +126,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 			)
 
 		# Close / Unbind LDAP Connection
-		c.unbind()
+		self.ldap_connection.unbind()
 		return Response(
 			 data={
 				'code': code,

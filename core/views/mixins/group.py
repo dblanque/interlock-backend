@@ -28,6 +28,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 class GroupViewMixin(viewsets.ViewSetMixin):
+	ldap_connection = None
+	ldap_filter_object = None
+	ldap_filter_attr = None
 
 	def getGroupByRID(ridToSearch=None, attributes=['objectSid','distinguishedName']):
 		if ridToSearch is None:
@@ -122,5 +125,5 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			return [ groupTypes, groupTypeInt ]
 		else:
 			return groupTypes
-
-	pass
+		
+	

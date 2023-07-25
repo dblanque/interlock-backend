@@ -47,7 +47,6 @@ from ldap3 import (
 	MODIFY_REPLACE
 )
 import ldap3
-import traceback
 import logging
 ################################################################################
 
@@ -193,15 +192,6 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		self.set_ldap_password(user_dn=user_dn, user_pwd=user_pwd)
 
-		if LDAP_LOG_CREATE == True:
-			# Log this action to DB
-			logToDB(
-				user_id=request.user.id,
-				actionType="CREATE",
-				objectClass="USER",
-				affectedObject=data['username']
-			)
-
 		# Unbind the connection
 		self.ldap_connection.unbind()
 		return Response(
@@ -233,6 +223,21 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		user_path = data['path']
 		user_placeholder_password = None
 		header_mapping = data['mapping']
+
+		######################## Set LDAP Attributes ###########################
+		self.ldap_filter_attr = [
+			LDAP_AUTH_USERNAME_IDENTIFIER,
+			'distinguishedName',
+			'userPrincipalName',
+		]
+		########################################################################
+
+		exclude_keys = [
+			mapped_user_key, # LDAP Uses sAMAccountName
+			mapped_pwd_key,
+			'permission_list', # This array was parsed and calculated, then changed to userAccountControl
+			'distinguishedName', # We don't want the front-end generated DN
+		]
 
 		# Check if data has a requested placeholder_password
 		required_fields = ['username']
@@ -293,122 +298,30 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			raise exc_ldap.CouldNotOpenConnection
 
 		for row in user_list:
-			userToSearch = row[mapped_user_key]
+			user_search = row[mapped_user_key]
 
-			# Send LDAP Query for user being created to see if it exists
-			attributes = [
-				LDAP_AUTH_USERNAME_IDENTIFIER,
-				'distinguishedName',
-				'userPrincipalName',
-			]
-			self.get_user_object(userToSearch, attributes=attributes)
-			user = self.ldap_connection.entries
-
-			# If user exists, move to next user
-			if user != []:
+			if self.ldap_user_exists(user_search=user_search):
 				skipped_users.append(row[mapped_user_key])
 				continue
 
-			if user_path is not None and user_path != "":
-				userDN = f"CN={row[mapped_user_key]},{user_path}"
-			else:
-				userDN = f"CN={row[mapped_user_key]},OU=Users,{LDAP_AUTH_SEARCH_BASE}"
-			userPermissions = 0
+			user_dn = self.ldap_user_insert(data=data, exclude_keys=exclude_keys, return_exception=False)
+			if not user_dn:
+				failed_users.append({'username': row[mapped_user_key], 'stage': 'permission'})
+				continue
 
-			# Add permissions selected in user creation
-			if 'permission_list' in row:
-				for perm in row['permission_list']:
-					permValue = int(ldap_adsi.LDAP_PERMS[perm]['value'])
-					try:
-						userPermissions += permValue
-						logger.debug("Located in: "+__name__+".insert")
-						logger.debug("Permission Value added (cast to string): " + str(permValue))
-					except Exception as error:
-						if len(user_list) > 1:
-							failed_users.append({'username': row[mapped_user_key], 'stage': 'permission'})
-							continue
-						else: # If there's an error unbind the connection and print traceback
-							self.ldap_connection.unbind()
-							print(traceback.format_exc())
-							raise exc_user.UserPermissionError # Return error code to client
-
-			# Add Normal Account permission to list
-			userPermissions += ldap_adsi.LDAP_PERMS['LDAP_UF_NORMAL_ACCOUNT']['value']
-			logger.debug("Final User Permissions Value: " + str(userPermissions))
-
-			arguments = dict()
-			arguments['userAccountControl'] = userPermissions
-			arguments[LDAP_AUTH_USERNAME_IDENTIFIER] = str(row[mapped_user_key]).lower()
-			arguments['objectClass'] = ['top', 'person', 'organizationalPerson', 'user']
-			arguments['userPrincipalName'] = row[mapped_user_key] + '@' + LDAP_DOMAIN
-
-			excludeKeys = [
-				mapped_user_key, # LDAP Uses sAMAccountName
-				mapped_pwd_key,
-				'permission_list', # This array was parsed and calculated, then changed to userAccountControl
-				'distinguishedName', # We don't want the front-end generated DN
-			]
-			for key in row:
-				if key not in excludeKeys and len(row[key]) > 0:
-					logger.debug("Key in data: " + key)
-					logger.debug("Value for key above: " + row[key])
-					if key in header_mapping.values():
-						ldap_key = list(header_mapping.keys())[list(header_mapping.values()).index(key)]
-						arguments[ldap_key] = row[key]
-					else:
-						arguments[key] = row[key]
-
-			if 'co' in arguments and arguments['co'] != "" and arguments['co'] != 0:
-				try:
-					# Set numeric country code (DCC Standard)
-					arguments['countryCode'] = LDAP_COUNTRIES[arguments['co']]['dccCode']
-					# Set ISO Country Code
-					arguments['c'] = LDAP_COUNTRIES[arguments['co']]['isoCode']
-				except Exception as e:
-					if len(user_list) > 1:
-						failed_users.append({'username': row[mapped_user_key], 'stage': 'country'})
-						continue
-					else:
-						self.ldap_connection.unbind()
-						print(data)
-						print(e)
-						raise exc_user.UserCountryUpdateError
-
-			logger.debug('Creating user in DN Path: ' + userDN)
-			try:
-				self.ldap_connection.add(userDN, LDAP_AUTH_OBJECT_CLASS, attributes=arguments)
-			except Exception as e:
-				if len(user_list) > 1:
-					failed_users.append({'username': row[mapped_user_key], 'stage': 'create'})
-					continue
-				else:
-					self.ldap_connection.unbind()
-					print(e)
-					print(f'Could not create User: {userDN}')
-					row = {
-						"ldap_response": self.ldap_connection.result
-					}
-					raise exc_user.UserCreate(data=row)
-
+			set_pwd = False
 			if user_placeholder_password:
 				row[mapped_pwd_key] = user_placeholder_password
+				set_pwd = True
+			elif data['password'] and len(data['password']) > 0:
+				row[mapped_pwd_key] = data['password']
+				set_pwd = True
 
-			try:
-				self.ldap_connection.extend.microsoft.modify_password(
-					user=userDN, 
-					new_password=row[mapped_pwd_key]
-				)
-			except Exception as e:
-				if len(user_list) > 1:
+			if set_pwd:
+				try:
+					self.set_ldap_password(user_dn=user_dn, user_pwd=row[mapped_pwd_key])
+				except:
 					failed_users.append({'username': row[mapped_user_key], 'stage': 'password'})
-					continue
-				else:
-					self.ldap_connection.unbind()
-					print(f'Could not update password for User DN: {userDN}')
-					row = {
-						"ldap_response": self.ldap_connection.result
-					}
-					raise exc_user.UserUpdateError(data=row)
 
 			imported_users.append(row[mapped_user_key])
 			if LDAP_LOG_CREATE == True:
@@ -475,7 +388,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		]
 
 		user_to_update = data['username']
-		permList = data['permission_list']
+		permission_list = data['permission_list']
 		for key in excludeKeys:
 			if key in data:
 				del data[key]
@@ -495,7 +408,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			user_dn=user_dn,
 			user_name=user_to_update,
 			user_data=data,
-			permissions_list=permList
+			permissions_list=permission_list
 		)
 
 		# Unbind the connection
@@ -747,7 +660,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			print(e)
 			raise exc_ldap.CouldNotOpenConnection
 
-		userToUpdate = data['username']
+		ldap_user_search = data['username']
 
 		# If data request for deletion has user DN
 		if 'distinguishedName' in data.keys() and data['distinguishedName'] != "":
@@ -757,7 +670,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		# Else, search for username dn
 		else:
 			logger.debug('Updating with user dn search method')
-			self.get_user_object(userToUpdate)
+			self.get_user_object(ldap_user_search)
 			
 			user = self.ldap_connection.entries
 			dn = str(user[0].distinguishedName)
@@ -770,6 +683,21 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		if data['password'] != data['passwordConfirm']:
 			self.ldap_connection.unbind()
 			raise exc_user.UserPasswordsDontMatch
+		
+		self.set_ldap_password(user_dn=dn, user_pwd=data['password'])
+
+		# Unbind the connection
+		self.ldap_connection.unbind()
+
+		django_user = None
+		try:
+			django_user = User.objects.get(username=ldap_user_search)
+		except:
+			self.ldap_connection.unbind()
+			pass
+		if django_user:
+			django_user.set_unusable_password()
+			django_user.save()
 
 		if LDAP_LOG_UPDATE == True:
 			# Log this action to DB
@@ -777,30 +705,10 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				user_id=request.user.id,
 				actionType="UPDATE",
 				objectClass="USER",
-				affectedObject=userToUpdate,
+				affectedObject=ldap_user_search,
 				extraMessage="CHANGED_PASSWORD"
 			)
 
-		try:
-			# ! ADDS does not handle password changing without ldaps
-			# enc_pwd = '"{}"'.format(data['password']).encode('utf-16-le')
-			# c.modify(dn, {'unicodePwd': [(MODIFY_REPLACE, [enc_pwd] )]})
-			# ldap3.extend.microsoft.modifyPassword.ad_modify_password(conn, user_dn, new_password, old_password=None)
-			self.ldap_connection.extend.microsoft.modify_password(
-				user=dn, 
-				new_password=data['password']
-			)
-		except Exception as e:
-			self.ldap_connection.unbind()
-			print(e)
-			print(f'Could not update password for User DN: {dn}')
-			data = {
-				"ldap_response": self.ldap_connection.result
-			}
-			raise exc_user.UserUpdateError(data=data)
-
-		# Unbind the connection
-		self.ldap_connection.unbind()
 		return Response(
 			 data={
 				'code': code,
@@ -909,8 +817,8 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			print(e)
 			raise exc_ldap.CouldNotOpenConnection
 
-		userToUpdate = user.username
-		self.get_user_object(userToUpdate, attributes=[LDAP_AUTH_USERNAME_IDENTIFIER, 'distinguishedName', 'userAccountControl'])
+		ldap_user_search = user.username
+		self.get_user_object(ldap_user_search, attributes=[LDAP_AUTH_USERNAME_IDENTIFIER, 'distinguishedName', 'userAccountControl'])
 		ldapUser = self.ldap_connection.entries
 
 		if 'distinguishedName' in data.keys() and data['distinguishedName'] != "":
@@ -933,20 +841,21 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		if data['password'] != data['passwordConfirm']:
 			self.ldap_connection.unbind()
 			raise exc_user.UserPasswordsDontMatch
+		
+		self.set_ldap_password(user_dn=distinguishedName, user_pwd=data['password'])
 
+		# Unbind the connection
+		self.ldap_connection.unbind()
+
+		django_user = None
 		try:
-			self.ldap_connection.extend.microsoft.modify_password(
-				user=distinguishedName, 
-				new_password=data['password']
-			)
-		except Exception as e:
+			django_user = User.objects.get(username=ldap_user_search)
+		except:
 			self.ldap_connection.unbind()
-			print(e)
-			print(f'Could not update password for User DN: {distinguishedName}')
-			data = {
-				"ldap_response": self.ldap_connection.result
-			}
-			raise exc_user.UserUpdateError(data=data)
+			pass
+		if django_user:
+			django_user.set_unusable_password()
+			django_user.save()
 
 		if LDAP_LOG_UPDATE == True:
 			# Log this action to DB
@@ -954,12 +863,10 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				user_id=request.user.id,
 				actionType="UPDATE",
 				objectClass="USER",
-				affectedObject=userToUpdate,
+				affectedObject=ldap_user_search,
 				extraMessage="CHANGED_PASSWORD"
 			)
 
-		# Unbind the connection
-		self.ldap_connection.unbind()
 		return Response(
 			 data={
 				'code': code,
@@ -971,14 +878,21 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@action(detail=False, methods=['put', 'post'])
 	@auth_required(require_admin=False)
 	def updateSelf(self, request, pk=None):
-		user = request.user
+		user_entry = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data
 
-		if data['username'] != user.username:
+		if data['username'] != user_entry.username:
 			raise PermissionDenied
 
+		# Get basic attributes for this user from AD to compare query and get dn
+		self.ldap_filter_attr = [
+			LDAP_AUTH_USERNAME_IDENTIFIER,
+			'distinguishedName',
+			'userPrincipalName',
+			'userAccountControl',
+		]
 		excludeKeys = [
 			'can_change_pwd',
 			'password', 
@@ -1000,7 +914,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			'primaryGroupID'
 		]
 
-		userToUpdate = data['username']
+		user_search = data['username']
 		for key in excludeKeys:
 			if key in data:
 				del data[key]
@@ -1012,57 +926,19 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			print(e)
 			raise exc_ldap.CouldNotOpenConnection
 
-		# Get basic attributes for this user from AD to compare query and get dn
-		attributes = [
-			LDAP_AUTH_USERNAME_IDENTIFIER,
-			'distinguishedName',
-			'userPrincipalName',
-			'userAccountControl',
-		]
-		self.get_user_object(userToUpdate, attributes=ldap3.ALL_ATTRIBUTES)
+		self.get_user_object(user_search, attributes=ldap3.ALL_ATTRIBUTES)
 
-		user = self.ldap_connection.entries
-		dn = str(user[0].distinguishedName)
+		user_entry = self.ldap_connection.entries
+		user_dn = str(user_entry[0].distinguishedName)
 
-		if data['co'] != "":
-			# Set numeric country code (DCC Standard)
-			data['countryCode'] = LDAP_COUNTRIES[data['co']]['dccCode']
-			# Set ISO Country Code
-			data['c'] = LDAP_COUNTRIES[data['co']]['isoCode']
+		self.ldap_user_update(
+			user_dn=user_dn,
+			user_name=user_search,
+			user_data=data
+		)
 
-		# We need to check if the attributes exist in the LDAP Object already
-		# To know what operation to apply. This is VERY important.
-		arguments = dict()
-		for key in data:
-				try:
-					if key in user[0].entry_attributes and data[key] == "":
-						operation = MODIFY_DELETE
-						self.ldap_connection.modify(
-							dn,
-							{key: [( operation ), []]},
-						)
-					elif data[key] != "":
-						operation = MODIFY_REPLACE
-						if isinstance(data[key], list):
-							self.ldap_connection.modify(
-								dn,
-								{key: [( operation, data[key])]},
-							)
-						else:
-							self.ldap_connection.modify(
-								dn,
-								{key: [( operation, [ data[key] ])]},
-							)
-					else:
-						logger.info("No suitable operation for attribute " + key)
-						pass
-				except:
-					print(traceback.format_exc())
-					logger.warn("Unable to update user '" + userToUpdate + "' with attribute '" + key + "'")
-					logger.warn("Attribute Value:" + str(data[key]))
-					logger.warn("Operation Type: " + operation)
-					self.ldap_connection.unbind()
-					raise exc_user.UserUpdateError
+		# Unbind the connection
+		self.ldap_connection.unbind()
 
 		logger.debug(self.ldap_connection.result)
 
@@ -1072,12 +948,12 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				user_id=request.user.id,
 				actionType="UPDATE",
 				objectClass="USER",
-				affectedObject=userToUpdate,
+				affectedObject=user_search,
 				extraMessage="END_USER_UPDATED"
 			)
 
 		try:
-			django_user = User.objects.get(username=userToUpdate)
+			django_user = User.objects.get(username=user_search)
 		except:
 			django_user = None
 			pass
@@ -1091,8 +967,6 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 					django_user.email = None
 			django_user.save()
 
-		# Unbind the connection
-		self.ldap_connection.unbind()
 		return Response(
 			 data={
 				'code': code,
@@ -1126,19 +1000,19 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@action(detail=False,methods=['get'])
 	@auth_required(require_admin=False)
 	def fetchme(self, request):
-		user = request.user
+		user_entry = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data
-		userToSearch = user.username
+		user_search = user_entry.username
 
 		# Open LDAP Connection
 		try:
-			c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
+			self.ldap_connection = LDAPConnector(user_entry.dn, user_entry.encryptedPassword, request.user).connection
 		except Exception as e:
 			print(e)
 			raise exc_ldap.CouldNotOpenConnection
-		attributes = [ 
+		self.ldap_filter_attr = [ 
 			'givenName', 
 			'sn', 
 			'displayName', 
@@ -1163,44 +1037,44 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			'userAccountControl'
 		]
 
-		objectClassFilter = "(objectclass=" + LDAP_AUTH_OBJECT_CLASS + ")"
+		self.ldap_filter_object = "(objectclass=" + LDAP_AUTH_OBJECT_CLASS + ")"
 
 		# Add filter for username
-		objectClassFilter = ldap_adsi.search_filter_add(objectClassFilter, LDAP_AUTH_USERNAME_IDENTIFIER + "=" + userToSearch)
-		c.search(
+		self.ldap_filter_object = ldap_adsi.search_filter_add(self.ldap_filter_object, LDAP_AUTH_USERNAME_IDENTIFIER + "=" + user_search)
+		self.ldap_connection.search(
 			LDAP_AUTH_SEARCH_BASE,
-			objectClassFilter,
-			attributes=attributes
+			self.ldap_filter_object,
+			attributes=self.ldap_filter_attr
 		)
-		user = c.entries
+		user_entry = self.ldap_connection.entries
 
-		attributes.remove('userAccountControl')
+		self.ldap_filter_attr.remove('userAccountControl')
 
 		# For each attribute in user object attributes
-		user_dict = {}
-		for attr_key in attributes:
-			if attr_key in attributes:
+		user_data = {}
+		for attr_key in self.ldap_filter_attr:
+			if attr_key in self.ldap_filter_attr:
 				str_key = str(attr_key)
-				str_value = str(getattr(user[0],attr_key))
+				str_value = str(getattr(user_entry[0],attr_key))
 				if str_value == "[]":
-					user_dict[str_key] = ""
+					user_data[str_key] = ""
 				else:
-					user_dict[str_key] = str_value
+					user_data[str_key] = str_value
 			if attr_key == LDAP_AUTH_USERNAME_IDENTIFIER:
-				user_dict['username'] = str_value
+				user_data['username'] = str_value
 
 			# Check if user can change password based on perms
-			user_dict['can_change_pwd'] = False
-			if not ldap_adsi.list_user_perms(user[0], permissionToSearch="LDAP_UF_PASSWD_CANT_CHANGE"):
-				user_dict['can_change_pwd'] = True
+			user_data['can_change_pwd'] = False
+			if not ldap_adsi.list_user_perms(user_entry[0], permissionToSearch="LDAP_UF_PASSWD_CANT_CHANGE"):
+				user_data['can_change_pwd'] = True
 
 		# Close / Unbind LDAP Connection
-		c.unbind()
+		self.ldap_connection.unbind()
 		return Response(
 			 data={
 				'code': code,
 				'code_msg': code_msg,
-				'data': user_dict
+				'data': user_data
 			 }
 		)
 
