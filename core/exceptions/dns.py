@@ -84,7 +84,15 @@ class DNSRecordEntryDoesNotExist(BaseException):
 class DNSCouldNotIncrementSOA(BaseException):
     status_code = 500
     default_detail = 'Unable to increment Start of Authority Serial'
-    default_code = 'dns_soa_increment'
+    default_code = 'dns_soa_serial_increment'
+class DNSCouldNotGetSerial(BaseException):
+    status_code = 500
+    default_detail = 'Unable to get record Serial'
+    default_code = 'dns_record_serial'
+class DNSCouldNotGetSOA(BaseException):
+    status_code = 500
+    default_detail = 'Unable to get record zone SOA'
+    default_code = 'dns_soa_fetch'
 
 class SOARecordRootOnly(BaseException):
     status_code = 400
