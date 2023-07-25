@@ -72,7 +72,7 @@ class DNSRecordMixin(DomainViewMixin):
                                 field_name=f_key,
                                 field_value=f_value
                             )
-                        except:
+                        except Exception as e:
                             logger.error(f"Validator: '{validator}' ({type(validator)})")
                             logger.error(f"Field Name: '{f_key}' ({type(f_key)})")
                             logger.error(f"Field Value: '{f_value}' ({type(f_value)})")

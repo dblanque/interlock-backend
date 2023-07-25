@@ -11,12 +11,14 @@ import sys
 import logging
 import re
 import socket
+from core.exceptions.dns import DNSFieldValidatorException, DNSFieldValidatorFailed
 from core.utils.ipv6 import ipv6_to_integer
 thismodule = sys.modules[__name__]
 logger = logging.getLogger(__name__)
 
 FIELD_VALIDATORS = {
     'tstime': None,
+    'serial': 'int32',
     'address': 'ipv4',
     'ipv6Address': 'ipv6',
     'nameNode': 'canonicalHostname',
@@ -35,6 +37,11 @@ FIELD_VALIDATORS = {
     'wPort': 'natural',
     'nameTarget': 'canonicalHostname'
 }
+
+def int32_validator(value):
+    if int(value) < 4294967296 and re.match(r'^[0-9]{0,10}$', str(value)):
+        return True
+    return False
 
 def natural_validator(value):
     try:

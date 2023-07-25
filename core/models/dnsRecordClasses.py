@@ -14,7 +14,10 @@ from .dnsRecordTypes import *
 import socket
 import datetime
 import sys
+import logging
 ################################################################################
+
+logger = logging.getLogger(__name__)
 
 RECORD_MAPPINGS = {
     DNS_RECORD_TYPE_ZERO: {
@@ -197,8 +200,7 @@ def record_to_dict(record, ts=False):
         data = getattr(thismodule, RECORD_MAPPINGS[record['Type']]['class'])(record['Data'])
 
         # ! Print class ! #
-        # print(getattr(thismodule, RECORD_MAPPINGS[record['Type']]['class']))
-
+        logger.debug(getattr(thismodule, RECORD_MAPPINGS[record['Type']]['class']))
 
         stringFields = [
             'nameNode',
@@ -227,46 +229,6 @@ def record_to_dict(record, ts=False):
                 print(record_dict)
                 print(valueField)
                 raise e
-
-    # ! Legacy Code, helps understand what it does
-    # if record['Type'] == 0:
-    #     tstime = DNS_RPC_RECORD_TS(record['Data'])
-    #     record_dict['tstime'] = tstime.toDatetime()
-    # # A record
-    # if record['Type'] == 1:
-    #     address = DNS_RPC_RECORD_A(record['Data'])
-    #     record_dict['address'] = address.formatCanonical()
-    # # NS record or CNAME record
-    # if record['Type'] == 2 or record['Type'] == 5:
-    #     address = DNS_RPC_RECORD_NODE_NAME(record['Data'])
-    #     record_dict['nameNode'] = address['nameNode'].toFqdn()
-    # # MX record
-    # if record['Type'] == 15:
-    #     address = DNS_RPC_RECORD_NAME_PREFERENCE(record['Data'])
-    #     record_dict['wPreference'] = address['wPreference']
-    #     record_dict['nameExchange'] = address['nameExchange'].toFqdn()
-    # # TXT record
-    # if record['Type'] == 16:
-    #     address = DNS_RPC_RECORD_STRING(record['Data'])
-    #     record_dict['stringData'] = address['stringData'].toString()
-    # # SRV record
-    # if record['Type'] == 33:
-    #     record_data = DNS_RPC_RECORD_SRV(record['Data'])
-    #     record_dict['wPriority'] = record_data['wPriority']
-    #     record_dict['wWeight'] = record_data['wWeight']
-    #     record_dict['wPort'] = record_data['wPort']
-    #     record_dict['nameTarget'] = record_data['nameTarget'].toFqdn()
-    # # SOA record
-    # if record['Type'] == 6:
-    #     record_data = DNS_RPC_RECORD_SOA(record['Data'])
-    #     record_dict['dwSerialNo'] = record_data['dwSerialNo']
-    #     record_dict['dwRefresh'] = record_data['dwRefresh']
-    #     record_dict['dwRetry'] = record_data['dwRetry']
-    #     record_dict['dwExpire'] = record_data['dwExpire']
-    #     record_dict['dwMinimumTtl'] = record_data['dwMinimumTtl']
-    #     record_dict['namePrimaryServer'] = record_data['namePrimaryServer'].toFqdn()
-    #     record_dict['zoneAdminEmail'] = record_data['zoneAdminEmail'].toFqdn()
-
     return record_dict
 
 class DNS_RECORD(Structure):

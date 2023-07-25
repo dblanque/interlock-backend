@@ -251,8 +251,36 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 
 		currentLDAPServer = ldapConnection.server_pool.get_current_server(ldapConnection)
 		currentLDAPServer_IP = currentLDAPServer.host
-		# LDAP Server IP Address
+		
+		# Create Start of Authority
+		base_soaRecord = LDAPRecord(
+			connection=ldapConnection, 
+			rName="@", 
+			rZone=target_zone,
+			rType=DNS_RECORD_TYPE_SOA
+		)
+		values_soa = {
+			'dwSerialNo': 1,
+			'dwRefresh': 900,
+			'dwRetry': 600,
+			'dwExpire': 86400,
+			'dwMinimumTtl': 900,
+			'namePrimaryServer': f'ns.{target_zone}.',
+			'zoneAdminEmail': f'hostmaster.{target_zone}'
+		}
+		base_soaRecord.create(values=values_soa)
+
+		soaCreateResult = ldapConnection.result
+
+		ipv4 = False
+		ipv6 = False
 		if ipv4_validator(currentLDAPServer_IP):
+			ipv4 = True
+		elif ipv6_validator(currentLDAPServer_IP):
+			ipv6 = True
+
+		# LDAP Server IP Address
+		if ipv4:
 			values_a = {
 				'address': currentLDAPServer.host,
 				'ttl': 900,
@@ -282,7 +310,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 			a_nsRecord.create(values=values_a_ns)
 
 			a_nsCreateResult = ldapConnection.result
-		elif ipv6_validator(currentLDAPServer_IP):
+		elif ipv6:
 			values_aaaa = {
 				'address': currentLDAPServer.host,
 				'ttl': 900,
@@ -314,7 +342,9 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 			aaaa_nsCreateResult = ldapConnection.result
 
 		values_ns = {
-			'nameNode':f'ns1.{target_zone}.'
+			'nameNode':f'ns1.{target_zone}.',
+			'ttl': 3600,
+			'serial': 1
 		}
 		base_nsRecord = LDAPRecord(
 			connection=ldapConnection,
@@ -326,27 +356,25 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 
 		nsCreateResult = ldapConnection.result
 
-		base_soaRecord = LDAPRecord(
-			connection=ldapConnection, 
-			rName="@", 
-			rZone=target_zone,
-			rType=DNS_RECORD_TYPE_SOA
-		)
-		values_soa = {
-			# SOA TEST
-			'dwSerialNo': 1,
-			'dwRefresh': 900,
-			'dwRetry': 600,
-			'dwExpire': 86400,
-			'dwMinimumTtl': 3600,
-			'namePrimaryServer': f'ns.{target_zone}.',
-			'zoneAdminEmail': f'hostmaster.{target_zone}'
-		}
-		base_soaRecord.create(values=values_soa)
-
-		soaCreateResult = ldapConnection.result
-
 		ldapConnection.unbind()
+
+		result = {
+			"dns": dnsCreateResult,
+			"forest": forestCreateResult,
+			"soa": soaCreateResult,
+			"ns": nsCreateResult
+		}
+
+		if ipv4:
+			result.update({
+				"a_ns": a_nsCreateResult,
+				"a": aCreateResult
+			})
+		elif ipv6:
+			result.update({
+				"aaaa_ns": aaaa_nsCreateResult,
+				"aaaa": aaaaCreateResult
+			})
 
 		if LDAP_LOG_CREATE == True:
 			# Log this action to DB
@@ -361,14 +389,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 			 data={
 				'code': code,
 				'code_msg': 'ok',
-				'result' : {
-					"dns": dnsCreateResult,
-					"forest": forestCreateResult,
-					"soa": soaCreateResult,
-					"ns": nsCreateResult,
-					"a_ns": a_nsCreateResult,
-					"a": aCreateResult
-				}
+				'result' : result
 			 }
 		)
 
