@@ -10,7 +10,6 @@ class LDAPConnectionNotOpen(BaseException):
     status_code = 500
     default_detail = 'No LDAP Connection was open prior to this operation'
     default_code = 'ldap_connection_not_open'
-
 class LDAPPermissionsInsufficient(BaseException):
     status_code = 400
     default_detail = 'Insufficient LDAP Permissions'
