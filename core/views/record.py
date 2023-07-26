@@ -8,16 +8,12 @@
 
 #---------------------------------- IMPORTS -----------------------------------#
 ### Models
-from core.models.log import logToDB
-from core.models.dns import LDAPRecord
 from core.models.dnsRecordTypes import *
-from core.models.dnsRecordClasses import RECORD_MAPPINGS
 
 ### ViewSets
 from core.views.base import BaseViewSet
 
 ### Exceptions
-from django.core.exceptions import PermissionDenied
 from core.exceptions import (
 	ldap as exc_ldap,
 	dns as exc_dns
@@ -32,23 +28,10 @@ from core.serializers.record import DNSRecordSerializer
 
 ### REST Framework
 from rest_framework.response import Response
-from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
 
 ### Others
-from core.utils import dnstool
-import traceback
-from ldap3 import (
-	MODIFY_ADD,
-	MODIFY_DELETE,
-	MODIFY_INCREMENT,
-	MODIFY_REPLACE
-)
 from core.utils.dnstool import record_to_dict
-from core.views.mixins.utils import convert_string_to_bytes
-from core.models.dnsRecordFieldValidators import FIELD_VALIDATORS as DNS_FIELD_VALIDATORS
-from core.models import dnsRecordFieldValidators as dnsValidators
-from interlock_backend.ldap.adsi import search_filter_add
 from core.decorators.login import auth_required
 from interlock_backend.ldap.constants_cache import *
 from interlock_backend.ldap.connector import LDAPConnector
@@ -65,6 +48,12 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 		user = request.user
 		data = {}
 		code = 0
+		required_values = [
+			'name',
+			'type',
+			'zone',
+			'ttl'
+		]
 
 		if 'record' not in request.data:
 			raise exc_dns.DNSRecordNotInRequest
@@ -72,107 +61,29 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 		record_data = request.data['record']
 		DNSRecordSerializer(self, record_data).is_valid(raise_exception=True)
 
-		if 'type' not in record_data:
-			raise exc_dns.DNSRecordTypeMissing
-
-		requiredAttributes = [
-			'name',
-			'type',
-			'zone',
-			'ttl'
-		]
-		# Add the necessary fields for this Record Type to Required Fields
-		requiredAttributes.extend(RECORD_MAPPINGS[record_data['type']]['fields'])
-
-		for a in requiredAttributes:
-			if a not in record_data:
-				exception = exc_dns.DNSRecordDataMissing
-				data = {
-					"code": exception.default_code,
-					"attribute": a,
-				}
-				exception.set_detail(exception, data)
-				raise exception
-
-		record_name = record_data.pop('name').lower()
-		record_type = record_data.pop('type')
-		record_zone = record_data.pop('zone').lower()
-
-		if record_zone == 'Root DNS Servers':
-			raise exc_dns.DNSRootServersOnlyCLI
-
 		# ! Test record validation with the Mix-in
-		DNSRecordMixin.validate_record_data(self, record_data=record_data)
-
-		if 'serial' in record_data and isinstance(record_data['serial'], str):
-			record_data.pop('serial')
-
-		if record_type == DNS_RECORD_TYPE_SOA and record_name != "@":
-			raise exc_dns.SOARecordRootOnly
-
-		if 'stringData' in record_data:
-			if len(record_data['stringData']) > 255:
-				raise exc_dns.DNSStringDataLimit
-
-		if 'nameNode' in record_data:
-			label = str(record_data['nameNode'])
-			split_labels = label.split('.')
-			if len(split_labels[-1]) > 1:
-				raise exc_dns.DNSRecordTypeConflict
-			if record_zone not in label:
-				print(record_zone)
-				raise exc_dns.DNSZoneNotInRequest
+		DNSRecordMixin.validate_record_data(
+			self,
+			record_data=record_data,
+			required_values=required_values
+		)
 
 		# Open LDAP Connection
 		try:
 			connector = LDAPConnector(user.dn, user.encryptedPassword, request.user)
-			ldapConnection = connector.connection
 		except Exception as e:
 			print(e)
 			raise exc_ldap.CouldNotOpenConnection
+		self.ldap_connection = connector.connection
 
-		dnsRecord = LDAPRecord(
-			connection=ldapConnection,
-			rName=record_name,
-			rZone=record_zone,
-			rType=record_type
-		)
-
-		dnsRecord.create(values=record_data)
-
-		#########################################
-		# Update Start of Authority Record Serial
-		if record_type != DNS_RECORD_TYPE_SOA:
-			try:
-				self.increment_soa_serial(dnsRecord.soa_object, dnsRecord.serial)
-			except:
-				logger.error(traceback.format_exc())
-				raise exc_dns.DNSCouldNotIncrementSOA
-
-		# result = dnsRecord.structure.getData()
-		# dr = dnstool.DNS_RECORD(result)
-
-		ldapConnection.unbind()
-
-		if record_name == "@":
-			affectedObject = record_zone + " (" + RECORD_MAPPINGS[record_type]['name'] + ")"
-		else:
-			affectedObject = record_name + "." + record_zone + " (" + RECORD_MAPPINGS[record_type]['name'] + ")"
-
-		if LDAP_LOG_CREATE == True:
-			# Log this action to DB
-			logToDB(
-				user_id=request.user.id,
-				actionType="CREATE",
-				objectClass="DNSR",
-				affectedObject=affectedObject
-			)
+		record_result_data = self.create_record(record_data=record_data)
+		self.ldap_connection.unbind()
 
 		return Response(
 			 data={
 				'code': code,
 				'code_msg': 'ok',
-				# 'data' : record_to_dict(dr, ts=False)
+				'data' : record_to_dict(record_result_data, ts=False)
 			 }
 		)
 
@@ -181,19 +92,6 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 		user = request.user
 		data = {}
 		code = 0
-
-		if 'record' not in request.data or 'oldRecord' not in request.data:
-			raise exc_dns.DNSRecordNotInRequest
-
-		old_record_data = request.data['oldRecord']
-		record_data = request.data['record']
-
-		DNSRecordSerializer(self, old_record_data).is_valid(raise_exception=True)
-		DNSRecordSerializer(self, record_data).is_valid(raise_exception=True)
-
-		if 'type' not in record_data:
-			raise exc_dns.DNSRecordTypeMissing
-
 		required_values = [
 			'name',
 			'serial',
@@ -203,110 +101,47 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 			'index',
 			'record_bytes'
 		]
-		# Add the necessary fields for this Record Type to Required Fields
-		required_values.extend(RECORD_MAPPINGS[record_data['type']]['fields'])
 
-		for a in required_values:
-			if a not in record_data:
-				exception = exc_dns.DNSRecordDataMissing
-				data = {
-					"code": exception.default_code,
-					"attribute": a,
-				}
-				exception.set_detail(exception, data)
-				raise exception
+		if 'record' not in request.data or 'oldRecord' not in request.data:
+			raise exc_dns.DNSRecordNotInRequest
 
-		old_record_name = old_record_data['name'].lower()
-		record_name = record_data.pop('name').lower()
-		record_type = record_data.pop('type')
-		record_zone = record_data.pop('zone').lower()
-		record_index = record_data.pop('index')
-		record_bytes = record_data.pop('record_bytes')
-		record_bytes = convert_string_to_bytes(record_bytes)
+		old_record_data = request.data['oldRecord']
+		record_data = request.data['record']
 
-		if record_zone == 'Root DNS Servers':
-			raise exc_dns.DNSRootServersOnlyCLI
+		# Basic Serializer Validation
+		DNSRecordSerializer(self, old_record_data).is_valid(raise_exception=True)
+		DNSRecordSerializer(self, record_data).is_valid(raise_exception=True)
 
-		# ! Test record validation with the Mix-in
-		DNSRecordMixin.validate_record_data(self, record_data=old_record_data)
-		DNSRecordMixin.validate_record_data(self, record_data=record_data)
-
-		if (
-			isinstance(record_data['serial'], str)
-			or 
-      		record_data['serial'] == old_record_data['serial']
-		):
-			record_data.pop('serial')
+		# Regex Validate Old Record Data
+		DNSRecordMixin.validate_record_data(
+			self, 
+			record_data=old_record_data, 
+			required_values=required_values
+		)
+		# Regex Validate New Record Data
+		DNSRecordMixin.validate_record_data(
+			self, 
+			record_data=record_data, 
+			required_values=required_values
+		)
 
 		# Open LDAP Connection
 		try:
 			connector = LDAPConnector(user.dn, user.encryptedPassword, request.user)
-			ldapConnection = connector.connection
 		except Exception as e:
 			print(e)
 			raise exc_ldap.CouldNotOpenConnection
+		self.ldap_connection = connector.connection
 
-		# ! If Record Name is being changed create the new one and delete the old.
-		if old_record_name != record_name:
-			dnsRecord = LDAPRecord(
-				connection=ldapConnection,
-				rName=record_name,
-				rZone=record_zone,
-				rType=record_type
-			)
-			# Create new Record
-			result = dnsRecord.create(values=record_data)
-			if result['result'] == 0:
-				# Delete old DNSR after new one is created
-				dnsRecord.connection.modify(old_record_data['distinguishedName'], {'dnsRecord': [( MODIFY_DELETE, record_bytes )]})
-			else:
-				raise exc_dns.BaseException
-		else:
-			dnsRecord = LDAPRecord(
-				connection=ldapConnection,
-				rName=record_name,
-				rZone=record_zone,
-				rType=record_type
-			)
-			result = dnsRecord.update(
-				values=record_data,
-				old_record_values=old_record_data,
-				old_record_bytes=record_bytes
-			)
+		record_result_data = self.update_record(record_data=record_data, old_record_data=old_record_data)
 
-		#########################################
-		# Update Start of Authority Record Serial
-		if record_type != DNS_RECORD_TYPE_SOA:
-			try:
-				self.increment_soa_serial(dnsRecord.soa_object, dnsRecord.serial)
-			except:
-				logger.error(traceback.format_exc())
-				raise exc_dns.DNSCouldNotIncrementSOA
-
-		ldapConnection.unbind()
-
-		result = dnsRecord.structure.getData()
-		dr = dnstool.DNS_RECORD(result)
-
-		if record_name == "@":
-			affectedObject = record_zone + " (" + RECORD_MAPPINGS[record_type]['name'] + ")"
-		else:
-			affectedObject = record_name + "." + record_zone + " (" + RECORD_MAPPINGS[record_type]['name'] + ")"
-
-		if LDAP_LOG_UPDATE == True:
-			# Log this action to DB
-			logToDB(
-				user_id=request.user.id,
-				actionType="UPDATE",
-				objectClass="DNSR",
-				affectedObject=affectedObject
-			)
+		self.ldap_connection.unbind()
 
 		return Response(
 			 data={
 				'code': code,
 				'code_msg': 'ok',
-				'data' : record_to_dict(dr, ts=False)
+				'data' : record_to_dict(record_result_data, ts=False)
 			 }
 		)
 
@@ -316,42 +151,56 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 		user = request.user
 		data = {}
 		code = 0
+		required_values = [
+			'name',
+			'type',
+			'zone',
+			'ttl',
+			'index',
+			'record_bytes'
+		]
 
-		if 'record' in request.data:
-			mode = 'single'
-		elif 'records' in request.data:
-			mode = 'multiple'
-		else:
+		key = 'record'
+		if 'records' in request.data:
+			key = f"{key}s"
+		elif 'record' not in request.data:
 			raise exc_dns.DNSRecordNotInRequest
 
-		if mode == 'single':
-			if isinstance(request.data['record'], dict):
-				recordValues = request.data['record']
-			else:
+		record_data = request.data['record']
+		if key == 'record':
+			if not isinstance(request.data['record'], dict):
 				data = {
-					'mode': mode,
 					'data': request.data['record']
 				}
 				raise exc_dns.DNSRecordDataMalformed(data=data)
-		elif mode == 'multiple':
-			if isinstance(request.data['records'], list):
-				recordValues = request.data['records']
-			else:
+			DNSRecordMixin.validate_record_data(self, record_data=record_data, required_values=required_values)
+		elif key == 'records':
+			if not isinstance(request.data['records'], list):
 				data = {
-					'mode': mode,
 					'data': request.data['records']
 				}
 				raise exc_dns.DNSRecordDataMalformed
+			for r in record_data:
+				DNSRecordMixin.validate_record_data(self, record_data=r, required_values=required_values)
 
-		if isinstance(recordValues, dict):
-			logger.debug(recordValues)
-			result = self.delete_record(recordValues, user)
-		elif isinstance(recordValues, list):
+		# Open LDAP Connection
+		try:
+			connector = LDAPConnector(user.dn, user.encryptedPassword, user)
+		except Exception as e:
+			print(e)
+			raise exc_ldap.CouldNotOpenConnection
+		self.ldap_connection = connector.connection
+
+		if isinstance(record_data, dict):
+			logger.debug(record_data)
+			result = self.delete_record(record_data, user)
+		elif isinstance(record_data, list):
 			result = list()
-			for r in recordValues:
+			for r in record_data:
 				logger.debug(r)
 				result.append(self.delete_record(r, user))
 
+		self.ldap_connection.unbind()
 		return Response(
 			 data={
 				'code': code,
