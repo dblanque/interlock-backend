@@ -191,12 +191,12 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		code = 0
 		code_msg = 'ok'
 
-		ldapObject = data['ldapObject']
-		newPath = ldapObject['destination']
-		distinguishedName = ldapObject['distinguishedName']
+		ldap_object = data['ldapObject']
+		ldap_path = ldap_object['destination']
+		distinguishedName = ldap_object['distinguishedName']
 		
-		if 'name' in ldapObject:
-			objectName = ldapObject['name']
+		if 'name' in ldap_object:
+			objectName = ldap_object['name']
 		else:
 			objectName = distinguishedName
 
@@ -207,22 +207,22 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 
 		# Open LDAP Connection
 		try:
-			c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
+			self.ldap_connection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
 		except Exception as e:
 			print(e)
 			raise exc_ldap.CouldNotOpenConnection
 	
 		try:
-			c.modify_dn(distinguishedName, relativeDistinguishedName, new_superior=newPath)
+			self.ldap_connection.modify_dn(distinguishedName, relativeDistinguishedName, new_superior=ldap_path)
 		except Exception as e:
 			print(e)
 			data = {
-				"ldap_response": c.result,
+				"ldap_response": self.ldap_connection.result,
 				"ldapObject": objectName,
 			}
-			if c.result.description == "entryAlreadyExists":
+			if self.ldap_connection.result.description == "entryAlreadyExists":
 				data[''] = 409
-			c.unbind()
+			self.ldap_connection.unbind()
 			raise exc_dirtree.DirtreeMove(data=data)
 
 		if LDAP_LOG_UPDATE == True:
@@ -236,7 +236,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			)
 
 		# Close / Unbind LDAP Connection
-		c.unbind()
+		self.ldap_connection.unbind()
 		return Response(
 				data={
 				'code': code,
@@ -253,58 +253,58 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		code = 0
 		code_msg = 'ok'
 
-		ldapObject = data['ldapObject']
-		distinguishedName = ldapObject['distinguishedName']
+		ldap_object = data['ldapObject']
+		distinguished_name = ldap_object['distinguishedName']
 		
-		if 'name' in ldapObject:
-			objectName = ldapObject['name']
+		if 'name' in ldap_object:
+			objectName = ldap_object['name']
 		else:
-			objectName = distinguishedName
+			objectName = distinguished_name
 
-		relativeDistinguishedName = distinguishedName.split(",")[0]
-		newRDN = ldapObject['newRDN']
+		relative_distinguished_name = distinguished_name.split(",")[0]
+		new_rdn = ldap_object['newRDN']
 
-		if relativeDistinguishedName == newRDN:
+		if relative_distinguished_name == new_rdn:
 			raise exc_dirtree.DirtreeDistinguishedNameConflict
 
-		newRDN = str(distinguishedName).split("=")[0].lower() + "=" + newRDN
+		new_rdn = str(distinguished_name).split("=")[0].lower() + "=" + new_rdn
 
 		# Open LDAP Connection
 		try:
-			c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
+			self.ldap_connection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
 		except Exception as e:
 			print(e)
 			raise exc_ldap.CouldNotOpenConnection
 
 		try:
-			c.modify_dn(distinguishedName, newRDN)
+			self.ldap_connection.modify_dn(distinguished_name, new_rdn)
 		except Exception as e:
 			print(e)
 			data = {
-				"ldap_response": c.result,
+				"ldap_response": self.ldap_connection.result,
 				"ldapObject": objectName,
 			}
-			if c.result.description == "entryAlreadyExists":
+			if self.ldap_connection.result.description == "entryAlreadyExists":
 				data['code'] = 409
-			c.unbind()
+			self.ldap_connection.unbind()
 			raise exc_dirtree.DirtreeMove(data=data)
 
 		if LDAP_LOG_UPDATE == True:
-			if objectName != ldapObject['name']:
-				affectedObject = "%s -> %s" % (objectName, ldapObject['name'])
+			if objectName != ldap_object['name']:
+				affected_object = "%s -> %s" % (objectName, ldap_object['name'])
 			else:
-				affectedObject = objectName
+				affected_object = objectName
 			# Log this action to DB
 			logToDB(
 				user_id=request.user.id,
 				actionType="UPDATE",
 				objectClass="LDAP",
-				affectedObject=affectedObject,
+				affectedObject=affected_object,
 				extraMessage="RENAME"
 			)
 
 		# Close / Unbind LDAP Connection
-		c.unbind()
+		self.ldap_connection.unbind()
 		return Response(
 				data={
 				'code': code,
@@ -321,7 +321,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		code = 0
 		code_msg = 'ok'
 
-		ldapObject = data['ldapObject']
+		ldap_object = data['ldapObject']
 
 		fields = [
 			'name',
@@ -329,47 +329,47 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			'type'
 		]
 		for f in fields:
-			if f not in ldapObject:
+			if f not in ldap_object:
 				print(f + "not in LDAP Object")
 				print(data)
 				raise exc_ou.MissingField
 
-		objectName = ldapObject['name']
-		objectPath = ldapObject['path']
-		objectType = ldapObject['type']
+		object_name = ldap_object['name']
+		object_path = ldap_object['path']
+		object_type = ldap_object['type']
 
 		attributes = {
-			"name": objectName
+			"name": object_name
 		}
 
-		if objectType == 'ou' or objectType is None:
-			objectDistinguishedName = "OU=" + objectName + "," + objectPath
-			objectMain = ldapObject['ou']
-			objectType = "organizationalUnit"
-			attributes["ou"] = objectMain
+		if object_type == 'ou' or object_type is None:
+			object_dn = "OU=" + object_name + "," + object_path
+			object_main = ldap_object['ou']
+			object_type = "organizationalUnit"
+			attributes["ou"] = object_main
 		else:
-			objectDistinguishedName = "CN=" + objectName + "," + objectPath
+			object_dn = "CN=" + object_name + "," + object_path
 
 		# Open LDAP Connection
 		try:
-			c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
+			self.ldap_connection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
 		except Exception as e:
 			print(e)
 			raise exc_ldap.CouldNotOpenConnection
 
 		try:
-			c.add(objectDistinguishedName, objectType, attributes=attributes)
+			self.ldap_connection.add(object_dn, object_type, attributes=attributes)
 		except Exception as e:
-			print(f'Could not Add LDAP Object: {objectDistinguishedName}')
-			print(ldapObject)
+			print(f'Could not Add LDAP Object: {object_dn}')
+			print(ldap_object)
 			print(e)
 			data = {
-				"ldap_response": c.result,
-				"ldapObject": objectName,
+				"ldap_response": self.ldap_connection.result,
+				"ldapObject": object_name,
 			}
-			if c.result.description == "entryAlreadyExists":
+			if self.ldap_connection.result.description == "entryAlreadyExists":
 				data["code"] = 409
-			c.unbind()
+			self.ldap_connection.unbind()
 			raise exc_ou.OUCreate(data=data)
 
 		if LDAP_LOG_CREATE == True:
@@ -378,11 +378,11 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				user_id=request.user.id,
 				actionType="CREATE",
 				objectClass="OU",
-				affectedObject=objectName
+				affectedObject=object_name
 			)
 
 		# Close / Unbind LDAP Connection
-		c.unbind()
+		self.ldap_connection.unbind()
 		return Response(
 				data={
 				'code': code,
@@ -401,24 +401,24 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 
 		# Open LDAP Connection
 		try:
-			c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
+			self.ldap_connection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
 		except Exception as e:
 			print(e)
 			raise exc_ldap.CouldNotOpenConnection
 
-		objectToDelete = data['distinguishedName']
+		object_dn = data['distinguishedName']
 
-		if not objectToDelete or objectToDelete == "":
-			c.unbind()
+		if not object_dn or object_dn == "":
+			self.ldap_connection.unbind()
 			raise exc_ldap.LDAPObjectDoesNotExist
 		try:
-			c.delete(objectToDelete)
+			self.ldap_connection.delete(object_dn)
 		except Exception as e:
-			c.unbind()
+			self.ldap_connection.unbind()
 			print(e)
-			print(f'Could not delete LDAP Object: {objectToDelete}')
+			print(f'Could not delete LDAP Object: {object_dn}')
 			data = {
-				"ldap_response": c.result
+				"ldap_response": self.ldap_connection.result
 			}
 			raise exc_ldap.BaseException(data=data)
 
@@ -432,7 +432,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			)
 
 		# Unbind the connection
-		c.unbind()
+		self.ldap_connection.unbind()
 		return Response(
 			 data={
 				'code': code,
