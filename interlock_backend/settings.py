@@ -61,7 +61,7 @@ if FERNET_KEY is None or len(str(FERNET_KEY)) < 1:
 DJANGO_SUPERUSER_USERNAME = 'admin'
 DJANGO_SUPERUSER_PASSWORD = 'interlock'
 
-#// SECURITY WARNING: don't run with debug turned on in production!
+# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
 ALLOW_ALL_HOSTS = ['*']
