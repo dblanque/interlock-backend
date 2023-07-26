@@ -696,6 +696,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			self.ldap_connection.unbind()
 			pass
 		if django_user:
+			django_user.encryptedPassword = ""
 			django_user.set_unusable_password()
 			django_user.save()
 
@@ -854,6 +855,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			self.ldap_connection.unbind()
 			pass
 		if django_user:
+			django_user.encryptedPassword = ""
 			django_user.set_unusable_password()
 			django_user.save()
 
