@@ -37,6 +37,10 @@ class UserDoesNotExist(BaseException):
     status_code = 400
     default_detail = 'User Distinguished Name does not exist'
     default_code = 'user_dn_does_not_exist'
+class UserDNPathException(BaseException):
+    status_code = 400
+    default_detail = 'User DN Path Parsing Stage Exception'
+    default_code = 'user_dn_path_exception'
 class CouldNotUnlockUser(BaseException):
     status_code = 500
     default_detail = 'User could not be unlocked'

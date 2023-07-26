@@ -113,6 +113,28 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		group = LDAPObject(**args)
 		return group.attributes
 
+	def calc_perms_from_list(self, permission_list=list()):
+		user_perms = 0
+		if len(permission_list) > 0:
+			# Add permissions selected in user creation
+			for perm in permission_list:
+				permValue = int(ldap_adsi.LDAP_PERMS[perm]['value'])
+				try:
+					user_perms += permValue
+					logger.debug("Located in: "+__name__+".insert")
+					logger.debug("Permission Value added (cast to string): " + str(permValue))
+				except Exception as error:
+					# If there's an error unbind the connectioön and print traceback
+					self.ldap_connection.unbind()
+					print(traceback.format_exc())
+					raise exc_user.UserPermissionError # Return error code to client
+
+		# Add Normal Account permission to list
+		user_perms += ldap_adsi.LDAP_PERMS['LDAP_UF_NORMAL_ACCOUNT']['value']
+		logger.debug("Final User Permissions Value: " + str(user_perms))
+		return user_perms
+
+
 	def ldap_user_list(self) -> dict:
 		"""
 		Returns dictionary with the following keys:
@@ -198,43 +220,34 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 	
 	def ldap_user_insert(
 			self,
-			data,
+			user_data,
 			exclude_keys: list = None,
-			return_exception: bool = True
+			return_exception: bool = True,
+			key_mapping: dict = None
 		) -> str:
 		"""
 		Returns User LDAP Distinguished Name on successful insert.
 		"""
 		# TODO Check by authUsernameIdentifier and CN
 		# TODO Add customizable default user path
-		if data['path'] is not None and data['path'] != "":
-			user_dn = 'CN='+data['username']+','+data['path']
-		else:
-			user_dn = 'CN='+data['username']+',OU=Users,'+LDAP_AUTH_SEARCH_BASE
-		user_perms = 0
+		try:
+			if 'path' in user_data and user_data['path'] is not None and user_data['path'] != "":
+				user_dn = 'CN='+user_data['username']+','+user_data['path']
+				user_data.pop('path')
+			else:
+				user_dn = 'CN='+user_data['username']+',OU=Users,'+LDAP_AUTH_SEARCH_BASE
+		except:
+			raise exc_user.UserDNPathException
 
-		# Add permissions selected in user creation
-		for perm in data['permission_list']:
-			permValue = int(ldap_adsi.LDAP_PERMS[perm]['value'])
-			try:
-				user_perms += permValue
-				logger.debug("Located in: "+__name__+".insert")
-				logger.debug("Permission Value added (cast to string): " + str(permValue))
-			except Exception as error:
-				# If there's an error unbind the connection and print traceback
-				self.ldap_connection.unbind()
-				print(traceback.format_exc())
-				raise exc_user.UserPermissionError # Return error code to client
-
-		# Add Normal Account permission to list
-		user_perms += ldap_adsi.LDAP_PERMS['LDAP_UF_NORMAL_ACCOUNT']['value']
-		logger.debug("Final User Permissions Value: " + str(user_perms))
 
 		arguments = dict()
-		arguments['userAccountControl'] = user_perms
-		arguments[LDAP_AUTH_USERNAME_IDENTIFIER] = str(data['username']).lower()
+		if 'permission_list' in user_data:
+			arguments['userAccountControl'] = self.calc_perms_from_list(user_data['permission_list'])
+		else:
+			arguments['userAccountControl'] = self.calc_perms_from_list()
+		arguments[LDAP_AUTH_USERNAME_IDENTIFIER] = str(user_data['username']).lower()
 		arguments['objectClass'] = ['top', 'person', 'organizationalPerson', 'user']
-		arguments['userPrincipalName'] = data['username'] + '@' + LDAP_DOMAIN
+		arguments['userPrincipalName'] = user_data['username'] + '@' + LDAP_DOMAIN
 
 		if not exclude_keys:
 			exclude_keys = [
@@ -246,24 +259,31 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				'username' # LDAP Uses sAMAccountName
 			]
 
-		for key in data:
-			if key not in exclude_keys:
+		for key in user_data:
+			if key not in exclude_keys and len(str(user_data[key])) > 0:
 				logger.debug("Key in data: " + key)
-				logger.debug("Value for key above: " + data[key])
-				arguments[key] = data[key]
+				logger.debug("Value for key above: " + user_data[key])
+				if key_mapping and key in key_mapping.values():
+					for lk in key_mapping: 
+						if key_mapping[lk] == key:
+							ldap_key = lk
+							break
+					arguments[ldap_key] = user_data[key]
+				else:
+					arguments[key] = user_data[key]
 
 		logger.debug(f'Creating user in DN Path: {user_dn}')
 		try:
 			self.ldap_connection.add(user_dn, LDAP_AUTH_OBJECT_CLASS, attributes=arguments)
 		except Exception as e:
-			self.ldap_connection.unbind()
+			logger.error(e)
+			logger.error(f'Could not create User: {user_dn}')
 			if return_exception:
-				print(e)
-				print(f'Could not create User: {user_dn}')
-				data = {
+				self.ldap_connection.unbind()
+				user_data = {
 					"ldap_response": self.ldap_connection.result
 				}
-				raise exc_user.UserCreate(data=data)
+				raise exc_user.UserCreate(data=user_data)
 			return None
 
 		if LDAP_LOG_CREATE == True:
@@ -272,7 +292,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				user_id=self.request.user.id,
 				actionType="CREATE",
 				objectClass="USER",
-				affectedObject=data['username']
+				affectedObject=user_data['username']
 			)
 
 		return user_dn
@@ -425,7 +445,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			raise exc_user.UserUpdateError(data=data)
 		return self.ldap_connection
 
-	def ldap_user_exists(self, user_search: str, return_exception: bool = True) -> LDAPConnector:
+	def ldap_user_exists(self, user_search: str, return_exception: bool = True):
 		"""
 		### Checks if LDAP User Exists on Directory
 		Returns the used LDAP Connection
@@ -452,12 +472,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			}
 			exception.set_detail(exception, data)
 			raise exception
-		elif not return_exception:
-			if user != []:
-				return True
-			else:
-				return False
-		return self.ldap_connection
+		elif user != [] and not return_exception:
+			return True
+		return False
 
 	def ldap_user_fetch(self, user_search):
 		# Exclude Computer Accounts if settings allow it
@@ -536,6 +553,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 	def ldap_user_enable(self, user_object):
 		user_to_enable = user_object['username']
+		self.ldap_filter_object = ""
 
 		# Exclude Computer Accounts if settings allow it
 		if EXCLUDE_COMPUTER_ACCOUNTS == True:
@@ -583,6 +601,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 	def ldap_user_disable(self, user_object):
 		user_to_disable = user_object['username']
+		self.ldap_filter_object = ""
 
 		# Exclude Computer Accounts if settings allow it
 		if EXCLUDE_COMPUTER_ACCOUNTS == True:

@@ -230,14 +230,18 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			'distinguishedName',
 			'userPrincipalName',
 		]
-		########################################################################
-
+		mapped_user_key = header_mapping[ldap_user.USERNAME]
+		if user_placeholder_password:
+			mapped_pwd_key = ldap_user.PASSWORD
+		else:
+			mapped_pwd_key = header_mapping[ldap_user.PASSWORD]
 		exclude_keys = [
 			mapped_user_key, # LDAP Uses sAMAccountName
 			mapped_pwd_key,
 			'permission_list', # This array was parsed and calculated, then changed to userAccountControl
 			'distinguishedName', # We don't want the front-end generated DN
 		]
+		########################################################################
 
 		# Check if data has a requested placeholder_password
 		required_fields = ['username']
@@ -261,12 +265,6 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		# Validate all usernames before opening connection
 		for row in user_list:
-			mapped_user_key = header_mapping[ldap_user.USERNAME]
-			if user_placeholder_password:
-				mapped_pwd_key = ldap_user.PASSWORD
-			else:
-				mapped_pwd_key = header_mapping[ldap_user.PASSWORD]
-
 			if len(row) != len(user_headers):
 				exception = exc_user.UserBulkInsertLengthError
 				data = {
@@ -299,12 +297,18 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		for row in user_list:
 			user_search = row[mapped_user_key]
+			row['path'] = user_path
 
 			if self.ldap_user_exists(user_search=user_search):
 				skipped_users.append(row[mapped_user_key])
 				continue
 
-			user_dn = self.ldap_user_insert(data=data, exclude_keys=exclude_keys, return_exception=False)
+			user_dn = self.ldap_user_insert(
+				user_data=row,
+				exclude_keys=exclude_keys,
+				return_exception=False,
+				key_mapping=header_mapping
+			)
 			if not user_dn:
 				failed_users.append({'username': row[mapped_user_key], 'stage': 'permission'})
 				continue
@@ -313,7 +317,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			if user_placeholder_password:
 				row[mapped_pwd_key] = user_placeholder_password
 				set_pwd = True
-			elif data['password'] and len(data['password']) > 0:
+			elif 'password' in data and len(data['password']) > 0:
 				row[mapped_pwd_key] = data['password']
 				set_pwd = True
 
