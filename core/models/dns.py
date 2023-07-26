@@ -176,6 +176,13 @@ class LDAPRecord(LDAPDNS):
 
 	def __connection__(self):
 		return self.connection
+	
+	def __fullname__(self):		
+		if self.name == "@":
+			return f"{self.zone} ({RECORD_MAPPINGS[self.type]['name']})"
+		else:
+			return f"{self.name}.{self.zone} ({RECORD_MAPPINGS[self.type]['name']})"
+
 
 	def make_record_bytes(self, values, serial, ttl=180):
 		## Check if class type is supported for creation ##
