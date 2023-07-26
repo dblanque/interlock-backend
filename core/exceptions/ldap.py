@@ -6,6 +6,10 @@ class LDAPObjectExists(BaseException):
     status_code = 409
     default_detail = 'An object with this Common Name already exists'
     default_code = 'ldap_obj_exists'
+class LDAPConnectionNotOpen(BaseException):
+    status_code = 500
+    default_detail = 'No LDAP Connection was open prior to this operation'
+    default_code = 'ldap_connection_not_open'
 
 class LDAPPermissionsInsufficient(BaseException):
     status_code = 400
