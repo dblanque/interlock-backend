@@ -172,7 +172,7 @@ def search_filter_add(filter_string, filter_to_add, operator="&", negate=False):
         suffix = ")"
 
     if operator != "&" and operator != "|" and filter_string != "":
-        raise Exception
+        raise Exception(f"Invalid Filter Operator {operator}")
     if not filter_string or filter_string == "":
         newFilter = prefix + filter_to_add + suffix
         return newFilter
