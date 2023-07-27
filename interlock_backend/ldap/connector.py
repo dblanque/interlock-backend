@@ -29,30 +29,46 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def recursive_member_search(user_dn: str, connection, group_dn: str = ADMIN_GROUP_TO_SEARCH):
+    # Add filter for username
+    ldap_filter_object = ""
+    ldap_filter_object = search_filter_add(ldap_filter_object, f"distinguishedName={group_dn}")
+    ldap_filter_object = search_filter_add(ldap_filter_object, f"objectClass=group")
+    try:
+        connection.search(
+            LDAP_AUTH_SEARCH_BASE, 
+            ldap_filter_object, 
+            attributes=['member', 'objectClass', 'distinguishedName']
+        )
+    except:
+        raise
+    for e in connection.entries:
+        if 'group' in e.objectClass:
+            if user_dn in e.member: return True
+            for dn in e.member:
+                r = recursive_member_search(group_dn=dn, user_dn=user_dn, connection=connection)
+                if r == True: return r
+    return False
+
 def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
-    GROUP_TO_SEARCH = ADMIN_GROUP_TO_SEARCH
+    user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
     if 'Administrator' in ldap_attributes[LDAP_AUTH_USER_FIELDS["username"]]:
         user.is_staff = True
         user.is_superuser = True
-        user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
         user.save()
-        pass
-    elif 'memberOf' in ldap_attributes and GROUP_TO_SEARCH in ldap_attributes['memberOf']:
+    elif recursive_member_search(user_dn=user.dn, connection=connection):
         # Do staff shit here
         user.is_staff = True
         user.is_superuser = True
         if user.email is not None and 'mail' in ldap_attributes:
             user.email = str(ldap_attributes['mail']).lstrip("['").rstrip("']") or ""
-        user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
         user.save()
     else:
         user.is_staff = True
         user.is_superuser = False
         if user.email is not None and 'mail' in ldap_attributes:
             user.email = str(ldap_attributes['mail']).lstrip("['").rstrip("']") or ""
-        user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
         user.save()
-    pass
 
 def authenticate(*args, **kwargs):
     """
@@ -252,14 +268,12 @@ class LDAPConnector(object):
         The user identifier should be keyword arguments matching the fields
         in settings.LDAP_AUTH_USER_LOOKUP_FIELDS.
         """
-        ldapAuthSearchBase = LDAP_AUTH_SEARCH_BASE
-        ldapAuthUserFields = LDAP_AUTH_USER_FIELDS
         searchFilter = ""
         for i in LDAP_AUTH_USER_LOOKUP_FIELDS:
-            searchFilter = search_filter_add(searchFilter, ldapAuthUserFields[i]+"="+kwargs['username'], '|')
+            searchFilter = search_filter_add(searchFilter, LDAP_AUTH_USER_FIELDS[i]+"="+kwargs['username'], '|')
         # Search the LDAP database.
         if self.connection.search(
-            search_base=ldapAuthSearchBase,
+            search_base=LDAP_AUTH_SEARCH_BASE,
             search_filter=searchFilter,
             search_scope=ldap3.SUBTREE,
             attributes=ldap3.ALL_ATTRIBUTES,
