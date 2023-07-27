@@ -239,7 +239,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 					memberAttributes = [
 						'cn',
 						'distinguishedName',
-						LDAP_AUTH_USERNAME_IDENTIFIER,
+						LDAP_AUTH_USER_FIELDS["username"],
 						'givenName',
 						'sn',
 						'objectCategory',

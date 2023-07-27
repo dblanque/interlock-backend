@@ -8,7 +8,7 @@
 
 #---------------------------------- IMPORTS -----------------------------------#
 ### Exceptions
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, BadRequest
 from core.exceptions import (
 	base as exc_base,
 	users as exc_user, 
@@ -67,7 +67,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			"givenName",
 			"sn",
 			"displayName",
-			LDAP_AUTH_USERNAME_IDENTIFIER,
+			LDAP_AUTH_USER_FIELDS["username"],
 			"mail",
 			"distinguishedName",
 			"userAccountControl"
@@ -110,7 +110,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			'givenName', 
 			'sn', 
 			'displayName', 
-			LDAP_AUTH_USERNAME_IDENTIFIER, 
+			LDAP_AUTH_USER_FIELDS["username"], 
 			'mail',
 			'telephoneNumber',
 			'streetAddress',
@@ -187,7 +187,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		self.ldap_user_exists(user_search=user_search)
 
-		user_dn = self.ldap_user_insert(data=data)
+		user_dn = self.ldap_user_insert(user_data=data)
 		user_pwd = data['password']
 
 		self.set_ldap_password(user_dn=user_dn, user_pwd=user_pwd)
@@ -226,7 +226,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		######################## Set LDAP Attributes ###########################
 		self.ldap_filter_attr = [
-			LDAP_AUTH_USERNAME_IDENTIFIER,
+			LDAP_AUTH_USER_FIELDS["username"],
 			'distinguishedName',
 			'userPrincipalName',
 		]
@@ -360,7 +360,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		######################## Set LDAP Attributes ###########################
 		self.ldap_filter_attr = [
-			LDAP_AUTH_USERNAME_IDENTIFIER,
+			LDAP_AUTH_USER_FIELDS["username"],
 			'distinguishedName',
 			'userPrincipalName',
 			'userAccountControl',
@@ -436,12 +436,12 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		data = request_data["users"]
 
 		if not isinstance(disable_users, bool) or not isinstance(data, list):
-			raise exc_base.BaseException
+			raise BadRequest
 
 		######################## Set LDAP Attributes ###########################
 		self.ldap_filter_object = "(objectclass=" + LDAP_AUTH_OBJECT_CLASS + ")"
 		self.ldap_filter_attr = [
-			LDAP_AUTH_USERNAME_IDENTIFIER,
+			LDAP_AUTH_USER_FIELDS["username"],
 			'distinguishedName',
 			'userPrincipalName',
 			'userAccountControl',
@@ -491,15 +491,21 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code_msg = 'ok'
 		data = request.data
 
+		if 'username' not in data:
+			raise BadRequest
+
 		######################## Set LDAP Attributes ###########################
 		self.ldap_filter_object = "(objectclass=" + LDAP_AUTH_OBJECT_CLASS + ")"
 		self.ldap_filter_attr = [
-			LDAP_AUTH_USERNAME_IDENTIFIER,
+			LDAP_AUTH_USER_FIELDS["username"],
 			'distinguishedName',
 			'userPrincipalName',
 			'userAccountControl'
 		]
 		########################################################################
+
+		if data['username'] == self.request.user: 
+			raise exc_user.UserAntiLockout
 
 		# Open LDAP Connection
 		try:
@@ -534,7 +540,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		######################## Set LDAP Attributes ###########################
 		self.ldap_filter_object = "(objectclass=" + LDAP_AUTH_OBJECT_CLASS + ")"
 		self.ldap_filter_attr = [
-			LDAP_AUTH_USERNAME_IDENTIFIER,
+			LDAP_AUTH_USER_FIELDS["username"],
 			'distinguishedName',
 			'userPrincipalName',
 			'userAccountControl'
@@ -588,8 +594,8 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			raise
 
 		username = data['username']
-		if LDAP_AUTH_USERNAME_IDENTIFIER in data:
-			username = data[LDAP_AUTH_USERNAME_IDENTIFIER]
+		if LDAP_AUTH_USER_FIELDS["username"] in data:
+			username = data[LDAP_AUTH_USER_FIELDS["username"]]
 		
 		userToDelete = None
 		try:
@@ -622,7 +628,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			raise exc_base.BaseException
 
 		self.ldap_settings = {
-			"authUsernameIdentifier": LDAP_AUTH_USERNAME_IDENTIFIER
+			"authUsernameIdentifier": LDAP_AUTH_USER_FIELDS["username"]
 		}
 
 		# Open LDAP Connection
@@ -823,7 +829,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			raise exc_ldap.CouldNotOpenConnection
 
 		ldap_user_search = user.username
-		self.get_user_object(ldap_user_search, attributes=[LDAP_AUTH_USERNAME_IDENTIFIER, 'distinguishedName', 'userAccountControl'])
+		self.get_user_object(ldap_user_search, attributes=[LDAP_AUTH_USER_FIELDS["username"], 'distinguishedName', 'userAccountControl'])
 		ldapUser = self.ldap_connection.entries
 
 		if 'distinguishedName' in data.keys() and data['distinguishedName'] != "":
@@ -836,7 +842,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			distinguishedName = str(ldapUser[0].distinguishedName)
 			logger.debug(distinguishedName)
 
-		if ldap_adsi.list_user_perms(ldapUser[0], permissionToSearch="LDAP_UF_PASSWD_CANT_CHANGE"):
+		if ldap_adsi.list_user_perms(user=ldapUser[0], perm_search="LDAP_UF_PASSWD_CANT_CHANGE"):
 			raise PermissionDenied
 
 		if not distinguishedName or distinguishedName == "":
@@ -894,7 +900,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		# Get basic attributes for this user from AD to compare query and get dn
 		self.ldap_filter_attr = [
-			LDAP_AUTH_USERNAME_IDENTIFIER,
+			LDAP_AUTH_USER_FIELDS["username"],
 			'distinguishedName',
 			'userPrincipalName',
 			'userAccountControl',
@@ -1022,7 +1028,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			'givenName', 
 			'sn', 
 			'displayName', 
-			LDAP_AUTH_USERNAME_IDENTIFIER, 
+			LDAP_AUTH_USER_FIELDS["username"], 
 			'mail',
 			'telephoneNumber',
 			'streetAddress',
@@ -1046,7 +1052,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		self.ldap_filter_object = "(objectclass=" + LDAP_AUTH_OBJECT_CLASS + ")"
 
 		# Add filter for username
-		self.ldap_filter_object = ldap_adsi.search_filter_add(self.ldap_filter_object, LDAP_AUTH_USERNAME_IDENTIFIER + "=" + user_search)
+		self.ldap_filter_object = ldap_adsi.search_filter_add(self.ldap_filter_object, LDAP_AUTH_USER_FIELDS["username"] + "=" + user_search)
 		self.ldap_connection.search(
 			LDAP_AUTH_SEARCH_BASE,
 			self.ldap_filter_object,
@@ -1066,12 +1072,12 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 					user_data[str_key] = ""
 				else:
 					user_data[str_key] = str_value
-			if attr_key == LDAP_AUTH_USERNAME_IDENTIFIER:
+			if attr_key == LDAP_AUTH_USER_FIELDS["username"]:
 				user_data['username'] = str_value
 
 			# Check if user can change password based on perms
 			user_data['can_change_pwd'] = False
-			if not ldap_adsi.list_user_perms(user_entry[0], permissionToSearch="LDAP_UF_PASSWD_CANT_CHANGE"):
+			if not ldap_adsi.list_user_perms(user=user_entry[0], perm_search="LDAP_UF_PASSWD_CANT_CHANGE"):
 				user_data['can_change_pwd'] = True
 
 		# Close / Unbind LDAP Connection

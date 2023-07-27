@@ -49,7 +49,7 @@ class LDAPTree():
         self.name = LDAP_AUTH_SEARCH_BASE
         self.searchBase = LDAP_AUTH_SEARCH_BASE
         self.connection = kwargs.pop('connection')
-        self.usernameIdentifier = LDAP_AUTH_USERNAME_IDENTIFIER
+        self.usernameIdentifier = LDAP_AUTH_USER_FIELDS["username"]
         self.subobjectId = 0
         self.excludedLdapAttributes = [
             'objectGUID',

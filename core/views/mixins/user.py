@@ -14,6 +14,7 @@ from rest_framework import viewsets
 from interlock_backend.ldap.adsi import search_filter_add
 from interlock_backend.ldap.constants_cache import *
 from interlock_backend.ldap import adsi as ldap_adsi
+from interlock_backend.ldap.user_flags import LDAP_UF_NORMAL_ACCOUNT
 from interlock_backend.ldap.accountTypes import LDAP_ACCOUNT_TYPES
 
 ### Models
@@ -64,11 +65,11 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		# Add filter for username
 		filter = search_filter_add(
 			filter,
-			LDAP_AUTH_USERNAME_IDENTIFIER + "=" + username
+			LDAP_AUTH_USER_FIELDS["username"] + "=" + username
 			)
 		return filter
 
-	def get_user_object(self, username, attributes=[LDAP_AUTH_USERNAME_IDENTIFIER, 'distinguishedName'], object_class_filter=None):
+	def get_user_object(self, username, attributes=[LDAP_AUTH_USER_FIELDS["username"], 'distinguishedName'], object_class_filter=None):
 		""" Default: Search for the dn from a username string param.
 		
 		Can also be used to fetch entire object from that username string or filtered attributes.
@@ -134,7 +135,6 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		logger.debug("Final User Permissions Value: " + str(user_perms))
 		return user_perms
 
-
 	def ldap_user_list(self) -> dict:
 		"""
 		Returns dictionary with the following keys:
@@ -197,7 +197,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 						user_dict[str_key] = ""
 					else:
 						user_dict[str_key] = str_value
-				if attr_key == LDAP_AUTH_USERNAME_IDENTIFIER:
+				if attr_key == LDAP_AUTH_USER_FIELDS["username"]:
 					user_dict['username'] = str_value
 
 			# Add entry DN to response dictionary
@@ -206,7 +206,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			# Check if user is disabled
 			user_dict['is_enabled'] = True
 			try:
-				if ldap_adsi.list_user_perms(user, permissionToSearch="LDAP_UF_ACCOUNT_DISABLE"):
+				if ldap_adsi.list_user_perms(user=user, perm_search="LDAP_UF_ACCOUNT_DISABLE"):
 					user_dict['is_enabled'] = False
 			except Exception as e:
 				print(e)
@@ -245,7 +245,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			arguments['userAccountControl'] = self.calc_perms_from_list(user_data['permission_list'])
 		else:
 			arguments['userAccountControl'] = self.calc_perms_from_list()
-		arguments[LDAP_AUTH_USERNAME_IDENTIFIER] = str(user_data['username']).lower()
+		arguments[LDAP_AUTH_USER_FIELDS["username"]] = str(user_data['username']).lower()
 		arguments['objectClass'] = ['top', 'person', 'organizationalPerson', 'user']
 		arguments['userPrincipalName'] = user_data['username'] + '@' + LDAP_DOMAIN
 
@@ -302,7 +302,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			user_dn: str,
 			user_name: str,
 			user_data: dict,
-			permissions_list: list = []
+			permissions_list: list = None
 		) -> LDAPConnector:
 		"""
 		### Updates LDAP User with provided data
@@ -315,7 +315,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			user_data['lockoutTime'] = 30 
 		
 		################# START NON-STANDARD ARGUMENT UPDATES ##################
-		if len(permissions_list) > 1:
+		if permissions_list:
 			try:
 				new_permissions_int = ldap_adsi.calc_permissions(permissions_list)
 			except:
@@ -327,7 +327,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			logger.debug("New Permission Integer (cast to String):" + str(new_permissions_int))
 			user_data['userAccountControl'] = new_permissions_int
 		else:
-			del user_data['userAccountControl']
+			user_data['userAccountControl'] = LDAP_UF_NORMAL_ACCOUNT
 
 		if 'co' in user_data and user_data['co'] != "" and user_data['co'] != 0:
 			try:
@@ -452,7 +452,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		"""
 		# Send LDAP Query for user being created to see if it exists
 		ldap_attributes = [
-			LDAP_AUTH_USERNAME_IDENTIFIER,
+			LDAP_AUTH_USER_FIELDS["username"],
 			'distinguishedName',
 			'userPrincipalName',
 		]
@@ -482,7 +482,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			self.ldap_filter_object = ldap_adsi.search_filter_add(self.ldap_filter_object, "!(objectclass=computer)")
 
 		# Add filter for username
-		self.ldap_filter_object = ldap_adsi.search_filter_add(self.ldap_filter_object, LDAP_AUTH_USERNAME_IDENTIFIER + "=" + user_search)
+		self.ldap_filter_object = ldap_adsi.search_filter_add(self.ldap_filter_object, LDAP_AUTH_USER_FIELDS["username"] + "=" + user_search)
 		
 		user_obj = LDAPObject(**{
 			"connection": self.ldap_connection,
@@ -529,7 +529,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		# Check if user is disabled
 		user_dict['is_enabled'] = True
 		try:
-			if ldap_adsi.list_user_perms(user_entry, permissionToSearch="LDAP_UF_ACCOUNT_DISABLE", isObject=False):
+			if ldap_adsi.list_user_perms(user=user_entry, perm_search="LDAP_UF_ACCOUNT_DISABLE", user_is_object=False):
 				user_dict['is_enabled'] = False
 		except Exception as e:
 			print(e)
@@ -537,7 +537,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		# Check if user is disabled
 		try:
-			userPermissions = ldap_adsi.list_user_perms(user_entry, permissionToSearch=None, isObject=False)
+			userPermissions = ldap_adsi.list_user_perms(user=user_entry, perm_search=None, user_is_object=False)
 			user_dict['permission_list'] = userPermissions
 		except Exception as e:
 			print(e)
@@ -562,7 +562,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		# Add filter for username
 		self.ldap_filter_object = ldap_adsi.search_filter_add(
 			self.ldap_filter_object, 
-			LDAP_AUTH_USERNAME_IDENTIFIER + "=" + user_to_enable
+			LDAP_AUTH_USER_FIELDS["username"] + "=" + user_to_enable
 			)
 
 		self.ldap_connection.search(
@@ -573,10 +573,10 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		user = self.ldap_connection.entries
 		dn = str(user[0].distinguishedName)
-		permList = ldap_adsi.list_user_perms(user[0], isObject=False)
+		permList = ldap_adsi.list_user_perms(user=user[0], user_is_object=False)
 		
 		try:
-			newPermINT = ldap_adsi.calc_permissions(permList, removePerm='LDAP_UF_ACCOUNT_DISABLE')
+			newPermINT = ldap_adsi.calc_permissions(permList, perm_remove='LDAP_UF_ACCOUNT_DISABLE')
 		except:
 			print(traceback.format_exc())
 			self.ldap_connection.unbind()
@@ -610,7 +610,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		# Add filter for username
 		self.ldap_filter_object = ldap_adsi.search_filter_add(
 			self.ldap_filter_object, 
-			LDAP_AUTH_USERNAME_IDENTIFIER + "=" + user_to_disable
+			LDAP_AUTH_USER_FIELDS["username"] + "=" + user_to_disable
 			)
 
 		self.ldap_connection.search(
@@ -621,10 +621,12 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		user = self.ldap_connection.entries
 		dn = str(user[0].distinguishedName)
-		permList = ldap_adsi.list_user_perms(user[0], isObject=False)
+		permList = ldap_adsi.list_user_perms(user=user[0], user_is_object=False)
+
+		if dn == LDAP_AUTH_CONNECTION_USER_DN: raise exc_user.UserAntiLockout
 
 		try:
-			newPermINT = ldap_adsi.calc_permissions(permList, addPerm='LDAP_UF_ACCOUNT_DISABLE')
+			newPermINT = ldap_adsi.calc_permissions(permList, perm_add='LDAP_UF_ACCOUNT_DISABLE')
 		except:
 			print(traceback.format_exc())
 			self.ldap_connection.unbind()
@@ -681,8 +683,8 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		return self.ldap_connection
 	
 	def ldap_user_delete(self, user_object):
-		if LDAP_AUTH_USERNAME_IDENTIFIER in user_object:
-			user_name = user_object[LDAP_AUTH_USERNAME_IDENTIFIER]
+		if LDAP_AUTH_USER_FIELDS["username"] in user_object:
+			user_name = user_object[LDAP_AUTH_USER_FIELDS["username"]]
 		elif 'username' in user_object:
 			user_name = user_object['username']
 		else:

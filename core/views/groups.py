@@ -135,7 +135,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 		group_data = data['group']
 		#Make sure Group doesn't exist check with CN and authUserField
 		self.ldap_filter_object = search_filter_add("", "cn="+group_data['cn'])
-		self.ldap_filter_object = search_filter_add(self.ldap_filter_object, LDAP_AUTH_USERNAME_IDENTIFIER+"="+group_data['cn'], "|")
+		self.ldap_filter_object = search_filter_add(self.ldap_filter_object, LDAP_AUTH_USER_FIELDS["username"]+"="+group_data['cn'], "|")
 
 		# Send LDAP Query for user being created to see if it exists
 		self.ldap_filter_attr = [
