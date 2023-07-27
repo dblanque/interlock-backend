@@ -41,6 +41,10 @@ class UserDNPathException(BaseException):
     status_code = 400
     default_detail = 'User DN Path Parsing Stage Exception'
     default_code = 'user_dn_path_exception'
+class UserAntiLockout(BaseException):
+    status_code = 406
+    default_detail = 'User Anti-lockout Exception, Unacceptable Operation'
+    default_code = 'user_anti_lockout'
 class CouldNotUnlockUser(BaseException):
     status_code = 500
     default_detail = 'User could not be unlocked'
