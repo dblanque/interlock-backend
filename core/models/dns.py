@@ -97,14 +97,13 @@ class LDAPRecord(LDAPDNS):
 		self.zone = rZone
 		self.zoneType = zoneType
 		self.type = rType
-		self.distinguishedName = "DC=%s,DC=%s,%s" % (self.name, self.zone, self.dnsroot)
+		self.distinguishedName = f"DC={self.name},DC={self.zone},{self.dnsroot}"
 		self.fetch()
 
 	def fetch(self):
 		if self.zone not in self.dnszones:
-			msg = "Target zone (%s) is not in the LDAP Server DNS List" % (self.zone)
 			logger.debug(self.dnszones)
-			raise Exception(msg)
+			raise Exception(f"Target zone ({self.zone}) is not in the LDAP Server DNS List")
 
 		if self.name.endswith(self.zone) or self.zone in self.name:
 			raise exc_dns.DNSZoneInRecord
@@ -113,7 +112,7 @@ class LDAPRecord(LDAPDNS):
 		searchFilter = search_filter_add(searchFilter, "distinguishedName=" + self.distinguishedName)
 		attributes=['dnsRecord','dNSTombstoned','name']
 
-		search_target = 'DC=%s,%s' % (self.zone, self.dnsroot)
+		search_target = f"DC={self.zone},{self.dnsroot}"
 		self.connection.search(
 			search_base=search_target,
 			search_filter=searchFilter,
@@ -159,20 +158,18 @@ class LDAPRecord(LDAPDNS):
 
 	def __attributes__(self):
 		# Exclude specific keys from self record attributes
-		excludedKeys = [
+		excluded_keys = [
 			'rawEntry',
 			'connection',
 			'ldap_info'
 		]
-		return [v for v in self.__dict__.keys() if v not in excludedKeys]
+		return [v for v in self.__dict__.keys() if v not in excluded_keys]
 
-	def __printAttributes__(self, printRawData=False):
-		if printRawData == True:
-			msg = "%s: %s" % ('rawEntry', self.rawEntry)
-			print(msg)
-		for attr in self.__attributes__():
-			msg = "%s: %s" % (attr, str(getattr(self, attr)))
-			print(msg)
+	def __printAttributes__(self, print_raw_data=False):
+		if print_raw_data == True:
+			print(f"rawEntry: {self.rawEntry}")
+		for a in self.__attributes__():
+			print(f"{a}: {str(getattr(self, a))}")
 
 	def __connection__(self):
 		return self.connection
