@@ -194,12 +194,6 @@ def bin_as_hex(value):
     casted_bin = hex(casted_bin)[2:].zfill(4)
     return str("0x" + casted_bin)
 
-def check_perm_in_list(permission, list):
-    if permission in list:
-        return True
-    else:
-        return False
-
 def list_perms():
     """ List all the permissions in the LDAP_PERMS constant array/list
 
@@ -208,87 +202,110 @@ def list_perms():
     for perm in LDAP_PERMS:
         print(perm + " = " + LDAP_PERMS[perm]["val_bin"] + ", " + str(LDAP_PERMS[perm]["index"]))
 
-# Lists User permissions (LDAP / AD Servers save them as binary)
-def list_user_perms(user, permissionToSearch=None, isObject=True):
-    # Cast raw integer user permissions as string
-    if isObject == True:
-        if user.userAccountControl != "[]":
-            rawUserPerms = bin_as_str(user.userAccountControl)
-        else: return None
-    else:
-        if user.userAccountControl != "[]":
-            rawUserPerms = bin_as_str(user['userAccountControl'])
-        else: return None
-    UserPerms = []
+def parse_permissions_int(raw_user_permissions: int, user_name=None):
+    """
+    Parses a raw LDAP Permission Integer Bitmap to a list.
+    """
+    permissions_list = list()
     i = 0
 
-    authUsernameIdentifier = LDAP_AUTH_USERNAME_IDENTIFIER
     for n in range(0, 32): # Loop for each bit in 0-32
         i += 1
-        if rawUserPerms[n] == "1": # If permission matches enter for loop to 
+        if raw_user_permissions[n] == "1": # If permission matches enter for loop to 
                                    # search which one it is in the dictionary
             for perm_name in LDAP_PERMS:
                 perm_binary = LDAP_PERMS[perm_name]['val_bin']
                 perm_index = LDAP_PERMS[perm_name]['index']
                 if perm_index == n:
-                    logger.debug("User: " + str(user[authUsernameIdentifier]))
-                    logger.debug("Permission Name: " + perm_name)
-                    logger.debug("Permission Index: " + str(perm_index))
-                    logger.debug("Permission Index (From User): " + str(n))
-                    logger.debug("Permission Binary Value (From Constant): " + perm_binary)
-                    logger.debug("Permission Hex Value (From Constant): " + bin_as_hex(perm_binary))
-                    UserPerms.append(perm_name)
-    logger.debug("Permission List (" + str(user[authUsernameIdentifier]) + "): ")
-    logger.debug(UserPerms)
-    if isinstance(permissionToSearch, str):
-        return check_perm_in_list(permissionToSearch, UserPerms)
-    return UserPerms
+                    if user_name: logger.debug(f"User: {user_name}")
+                    logger.debug(f"Permission Name: {perm_name}")
+                    logger.debug(f"Permission Index: {str(perm_index)}")
+                    logger.debug(f"Permission Index (From User): {str(n)}")
+                    logger.debug(f"Permission Binary Value (From Constant): {perm_binary}")
+                    logger.debug(f"Permission Hex Value (From Constant): {bin_as_hex(perm_binary)}")
+                    permissions_list.append(perm_name)
+    if user_name: logger.debug(f"Permission List ({user_name}): ")
+    else: logger.debug("Permission List:")
+    logger.debug(permissions_list)
+    return permissions_list
 
-def calc_permissions(permissionArray, addPerm=None, removePerm=None):
-    """ Calculates permissions INT based on a desired array of Permission String Keys
+# Lists User permissions (LDAP / AD Servers save them as binary)
+def list_user_perms(user, perm_search: str = None, user_is_object: bool = True) -> list:
+    """
+    ### Creates a list of user permissions from raw LDAP Integer Bitmap
+    * user: User dict or object.
+    * perm_search:  Allows for directly returning a boolean when a specified 
+                    permission is found.
+    * user_is_object: Whether the user passed is an object or dict.
 
-    ARGUMENTS
+    Returns list.
 
-    :permissionArray: Permission List (Array/List)
+    Returns bool if perm_search is used.
+    """
+    # Cast raw integer user permissions as string
+    if user_is_object == True:
+        if user.userAccountControl != "[]":
+            raw_user_permissions = bin_as_str(user.userAccountControl)
+        else: return None
+    else:
+        if user.userAccountControl != "[]":
+            raw_user_permissions = bin_as_str(user['userAccountControl'])
+        else: return None
 
-    :addPerm: (String || List) -- Contains permission(s) to add to calculated result
+    user_permissions = parse_permissions_int(
+        raw_user_permissions=raw_user_permissions,
+        user_name=str(user[LDAP_AUTH_USER_FIELDS["username"]])
+    )
+    if isinstance(perm_search, str):
+        return perm_search in user_permissions
+    return user_permissions
 
-    :removePerm: (String || List) -- Contains permission(s) to remove from calculated result
+def calc_permissions(
+        permission_list: list, 
+        perm_add: str | list = None, 
+        perm_remove: str | list = None
+    ):
+    """ 
+    ### Calculates permissions INT based on a desired array of Permission String Keys
+
+    * permissionArray: List of Permissions
+    * addPerm: Contains permission(s) to add to calculated result
+    * removePerm: Contains permission(s) to remove from calculated result
 
     Returns an integer.
     """
     # TODO Check that this works properly when permission_list is in object/list
-    userPermissions = 0
+    perm_int = 0
 
     # Add permissions selected in user creation
-    for perm in permissionArray:
-        permValue = int(LDAP_PERMS[perm]['value'])
-        userPermissions += permValue
-        logger.debug("Permission Value added (cast to string): " + perm + " = " + str(permValue))
+    for perm in permission_list:
+        p_value = int(LDAP_PERMS[perm]['value'])
+        perm_int += p_value
+        logger.debug(f"Permission Value added (cast to string): {perm} = {str(p_value)}")
 
     # Add Permissions to list
-    if addPerm and isinstance(addPerm, list):
-        for perm in addPerm:
-            permValue = int(LDAP_PERMS[perm]['value'])
-            userPermissions += permValue
-            logger.debug("Permission Value added (cast to string): " + perm + " = " + str(permValue))
-    elif addPerm:
-        permValue = int(LDAP_PERMS[addPerm]['value'])
-        userPermissions += permValue
-        logger.debug("Permission Value added (cast to string): " + addPerm + " = " + str(permValue))
+    if perm_add and isinstance(perm_add, list):
+        for perm in perm_add:
+            p_value = int(LDAP_PERMS[perm]['value'])
+            perm_int += p_value
+            logger.debug(f"Permission Value added (cast to string): {perm} = {str(p_value)}")
+    elif perm_add:
+        p_value = int(LDAP_PERMS[perm_add]['value'])
+        perm_int += p_value
+        logger.debug(f"Permission Value added (cast to string): {perm} = {str(p_value)}")
 
     # Remove permissions from list
-    if removePerm and isinstance(removePerm, list):
-        for perm in removePerm:
-            permValue = int(LDAP_PERMS[perm]['value'])
-            userPermissions -= permValue
-            logger.debug("Permission Value removed (cast to string): " + perm + " = " + str(permValue))
-    elif removePerm:
-        permValue = int(LDAP_PERMS[removePerm]['value'])
-        userPermissions -= permValue
-        logger.debug("Permission Value removed (cast to string): " + removePerm + " = " + str(permValue))
+    if perm_remove and isinstance(perm_remove, list):
+        for perm in perm_remove:
+            p_value = int(LDAP_PERMS[perm]['value'])
+            perm_int -= p_value
+            logger.debug(f"Permission Value removed (cast to string): {perm} = {str(p_value)}")
+    elif perm_remove:
+        p_value = int(LDAP_PERMS[perm_remove]['value'])
+        perm_int -= p_value
+        logger.debug(f"Permission Value removed (cast to string): {perm} = {str(p_value)}")
 
     # Final Result Log
-    logger.debug("add_permission - Final User Permissions Value: " + str(userPermissions))
+    logger.debug(f"calc_permissions - Final User Permissions Value: {str(perm_int)}")
 
-    return int(userPermissions)
+    return int(perm_int)
