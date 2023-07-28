@@ -18,7 +18,6 @@ from interlock_backend.ldap.constants import *
 from interlock_backend.local_django_settings import *
 import base64
 from importlib import util as importutils
-from pathlib import Path
 
 # A little easter egg for you :)
 # from this import d
