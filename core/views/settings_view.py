@@ -144,13 +144,13 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 		# Open LDAP Connection
 		try:
-			c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
+			self.ldap_connection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
 		except Exception as e:
 			print(e)
 			raise exc_ldap.CouldNotOpenConnection
 
 		# Unbind the connection
-		c.unbind()
+		self.ldap_connection.unbind()
 		return Response(
 			 data={
 				'code': code,

@@ -16,7 +16,10 @@ from interlock_backend.ldap.constants import (
 )
 from interlock_backend.ldap import constants_cache
 from interlock_backend.ldap.encrypt import decrypt
+from rest_framework import serializers
+
 # Full imports
+import traceback
 import logging
 ################################################################################
 
@@ -26,7 +29,7 @@ def getSettingType(settingKey):
     # Set the Type for the Front-end based on Types in List
     settingType = CMAPS[settingKey]
     if not settingType:
-        settingType = 'string'
+        raise TypeError(f"No type set for {settingKey}")
     return settingType
 
 def normalizeValues(settingKey, settingDict):
@@ -51,9 +54,15 @@ def normalizeValues(settingKey, settingDict):
     try:
         # INT
         if settingDict['type'] == 'integer':
+            if not serializers.IntegerField().run_validation(settingDict['value']):
+                logger.error(traceback.format_exc())
+                raise
             settingDict['value'] = int(settingDict['value'])
         # FLOAT
         elif settingDict['type'] == 'float':
+            if not serializers.FloatField().run_validation(settingDict['value']):
+                logger.error(traceback.format_exc())
+                raise
             settingDict['value'] = float(settingDict['value'])
         # LIST/ARRAY OR OBJECT
         elif (settingDict['type'] in listTypes):
@@ -64,11 +73,14 @@ def normalizeValues(settingKey, settingDict):
                 settingDict['value'] = True
             else:
                 settingDict['value'] = False
+            if not type(serializers.BooleanField().run_validation(settingDict['value'])) == bool:
+                logger.error(traceback.format_exc())
+                raise
 
         if settingKey == "LDAP_AUTH_TLS_VERSION":
             settingDict['value'] = str(settingDict['value']).split('.')[-1]
     except:
-        raise ValueError("Invalid value for %s: %s (%s)" % (settingKey, settingDict['value'], type(settingDict['value'])))
+        raise ValueError(f"Invalid value for {settingKey}: {settingDict['value']} ({type(settingDict['value'])})")
     return settingDict
 
 def getSettingsList(settingList=CMAPS):
