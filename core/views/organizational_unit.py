@@ -28,8 +28,6 @@ from .mixins.organizational_unit import OrganizationalUnitMixin
 
 ### REST Framework
 from rest_framework.response import Response
-from rest_framework.exceptions import NotFound
-from rest_framework import viewsets
 from rest_framework.decorators import action
 
 ### Others
