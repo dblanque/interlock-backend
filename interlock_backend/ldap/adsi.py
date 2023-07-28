@@ -262,8 +262,8 @@ def list_user_perms(user, perm_search: str = None, user_is_object: bool = True) 
 
 def calc_permissions(
         permission_list: list, 
-        perm_add: str | list = None, 
-        perm_remove: str | list = None
+        perm_add: str or list = None, 
+        perm_remove: str or list = None
     ):
     """ 
     ### Calculates permissions INT based on a desired array of Permission String Keys
