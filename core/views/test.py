@@ -3,8 +3,6 @@
 from core.exceptions.test import TestError
 
 ### ViewSets
-import dns
-import ldap3
 from core.views.base import BaseViewSet
 
 ### REST Framework
@@ -14,20 +12,14 @@ from rest_framework.decorators import action
 ### Others
 from core.decorators.login import auth_required
 import logging
-import json
 ################################################################################
 
 ################################# Test Imports #################################
-from core.views.mixins.group import GroupViewMixin
 from core.exceptions.ldap import CouldNotOpenConnection
-from core.exceptions import dns as exc_dns
 from interlock_backend.ldap.connector import LDAPConnector, LDAPInfo
-from interlock_backend.ldap.adsi import search_filter_add, search_filter_from_dict
-from core.utils import dnstool
-from core.utils.dnstool import record_to_dict, RECORD_MAPPINGS
 from core.models.dnsRecordTypes import *
-from core.models.dns import LDAPDNS, LDAPRecord
 from interlock_backend.ldap import constants_cache
+from interlock_backend.settings import LOG_FILE_FOLDER
 ################################################################################
 
 logger = logging.getLogger(__name__)
@@ -45,25 +37,29 @@ class TestViewSet(BaseViewSet):
 			for i in constants_cache.__dict__:
 				if not i.startswith("_"):
 					value = getattr(constants_cache, i)
-					print("%s (%s): %s" % (i, type(value), value))
+					print(f"{i} ({type(value)}): {value}")
 
 		# Open LDAP Connection
 		try:
 			connector = LDAPConnector()
-			ldapConnection = connector.connection
+			self.ldap_connection = connector.connection
 		except Exception as e:
 			print(e)
 			raise CouldNotOpenConnection
 
+		ldap_server = self.ldap_connection.server_pool.get_current_server(self.ldap_connection)
 
-		currentLDAPServer = ldapConnection.server_pool.get_current_server(ldapConnection)
+		ldap_info = LDAPInfo()
+		with open(f"{LOG_FILE_FOLDER}/test.log", "w") as f:			
+			print(ldap_info.schema.to_json(), file=f)
+			f.close()
 
-		ldapConnection.unbind()
+		self.ldap_connection.unbind()
 		return Response(
 			 data={
 				'code': code,
 				'code_msg': 'ok',
-				'data' : ldapConnection.result,
-				'active_server': currentLDAPServer.host
+				'data' : self.ldap_connection.result,
+				'active_server': ldap_server.host
 			 }
 		)
