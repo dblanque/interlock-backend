@@ -108,8 +108,8 @@ def authenticate(*args, **kwargs):
     return user
 
 class LDAPConnector(object):
-    defaultUserDn = LDAP_AUTH_CONNECTION_USER_DN
-    defaultUserPassword = LDAP_AUTH_CONNECTION_PASSWORD
+    default_user_dn = LDAP_AUTH_CONNECTION_USER_DN
+    default_user_pwd = LDAP_AUTH_CONNECTION_PASSWORD
 
     def __init__(self,
         user_dn=None,
@@ -119,14 +119,14 @@ class LDAPConnector(object):
         plainPassword=False,
         getInfo=ldap3.NONE
         ):
-        if PLAIN_TEXT_BIND_PASSWORD != True and self.defaultUserPassword is not None:
+        if PLAIN_TEXT_BIND_PASSWORD != True and self.default_user_pwd is not None:
             try:
-                ldapAuthConnectionPassword = decrypt(self.defaultUserPassword)
+                ldapAuthConnectionPassword = decrypt(self.default_user_pwd)
             except Exception as e:
                 print(e)
-                ldapAuthConnectionPassword = self.defaultUserPassword
+                ldapAuthConnectionPassword = self.default_user_pwd
         else:
-            ldapAuthConnectionPassword = self.defaultUserPassword
+            ldapAuthConnectionPassword = self.default_user_pwd
 
         if not isinstance(LDAP_AUTH_TLS_VERSION, Enum):
             ldapAuthTLSVersion = getattr(ssl, LDAP_AUTH_TLS_VERSION)
@@ -135,7 +135,7 @@ class LDAPConnector(object):
 
         # If no user_dn and no user assume it's initial auth
         if user_dn is None:
-            user_dn = self.defaultUserDn
+            user_dn = self.default_user_dn
         if password is None:
             password = ldapAuthConnectionPassword
 
