@@ -12,6 +12,7 @@
 
 #---------------------------------- IMPORTS -----------------------------------#
 from interlock_backend.ldap.constants_cache import *
+from typing import Union
 import logging
 
 logger = logging.getLogger(__name__)
@@ -262,8 +263,8 @@ def list_user_perms(user, perm_search: str = None, user_is_object: bool = True) 
 
 def calc_permissions(
         permission_list: list, 
-        perm_add: str or list = None, 
-        perm_remove: str or list = None
+        perm_add: Union[list, str] = None, 
+        perm_remove: Union[list, str] = None
     ):
     """ 
     ### Calculates permissions INT based on a desired array of Permission String Keys
