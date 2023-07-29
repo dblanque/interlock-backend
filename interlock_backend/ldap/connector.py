@@ -119,6 +119,9 @@ class LDAPConnector(object):
         plainPassword=False,
         getInfo=ldap3.NONE
         ):
+        if user_dn and not password:
+            return None
+
         if PLAIN_TEXT_BIND_PASSWORD != True and self.default_user_pwd is not None:
             try:
                 ldapAuthConnectionPassword = decrypt(self.default_user_pwd)
@@ -229,7 +232,7 @@ class LDAPConnector(object):
             raise exception
 
         # ! Unset Password ! #
-        password = ""
+        del password
         # Configure.
         try:
             if LDAP_AUTH_USE_TLS:
@@ -257,9 +260,9 @@ class LDAPConnector(object):
                 password=password,
                 read_server_info=True
             )
-            return self.connection.result
         except:
             return None
+        return self.connection.result
 
     def get_user(self, **kwargs):
         """
