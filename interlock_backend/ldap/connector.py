@@ -64,7 +64,7 @@ def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
             user.email = str(ldap_attributes['mail']).lstrip("['").rstrip("']") or ""
         user.save()
     else:
-        user.is_staff = True
+        user.is_staff = False
         user.is_superuser = False
         if user.email is not None and 'mail' in ldap_attributes:
             user.email = str(ldap_attributes['mail']).lstrip("['").rstrip("']") or ""
