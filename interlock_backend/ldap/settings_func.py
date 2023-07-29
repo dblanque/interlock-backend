@@ -118,6 +118,11 @@ def getSettingsList(settingList=CMAPS):
                 data[c]['value'] = str(data[c]['value'])
                 data[c]['value'] = data[c]['value'].split('.')[-1]
             if c == "LDAP_AUTH_CONNECTION_PASSWORD" and data[c]['value'] is not None:
-                data[c]['value'] = decrypt(data[c]['value'])
+                try:
+                    data[c]['value'] = decrypt(data[c]['value'])
+                except:
+                    data[c]['value'] = ""
+                    print("Could not decrypt password")
+                    pass
 
     return data
