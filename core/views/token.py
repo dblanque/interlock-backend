@@ -22,7 +22,6 @@ from core.views.mixins.token import (
 	delete_device_totp_for_user,
 	parse_config_url
 )
-from core.models.user import User
 from core.exceptions import otp as exc_otp
 from core.decorators.login import auth_required
 ### ViewSets
