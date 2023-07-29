@@ -431,7 +431,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		### ! Microsoft AD Servers do not allow password changing without LDAPS
 		"""
 		try:
-			self.ldap_connection.extend.microsoft.modify_password(
+			return self.ldap_connection.extend.microsoft.modify_password(
 				user=user_dn, 
 				new_password=user_pwd
 			)
@@ -443,7 +443,6 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				"ldap_response": self.ldap_connection.result
 			}
 			raise exc_user.UserUpdateError(data=data)
-		return self.ldap_connection
 
 	def ldap_user_exists(self, user_search: str, return_exception: bool = True):
 		"""
