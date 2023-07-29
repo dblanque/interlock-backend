@@ -57,7 +57,6 @@ def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
         user.is_superuser = True
         user.save()
     elif recursive_member_search(user_dn=user.dn, connection=connection):
-        # Do staff shit here
         user.is_staff = True
         user.is_superuser = True
         if user.email is not None and 'mail' in ldap_attributes:
@@ -98,7 +97,10 @@ def authenticate(*args, **kwargs):
     if ldap_connector.connection is None: return None
 
     user = ldap_connector.get_user(**ldap_kwargs)
-    if user is None or not ldap_connector.rebind(user=user.dn, password=password):
+    user.has_usable_password()
+    if (user is None or 
+        (not ldap_connector.rebind(user=user.dn, password=password) and not user.has_usable_password())
+        ):
         return None
     ldap_connector.connection.unbind()
     user.encryptedPassword = encrypt(password)
@@ -120,30 +122,27 @@ class LDAPConnector(object):
         ):
         if PLAIN_TEXT_BIND_PASSWORD != True and self.default_user_pwd is not None:
             try:
-                ldapAuthConnectionPassword = decrypt(self.default_user_pwd)
+                decrypted_password = decrypt(self.default_user_pwd)
             except Exception as e:
                 print(e)
-                ldapAuthConnectionPassword = self.default_user_pwd
+                decrypted_password = self.default_user_pwd
         else:
-            ldapAuthConnectionPassword = self.default_user_pwd
+            decrypted_password = self.default_user_pwd
 
         if not isinstance(LDAP_AUTH_TLS_VERSION, Enum):
             ldapAuthTLSVersion = getattr(ssl, LDAP_AUTH_TLS_VERSION)
         else:
             ldapAuthTLSVersion = LDAP_AUTH_TLS_VERSION
 
-        # If no user_dn and no user assume it's initial auth
-        if user_dn is None:
-            user_dn = self.default_user_dn
-        if password is None:
-            password = ldapAuthConnectionPassword
-
         # If it's an Initial Authentication we need to use the bind user first
         if initialAuth == True or user is not None:
             # If initial auth or user is local interlock superadmin
             if initialAuth == True or (user.username == 'admin' and user.is_local == True):
-                user_dn = LDAP_AUTH_CONNECTION_USER_DN
-                password = ldapAuthConnectionPassword
+                user_dn = self.default_user_dn
+                password = decrypted_password
+
+        if not user_dn and not initialAuth:
+            raise ValueError(f"No user_dn was provided for LDAP Connector ({user_dn})")
 
         logger.debug("Connection Parameters: ")
         logger.debug(f'User: {user}')
@@ -155,7 +154,7 @@ class LDAPConnector(object):
         logger.debug(f'LDAP Use TLS: {LDAP_AUTH_USE_TLS}')
         logger.debug(f'LDAP TLS Version: {ldapAuthTLSVersion}')
 
-        if password != ldapAuthConnectionPassword and plainPassword == False:
+        if password != decrypted_password and plainPassword == False:
             password = str(decrypt(password))
 
         # Initialize Server Args Dictionary
