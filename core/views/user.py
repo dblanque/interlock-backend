@@ -703,7 +703,6 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		try:
 			django_user = User.objects.get(username=ldap_user_search)
 		except:
-			self.ldap_connection.unbind()
 			pass
 		if django_user:
 			django_user.encryptedPassword = ""
@@ -862,7 +861,6 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		try:
 			django_user = User.objects.get(username=ldap_user_search)
 		except:
-			self.ldap_connection.unbind()
 			pass
 		if django_user:
 			django_user.encryptedPassword = ""
