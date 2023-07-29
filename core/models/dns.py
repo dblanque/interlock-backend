@@ -614,15 +614,9 @@ class LDAPRecord(LDAPDNS):
 						# A -> CNAME
 						or
 						(self.type == DNS_RECORD_TYPE_A and record['type'] == DNS_RECORD_TYPE_CNAME)
-						# A -> AAAA
-						or
-						(self.type == DNS_RECORD_TYPE_A and record['type'] == DNS_RECORD_TYPE_AAAA)
 						# AAAA -> CNAME
 						or
 						(self.type == DNS_RECORD_TYPE_AAAA and record['type'] == DNS_RECORD_TYPE_CNAME)
-						# AAAA -> A
-						or
-						(self.type == DNS_RECORD_TYPE_AAAA and record['type'] == DNS_RECORD_TYPE_A)
 						):
 						exc = True
 						msg = "A conflicting DNS Record %s was found for this %s Entry: \n -> %s" % \
