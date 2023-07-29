@@ -61,7 +61,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		# Open LDAP Connection
 		try:
-			ldapConnection = LDAPConnector().connection
+			ldapConnection = LDAPConnector(force_admin=True).connection
 		except Exception as e:
 			print(e)
 			raise CouldNotOpenConnection

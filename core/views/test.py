@@ -41,7 +41,7 @@ class TestViewSet(BaseViewSet):
 
 		# Open LDAP Connection
 		try:
-			connector = LDAPConnector()
+			connector = LDAPConnector(force_admin=True)
 			self.ldap_connection = connector.connection
 		except Exception as e:
 			print(e)
@@ -49,7 +49,7 @@ class TestViewSet(BaseViewSet):
 
 		ldap_server = self.ldap_connection.server_pool.get_current_server(self.ldap_connection)
 
-		ldap_info = LDAPInfo()
+		ldap_info = LDAPInfo(force_admin=True)
 		with open(f"{LOG_FILE_FOLDER}/test.log", "w") as f:			
 			print(ldap_info.schema.to_json(), file=f)
 			f.close()

@@ -19,6 +19,7 @@ from interlock_backend.ldap.encrypt import (
 )
 from interlock_backend.ldap.adsi import search_filter_add
 from interlock_backend.ldap.constants_cache import *
+import traceback
 import ldap3
 from ldap3.core.exceptions import LDAPException
 from core.exceptions import ldap as exc_ldap
@@ -93,7 +94,7 @@ def authenticate(*args, **kwargs):
 
     # Connect to LDAP.
     # with orig_connection(password=password, **ldap_kwargs) as c:
-    ldap_connector = LDAPConnector(password=password, initialAuth=True, plainPassword=True)
+    ldap_connector = LDAPConnector(password=password, force_admin=True, plain_bind_password=True)
     if ldap_connector.connection is None: return None
 
     user = ldap_connector.get_user(**ldap_kwargs)
@@ -116,8 +117,8 @@ class LDAPConnector(object):
         user_dn=None,
         password=None,
         user=None,
-        initialAuth=False,
-        plainPassword=False,
+        force_admin=False,
+        plain_bind_password=False,
         getInfo=ldap3.NONE
         ):
         if PLAIN_TEXT_BIND_PASSWORD != True and self.default_user_pwd is not None:
@@ -135,13 +136,14 @@ class LDAPConnector(object):
             ldapAuthTLSVersion = LDAP_AUTH_TLS_VERSION
 
         # If it's an Initial Authentication we need to use the bind user first
-        if initialAuth == True or user is not None:
+        if force_admin == True or user is not None:
             # If initial auth or user is local interlock superadmin
-            if initialAuth == True or (user.username == 'admin' and user.is_local == True):
+            if force_admin == True or (user.username == 'admin' and user.is_local == True):
                 user_dn = self.default_user_dn
                 password = decrypted_password
 
-        if not user_dn and not initialAuth:
+        if not user_dn and not force_admin:
+            print(traceback.format_exc())
             raise ValueError(f"No user_dn was provided for LDAP Connector ({user_dn})")
 
         logger.debug("Connection Parameters: ")
@@ -154,7 +156,7 @@ class LDAPConnector(object):
         logger.debug(f'LDAP Use TLS: {LDAP_AUTH_USE_TLS}')
         logger.debug(f'LDAP TLS Version: {ldapAuthTLSVersion}')
 
-        if password != decrypted_password and plainPassword == False:
+        if password != decrypted_password and plain_bind_password == False:
             password = str(decrypt(password))
 
         # Initialize Server Args Dictionary
@@ -352,11 +354,11 @@ class LDAPInfo(LDAPConnector):
         user_dn=None, 
         password=None, 
         user=None, 
-        initialAuth=False, 
-        plainPassword=False,
+        force_admin=False, 
+        plain_bind_password=False,
         getInfo=ldap3.ALL
         ):
-        super().__init__(user_dn, password, user, initialAuth, plainPassword, getInfo)
+        super().__init__(user_dn, password, user, force_admin, plain_bind_password, getInfo)
         self.refresh_server_info()
 
     def refresh_server_info(self):

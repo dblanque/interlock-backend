@@ -825,7 +825,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		# Open LDAP Connection
 		try:
-			self.ldap_connection = LDAPConnector().connection
+			self.ldap_connection = LDAPConnector(force_admin=True).connection
 		except Exception as e:
 			print(e)
 			raise exc_ldap.CouldNotOpenConnection
@@ -935,7 +935,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		# Open LDAP Connection
 		try:
-			self.ldap_connection = LDAPConnector().connection
+			self.ldap_connection = LDAPConnector(force_admin=True).connection
 		except Exception as e:
 			print(e)
 			raise exc_ldap.CouldNotOpenConnection
