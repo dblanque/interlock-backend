@@ -118,7 +118,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		code_msg = 'ok'
 
 		try:
-			ldapFilter = self.processFilter(data)
+			ldap_filter_object = self.processFilter(data)
 		except Exception as e:
 			print(e)
 			raise exc_dirtree.DirtreeFilterBad
@@ -130,7 +130,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			print(e)
 			raise exc_ldap.CouldNotOpenConnection
 
-		attributesToSearch = [
+		ldap_filter_attr = [
 			# User Attrs
 			'objectClass',
 			'objectCategory',
@@ -152,8 +152,8 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			dirList = LDAPTree(**{
 				"connection": c,
 				"recursive": True,
-				"ldapFilter": ldapFilter,
-				"ldapAttributes": attributesToSearch,
+				"ldapFilter": ldap_filter_object,
+				"ldapAttributes": ldap_filter_attr,
 			})
 			debugTimerEnd = perf_counter()
 			logger.info("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
