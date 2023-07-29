@@ -48,6 +48,10 @@ class LogsViewSet(BaseViewSet, LogMixin):
 			'extraMessage'
 		]
 		response_list = []
+		date_format = {
+			'iso': '%Y-%m-%dT%H:%M:%S.%f%z',
+			'readable': "%Y-%m-%d %H:%M:%S"
+		}
 		querySet = Log.objects.all()
 		for log in querySet:
 			logDict = {}
@@ -55,7 +59,7 @@ class LogsViewSet(BaseViewSet, LogMixin):
 				if h == 'user':
 					logDict[h] = getattr(log, h).username
 				elif h == 'date':
-					logDict[h] = getattr(log, 'logged_at').strftime("%Y-%m-%d %H:%M:%S")
+					logDict[h] = getattr(log, 'logged_at').strftime(date_format['iso'])
 				elif h == 'affectedObject':
 					logDict[h] = getattr(log, h)
 				else:
