@@ -88,21 +88,19 @@ def authenticate(*args, **kwargs):
         if key in auth_user_lookup_fields
     }
 
-    encryptedPass = encrypt(password)
-
     # Check that this is valid login data.
     if not password or 'username' not in frozenset(ldap_kwargs.keys()):
         return None
 
     # Connect to LDAP.
     # with orig_connection(password=password, **ldap_kwargs) as c:
-    c = LDAPConnector(password=password, initialAuth=True, plainPassword=True)
-    if c.connection is None:
+    ldap_connector = LDAPConnector(password=password, initialAuth=True, plainPassword=True)
+    if ldap_connector.connection is None: return None
+
+    user = ldap_connector.get_user(**ldap_kwargs)
+    if user is None or not ldap_connector.rebind(user=user.dn, password=password):
         return None
-    user = c.get_user(**ldap_kwargs)
-    if user is None or not c.rebind(user=user.dn, password=password):
-        return None
-    user.encryptedPassword = encryptedPass
+    user.encryptedPassword = encrypt(password)
     user.is_local = False
     user.save()
     return user
@@ -119,9 +117,6 @@ class LDAPConnector(object):
         plainPassword=False,
         getInfo=ldap3.NONE
         ):
-        if user_dn and not password:
-            return None
-
         if PLAIN_TEXT_BIND_PASSWORD != True and self.default_user_pwd is not None:
             try:
                 ldapAuthConnectionPassword = decrypt(self.default_user_pwd)
