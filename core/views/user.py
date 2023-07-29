@@ -703,12 +703,13 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		django_user = None
 		try:
 			django_user = User.objects.get(username=ldap_user_search)
-		except:
+		except Exception as e:
+			logger.error(e)
 			pass
 		if django_user:
 			encryptedPass = encrypt(data['password'])
 			django_user.encryptedPassword = encryptedPass
-			django_user.set_password(data['password'])
+			django_user.set_unusable_password()
 			django_user.save()
 
 		if LDAP_LOG_UPDATE == True:
@@ -862,12 +863,12 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		django_user = None
 		try:
 			django_user = User.objects.get(username=ldap_user_search)
-		except:
-			pass
+		except Exception as e:
+			logger.error(e)
 		if django_user:
 			encryptedPass = encrypt(data['password'])
 			django_user.encryptedPassword = encryptedPass
-			django_user.set_password(data['password'])
+			django_user.set_unusable_password()
 			django_user.save()
 
 		if LDAP_LOG_UPDATE == True:
