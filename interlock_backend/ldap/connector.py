@@ -100,6 +100,7 @@ def authenticate(*args, **kwargs):
     user = ldap_connector.get_user(**ldap_kwargs)
     if user is None or not ldap_connector.rebind(user=user.dn, password=password):
         return None
+    ldap_connector.connection.unbind()
     user.encryptedPassword = encrypt(password)
     user.is_local = False
     user.save()
