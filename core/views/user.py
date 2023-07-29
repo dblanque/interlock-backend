@@ -15,6 +15,7 @@ from core.exceptions import (
 	ldap as exc_ldap
 )
 from interlock_backend.settings import SIMPLE_JWT
+from interlock_backend.ldap.encrypt import encrypt
 
 ### Models
 from core.models import User
@@ -705,8 +706,9 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		except:
 			pass
 		if django_user:
-			django_user.encryptedPassword = ""
-			django_user.set_unusable_password()
+			encryptedPass = encrypt(data['password'])
+			django_user.encryptedPassword = encryptedPass
+			django_user.set_password(data['password'])
 			django_user.save()
 
 		if LDAP_LOG_UPDATE == True:
@@ -863,8 +865,9 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		except:
 			pass
 		if django_user:
-			django_user.encryptedPassword = ""
-			django_user.set_unusable_password()
+			encryptedPass = encrypt(data['password'])
+			django_user.encryptedPassword = encryptedPass
+			django_user.set_password(data['password'])
 			django_user.save()
 
 		if LDAP_LOG_UPDATE == True:
