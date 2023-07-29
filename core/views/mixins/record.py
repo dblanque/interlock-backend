@@ -52,19 +52,6 @@ class DNSRecordMixin(DomainViewMixin):
 	def validate_record_data(self, record_data, required_values=list()):
 		if 'type' not in record_data:
 			raise exc_dns.DNSRecordTypeMissing
-		if len(required_values) > 1:
-			# Add the necessary fields for this Record Type to Required Fields
-			required_values.extend(RECORD_MAPPINGS[record_data['type']]['fields'])
-
-			for a in required_values:
-				if a not in record_data:
-					exception = exc_dns.DNSRecordDataMissing
-					data = {
-						"code": exception.default_code,
-						"attribute": a,
-					}
-					exception.set_detail(exception, data)
-					raise exception
 
 		if record_data['zone'] == 'Root DNS Servers':
 			raise exc_dns.DNSRootServersOnlyCLI
@@ -84,6 +71,21 @@ class DNSRecordMixin(DomainViewMixin):
 			if record_data['zone'] not in label:
 				print(record_data['zone'])
 				raise exc_dns.DNSZoneNotInRequest
+
+		if len(required_values) > 1:
+			# Add the necessary fields for this Record Type to Required Fields
+			required_values.extend(RECORD_MAPPINGS[record_data['type']]['fields'])
+
+			for a in required_values:
+				if a not in record_data:
+					exception = exc_dns.DNSRecordDataMissing
+					logger.error(f"Record Attribute Failed Validation ({a})")
+					data = {
+						"code": exception.default_code,
+						"attribute": a,
+					}
+					exception.set_detail(exception, data)
+					raise exception
 
 		valid = False
 		# For each field in the Record Value Dictionary

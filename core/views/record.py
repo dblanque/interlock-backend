@@ -166,22 +166,22 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 		elif 'record' not in request.data:
 			raise exc_dns.DNSRecordNotInRequest
 
-		record_data = request.data['record']
+		record_data = request.data[key]
 		if key == 'record':
-			if not isinstance(request.data['record'], dict):
+			if not isinstance(request.data[key], dict):
 				data = {
-					'data': request.data['record']
+					'data': request.data[key]
 				}
 				raise exc_dns.DNSRecordDataMalformed(data=data)
-			DNSRecordMixin.validate_record_data(self, record_data=record_data, required_values=required_values)
+			DNSRecordMixin.validate_record_data(self, record_data=record_data, required_values=required_values.copy())
 		elif key == 'records':
-			if not isinstance(request.data['records'], list):
+			if not isinstance(request.data[key], list):
 				data = {
-					'data': request.data['records']
+					'data': request.data[key]
 				}
 				raise exc_dns.DNSRecordDataMalformed
 			for r in record_data:
-				DNSRecordMixin.validate_record_data(self, record_data=r, required_values=required_values)
+				DNSRecordMixin.validate_record_data(self, record_data=r, required_values=required_values.copy())
 
 		# Open LDAP Connection
 		try:
