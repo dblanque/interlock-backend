@@ -92,19 +92,20 @@ def authenticate(*args, **kwargs):
     if not password or 'username' not in frozenset(ldap_kwargs.keys()):
         return None
 
-    # Connect to LDAP.
-    # with orig_connection(password=password, **ldap_kwargs) as c:
-    ldap_connector = LDAPConnector(password=password, force_admin=True, plain_bind_password=True)
-    if ldap_connector.connection is None: return None
+    # Connect to LDAP and fetch user DN, create or update user if necessary
+    with LDAPConnector(password=password, force_admin=True) as ldap_c:
+        if ldap_c.connection is None: return None
+        user = ldap_c.get_user(**ldap_kwargs)
+        ldap_c.connection.unbind()
+        if user is None: return None
 
-    user = ldap_connector.get_user(**ldap_kwargs)
-    user.has_usable_password()
-    if (user is None or 
-        (not ldap_connector.rebind(user=user.dn, password=password) and not user.has_usable_password())
-        ):
+    # Test user credentials against LDAP Server
+    try:
+        LDAPConnector(user_dn=user.dn, password=password, plain_text_password=True)
+    except:
         return None
-    ldap_connector.connection.unbind()
     user.encryptedPassword = encrypt(password)
+    del password
     user.is_local = False
     user.save()
     return user
@@ -113,13 +114,16 @@ class LDAPConnector(object):
     default_user_dn = LDAP_AUTH_CONNECTION_USER_DN
     default_user_pwd = LDAP_AUTH_CONNECTION_PASSWORD
 
+    def __enter__(self):
+        return self
+
     def __init__(self,
         user_dn=None,
         password=None,
         user=None,
         force_admin=False,
-        plain_bind_password=False,
-        getInfo=ldap3.NONE
+        plain_text_password=False,
+        get_ldap_info=ldap3.NONE
         ):
         if PLAIN_TEXT_BIND_PASSWORD != True and self.default_user_pwd is not None:
             try:
@@ -156,12 +160,12 @@ class LDAPConnector(object):
         logger.debug(f'LDAP Use TLS: {LDAP_AUTH_USE_TLS}')
         logger.debug(f'LDAP TLS Version: {ldapAuthTLSVersion}')
 
-        if password != decrypted_password and plain_bind_password == False:
+        if password != decrypted_password and plain_text_password == False:
             password = str(decrypt(password))
 
         # Initialize Server Args Dictionary
         server_args = {
-            'get_info': getInfo,
+            'get_info': get_ldap_info,
             'connect_timeout': LDAP_AUTH_CONNECT_TIMEOUT
         }
 
@@ -249,6 +253,9 @@ class LDAPConnector(object):
             }
             exception.set_detail(exception, data)
             raise exception
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        return self.connection.unbind()
 
     def rebind(self, user, password):
         try:
@@ -354,11 +361,10 @@ class LDAPInfo(LDAPConnector):
         user_dn=None, 
         password=None, 
         user=None, 
-        force_admin=False, 
-        plain_bind_password=False,
-        getInfo=ldap3.ALL
+        force_admin=False,
+        get_ldap_info=ldap3.ALL
         ):
-        super().__init__(user_dn, password, user, force_admin, plain_bind_password, getInfo)
+        super().__init__(user_dn, password, user, force_admin, get_ldap_info)
         self.refresh_server_info()
 
     def refresh_server_info(self):
