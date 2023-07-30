@@ -255,9 +255,16 @@ class LDAPConnector(object):
             raise exception
 
     def __exit__(self, exc_type, exc_value, traceback):
+        if exc_value:
+            logger.error(exc_type)
+            logger.error(exc_value)
+            logger.error(traceback)
         return self.connection.unbind()
 
     def rebind(self, user, password):
+        if len(password) < 1: 
+            self.connection.unbind()
+            raise ValueError("Password length smaller than one, unbinding connection.")
         try:
             self.connection.rebind(
                 user=user,
