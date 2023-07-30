@@ -99,11 +99,16 @@ def authenticate(*args, **kwargs):
         ldap_c.connection.unbind()
         if user is None: return None
 
-    # Test user credentials against LDAP Server
-    try:
-        LDAPConnector(user_dn=user.dn, password=password, plain_text_password=True)
-    except:
-        return None
+        # ! I went insane with this garbage ! #
+        # Test user credentials against server, keep in mind LDAP Passwords have history
+        # lifetime in the NTLM. 
+        # Letting you know so you don't spend 50 hours debugging something that's 
+        # actually working properly =_= -Dylan
+        # sources: 
+        # https://learn.microsoft.com/en-US/troubleshoot/windows-server/windows-security/new-setting-modifies-ntlm-network-authentication
+        # https://unix.stackexchange.com/questions/737113/samba-4-change-password-old-enable
+        if not ldap_c.rebind(user=user.dn, password=password): return None
+
     user.encryptedPassword = encrypt(password)
     del password
     user.is_local = False
@@ -223,7 +228,7 @@ class LDAPConnector(object):
             )
         except LDAPException as ex:
             str_ex = "LDAP connect failed: {ex}".format(ex=ex)
-            logger.warning(str_ex)
+            logger.error(str_ex)
             exception = exc_ldap.CouldNotOpenConnection
             data = {
                 "code": exception.default_code,
@@ -245,7 +250,7 @@ class LDAPConnector(object):
             self.connection = c
         except LDAPException as ex:
             str_ex = "LDAP bind failed: {ex}".format(ex=ex)
-            logger.warning(str_ex)
+            logger.error(str_ex)
             exception = exc_ldap.CouldNotOpenConnection
             data = {
                 "code": exception.default_code,
