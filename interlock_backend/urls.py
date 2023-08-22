@@ -15,14 +15,11 @@ Including another URLconf
 """
 
 #  Django 
-from django.conf.urls import url
 from django.contrib import admin
 from django.urls import path, include
 
 # Django-rest
 from rest_framework import routers
-from rest_framework import permissions
-from rest_framework_simplejwt import views as jwt_views
 from core.views.domain import DomainViewSet
 
 # CORE VIEWS
