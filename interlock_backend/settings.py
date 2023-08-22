@@ -18,6 +18,8 @@ from interlock_backend.ldap.constants import *
 from interlock_backend.local_django_settings import *
 import base64
 from importlib import util as importutils
+import mimetypes
+mimetypes.add_type("text/css", ".css", True)
 
 # A little easter egg for you :)
 # from this import d
