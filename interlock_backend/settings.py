@@ -37,7 +37,7 @@ SECRET_KEY = 'in2tfy@bhej(5i@h!_04+kes__58rd9mh$=1!o_6ky236d-ue)'
 # - interlock_backend/enc_key.py
 # ! If the key changes you will need to re-save your LDAP Bind Password
 # ! and all your users will be required to login again
-# To MANUALLY generate a new key run and paste that value into enc_key.py
+# To MANUALLY generate a new key run this code in python and paste the return value into enc_key.py
 # python3 <<< "import base64; import os; key = base64.urlsafe_b64encode(os.urandom(32)); print(key)"
 # FERNET_KEY = base64.urlsafe_b64encode(os.urandom(32))
 
