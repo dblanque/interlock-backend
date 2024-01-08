@@ -7,9 +7,6 @@
 # Contains the Mixin for DNS Record related operations
 
 #---------------------------------- IMPORTS -----------------------------------#
-### ViewSets
-from rest_framework import viewsets
-
 ### Exceptions
 from core.exceptions import (
 	ldap as exc_ldap,
@@ -29,7 +26,6 @@ from core.views.mixins.utils import convert_string_to_bytes
 
 ### Interlock
 from interlock_backend.ldap.constants_cache import *
-from interlock_backend.ldap.connector import LDAPConnector
 from core.views.mixins.domain import DomainViewMixin
 import logging
 
@@ -68,8 +64,9 @@ class DNSRecordMixin(DomainViewMixin):
 			split_labels = label.split('.')
 			if len(split_labels[-1]) > 1:
 				raise exc_dns.DNSRecordTypeConflict
-			if record_data['zone'] not in label:
-				print(record_data['zone'])
+			# Validate Zone in Record
+			if not dnsValidators.canonicalHostname_validator(label):
+				logger.error("Canonical Zone not in Request or invalid: "+label)
 				raise exc_dns.DNSZoneNotInRequest
 
 		if len(required_values) > 1:

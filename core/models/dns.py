@@ -23,8 +23,7 @@ from core.utils.dns import *
 from core.utils import dnstool
 from core.utils.dnstool import (
 	new_record,
-	record_to_dict,
-	get_next_serial
+	record_to_dict
 )
 from ldap3 import (
 	MODIFY_ADD,
@@ -34,9 +33,11 @@ from ldap3 import (
 )
 import logging
 import re
+from datetime import datetime
 from interlock_backend.ldap.constants_cache import *
 ################################################################################
 
+DATE_FMT = "%Y%m%d"
 logger = logging.getLogger(__name__)
 class LDAPDNS():
 	def __init__(self, connection):
@@ -278,24 +279,48 @@ class LDAPRecord(LDAPDNS):
 	def __soa__(self):
 		return self.soa
 
-	def serial_is_epoch(self, soa_serial: int):
-		epoch_regex = r'^[0-9]{4}(0[0-9]|1[0-2])([0-2][0-9]|3[0-1])[0-9]{2}$'
+	def serial_is_epoch_datetime(self, soa_serial: int):
 		if not isinstance(soa_serial, int):
 			raise TypeError('soa_serial must be an int')
+		soa_serial = str(soa_serial)
+		try:
+			datetime.strptime(soa_serial[:8], DATE_FMT)
+		except ValueError:
+			return False
+		return True
+
+	def serial_is_epoch_regex(self, soa_serial: int):
+		if not isinstance(soa_serial, int):
+			raise TypeError('soa_serial must be an int')
+		epoch_regex = r'^[0-9]{4}(0[0-9]|1[0-2])([0-2][0-9]|3[0-1])[0-9]{2}$'
+		soa_serial = str(soa_serial)
 		if re.match(epoch_regex, str(soa_serial)):
 			return True
 		return False
 
-	def get_soa_serial(self):
+	def get_soa_serial(self) -> int:
+		"""
+		Gets the current Start of Authority Serial
+		MUST RETURN AN INTEGER SERIAL
+		"""
 		self.get_soa()
 		if self.soa['dwSerialNo'] != self.soa['serial']:
 			raise exc_dns.DNSRecordDataMalformed
 		if 'dwSerialNo' in self.soa:
-			serial = int(self.soa['dwSerialNo'])
+			try:
+				serial = int(self.soa['dwSerialNo'])
+			except:
+				try:
+					return str(serial)
+				except: raise
 			# If serial epoch then sum 1 until last 2 digits are 99 #
-			if self.serial_is_epoch(self.soa['dwSerialNo']):
-				if int(str(serial)[:-2]) > 99: return serial + 1
-				return serial
+			if self.serial_is_epoch_datetime(serial):
+				serial_date = str(serial)[:8]
+				# Get Counter from Epoch Serial
+				if len(str(serial)) > 8: serial_num = int(str(serial)[8:])
+				# Restart counter if serial after datetime is invalid
+				elif len(str(serial)) <= 8 or serial_num > 99: serial_num = 0
+				return int(f"{serial_date}{str(serial_num+1).rjust(2, '0')}")
 			#########################################################
 			return serial + 1
 		logger.error(traceback.format_exc())
