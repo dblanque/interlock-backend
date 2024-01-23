@@ -301,7 +301,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			user_search = row[mapped_user_key]
 			row['path'] = user_path
 
-			if self.ldap_user_exists(user_search=user_search):
+			if self.ldap_user_exists(user_search=user_search, return_exception=False):
 				skipped_users.append(row[mapped_user_key])
 				continue
 
