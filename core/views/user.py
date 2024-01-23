@@ -231,6 +231,17 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			'distinguishedName',
 			'userPrincipalName',
 		]
+
+		# Check if data has a requested placeholder_password
+		required_fields = ['username']
+		if 'placeholder_password' in data and data['placeholder_password']:
+			if len(data['placeholder_password']) > 0:
+				user_placeholder_password = data['placeholder_password']
+
+		# Use CSV column if placeholder not requested
+		if not user_placeholder_password:
+			required_fields.append('password')
+
 		mapped_user_key = header_mapping[ldap_user.USERNAME]
 		if user_placeholder_password:
 			mapped_pwd_key = ldap_user.PASSWORD
@@ -243,16 +254,6 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			'distinguishedName', # We don't want the front-end generated DN
 		]
 		########################################################################
-
-		# Check if data has a requested placeholder_password
-		required_fields = ['username']
-		if 'placeholder_password' in data and data['placeholder_password']:
-			if len(data['placeholder_password']) > 0:
-				user_placeholder_password = data['placeholder_password']
-
-		# Use CSV column if placeholder not requested
-		if not user_placeholder_password:
-			required_fields.append('password')
 
 		# Validate Front-end mapping with CSV Headers
 		for k in required_fields:
