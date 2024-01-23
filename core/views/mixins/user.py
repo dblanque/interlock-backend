@@ -309,13 +309,12 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		Returns the used LDAP Connection
 		"""
 		connection_entries = self.ldap_connection.entries
-
-		if 'LDAP_UF_LOCKOUT' in permissions_list:
-			# Default is 30 Minutes
-			user_data['lockoutTime'] = 30 
 		
 		################# START NON-STANDARD ARGUMENT UPDATES ##################
 		if permissions_list:
+			if 'LDAP_UF_LOCKOUT' in permissions_list:
+				# Default is 30 Minutes
+				user_data['lockoutTime'] = 30 
 			try:
 				new_permissions_int = ldap_adsi.calc_permissions(permissions_list)
 			except:
@@ -327,7 +326,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			logger.debug("New Permission Integer (cast to String):" + str(new_permissions_int))
 			user_data['userAccountControl'] = new_permissions_int
 		else:
-			user_data['userAccountControl'] = LDAP_UF_NORMAL_ACCOUNT
+			user_data['userAccountControl'] = LDAP_UF_NORMAL_ACCOUNT['value']
 
 		if 'co' in user_data and user_data['co'] != "" and user_data['co'] != 0:
 			try:
@@ -391,7 +390,8 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				except:
 					print(traceback.format_exc())
 					logger.warn("Unable to update user '" + str(user_name) + "' with attribute '" + str(key) + "'")
-					logger.warn("Attribute Value:" + str(user_data[key]))
+					logger.warn("Attribute Value: " + str(user_data[key]))
+					logger.warn("Attribute Type: " + str(type(user_data[key])))
 					if operation is not None:
 						logger.warn("Operation Type: " + str(operation))
 					self.ldap_connection.unbind()
