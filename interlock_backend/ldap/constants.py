@@ -187,6 +187,19 @@ LDAP_DIRTREE_ATTRIBUTES = [
     'objectSid'
 ]
 
+LDAP_OPERATIONS = [
+    'BIND',
+    'UNBIND',
+    'ADD',
+    'DELETE',
+    'MODIFY',
+    'MODIFY-DN',
+    'SEARCH',
+    'COMPARE',
+    'ABANDON',
+    'EXTENDED'
+]
+
 ################################## Logging #####################################
 LDAP_LOG_READ = False
 LDAP_LOG_CREATE = True
