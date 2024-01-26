@@ -7,8 +7,7 @@
 # Contains extra utilities and functions
 
 #---------------------------------- IMPORTS -----------------------------------#
-import socket
-import struct
+import socket, struct
 
 def convert_string_to_bytes(string):
     if not isinstance(string, str):
