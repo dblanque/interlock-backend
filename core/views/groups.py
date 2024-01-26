@@ -9,11 +9,6 @@
 #---------------------------------- IMPORTS -----------------------------------#
 ### Exceptions
 from core.exceptions import ldap as exc_ldap
-from core.exceptions import groups as exc_groups
-
-### Models
-from core.models.log import logToDB
-from core.models.ldapObject import LDAPObject
 
 ### Mixins
 from .mixins.group import GroupViewMixin
@@ -29,7 +24,6 @@ from rest_framework.decorators import action
 from core.decorators.login import auth_required
 from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.adsi import search_filter_add
-from interlock_backend.ldap.securityIdentifier import SID
 from interlock_backend.ldap.constants_cache import *
 import logging
 ################################################################################
