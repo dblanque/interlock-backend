@@ -32,6 +32,7 @@ from core.views.groups import GroupsViewSet
 from core.views.test import TestViewSet
 from core.views.liveness import LivenessViewSet
 from core.views.record import RecordViewSet
+from core.views.debug import DebugViewSet
 from interlock_backend.settings import DEBUG
 
 # Initalizes Router
@@ -49,7 +50,10 @@ named_view_sets = {
 }
 
 if DEBUG == True:
-	named_view_sets.update({ r"test": TestViewSet })
+	named_view_sets.update({ 
+		r"test": TestViewSet,
+		r"debug": DebugViewSet
+	})
 
 [router.register(f"api/{name}", view_set, basename=name) for name, view_set in named_view_sets.items()]
 

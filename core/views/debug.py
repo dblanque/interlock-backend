@@ -37,6 +37,6 @@ class DebugViewSet(BaseViewSet):
 			 data={
 				'code': code,
 				'code_msg': code_msg,
-				'available_operations': LDAP_OPERATIONS
+				'data': LDAP_OPERATIONS
 			 }
 		)
