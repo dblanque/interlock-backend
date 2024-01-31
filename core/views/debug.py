@@ -31,12 +31,36 @@ class DebugViewSet(BaseViewSet):
 	def list(self, request):
 		user = request.user
 		data = []
+		NON_DEBUGGABLE_OPERATIONS = [
+			"BIND",
+			"UNBIND",
+			"COMPARE",
+			"ABANDON"
+		]
+		valid_debug_operations = LDAP_OPERATIONS
+		for op in NON_DEBUGGABLE_OPERATIONS:
+			if op in valid_debug_operations: valid_debug_operations.remove(op)
 		code = 0
 		code_msg = 'ok'
 		return Response(
 			 data={
 				'code': code,
 				'code_msg': code_msg,
-				'data': LDAP_OPERATIONS
+				'data': valid_debug_operations
+			 }
+		)
+
+	@action(detail=False,methods=['post'])
+	@auth_required()
+	def action(self, request):
+		user = request.user
+		data = request.data
+		code = 0
+		code_msg = 'ok'
+		return Response(
+			 data={
+				'code': code,
+				'code_msg': code_msg,
+				'data': data
 			 }
 		)
