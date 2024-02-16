@@ -9,7 +9,7 @@ For information and official Interlock Documentation go to:
 
 1. Install the following dependencies
 ```bash
-apt-get install git python3 python3-virtualenv python3-pip postgresql
+apt-get install git python3 python3-venv python3-pip postgresql
 ```
 
 2. Once you’ve installed all the requirements, you can pull the latest repo.
@@ -72,7 +72,7 @@ Now we must install the requirements in a virtual environment with pip.
 ```bash
 # Create the Virtual Environment
 cd /opt/interlock-backend/
-virtualenv -p python3 .
+python3 -m venv . --upgrade
 
 # Activate it and Install the Requirements
 source bin/activate
@@ -90,7 +90,7 @@ python3 ./manage.py createsuperuser
 ```
 # PROJECT LICENSE
 
-*Interlock Copyright (C) 2022 | Dylan Blanqué, BR Consulting S.R.L.*
+*Interlock Copyright (C) 2022-2024 | Dylan Blanqué, BR Consulting S.R.L.*
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
