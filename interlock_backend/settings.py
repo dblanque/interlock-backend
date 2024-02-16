@@ -287,7 +287,7 @@ SIMPLE_JWT = {
 LANGUAGE_CODE = 'en-us'
 
 # Get current System Olson Timezone
-try: TIME_ZONE = '/'.join(os.readlink('/etc/localtime').split('/')[-2:])
+try: TIME_ZONE = '/'.join(os.readlink('/etc/timezone').split('/')[-2:])
 except: TIME_ZONE = 'UTC'
 
 USE_I18N = True
