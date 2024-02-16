@@ -279,15 +279,15 @@ class LDAPRecord(LDAPDNS):
 	def __soa__(self):
 		return self.soa
 
-	def serial_is_epoch_datetime(self, soa_serial: int):
+	def serial_is_epoch_datetime(self, soa_serial: int) -> datetime:
 		if not isinstance(soa_serial, int):
 			raise TypeError('soa_serial must be an int')
 		soa_serial = str(soa_serial)
 		try:
-			datetime.strptime(soa_serial[:8], DATE_FMT)
+			as_date = datetime.strptime(soa_serial[:8], DATE_FMT)
 		except ValueError:
 			return False
-		return True
+		return as_date
 
 	def serial_is_epoch_regex(self, soa_serial: int):
 		if not isinstance(soa_serial, int):
@@ -314,12 +314,19 @@ class LDAPRecord(LDAPDNS):
 					return str(serial)
 				except: raise
 			# If serial epoch then sum 1 until last 2 digits are 99 #
-			if self.serial_is_epoch_datetime(serial):
-				serial_date = str(serial)[:8]
+			serial_date_obj = self.serial_is_epoch_datetime(serial)
+			if serial_date_obj:
+				date_changed = False
+				if serial_date_obj.date() != datetime.today().date():
+					serial_date_obj = datetime.now()
+					serial_num = 0
+					date_changed = True
+				serial_date = serial_date_obj.strftime(DATE_FMT)
 				# Get Counter from Epoch Serial
-				if len(str(serial)) > 8: serial_num = int(str(serial)[8:])
-				# Restart counter if serial after datetime is invalid
-				elif len(str(serial)) <= 8 or serial_num > 99: serial_num = 0
+				if not date_changed:
+					if len(str(serial)) > 8: serial_num = int(str(serial)[8:])
+					# Restart counter if serial after datetime is invalid
+					elif len(str(serial)) <= 8 or serial_num > 99: serial_num = 0
 				return int(f"{serial_date}{str(serial_num+1).rjust(2, '0')}")
 			#########################################################
 			return serial + 1

@@ -13,7 +13,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 import os
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import gettext_lazy as _
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 from interlock_backend.ldap.constants import *
 from interlock_backend.local_django_settings import *
 import base64
@@ -286,7 +286,9 @@ SIMPLE_JWT = {
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+# Get current System Olson Timezone
+try: TIME_ZONE = '/'.join(os.readlink('/etc/localtime').split('/')[-2:])
+except: TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
