@@ -4,12 +4,18 @@
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
 # Module: core.views.token
+# Contributors: Martín Vilche
 # Contains the ViewSet for Token Authentication related operations
 
 #---------------------------------- IMPORTS -----------------------------------#
+from datetime import datetime
 from rest_framework_simplejwt import views as jwt_views
+from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS
 from rest_framework.response import Response
+from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.exceptions import TokenError
 from core.serializers.token import (
 	TokenObtainPairSerializer,
 	TokenRefreshSerializer,
@@ -24,6 +30,8 @@ from core.views.mixins.token import (
 )
 from core.exceptions import otp as exc_otp
 from core.decorators.login import auth_required
+from core.views.mixins.auth import RemoveTokenResponse, DATE_FMT_COOKIE
+
 ### ViewSets
 from .base import BaseViewSet
 ################################################################################
@@ -34,17 +42,54 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 	token pair to prove the authentication of those credentials.
 	"""
 	serializer_class = TokenObtainPairSerializer
+	token_exc = [
+		TokenError,
+		AuthenticationFailed
+	]
 
-token_obtain_pair = TokenObtainPairView.as_view()
+	def post(self, request, *args, **kwargs):
+		try:
+			serializer: TokenObtainPairSerializer = self.get_serializer(data=request.data)
+			serializer.is_valid(raise_exception=True)
+		except Exception as e:
+			print(type(e) in self.token_exc)
+			if type(e) in self.token_exc == False: raise
+			return RemoveTokenResponse()
 
+		access_expire: datetime = datetime.now().utcnow() + JWT_SETTINGS['ACCESS_TOKEN_LIFETIME']
+		refresh_expire: datetime = datetime.now().utcnow() + JWT_SETTINGS['REFRESH_TOKEN_LIFETIME']
+		validated_data = serializer.validated_data
+		tokens = dict()
+		for k in ['access', 'refresh']:
+			tokens[k] = validated_data.pop(k)
+		response = Response(serializer.validated_data, status=status.HTTP_200_OK)
+		response.set_cookie(
+			key=JWT_SETTINGS['AUTH_COOKIE_NAME'],
+			value=tokens['access'],
+			httponly=True,
+			samesite=JWT_SETTINGS['AUTH_COOKIE_SAME_SITE'],
+			secure=JWT_SETTINGS['AUTH_COOKIE_SECURE'],
+			expires=access_expire.strftime(DATE_FMT_COOKIE),
+			domain=JWT_SETTINGS['AUTH_COOKIE_DOMAIN']
+		)
+		response.set_cookie(
+			key=JWT_SETTINGS['REFRESH_COOKIE_NAME'],
+			value=tokens['refresh'],
+			httponly=True,
+			samesite=JWT_SETTINGS['AUTH_COOKIE_SAME_SITE'],
+			secure=JWT_SETTINGS['AUTH_COOKIE_SECURE'],
+			expires=refresh_expire.strftime(DATE_FMT_COOKIE),
+			domain=JWT_SETTINGS['AUTH_COOKIE_DOMAIN']
+		)
+		return response
+
+# ! Old, unused
 class TokenRefreshView(jwt_views.TokenViewBase):
 	"""
 	Takes a refresh type JSON web token and returns an access type JSON web
 	token if the refresh token is valid.
 	"""
 	serializer_class = TokenRefreshSerializer
-
-token_refresh = TokenRefreshView.as_view()
 
 class TOTPViewSet(BaseViewSet):
 

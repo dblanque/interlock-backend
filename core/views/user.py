@@ -8,13 +8,12 @@
 
 #---------------------------------- IMPORTS -----------------------------------#
 ### Exceptions
-from django.core.exceptions import PermissionDenied, BadRequest
+from core.exceptions.base import PermissionDenied, BadRequest
 from core.exceptions import (
 	base as exc_base,
 	users as exc_user, 
 	ldap as exc_ldap
 )
-from interlock_backend.settings import SIMPLE_JWT
 from interlock_backend.ldap.encrypt import encrypt
 
 ### Models
@@ -35,18 +34,12 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
+from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS
 from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.constants_cache import *
 from interlock_backend.ldap import adsi as ldap_adsi
-from interlock_backend.ldap.countries import LDAP_COUNTRIES
 from interlock_backend.ldap import user as ldap_user
 from core.decorators.login import auth_required
-from ldap3 import (
-	MODIFY_ADD,
-	MODIFY_DELETE,
-	MODIFY_INCREMENT,
-	MODIFY_REPLACE
-)
 import ldap3
 import logging
 ################################################################################
@@ -1002,8 +995,8 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		data["email"] = request.user.email or ""
 		if request.user.is_superuser:
 			data["admin_allowed"] = True
-		data["access_token_lifetime"] = SIMPLE_JWT["ACCESS_TOKEN_LIFETIME"].total_seconds()
-		data["refresh_token_lifetime"] = SIMPLE_JWT["REFRESH_TOKEN_LIFETIME"].total_seconds()
+		data["access_token_lifetime"] = JWT_SETTINGS["ACCESS_TOKEN_LIFETIME"].total_seconds()
+		data["refresh_token_lifetime"] = JWT_SETTINGS["REFRESH_TOKEN_LIFETIME"].total_seconds()
 		return Response(
 			 data={
 				'code': code,
@@ -1090,27 +1083,5 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				'code': code,
 				'code_msg': code_msg,
 				'data': user_data
-			 }
-		)
-
-	@action(detail=False,methods=['get'])
-	@auth_required(require_admin=False)
-	def logout(self, request):
-		user = request.user
-		code = 0
-		code_msg = 'ok'
-
-		if LDAP_LOG_LOGOUT == True:
-			# Log this action to DB
-			logToDB(
-				user_id=request.user.id,
-				actionType="LOGOUT",
-				objectClass="USER",
-			)
-
-		return Response(
-			 data={
-				'code': code,
-				'code_msg': code_msg,
 			 }
 		)

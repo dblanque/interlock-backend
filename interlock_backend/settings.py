@@ -99,7 +99,6 @@ INSTALLED_APPS = [
     "django_otp.plugins.otp_totp",
     "django_otp.plugins.otp_hotp",
     "django_otp.plugins.otp_static",
-    "rest_framework.authtoken",
     "rest_framework",
     "drf_yasg",
     "corsheaders",
@@ -238,13 +237,9 @@ REST_FRAMEWORK = {
     "COERCE_DECIMAL_TO_STRING": False,
     "EXCEPTION_HANDLER": 'core.system.exceptionhandler.custom_exception_handler',
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-        #~~~~ Uncomment to allow authentication "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "core.views.mixins.auth.CookieJWTAuthentication",
     ),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "DEFAULT_PERMISSION_CLASSES": [
-        #~~~~"rest_framework.permissions.IsAuthenticated"
-    ],
     "PAGE_SIZE": 10,
 }
 
@@ -254,7 +249,7 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5), # Change for development (default was minutes=5)
     'REFRESH_TOKEN_LIFETIME': timedelta(minutes=15),
     'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
+    'BLACKLIST_AFTER_ROTATION': False,
     'UPDATE_LAST_LOGIN': False,
 
     'ALGORITHM': 'HS256',
@@ -265,8 +260,18 @@ SIMPLE_JWT = {
     'JWK_URL': None,
     'LEEWAY': 0,
 
+    ######################## AUTH TOKEN COOKIE ########################
+    'AUTH_HEADER_NAME': 'HTTP_COOKIE',
     'AUTH_HEADER_TYPES': ('Bearer',),
-    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'AUTH_COOKIE_DOMAIN': None,
+    'AUTH_COOKIE_NAME': 'access_token',
+    'REFRESH_COOKIE_NAME': 'refresh_token',
+    'AUTH_COOKIE_SECURE': False if DEBUG == True else True,
+    'AUTH_COOKIE_HTTP_ONLY' : True,
+    # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value
+    # 'AUTH_COOKIE_SAME_SITE': 'lax',
+    'AUTH_COOKIE_SAME_SITE': 'strict',
+    ###################################################################
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
     'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',

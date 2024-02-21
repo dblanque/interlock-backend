@@ -23,7 +23,8 @@ from rest_framework import routers
 from core.views.domain import DomainViewSet
 
 # CORE VIEWS
-from core.views.token import TokenObtainPairView, TokenRefreshView, TOTPViewSet
+from core.views.token import TokenObtainPairView, TOTPViewSet
+from core.views.auth import AuthViewSet
 from core.views.user import UserViewSet
 from core.views.organizational_unit import OrganizationalUnitViewSet
 from core.views.settings_view import SettingsViewSet
@@ -68,5 +69,6 @@ urlpatterns = [
 
 	# {BASE_URL} api/token/*
 	path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-	path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+	path('api/token/refresh/', AuthViewSet.as_view({'post':'refresh'}), name='token_refresh'),
+	path('api/token/revoke/', AuthViewSet.as_view({'post':'logout'}), name='token_revoke'),
 ]
