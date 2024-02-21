@@ -8,7 +8,6 @@
 #---------------------------------- IMPORTS -----------------------------------#
 from cryptography.fernet import Fernet
 from interlock_backend.settings import FERNET_KEY
-from django.core.exceptions import PermissionDenied
 ################################################################################
 
 # KNOWLEDGE SOURCE: geeksforgeeks.org | Thank you guys!
@@ -30,19 +29,3 @@ def decrypt(stringToDecrypt):
 
 	decMessage = fernet.decrypt(stringToDecrypt).decode()
 	return decMessage
-
-# ! Deprecated, see core.decorators.login.auth_required
-def validate_request_user(request, requireAdmin=True):
-	print("This function has been DEPRECATED.")
-	print("Use the @auth_required decorator from core.decorators.login instead.")
-	user = request.user
-	if requireAdmin == True or requireAdmin is None:
-		# Check user is_staff for any user that is not local default admin
-		if user.username != 'admin' and (user.is_superuser == False or not user):
-			raise PermissionDenied
-	elif user.is_staff != True:
-		raise PermissionDenied
-	# Check if Local Default Super-admin is deleted/disabled
-	elif user.deleted == True:
-		raise PermissionDenied
-	return True
