@@ -5,8 +5,9 @@
 ################################################################################
 # Module: core.decorators.login
 # Contains Login and Authentication related decorators
-
-from django.core.exceptions import PermissionDenied
+from core.models.user import User
+from core.exceptions.base import PermissionDenied, Unauthorized
+from core.views.mixins.auth import RemoveTokenResponse
 from functools import wraps
 
 def auth_required(require_admin: bool = True):
@@ -14,16 +15,14 @@ def auth_required(require_admin: bool = True):
 		@wraps(view_func)
 		def _wrapped(request, *args, **kwargs):
 			actual_request = request.request
-			user = actual_request.user
+			user: User = actual_request.user
 			# Check if user logically deleted or disabled
-			if user.deleted == True: raise PermissionDenied
+			if not user.is_authenticated or user.is_anonymous: return RemoveTokenResponse()
+			if user.deleted == True: raise PermissionDenied()
 
-			# Check user is_staff for any user that is not local default admin
 			if require_admin == True or require_admin is None:
 				if user.username != 'admin' and (user.is_superuser == False or not user):
 					raise PermissionDenied()
-			elif user.is_staff != True:
-				raise PermissionDenied()
 			return view_func(request, *args, **kwargs)
 		return _wrapped
 	return decorator
