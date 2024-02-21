@@ -16,7 +16,6 @@ from core.models.dnsRecordTypes import *
 from core.views.base import BaseViewSet
 
 ### Exceptions
-from django.core.exceptions import PermissionDenied
 from core.exceptions import (
 	ldap as exc_ldap,
 	dns as exc_dns

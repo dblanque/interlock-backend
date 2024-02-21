@@ -6,7 +6,7 @@
 # Module: core.decorators.login
 # Contains Login and Authentication related decorators
 from core.models.user import User
-from core.exceptions.base import PermissionDenied, Unauthorized
+from core.exceptions.base import PermissionDenied
 from core.views.mixins.auth import RemoveTokenResponse
 from functools import wraps
 

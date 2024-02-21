@@ -9,7 +9,6 @@
 
 #---------------------------------- IMPORTS -----------------------------------#
 ### Exceptions
-from django.core.exceptions import PermissionDenied
 from core.exceptions import (
 	ldap as exc_ldap,
 	dirtree as exc_dirtree,
