@@ -8,14 +8,18 @@
 # Contains the ViewSet for Token Authentication related operations
 
 #---------------------------------- IMPORTS -----------------------------------#
-from datetime import datetime
-from rest_framework_simplejwt import views as jwt_views
+### Interlock
 from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS
+
+### Rest Framework
+from rest_framework_simplejwt import views as jwt_views
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.exceptions import TokenError
+
+### Core
 from core.serializers.token import (
 	TokenObtainPairSerializer,
 	TokenRefreshSerializer,
@@ -34,6 +38,9 @@ from core.views.mixins.auth import RemoveTokenResponse, DATE_FMT_COOKIE
 
 ### ViewSets
 from .base import BaseViewSet
+
+### Others
+from datetime import datetime
 ################################################################################
 
 class TokenObtainPairView(jwt_views.TokenViewBase):

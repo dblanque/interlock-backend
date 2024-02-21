@@ -8,15 +8,22 @@
 # Contains the ViewSet for Token Authentication related operations
 
 #---------------------------------- IMPORTS -----------------------------------#
+### Django
 from django.utils.translation import gettext_lazy as _
-from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS
 from django.contrib.auth.models import AnonymousUser
+
+### Interlock
+from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS
+
+### Core
+from core.exceptions.base import AccessTokenInvalid, RefreshTokenExpired
+
+### Rest Framework
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
-from core.exceptions.base import AccessTokenInvalid, RefreshTokenExpired
 ################################################################################
 
 EMPTY_TOKEN = ""
