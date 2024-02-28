@@ -52,7 +52,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@auth_required()
 	def list(self, request):
 		user = request.user
-		data = []
+		data = dict()
 		code = 0
 		code_msg = 'ok'
 
