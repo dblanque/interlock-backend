@@ -180,10 +180,22 @@ def search_filter_add(filter_string, filter_to_add, operator="&", negate=False):
     newFilter = "(" + operator + filter_string + prefix + filter_to_add + suffix + ")"
     return newFilter
 
-def search_filter_from_dict(dictArray, operator="|"):
+def search_filter_from_dict(filter_dict: dict, operator: str="|", reverse_key=False):
+    """
+    Valid Operators: | &
+    """
     search_filter = ""
-    for key, objectType in dictArray.items():
-        search_filter = search_filter_add(search_filter, objectType + "=" + key, operator)
+    for object_key, object_type in filter_dict.items():
+        _ldap_obj_key = object_key
+        _ldap_obj_type = object_type
+        if reverse_key:
+            _ldap_obj_key = object_type
+            _ldap_obj_type = object_key
+        if type(_ldap_obj_type) == list:
+            for o in _ldap_obj_type:
+                search_filter = search_filter_add(search_filter, o + "=" + _ldap_obj_key, operator)
+        else:
+            search_filter = search_filter_add(search_filter, _ldap_obj_type + "=" + _ldap_obj_key, operator)
     return search_filter
 
 def bin_as_str(value):
