@@ -6,7 +6,6 @@
 # Module: interlock_backend.ldap.securityIdentifier
 
 #---------------------------------- IMPORTS -----------------------------------#
-import struct
 import logging
 ################################################################################
 
