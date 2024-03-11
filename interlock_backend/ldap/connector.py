@@ -143,6 +143,7 @@ class LDAPConnector(object):
             logger.error(exc_type)
             logger.error(exc_value)
             logger.error(traceback)
+            raise exc_value
         # LOG Open Connection Events
         if LDAP_LOG_CLOSE_CONNECTION == True and self.is_authenticating == False:
             logToDB(
