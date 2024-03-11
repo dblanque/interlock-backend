@@ -22,7 +22,6 @@ from rest_framework_simplejwt.exceptions import TokenError
 ### Core
 from core.serializers.token import (
 	TokenObtainPairSerializer,
-	TokenRefreshSerializer,
 	OTPTokenSerializer
 )
 from core.views.mixins.token import (
@@ -89,14 +88,6 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 			domain=JWT_SETTINGS['AUTH_COOKIE_DOMAIN']
 		)
 		return response
-
-# ! Old, unused
-class TokenRefreshView(jwt_views.TokenViewBase):
-	"""
-	Takes a refresh type JSON web token and returns an access type JSON web
-	token if the refresh token is valid.
-	"""
-	serializer_class = TokenRefreshSerializer
 
 class TOTPViewSet(BaseViewSet):
 
