@@ -39,7 +39,8 @@ class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
 		data["first_name"] = self.user.first_name or ""
 		data["last_name"] = self.user.last_name or ""
 		data["email"] = self.user.email or ""
-		data["admin_allowed"] = self.user.is_superuser or self.user.username == 'admin' or False
+		if self.user.is_superuser or self.user.username == 'admin':
+			data["admin_allowed"] = True
 
 		if LDAP_LOG_LOGIN == True:
 			# Log this action to DB
