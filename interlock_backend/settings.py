@@ -161,7 +161,7 @@ if not LOG_FILE_PATH:
 
 LOG_LEVEL = "INFO"
 LDAP3_MODULE_LOG_LEVEL = "WARNING"
-LDAP_CONNECTOR_LOG_LEVEL = "INFO"
+LDAP_CONNECTOR_LOG_LEVEL = "WARNING"
 LDAP_DNS_LOG_LEVEL = "WARNING"
 LOGGING = {
     "version": 1,
@@ -246,7 +246,8 @@ REST_FRAMEWORK = {
 DATE_INPUT_FORMATS = ['%Y-%m-%d']
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5), # Change for development (default was minutes=5)
+    # Change for development (default is minutes=5)
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
     'REFRESH_TOKEN_LIFETIME': timedelta(minutes=15),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': False,
