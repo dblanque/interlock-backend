@@ -58,7 +58,6 @@ class AuthViewSet(BaseViewSet):
 
 		return response
 
-	@auth_required(require_admin=False)
 	def logout(self, request):
 		user = request.user
 		code = 0
