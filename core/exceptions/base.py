@@ -40,6 +40,10 @@ class PermissionDenied(BaseException):
     status_code = status.HTTP_403_FORBIDDEN
     default_detail = 'Permission Denied'
     default_code = 'permission_denied'
+class NotAcceptable(BaseException):
+    status_code = status.HTTP_406_NOT_ACCEPTABLE
+    default_detail = 'Not Acceptable'
+    default_code = 'not_acceptable'
 class MissingDataKey(BaseException):
     status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     default_detail = 'Missing key in data'
