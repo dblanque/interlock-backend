@@ -56,6 +56,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 		data["realm"] = LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN or ""
 		data["name"] = LDAP_DOMAIN or ""
 		data["basedn"] = LDAP_AUTH_SEARCH_BASE or ""
+		data["user_selector"] = LDAP_AUTH_USERNAME_IDENTIFIER or ""
 		return Response(
 			 data={
 				'code': code,
@@ -76,6 +77,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 		if 'filter' in reqData:
 			if 'dnsZone' in reqData['filter']:
 				zoneFilter = str(reqData['filter']['dnsZone']).replace(" ", "")
+			else: raise exc_dns.DNSZoneNotInRequest
 
 		if zoneFilter is not None:
 			if zoneFilter == "" or len(zoneFilter) == 0:
