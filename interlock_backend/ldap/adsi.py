@@ -265,7 +265,7 @@ def list_user_perms(user, perm_search: str = None, user_is_object: bool = True) 
             raw_user_permissions = bin_as_str(user['userAccountControl'])
         else: return None
 
-    user_permissions = parse_permissions_int(
+    user_permissions: list = parse_permissions_int(
         raw_user_permissions=raw_user_permissions,
         user_name=str(user[LDAP_AUTH_USER_FIELDS["username"]])
     )
