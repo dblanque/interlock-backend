@@ -386,8 +386,9 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			'objectRid'
 		]
 
-		user_to_update = data['username']
-		permission_list = data['permission_list']
+		user_to_update = data[LDAP_AUTH_USER_FIELDS["username"]]
+		if 'permission_list' in data: permission_list = data['permission_list']
+		else: permission_list = None
 		for key in excludeKeys:
 			if key in data:
 				del data[key]
@@ -412,6 +413,81 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		# Unbind the connection
 		self.ldap_connection.unbind()
+		return Response(
+			 data={
+				'code': code,
+				'code_msg': code_msg,
+				'data': data
+			 }
+		)
+
+	@action(detail=False,methods=['post'])
+	@auth_required()
+	def bulkUpdate(self, request, pk=None):
+		user = request.user
+		code = 0
+		code_msg = 'ok'
+		data = request.data
+
+		# ######################## Set LDAP Attributes ###########################
+		# self.ldap_filter_attr = [
+		# 	LDAP_AUTH_USER_FIELDS["username"],
+		# 	'distinguishedName',
+		# 	'userPrincipalName',
+		# 	'userAccountControl',
+		# ]
+		# ########################################################################
+
+		# excludeKeys = [
+		# 	# Added keys for front-end normalization
+		# 	'name',
+		# 	'type',
+
+		# 	# Samba keys to intentionally exclude
+		# 	'password', 
+		# 	'passwordConfirm',
+		# 	'path',
+		# 	'permission_list', # This array is parsed and calculated later
+		# 	'distinguishedName', # We don't want the front-end generated DN
+		# 	'username', # LDAP Uses sAMAccountName
+		# 	'whenChanged',
+		# 	'whenCreated',
+		# 	'lastLogon',
+		# 	'badPwdCount',
+		# 	'pwdLastSet',
+		# 	'is_enabled',
+		# 	'sAMAccountType',
+		# 	'objectCategory',
+		# 	'objectSid',
+		# 	'objectRid'
+		# ]
+
+		# user_to_update = data['username']
+		# permission_list = data['permission_list']
+		# for key in excludeKeys:
+		# 	if key in data:
+		# 		del data[key]
+
+		# # Open LDAP Connection
+		# try:
+		# 	self.ldap_connection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
+		# except Exception as e:
+		# 	print(e)
+		# 	raise exc_ldap.CouldNotOpenConnection
+
+		# self.get_user_object(user_to_update, attributes=ldap3.ALL_ATTRIBUTES)
+		# user_entry = self.ldap_connection.entries[0]
+		# user_dn = str(user_entry.distinguishedName)
+
+		# self.ldap_user_update(
+		# 	user_dn=user_dn,
+		# 	user_name=user_to_update,
+		# 	user_data=data,
+		# 	permissions_list=permission_list
+		# )
+
+		# # Unbind the connection
+		# self.ldap_connection.unbind()
 		return Response(
 			 data={
 				'code': code,
