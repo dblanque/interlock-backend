@@ -740,6 +740,9 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code_msg = 'ok'
 		data = request.data
 
+		if 'username' in data or LDAP_AUTH_USER_FIELDS['username'] in data:
+			raise exc_base.NotAcceptable
+
 		# Open LDAP Connection
 		with LDAPConnector(force_admin=True) as ldc:
 			self.ldap_connection = ldc.connection
@@ -805,6 +808,9 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code = 0
 		code_msg = 'ok'
 		data = request.data
+
+		if 'username' in data or LDAP_AUTH_USER_FIELDS['username'] in data:
+			raise exc_base.NotAcceptable
 
 		# Get basic attributes for this user from AD to compare query and get dn
 		self.ldap_filter_attr = [
