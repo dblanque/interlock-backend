@@ -69,15 +69,9 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 		)
 
 		# Open LDAP Connection
-		try:
-			connector = LDAPConnector(user.dn, user.encryptedPassword, request.user)
-		except Exception as e:
-			print(e)
-			raise exc_ldap.CouldNotOpenConnection
-		self.ldap_connection = connector.connection
-
-		record_result_data = self.create_record(record_data=record_data)
-		self.ldap_connection.unbind()
+		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+			self.ldap_connection = ldc.connection
+			record_result_data = self.create_record(record_data=record_data)
 
 		return Response(
 			 data={
@@ -126,16 +120,9 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 		)
 
 		# Open LDAP Connection
-		try:
-			connector = LDAPConnector(user.dn, user.encryptedPassword, request.user)
-		except Exception as e:
-			print(e)
-			raise exc_ldap.CouldNotOpenConnection
-		self.ldap_connection = connector.connection
-
-		record_result_data = self.update_record(record_data=record_data, old_record_data=old_record_data)
-
-		self.ldap_connection.unbind()
+		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+			self.ldap_connection = ldc.connection
+			record_result_data = self.update_record(record_data=record_data, old_record_data=old_record_data)
 
 		return Response(
 			 data={
@@ -184,23 +171,17 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 				DNSRecordMixin.validate_record_data(self, record_data=r, required_values=required_values.copy())
 
 		# Open LDAP Connection
-		try:
-			connector = LDAPConnector(user.dn, user.encryptedPassword, user)
-		except Exception as e:
-			print(e)
-			raise exc_ldap.CouldNotOpenConnection
-		self.ldap_connection = connector.connection
+		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+			self.ldap_connection = ldc.connection
+			if isinstance(record_data, dict):
+				logger.debug(record_data)
+				result = self.delete_record(record_data, user)
+			elif isinstance(record_data, list):
+				result = list()
+				for r in record_data:
+					logger.debug(r)
+					result.append(self.delete_record(r, user))
 
-		if isinstance(record_data, dict):
-			logger.debug(record_data)
-			result = self.delete_record(record_data, user)
-		elif isinstance(record_data, list):
-			result = list()
-			for r in record_data:
-				logger.debug(r)
-				result.append(self.delete_record(r, user))
-
-		self.ldap_connection.unbind()
 		return Response(
 			 data={
 				'code': code,

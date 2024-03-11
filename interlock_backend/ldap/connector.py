@@ -10,6 +10,10 @@
 
 #---------------------------------- IMPORTS -----------------------------------#
 from enum import Enum
+import traceback
+import ldap3
+import ssl
+import logging
 from django_python3_ldap.utils import import_func
 from inspect import getfullargspec
 from django.contrib.auth import get_user_model
@@ -19,13 +23,14 @@ from interlock_backend.ldap.encrypt import (
 )
 from interlock_backend.ldap.adsi import search_filter_add
 from interlock_backend.ldap.constants_cache import *
-import traceback
-import ldap3
 from ldap3.core.exceptions import LDAPException
 from core.exceptions import ldap as exc_ldap
 from core.models.log import logToDB
-import ssl
-import logging
+from uuid import (
+	uuid1,
+    getnode as uuid_getnode
+)
+from random import getrandbits
 ###############################################################################
 
 logger = logging.getLogger(__name__)
@@ -93,10 +98,10 @@ def authenticate(*args, **kwargs):
         return None
 
     # Connect to LDAP and fetch user DN, create or update user if necessary
-    with LDAPConnector(password=password, force_admin=True) as ldap_c:
-        if ldap_c.connection is None: return None
-        user = ldap_c.get_user(**ldap_kwargs)
-        ldap_c.connection.unbind()
+    with LDAPConnector(password=password, force_admin=True, is_authenticating=True) as ldc:
+        if ldc.connection is None: return None
+        user = ldc.get_user(**ldap_kwargs)
+        ldc.connection.unbind()
         if user is None: return None
 
         # ! I went insane with this garbage ! #
@@ -107,7 +112,7 @@ def authenticate(*args, **kwargs):
         # sources: 
         # https://learn.microsoft.com/en-US/troubleshoot/windows-server/windows-security/new-setting-modifies-ntlm-network-authentication
         # https://unix.stackexchange.com/questions/737113/samba-4-change-password-old-enable
-        if not ldap_c.rebind(user=user.dn, password=password): return None
+        if not ldc.rebind(user_dn=user.dn, password=password): return None
 
     user.encryptedPassword = encrypt(password)
     del password
@@ -120,7 +125,36 @@ class LDAPConnector(object):
     default_user_pwd = LDAP_AUTH_CONNECTION_PASSWORD
 
     def __enter__(self):
+        logger.info(f"Connection {self.uuid} opened.")
+        # LOG Open Connection Events
+        if LDAP_LOG_OPEN_CONNECTION == True and self.is_authenticating == False:
+            logToDB(
+                user_id=self.user.id,
+                actionType="OPEN",
+                objectClass="CONN",
+                affectedObject=f"{self.uuid}"
+            )
         return self
+    
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.connection.unbind()
+        logger.info(f"Connection {self.uuid} closed.")
+        if exc_value:
+            logger.error(exc_type)
+            logger.error(exc_value)
+            logger.error(traceback)
+        # LOG Open Connection Events
+        if LDAP_LOG_CLOSE_CONNECTION == True and self.is_authenticating == False:
+            logToDB(
+                user_id=self.user.id,
+                actionType="CLOSE",
+                objectClass="CONN",
+                affectedObject=f"{self.uuid}"
+            )
+        return self.connection
+
+    def __newUuid__(self):
+        self.uuid = uuid1(node=uuid_getnode(), clock_seq=getrandbits(14))
 
     def __init__(self,
         user_dn=None,
@@ -128,8 +162,11 @@ class LDAPConnector(object):
         user=None,
         force_admin=False,
         plain_text_password=False,
-        get_ldap_info=ldap3.NONE
+        get_ldap_info=ldap3.NONE,
+        is_authenticating=False
         ):
+        self.__newUuid__()
+        self.is_authenticating = is_authenticating
         if PLAIN_TEXT_BIND_PASSWORD != True and self.default_user_pwd is not None:
             try:
                 decrypted_password = decrypt(self.default_user_pwd)
@@ -200,18 +237,12 @@ class LDAPConnector(object):
                         )
             self.server_pool.add(server)
 
-        self.user = user_dn
+        self.user = user
+        self.user_dn = user_dn
         self.auth_url = self.auth_url
         self.connection = None
         # Connect.
         try:
-            # LOG Open Connection Events
-            if user is not None and LDAP_LOG_OPEN_CONNECTION == True:
-                logToDB(
-                    user_id=user.id,
-                    actionType="OPEN",
-                    objectClass="CONN"
-                )
             connection_args = {
                 "user": user_dn,
                 "password": password,
@@ -259,20 +290,13 @@ class LDAPConnector(object):
             exception.set_detail(exception, data)
             raise exception
 
-    def __exit__(self, exc_type, exc_value, traceback):
-        if exc_value:
-            logger.error(exc_type)
-            logger.error(exc_value)
-            logger.error(traceback)
-        return self.connection.unbind()
-
-    def rebind(self, user, password):
+    def rebind(self, user_dn, password):
         if len(password) < 1: 
             self.connection.unbind()
             raise ValueError("Password length smaller than one, unbinding connection.")
         try:
             self.connection.rebind(
-                user=user,
+                user=user_dn,
                 password=password,
                 read_server_info=True
             )

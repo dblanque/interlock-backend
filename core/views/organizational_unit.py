@@ -51,55 +51,50 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		code_msg = 'ok'
 
 		# Open LDAP Connection
-		try:
-			c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
-		except Exception as e:
-			print(e)
-			raise exc_ldap.CouldNotOpenConnection
+		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+			self.ldap_connection = ldc.connection
 
-		attributesToSearch = [
-			# User Attrs
-			'objectClass',
-			'objectCategory',
-			LDAP_OU_FIELD,
+			attributesToSearch = [
+				# User Attrs
+				'objectClass',
+				'objectCategory',
+				LDAP_OU_FIELD,
 
-			# Group Attrs
-			'cn',
-			'member',
-			'distinguishedName',
-			'groupType',
-			'objectSid'
-		]
+				# Group Attrs
+				'cn',
+				'member',
+				'distinguishedName',
+				'groupType',
+				'objectSid'
+			]
 
-		# Read-only end-point, build filters from default dictionary
-		filterDict = LDAP_DIRTREE_OU_FILTER
-		ldapFilter = search_filter_from_dict(filterDict)
+			# Read-only end-point, build filters from default dictionary
+			filterDict = LDAP_DIRTREE_OU_FILTER
+			ldapFilter = search_filter_from_dict(filterDict)
 
-		try:
-			debugTimerStart = perf_counter()
-			dirList = LDAPTree(**{
-				"connection": c,
-				"recursive": True,
-				"ldapFilter": ldapFilter,
-				"ldapAttributes": attributesToSearch,
-			})
-			debugTimerEnd = perf_counter()
-			logger.info("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
-		except Exception as e:
-			print(e)
-			raise exc_ldap.CouldNotFetchDirtree
+			try:
+				debugTimerStart = perf_counter()
+				dirList = LDAPTree(**{
+					"connection": self.ldap_connection,
+					"recursive": True,
+					"ldapFilter": ldapFilter,
+					"ldapAttributes": attributesToSearch,
+				})
+				debugTimerEnd = perf_counter()
+				logger.info("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
+			except Exception as e:
+				print(e)
+				raise exc_ldap.CouldNotFetchDirtree
 
-		if LDAP_LOG_READ == True:
-			# Log this action to DB
-			logToDB(
-				user_id=request.user.id,
-				actionType="READ",
-				objectClass="OU",
-				affectedObject="ALL - List Query"
-			)
+			if LDAP_LOG_READ == True:
+				# Log this action to DB
+				logToDB(
+					user_id=request.user.id,
+					actionType="READ",
+					objectClass="OU",
+					affectedObject="ALL - List Query"
+				)
 
-		# Close / Unbind LDAP Connection
-		c.unbind()
 		return Response(
 				data={
 				'code': code,
@@ -123,55 +118,49 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			raise exc_dirtree.DirtreeFilterBad
 
 		# Open LDAP Connection
-		try:
-			c = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
-		except Exception as e:
-			print(e)
-			raise exc_ldap.CouldNotOpenConnection
+		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+			self.ldap_connection = ldc.connection
 
-		ldap_filter_attr = [
-			# User Attrs
-			'objectClass',
-			'objectCategory',
-			LDAP_OU_FIELD,
+			ldap_filter_attr = [
+				# User Attrs
+				'objectClass',
+				'objectCategory',
+				LDAP_OU_FIELD,
 
-			# Group Attrs
-			'cn',
-			'member',
-			'distinguishedName',
-			'groupType',
-			'objectSid'
-		]
+				# Group Attrs
+				'cn',
+				'member',
+				'distinguishedName',
+				'groupType',
+				'objectSid'
+			]
 
-		# Should have:
-		# Filter by Object DN
-		# Filter by Attribute
-		try:
-			debugTimerStart = perf_counter()
-			dirList = LDAPTree(**{
-				"connection": c,
-				"recursive": True,
-				"ldapFilter": ldap_filter_object,
-				"ldapAttributes": ldap_filter_attr,
-			})
-			debugTimerEnd = perf_counter()
-			logger.info("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
-		except Exception as e:
-			print(e)
-			c.unbind()
-			raise exc_ldap.CouldNotFetchDirtree
+			# Should have:
+			# Filter by Object DN
+			# Filter by Attribute
+			try:
+				debugTimerStart = perf_counter()
+				dirList = LDAPTree(**{
+					"connection": self.ldap_connection,
+					"recursive": True,
+					"ldapFilter": ldap_filter_object,
+					"ldapAttributes": ldap_filter_attr,
+				})
+				debugTimerEnd = perf_counter()
+				logger.info("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
+			except Exception as e:
+				print(e)
+				raise exc_ldap.CouldNotFetchDirtree
 
-		if LDAP_LOG_READ == True:
-			# Log this action to DB
-			logToDB(
-				user_id=request.user.id,
-				actionType="READ",
-				objectClass="LDAP",
-				affectedObject="ALL - Full Dirtree Query"
-			)
+			if LDAP_LOG_READ == True:
+				# Log this action to DB
+				logToDB(
+					user_id=request.user.id,
+					actionType="READ",
+					objectClass="LDAP",
+					affectedObject="ALL - Full Dirtree Query"
+				)
 
-		# Close / Unbind LDAP Connection
-		c.unbind()
 		return Response(
 				data={
 				'code': code,
@@ -203,37 +192,32 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			raise exc_dirtree.DirtreeDistinguishedNameConflict
 
 		# Open LDAP Connection
-		try:
-			self.ldap_connection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
-		except Exception as e:
-			print(e)
-			raise exc_ldap.CouldNotOpenConnection
-	
-		try:
-			self.ldap_connection.modify_dn(distinguishedName, relativeDistinguishedName, new_superior=ldap_path)
-		except Exception as e:
-			print(e)
-			data = {
-				"ldap_response": self.ldap_connection.result,
-				"ldapObject": objectName,
-			}
-			if self.ldap_connection.result.description == "entryAlreadyExists":
-				data[''] = 409
-			self.ldap_connection.unbind()
-			raise exc_dirtree.DirtreeMove(data=data)
+		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+			self.ldap_connection = ldc.connection
 
-		if LDAP_LOG_UPDATE == True:
-			# Log this action to DB
-			logToDB(
-				user_id=request.user.id,
-				actionType="UPDATE",
-				objectClass="LDAP",
-				affectedObject=objectName,
-				extraMessage="MOVE"
-			)
+			try:
+				self.ldap_connection.modify_dn(distinguishedName, relativeDistinguishedName, new_superior=ldap_path)
+			except Exception as e:
+				print(e)
+				data = {
+					"ldap_response": self.ldap_connection.result,
+					"ldapObject": objectName,
+				}
+				if self.ldap_connection.result.description == "entryAlreadyExists":
+					data[''] = 409
+				self.ldap_connection.unbind()
+				raise exc_dirtree.DirtreeMove(data=data)
 
-		# Close / Unbind LDAP Connection
-		self.ldap_connection.unbind()
+			if LDAP_LOG_UPDATE == True:
+				# Log this action to DB
+				logToDB(
+					user_id=request.user.id,
+					actionType="UPDATE",
+					objectClass="LDAP",
+					affectedObject=objectName,
+					extraMessage="MOVE"
+				)
+
 		return Response(
 				data={
 				'code': code,
@@ -267,41 +251,36 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		new_rdn = str(distinguished_name).split("=")[0].lower() + "=" + new_rdn
 
 		# Open LDAP Connection
-		try:
-			self.ldap_connection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
-		except Exception as e:
-			print(e)
-			raise exc_ldap.CouldNotOpenConnection
+		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+			self.ldap_connection = ldc.connection
 
-		try:
-			self.ldap_connection.modify_dn(distinguished_name, new_rdn)
-		except Exception as e:
-			print(e)
-			data = {
-				"ldap_response": self.ldap_connection.result,
-				"ldapObject": objectName,
-			}
-			if self.ldap_connection.result.description == "entryAlreadyExists":
-				data['code'] = 409
-			self.ldap_connection.unbind()
-			raise exc_dirtree.DirtreeMove(data=data)
+			try:
+				self.ldap_connection.modify_dn(distinguished_name, new_rdn)
+			except Exception as e:
+				print(e)
+				data = {
+					"ldap_response": self.ldap_connection.result,
+					"ldapObject": objectName,
+				}
+				if self.ldap_connection.result.description == "entryAlreadyExists":
+					data['code'] = 409
+				self.ldap_connection.unbind()
+				raise exc_dirtree.DirtreeMove(data=data)
 
-		if LDAP_LOG_UPDATE == True:
-			if objectName != ldap_object['name']:
-				affected_object = "%s -> %s" % (objectName, ldap_object['name'])
-			else:
-				affected_object = objectName
-			# Log this action to DB
-			logToDB(
-				user_id=request.user.id,
-				actionType="UPDATE",
-				objectClass="LDAP",
-				affectedObject=affected_object,
-				extraMessage="RENAME"
-			)
+			if LDAP_LOG_UPDATE == True:
+				if objectName != ldap_object['name']:
+					affected_object = "%s -> %s" % (objectName, ldap_object['name'])
+				else:
+					affected_object = objectName
+				# Log this action to DB
+				logToDB(
+					user_id=request.user.id,
+					actionType="UPDATE",
+					objectClass="LDAP",
+					affectedObject=affected_object,
+					extraMessage="RENAME"
+				)
 
-		# Close / Unbind LDAP Connection
-		self.ldap_connection.unbind()
 		return Response(
 				data={
 				'code': code,
@@ -348,38 +327,33 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			object_dn = "CN=" + object_name + "," + object_path
 
 		# Open LDAP Connection
-		try:
-			self.ldap_connection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
-		except Exception as e:
-			print(e)
-			raise exc_ldap.CouldNotOpenConnection
+		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+			self.ldap_connection = ldc.connection
 
-		try:
-			self.ldap_connection.add(object_dn, object_type, attributes=attributes)
-		except Exception as e:
-			print(f'Could not Add LDAP Object: {object_dn}')
-			print(ldap_object)
-			print(e)
-			data = {
-				"ldap_response": self.ldap_connection.result,
-				"ldapObject": object_name,
-			}
-			if self.ldap_connection.result.description == "entryAlreadyExists":
-				data["code"] = 409
-			self.ldap_connection.unbind()
-			raise exc_ou.OUCreate(data=data)
+			try:
+				self.ldap_connection.add(object_dn, object_type, attributes=attributes)
+			except Exception as e:
+				print(f'Could not Add LDAP Object: {object_dn}')
+				print(ldap_object)
+				print(e)
+				data = {
+					"ldap_response": self.ldap_connection.result,
+					"ldapObject": object_name,
+				}
+				if self.ldap_connection.result.description == "entryAlreadyExists":
+					data["code"] = 409
+				self.ldap_connection.unbind()
+				raise exc_ou.OUCreate(data=data)
 
-		if LDAP_LOG_CREATE == True:
-			# Log this action to DB
-			logToDB(
-				user_id=request.user.id,
-				actionType="CREATE",
-				objectClass="OU",
-				affectedObject=object_name
-			)
+			if LDAP_LOG_CREATE == True:
+				# Log this action to DB
+				logToDB(
+					user_id=request.user.id,
+					actionType="CREATE",
+					objectClass="OU",
+					affectedObject=object_name
+				)
 
-		# Close / Unbind LDAP Connection
-		self.ldap_connection.unbind()
 		return Response(
 				data={
 				'code': code,
@@ -397,39 +371,34 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		data = request.data
 
 		# Open LDAP Connection
-		try:
-			self.ldap_connection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
-		except Exception as e:
-			print(e)
-			raise exc_ldap.CouldNotOpenConnection
+		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+			self.ldap_connection = ldc.connection
 
-		object_dn = data['distinguishedName']
+			object_dn = data['distinguishedName']
 
-		if not object_dn or object_dn == "":
-			self.ldap_connection.unbind()
-			raise exc_ldap.LDAPObjectDoesNotExist
-		try:
-			self.ldap_connection.delete(object_dn)
-		except Exception as e:
-			self.ldap_connection.unbind()
-			print(e)
-			print(f'Could not delete LDAP Object: {object_dn}')
-			data = {
-				"ldap_response": self.ldap_connection.result
-			}
-			raise exc_ldap.BaseException(data=data)
+			if not object_dn or object_dn == "":
+				self.ldap_connection.unbind()
+				raise exc_ldap.LDAPObjectDoesNotExist
+			try:
+				self.ldap_connection.delete(object_dn)
+			except Exception as e:
+				self.ldap_connection.unbind()
+				print(e)
+				print(f'Could not delete LDAP Object: {object_dn}')
+				data = {
+					"ldap_response": self.ldap_connection.result
+				}
+				raise exc_ldap.BaseException(data=data)
 
-		if LDAP_LOG_DELETE == True:
-			# Log this action to DB
-			logToDB(
-				user_id=request.user.id,
-				actionType="DELETE",
-				objectClass="LDAP",
-				affectedObject=data['name']
-			)
+			if LDAP_LOG_DELETE == True:
+				# Log this action to DB
+				logToDB(
+					user_id=request.user.id,
+					actionType="DELETE",
+					objectClass="LDAP",
+					affectedObject=data['name']
+				)
 
-		# Unbind the connection
-		self.ldap_connection.unbind()
 		return Response(
 			 data={
 				'code': code,

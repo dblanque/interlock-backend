@@ -40,23 +40,19 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 		code_msg = 'ok'
 
 		# Open LDAP Connection
-		try:
-			self.ldap_connection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
-		except Exception as e:
-			print(e)
-			raise exc_ldap.CouldNotOpenConnection
-		self.ldap_filter_object = search_filter_add("", "objectclass=" + 'group')
-		self.ldap_filter_attr = [
-			'cn',
-			'distinguishedName',
-			'groupType',
-			'member'
-		]
+		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+			self.ldap_connection = ldc.connection
 
-		data, valid_attributes = self.list_groups()
+			self.ldap_filter_object = search_filter_add("", "objectclass=" + 'group')
+			self.ldap_filter_attr = [
+				'cn',
+				'distinguishedName',
+				'groupType',
+				'member'
+			]
 
-		# Close / Unbind LDAP Connection
-		self.ldap_connection.unbind()
+			data, valid_attributes = self.list_groups()
+
 		return Response(
 			 data={
 				'code': code,
@@ -91,16 +87,10 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 		########################################################################
 
 		# Open LDAP Connection
-		try:
-			self.ldap_connection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
-		except Exception as e:
-			print(e)
-			raise exc_ldap.CouldNotOpenConnection
+		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+			self.ldap_connection = ldc.connection
+			group_dict, valid_attributes = self.fetch_group()
 
-		group_dict, valid_attributes = self.fetch_group()
-
-		# Close / Unbind LDAP Connection
-		self.ldap_connection.unbind()
 		return Response(
 			 data={
 				'code': code,
@@ -119,28 +109,22 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 		data = request.data
 
 		# Open LDAP Connection
-		try:
-			self.connection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
-		except Exception as e:
-			self.connection.unbind()
-			print(e)
-			raise exc_ldap.CouldNotOpenConnection
+		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+			self.ldap_connection = ldc.connection
 
-		group_data = data['group']
-		#Make sure Group doesn't exist check with CN and authUserField
-		self.ldap_filter_object = search_filter_add("", "cn="+group_data['cn'])
-		self.ldap_filter_object = search_filter_add(self.ldap_filter_object, LDAP_AUTH_USER_FIELDS["username"]+"="+group_data['cn'], "|")
+			group_data = data['group']
+			# Make sure Group doesn't exist check with CN and authUserField
+			self.ldap_filter_object = search_filter_add("", "cn="+group_data['cn'])
+			self.ldap_filter_object = search_filter_add(self.ldap_filter_object, LDAP_AUTH_USER_FIELDS["username"]+"="+group_data['cn'], "|")
 
-		# Send LDAP Query for user being created to see if it exists
-		self.ldap_filter_attr = [
-			'cn',
-			'distinguishedName',
-			'userPrincipalName',
-		]
-		self.create_group(group_data=group_data)
+			# Send LDAP Query for user being created to see if it exists
+			self.ldap_filter_attr = [
+				'cn',
+				'distinguishedName',
+				'userPrincipalName',
+			]
+			self.create_group(group_data=group_data)
 
-		# Unbind the connection
-		self.connection.unbind()
 		return Response(
 			 data={
 				'code': code,
@@ -157,20 +141,12 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 		data = request.data
 
 		# Open LDAP Connection
-		try:
-			self.ldap_connection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
-		except Exception as e:
-			self.ldap_connection.unbind()
-			print(e)
-			raise exc_ldap.CouldNotOpenConnection
+		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+			self.ldap_connection = ldc.connection
+			group_data = data['group']
+			self.ldap_filter_attr = list(group_data.keys())
+			self.update_group(group_data=group_data)
 
-		group_data = data['group']
-		self.ldap_filter_attr = list(group_data.keys())
-
-		self.update_group(group_data=group_data)
-
-		# Unbind the connection
-		self.ldap_connection.unbind()
 		return Response(
 			 data={
 				'code': code,
@@ -189,16 +165,10 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 		group_data = data['group']
 
 		# Open LDAP Connection
-		try:
-			self.ldap_connection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
-		except Exception as e:
-			print(e)
-			raise exc_ldap.CouldNotOpenConnection
+		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+			self.ldap_connection = ldc.connection
+			self.delete_group(group_data=group_data)
 
-		self.delete_group(group_data=group_data)
-
-		# Unbind the connection
-		self.ldap_connection.unbind()
 		return Response(
 			 data={
 				'code': code,
