@@ -159,6 +159,10 @@ if not os.path.exists(LOG_FILE_PATH):
 if not LOG_FILE_PATH:
     raise ImproperlyConfigured("No LOG_FILE_PATH found.")
 
+LOG_LEVEL = "INFO"
+LDAP3_MODULE_LOG_LEVEL = "WARNING"
+LDAP_CONNECTOR_LOG_LEVEL = "INFO"
+LDAP_DNS_LOG_LEVEL = "WARNING"
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -182,20 +186,16 @@ LOGGING = {
     "loggers": {
         '': {
             'handlers': ['console', 'file'],
-            'propagate': True,
-            'level': 'INFO',
+            'level': LOG_LEVEL,
         },
         "django_python3_ldap": {
-            "handlers": ["console"],
-            "level": "INFO",
+            "level": LDAP3_MODULE_LOG_LEVEL,
         },
         "interlock_backend.ldap.connector": {
-            "handlers": ["console"],
-            "level": "INFO",
+            "level": LDAP_CONNECTOR_LOG_LEVEL,
         },
         "core.models.dns": {
-            "handlers": ["console"],
-            "level": "INFO",
+            "level": LDAP_DNS_LOG_LEVEL,
         },
     },
 }
