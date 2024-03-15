@@ -136,14 +136,8 @@ class LDAPConnector(object):
             )
         return self
     
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.connection.unbind()
-        logger.info(f"Connection {self.uuid} closed.")
-        if exc_value:
-            logger.error(exc_type)
-            logger.error(exc_value)
-            logger.error(traceback)
-            raise exc_value
         # LOG Open Connection Events
         if LDAP_LOG_CLOSE_CONNECTION == True and self.is_authenticating == False:
             logToDB(
@@ -152,7 +146,10 @@ class LDAPConnector(object):
                 objectClass="CONN",
                 affectedObject=f"{self.uuid}"
             )
-        return self.connection
+        logger.info(f"Connection {self.uuid} closed.")
+        if exc_value:
+            logger.exception(exc_value)
+            raise exc_value
 
     def __newUuid__(self):
         self.uuid = uuid1(node=uuid_getnode(), clock_seq=getrandbits(14))
@@ -168,7 +165,7 @@ class LDAPConnector(object):
         ):
         self.__newUuid__()
         self.is_authenticating = is_authenticating
-        if PLAIN_TEXT_BIND_PASSWORD != True and self.default_user_pwd is not None:
+        if not PLAIN_TEXT_BIND_PASSWORD and self.default_user_pwd:
             try:
                 decrypted_password = decrypt(self.default_user_pwd)
             except Exception as e:
@@ -283,6 +280,7 @@ class LDAPConnector(object):
         except LDAPException as ex:
             str_ex = "LDAP bind failed: {ex}".format(ex=ex)
             logger.error(str_ex)
+            logger.exception(ex)
             exception = exc_ldap.CouldNotOpenConnection
             data = {
                 "code": exception.default_code,
