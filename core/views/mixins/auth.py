@@ -24,13 +24,18 @@ from rest_framework import status
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
+
+### Others
+import logging
 ################################################################################
+
+logger = logging.getLogger(__name__)
 
 EMPTY_TOKEN = ""
 DATE_FMT_COOKIE = "%a, %d %b %Y %H:%M:%S GMT"
 BAD_LOGIN_LIMIT = 5
 
-def RemoveTokenResponse(remove_refresh=False, increase_bad_login=True, bad_login_count=0) -> Response:
+def RemoveTokenResponse(request, remove_refresh=False, bad_login_count=False) -> Response:
 	response = Response(status=status.HTTP_401_UNAUTHORIZED)
 	response.set_cookie(
 		key=JWT_SETTINGS['AUTH_COOKIE_NAME'],
@@ -48,65 +53,53 @@ def RemoveTokenResponse(remove_refresh=False, increase_bad_login=True, bad_login
 			domain=JWT_SETTINGS['AUTH_COOKIE_DOMAIN']
 		)
 
-	# TODO - Bad Login Stuff
-	# if increase_bad_login:
-	# 	try:
-	# 		response.set_cookie(
-	# 			key="BAD_LOGIN_COUNT",
-	# 			value=int(bad_login_count)+1,
-	# 			httponly=False,
-	# 			samesite=JWT_SETTINGS['AUTH_COOKIE_SAME_SITE'],
-	# 			domain=JWT_SETTINGS['AUTH_COOKIE_DOMAIN']
-	# 		)
-	# 	except:
-	# 		pass
+	if bad_login_count:
+		bad_login_count = int(request.COOKIES.get("X_BAD_LOGIN_COUNT")) or 0
+		if bad_login_count < BAD_LOGIN_LIMIT: bad_login_count = int(bad_login_count)+1
+		else: bad_login_count = 0
+		try:
+			response.set_cookie(
+				key="X_BAD_LOGIN_COUNT",
+				value=bad_login_count,
+				httponly=False,
+				samesite=JWT_SETTINGS['AUTH_COOKIE_SAME_SITE'],
+				domain=JWT_SETTINGS['AUTH_COOKIE_DOMAIN']
+			)
+		except:
+			pass
+	response.data = { "remaining_login_count": BAD_LOGIN_LIMIT-bad_login_count }
 	return response
 
 class CookieJWTAuthentication(JWTAuthentication):  
 	def authenticate(self, request):
-		if(JWT_SETTINGS['AUTH_HEADER_NAME'] not in request.META): return AnonymousUser(), EMPTY_TOKEN
-		if(len(request.META[JWT_SETTINGS['AUTH_HEADER_NAME']]) == 0): return AnonymousUser(), EMPTY_TOKEN
-		tokens = {}
-		split_cookies = request.META[JWT_SETTINGS['AUTH_HEADER_NAME']].split(';')
-		for cookie in split_cookies:
-			split_token = cookie.split('=')
-			if(len(split_token)==0):
-				return AnonymousUser(), EMPTY_TOKEN
-			tokens[split_token[0].strip()] = split_token[1].strip()
-
-		if (JWT_SETTINGS['AUTH_COOKIE_NAME'] not in tokens):
-			return AnonymousUser(), EMPTY_TOKEN
-
-		raw_token = tokens[JWT_SETTINGS['AUTH_COOKIE_NAME']]
-		if raw_token is None or raw_token == 'expired':
-			return AnonymousUser(), EMPTY_TOKEN
 		try:
-			validated_token = AccessToken(raw_token)
+			AUTH_TOKEN = request.COOKIES.get(JWT_SETTINGS['AUTH_COOKIE_NAME'])
+			if (not AUTH_TOKEN
+				or AUTH_TOKEN == 'expired'
+				or len(AUTH_TOKEN) == 0
+			): return AnonymousUser(), EMPTY_TOKEN
+			validated_token = AccessToken(AUTH_TOKEN)
 		except TokenError as e:
 			raise AccessTokenInvalid()
+		except Exception as generic_e:
+			logger.exception(generic_e)
+			raise generic_e
 		return self.get_user(validated_token), validated_token
 
 	def refresh(self, request):
-		if(JWT_SETTINGS['AUTH_HEADER_NAME'] not in request.META): raise RefreshTokenExpired()
-		if(len(request.META[JWT_SETTINGS['AUTH_HEADER_NAME']]) == 0): raise RefreshTokenExpired()
-		tokens = {}
-		split_cookies = request.META[JWT_SETTINGS['AUTH_HEADER_NAME']].split(';')
-		for cookie in split_cookies:
-			split_token = cookie.split('=')
-			if(len(split_token)==0):
-				raise RefreshTokenExpired()
-			tokens[split_token[0].strip()] = split_token[1].strip()
+		REFRESH_TOKEN = request.COOKIES.get(JWT_SETTINGS['REFRESH_COOKIE_NAME'])
+		if (not REFRESH_TOKEN
+			or REFRESH_TOKEN == 'expired'
+			or len(REFRESH_TOKEN) == 0
+		): raise RefreshTokenExpired()
 
-		if (JWT_SETTINGS['REFRESH_COOKIE_NAME'] not in tokens):
-			raise RefreshTokenExpired()
-
-		raw_token = tokens[JWT_SETTINGS['REFRESH_COOKIE_NAME']]
-		if raw_token is None:
-			raise RefreshTokenExpired()
 		try:
-			refreshed_tokens = RefreshToken(raw_token)
+			refreshed_tokens = RefreshToken(REFRESH_TOKEN)
 		except TokenError as e:
 			raise RefreshTokenExpired()
+		except Exception as generic_e:
+			logger.exception(generic_e)
+			raise generic_e
 		refreshed_tokens.set_jti()
 		refreshed_tokens.set_exp()
 		refreshed_tokens.set_iat()

@@ -13,6 +13,7 @@ from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS
 
 ### Rest Framework
 from rest_framework_simplejwt import views as jwt_views
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import AuthenticationFailed
@@ -34,18 +35,15 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 	token pair to prove the authentication of those credentials.
 	"""
 	serializer_class = TokenObtainPairSerializer
-	token_exc = [
-		TokenError,
-		AuthenticationFailed
-	]
+	token_exc = [ TokenError, AuthenticationFailed ]
 
-	def post(self, request, *args, **kwargs):
+	def post(self, request: Request, *args, **kwargs):
 		try:
 			serializer: TokenObtainPairSerializer = self.get_serializer(data=request.data)
 			serializer.is_valid(raise_exception=True)
 		except Exception as e:
-			if any(type(e) == type(te) for te in self.token_exc):
-				return RemoveTokenResponse()
+			if any(type(e) == te for te in self.token_exc):
+				return RemoveTokenResponse(request, bad_login_count=True)
 			raise e
 
 		access_expire: datetime = datetime.now().astimezone(timezone.utc) + JWT_SETTINGS['ACCESS_TOKEN_LIFETIME']
