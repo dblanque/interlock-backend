@@ -16,6 +16,7 @@ import string as mod_string
 import re
 import logging
 
+from interlock_backend.settings import DEBUG as INTERLOCK_DEBUG
 from interlock_backend.ldap.constants_cache import LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN
 ################################################################################
 
@@ -35,7 +36,10 @@ def parse_config_url(url: str):
 	# totp/dblanque? totp is cap group 1 | dblanque is cap group 2 | everything else cap group 3
 	if re.match(r'^.*totp/.*:.*$', url):
 		return url
-	label = f"Interlock {LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN}"
+	if INTERLOCK_DEBUG:
+		label = f"Interlock DEVELOPMENT {LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN}"
+	else:
+		label = f"Interlock {LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN}"
 	regex = r'^(.*totp/)(?!.*:)(.*)(\?.*)$'
 	return re.sub(regex, rf"\1{label}:\2@{LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN}\3", url)
 

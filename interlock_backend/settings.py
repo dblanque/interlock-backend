@@ -69,8 +69,10 @@ DEBUG = True
 CORS_ALLOW_CREDENTIALS = True
 DEV_URL = "http://127.0.0.1:3000"
 FRONT_URL = DEV_URL
-HTTP_FRONT_URL = f"http://{FRONT_URL}"
-HTTPS_FRONT_URL = f"https://{FRONT_URL}"
+URLS = [ DEV_URL, FRONT_URL ]
+if FRONT_URL != DEV_URL:
+    URLS.append(f"http://{FRONT_URL}")
+    URLS.append(f"https://{FRONT_URL}")
 
 # If you want to restrict to a subnet or host
 # ALLOWED_HOSTS = ['127.0.0.1']
@@ -83,10 +85,10 @@ if DEBUG:
 else:
     # SAFE CORS SETTINGS
     # If this is used, there's no need to use `CORS_ORIGIN_ALLOW_ALL = True`
-    CORS_ALLOWED_ORIGINS = [ HTTP_FRONT_URL, HTTPS_FRONT_URL, DEV_URL ]
-    CORS_ORIGIN_WHITELIST = [ HTTP_FRONT_URL, HTTPS_FRONT_URL, DEV_URL ] 
-    CORS_ORIGIN_REGEX_WHITELIST = [ HTTP_FRONT_URL, HTTPS_FRONT_URL, DEV_URL ]
-    ALLOWED_HOSTS = [ HTTP_FRONT_URL, HTTPS_FRONT_URL, DEV_URL, 'localhost', '127.0.0.1' ]
+    CORS_ALLOWED_ORIGINS = URLS
+    CORS_ORIGIN_WHITELIST = URLS 
+    CORS_ORIGIN_REGEX_WHITELIST = URLS
+    ALLOWED_HOSTS = URLS + [ 'localhost', '127.0.0.1' ]
 
 # Application definition
 
