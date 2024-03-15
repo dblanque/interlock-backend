@@ -1,6 +1,7 @@
 from rest_framework.exceptions import APIException
 from rest_framework import status
 
+# TODO change to CoreException
 class BaseException(APIException):
     def __init__(self, data=None):
         super().__init__()
@@ -45,7 +46,7 @@ class NotAcceptable(BaseException):
     default_detail = 'Not Acceptable'
     default_code = 'not_acceptable'
 class MissingDataKey(BaseException):
-    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+    status_code = status.HTTP_400_BAD_REQUEST
     default_detail = 'Missing key in data'
     default_code = 'data_key_missing'
 class LDAPServerUnreachable(BaseException):
