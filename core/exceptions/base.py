@@ -1,7 +1,6 @@
 from rest_framework.exceptions import APIException
 from rest_framework import status
 
-# TODO change to CoreException
 class CoreException(APIException):
     def __init__(self, data=None):
         super().__init__()
