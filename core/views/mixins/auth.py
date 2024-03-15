@@ -28,8 +28,9 @@ from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
 EMPTY_TOKEN = ""
 DATE_FMT_COOKIE = "%a, %d %b %Y %H:%M:%S GMT"
+BAD_LOGIN_LIMIT = 5
 
-def RemoveTokenResponse(remove_refresh=False) -> Response:
+def RemoveTokenResponse(remove_refresh=False, increase_bad_login=True, bad_login_count=0) -> Response:
 	response = Response(status=status.HTTP_401_UNAUTHORIZED)
 	response.set_cookie(
 		key=JWT_SETTINGS['AUTH_COOKIE_NAME'],
@@ -46,6 +47,19 @@ def RemoveTokenResponse(remove_refresh=False) -> Response:
 			samesite=JWT_SETTINGS['AUTH_COOKIE_SAME_SITE'],
 			domain=JWT_SETTINGS['AUTH_COOKIE_DOMAIN']
 		)
+
+	# TODO - Bad Login Stuff
+	# if increase_bad_login:
+	# 	try:
+	# 		response.set_cookie(
+	# 			key="BAD_LOGIN_COUNT",
+	# 			value=int(bad_login_count)+1,
+	# 			httponly=False,
+	# 			samesite=JWT_SETTINGS['AUTH_COOKIE_SAME_SITE'],
+	# 			domain=JWT_SETTINGS['AUTH_COOKIE_DOMAIN']
+	# 		)
+	# 	except:
+	# 		pass
 	return response
 
 class CookieJWTAuthentication(JWTAuthentication):  

@@ -23,7 +23,8 @@ from rest_framework import routers
 from core.views.domain import DomainViewSet
 
 # CORE VIEWS
-from core.views.token import TokenObtainPairView, TOTPViewSet
+from core.views.token import TokenObtainPairView
+from core.views.totp import TOTPViewSet
 from core.views.auth import AuthViewSet
 from core.views.user import UserViewSet
 from core.views.organizational_unit import OrganizationalUnitViewSet
@@ -31,6 +32,7 @@ from core.views.settings_view import SettingsViewSet
 from core.views.logs import LogsViewSet
 from core.views.groups import GroupsViewSet
 from core.views.test import TestViewSet
+from core.views.gpo import GPOViewSet
 from core.views.liveness import LivenessViewSet
 from core.views.record import RecordViewSet
 from core.views.debug import DebugViewSet
@@ -51,7 +53,8 @@ named_view_sets = {
 }
 
 if DEBUG == True:
-	named_view_sets.update({ 
+	named_view_sets.update({
+		r"gpo": GPOViewSet,
 		r"test": TestViewSet,
 		r"debug": DebugViewSet
 	})

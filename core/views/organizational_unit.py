@@ -10,6 +10,7 @@
 #---------------------------------- IMPORTS -----------------------------------#
 ### Exceptions
 from core.exceptions import (
+	base as exc_base,
 	ldap as exc_ldap,
 	dirtree as exc_dirtree,
 	organizational_unit as exc_ou
@@ -388,7 +389,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				data = {
 					"ldap_response": self.ldap_connection.result
 				}
-				raise exc_ldap.BaseException(data=data)
+				raise exc_base.CoreException(data=data)
 
 			if LDAP_LOG_DELETE == True:
 				# Log this action to DB

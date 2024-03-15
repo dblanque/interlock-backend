@@ -3,7 +3,7 @@ from rest_framework_simplejwt import serializers as jwt_serializers
 from interlock_backend.ldap.constants_cache import *
 from core.exceptions import otp as exc_otp
 from core.models.log import logToDB
-from core.views.mixins.token import get_user_totp_device, validate_user_otp
+from core.views.mixins.totp import get_user_totp_device, validate_user_otp
 import re
 class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
 	def __init__(self, *args, **kwargs):

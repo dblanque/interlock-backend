@@ -16,10 +16,7 @@ import string as mod_string
 import re
 import logging
 
-from interlock_backend.ldap.constants_cache import (
-    LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN,
-    LDAP_DOMAIN
-)
+from interlock_backend.ldap.constants_cache import LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN
 ################################################################################
 
 logger = logging.getLogger(__name__)

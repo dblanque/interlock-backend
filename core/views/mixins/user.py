@@ -42,6 +42,8 @@ import traceback
 import logging
 
 ### Others
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
 from interlock_backend.ldap.countries import LDAP_COUNTRIES
 ################################################################################
 
@@ -55,18 +57,24 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 	ldap_filter_object = None
 	ldap_filter_attr = None
 
-	def get_user_object_filter(self, username):
+	def get_user_object_filter(self, username: str=None, email: str=None):
+		if (not username and not email) or (username and email):
+			raise ValueError("XOR Fail: Username OR Email required, single value allowed.")
 		filter = "(objectclass=" + LDAP_AUTH_OBJECT_CLASS + ")"
 
 		# Exclude Computer Accounts if settings allow it
 		if EXCLUDE_COMPUTER_ACCOUNTS == True:
 			filter = search_filter_add(filter, "!(objectclass=computer)")
 
-		# Add filter for username
+		if username:
+			filter_to_use = LDAP_AUTH_USER_FIELDS["username"] + "=" + username
+		elif email:
+			filter_to_use = LDAP_AUTH_USER_FIELDS["email"] + "=" + email
+		# Add filter
 		filter = search_filter_add(
 			filter,
-			LDAP_AUTH_USER_FIELDS["username"] + "=" + username
-			)
+			filter_to_use
+		)
 		return filter
 
 	def get_user_object(self, username, attributes=[LDAP_AUTH_USER_FIELDS["username"], 'distinguishedName'], object_class_filter=None):
@@ -239,7 +247,6 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		except:
 			raise exc_user.UserDNPathException
 
-
 		arguments = dict()
 		if 'permission_list' in user_data:
 			arguments['userAccountControl'] = self.calc_perms_from_list(user_data['permission_list'])
@@ -309,12 +316,12 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		Returns the used LDAP Connection
 		"""
 		connection_entries = self.ldap_connection.entries
-		
+
 		################# START NON-STANDARD ARGUMENT UPDATES ##################
 		if permissions_list:
 			if 'LDAP_UF_LOCKOUT' in permissions_list:
 				# Default is 30 Minutes
-				user_data['lockoutTime'] = 30 
+				user_data['lockoutTime'] = 30
 			try:
 				new_permissions_int = ldap_adsi.calc_permissions(permissions_list)
 			except:
@@ -444,7 +451,11 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			}
 			raise exc_user.UserUpdateError(data=data)
 
-	def ldap_user_exists(self, user_search: str, return_exception: bool = True):
+	def ldap_user_exists(
+			self,
+			user_search: str,
+			return_exception: bool = True
+		):
 		"""
 		### Checks if LDAP User Exists on Directory
 		Returns the used LDAP Connection
@@ -453,7 +464,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		ldap_attributes = [
 			LDAP_AUTH_USER_FIELDS["username"],
 			'distinguishedName',
-			'userPrincipalName',
+			LDAP_AUTH_USER_FIELDS["email"],
 		]
 		self.get_user_object(
 			user_search, 
@@ -473,6 +484,57 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			raise exception
 		elif user != [] and not return_exception:
 			return True
+		return False
+
+	def ldap_user_with_email_exists(
+			self,
+			email_search: str,
+			user_check: dict=None,
+			return_exception: bool = True
+		):
+		"""
+		### Checks if LDAP User with email exists on Directory
+		* Optional Argument user allows for conflict checking with distinguishedName and username.
+		Returns the user
+		"""
+		try: validate_email(email_search)
+		except ValidationError as e:
+			logger.warning("An invalid mail has been input into the API.")
+			raise e
+		# Send LDAP Query for user being created to see if it exists
+		ldap_attributes = [
+			LDAP_AUTH_USER_FIELDS["username"],
+			'distinguishedName',
+			LDAP_AUTH_USER_FIELDS["email"],
+		]
+		self.ldap_connection.search(
+			LDAP_AUTH_SEARCH_BASE, 
+			self.get_user_object_filter(email=email_search), 
+			attributes=ldap_attributes
+		)
+		user = self.ldap_connection.entries
+
+		if user != [] and user_check != None:
+			eq_attributes = [ 
+				"distinguishedName",
+				LDAP_AUTH_USER_FIELDS["username"]
+			]
+			# If user with same dn and username exists, return error
+			if not all(
+				(a in user_check) and
+				hasattr(user, a) and
+				user_check[a] == getattr(user, a)
+				for a in eq_attributes
+			):
+				print("A")
+				raise exc_user.UserWithEmailExists
+		else:
+			# If user exists, return error
+			if user != [] and return_exception:
+				print("B")
+				raise exc_user.UserWithEmailExists
+		if user != [] and not return_exception:
+			return user
 		return False
 
 	def ldap_user_fetch(self, user_search):
@@ -687,7 +749,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		elif 'username' in user_object:
 			user_name = user_object['username']
 		else:
-			raise exc_user.BaseException
+			raise exc_base.CoreException
 
 		# If data request for deletion has user DN
 		if 'distinguishedName' in user_object.keys() and user_object['distinguishedName'] != "":
@@ -705,7 +767,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				data = {
 					"ldap_response": self.ldap_connection.result
 				}
-				raise exc_ldap.BaseException(data=data)
+				raise exc_base.CoreException(data=data)
 		# Else, search for username dn
 		else:
 			logger.debug('Deleting with user dn search method')
@@ -726,7 +788,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				data = {
 					"ldap_response": self.ldap_connection.result
 				}
-				raise exc_ldap.BaseException(data=data)
+				raise exc_base.CoreException(data=data)
 
 		if LDAP_LOG_DELETE == True:
 			# Log this action to DB

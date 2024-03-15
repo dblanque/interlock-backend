@@ -9,6 +9,7 @@
 #---------------------------------- IMPORTS -----------------------------------#
 ### Exceptions
 from core.exceptions import (
+	base as exc_base,
 	ldap as exc_ldap,
 	dns as exc_dns
 )
@@ -223,7 +224,7 @@ class DNSRecordMixin(DomainViewMixin):
 				# Delete old DNSR after new one is created
 				dnsRecord.connection.modify(old_record_data['distinguishedName'], {'dnsRecord': [( MODIFY_DELETE, record_bytes )]})
 			else:
-				raise exc_dns.BaseException
+				raise exc_base.CoreException
 		else:
 			result = dnsRecord.update(
 				values=record_data,

@@ -150,7 +150,9 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		data = request.data
 
 		if "username" not in data:
-			raise exc_base.MissingDataKey.set_detail({ "key": "username" })
+			e = exc_base.MissingDataKey()
+			e.set_detail({ "key": "username" })
+			raise e
 
 		if data['password'] != data['passwordConfirm']:
 			exception = exc_user.UserPasswordsDontMatch
@@ -168,6 +170,8 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			self.ldap_connection = ldc.connection
 			try:
 				self.ldap_user_exists(user_search=user_search)
+				if LDAP_AUTH_USER_FIELDS["email"] in data and len(data[LDAP_AUTH_USER_FIELDS["email"]]) > 0:
+					self.ldap_user_with_email_exists(email_search=data[LDAP_AUTH_USER_FIELDS["email"]])
 				user_dn = self.ldap_user_insert(user_data=data)
 				user_pwd = data['password']
 				self.set_ldap_password(user_dn=user_dn, user_pwd=user_pwd)
@@ -196,7 +200,9 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		for k in data_keys:
 			if k not in data:
-				raise exc_base.MissingDataKey.set_detail({ "key": k })
+				e = exc_base.MissingDataKey()
+				e.set_detail({ "key": k })
+				raise e
 
 		user_headers = data['headers']
 		user_list = data['users']
@@ -226,7 +232,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			mapped_pwd_key = ldap_user.PASSWORD
 		else:
 			mapped_pwd_key = header_mapping[ldap_user.PASSWORD]
-		exclude_keys = [
+		EXCLUDE_KEYS = [
 			mapped_user_key, # LDAP Uses sAMAccountName
 			mapped_pwd_key,
 			'permission_list', # This array was parsed and calculated, then changed to userAccountControl
@@ -280,9 +286,16 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 					skipped_users.append(row[mapped_user_key])
 					continue
 
+				# Check overlapping email
+				if LDAP_AUTH_USER_FIELDS["email"] in data and len(data[LDAP_AUTH_USER_FIELDS["email"]]) > 0:
+					self.ldap_user_with_email_exists(
+						email_search=data[LDAP_AUTH_USER_FIELDS["email"]],
+						user_check=data
+					)
+
 				user_dn = self.ldap_user_insert(
 					user_data=row,
-					exclude_keys=exclude_keys,
+					exclude_keys=EXCLUDE_KEYS,
 					return_exception=False,
 					key_mapping=header_mapping
 				)
@@ -342,7 +355,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		]
 		########################################################################
 
-		excludeKeys = [
+		EXCLUDE_KEYS = [
 			# Added keys for front-end normalization
 			'name',
 			'type',
@@ -369,16 +382,25 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		user_to_update = data[LDAP_AUTH_USER_FIELDS["username"]]
 		if 'permission_list' in data: permission_list = data['permission_list']
 		else: permission_list = None
-		for key in excludeKeys:
+		for key in EXCLUDE_KEYS:
 			if key in data:
 				del data[key]
 
 		# Open LDAP Connection
 		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
 			self.ldap_connection = ldc.connection
-			self.get_user_object(user_to_update, attributes=ldap3.ALL_ATTRIBUTES)
+
+			if not self.ldap_user_exists(user_search=user_to_update, return_exception=False):
+				raise exc_user.UserDoesNotExist
 			user_entry = self.ldap_connection.entries[0]
 			user_dn = str(user_entry.distinguishedName)
+			# Check overlapping email
+			if LDAP_AUTH_USER_FIELDS["email"] in data and len(data[LDAP_AUTH_USER_FIELDS["email"]]) > 0:
+				self.ldap_user_with_email_exists(
+					email_search=data[LDAP_AUTH_USER_FIELDS["email"]],
+					user_check=data
+				)
+			self.get_user_object(user_to_update, attributes=ldap3.ALL_ATTRIBUTES)
 
 			self.ldap_user_update(
 				user_dn=user_dn,
@@ -402,6 +424,67 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code = 0
 		code_msg = 'ok'
 		data = request.data
+
+		if any(v not in data for v in ["users", "permissions", "values"]):
+			raise exc_base.BadRequest
+
+		permission_list = None
+		if len(data["permissions"]) > 0: permission_list = data["permissions"]
+
+		EXCLUDE_KEYS = [
+			# Added keys for front-end normalization
+			'name',
+			'type',
+
+			# Samba keys to intentionally exclude
+			LDAP_AUTH_USER_FIELDS["email"],
+			'password', 
+			'passwordConfirm',
+			'path',
+			'permission_list', # This array is parsed and calculated later
+			'distinguishedName', # We don't want the front-end generated DN
+			'username', # LDAP Uses sAMAccountName
+			'whenChanged',
+			'whenCreated',
+			'lastLogon',
+			'badPwdCount',
+			'pwdLastSet',
+			'is_enabled',
+			'sAMAccountType',
+			'objectCategory',
+			'objectSid',
+			'objectRid',
+		]
+		for k in EXCLUDE_KEYS:
+			if k in data["values"]:
+				del data["values"][k]
+
+		if len(data["values"]) == 0 and len(data["permissions"]) == 0:
+			raise exc_base.NotAcceptable
+
+		# Open LDAP Connection
+		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+			for user_to_update in data["users"]:
+				self.ldap_connection = ldc.connection
+
+				if not self.ldap_user_exists(user_search=user_to_update, return_exception=False):
+					raise exc_user.UserDoesNotExist
+				user_entry = self.ldap_connection.entries[0]
+				user_dn = str(user_entry.distinguishedName)
+				# Check overlapping email
+				if LDAP_AUTH_USER_FIELDS["email"] in data and len(data[LDAP_AUTH_USER_FIELDS["email"]]) > 0:
+					self.ldap_user_with_email_exists(
+						email_search=data[LDAP_AUTH_USER_FIELDS["email"]],
+						user_check=data["values"]
+					)
+				self.get_user_object(user_to_update, attributes=ldap3.ALL_ATTRIBUTES)
+
+				self.ldap_user_update(
+					user_dn=user_dn,
+					user_name=user_to_update,
+					user_data=data["values"],
+					permissions_list=permission_list
+				)
 
 		return Response(
 			 data={
@@ -542,7 +625,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		data = request.data
 
 		if not isinstance(data, dict):
-			raise exc_base.BaseException
+			raise exc_base.CoreException
 
 		# Open LDAP Connection
 		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
@@ -554,7 +637,10 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 					username = data[LDAP_AUTH_USER_FIELDS["username"]]
 
 				userToDelete = None
-				userToDelete = User.objects.get(username=username)
+				try:
+					userToDelete = User.objects.get(username=username)
+				except:
+					pass
 				if userToDelete:
 					userToDelete.delete_permanently()
 			except:
@@ -577,7 +663,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		data = request.data
 
 		if not isinstance(data, list):
-			raise exc_base.BaseException
+			raise exc_base.CoreException
 
 		self.ldap_settings = {
 			"authUsernameIdentifier": LDAP_AUTH_USER_FIELDS["username"]
@@ -642,7 +728,6 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			django_user = User.objects.get(username=ldap_user_search)
 		except Exception as e:
 			logger.error(e)
-			pass
 		if django_user:
 			encryptedPass = encrypt(data['password'])
 			django_user.encryptedPassword = encryptedPass
@@ -705,7 +790,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		data = request.data
 
 		if not isinstance(data, list):
-			raise exc_base.BaseException
+			raise exc_base.CoreException
 
 		# Open LDAP Connection
 		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
@@ -819,7 +904,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			'userPrincipalName',
 			'userAccountControl',
 		]
-		excludeKeys = [
+		EXCLUDE_KEYS = [
 			'can_change_pwd',
 			'password', 
 			'passwordConfirm',
@@ -840,7 +925,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			'primaryGroupID'
 		]
 
-		for key in excludeKeys:
+		for key in EXCLUDE_KEYS:
 			if key in data:
 				del data[key]
 
@@ -871,10 +956,10 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				extraMessage="END_USER_UPDATED"
 			)
 
+		django_user = None
 		try:
 			django_user = User.objects.get(username=ldap_user_search)
 		except:
-			django_user = None
 			pass
 
 		if django_user:
@@ -886,7 +971,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 					django_user.email = None
 			django_user.save()
 
-		for k in excludeKeys:
+		for k in EXCLUDE_KEYS:
 			if k in data:
 				del data[k]
 		return Response(

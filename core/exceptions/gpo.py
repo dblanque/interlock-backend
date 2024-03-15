@@ -1,4 +1,4 @@
-from core.exceptions.base import BaseException
+from core.exceptions.base import CoreException
 from rest_framework import status
 
 # GPO Custom Exceptions
