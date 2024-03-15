@@ -390,7 +390,6 @@ class LDAPConnector(object):
         return user
 
 class LDAPInfo(LDAPConnector):
-    
     def __init__(
         self, 
         user_dn=None, 
@@ -399,7 +398,13 @@ class LDAPInfo(LDAPConnector):
         force_admin=False,
         get_ldap_info=ldap3.ALL
         ):
-        super().__init__(user_dn, password, user, force_admin, get_ldap_info)
+        super().__init__(
+            user_dn=user_dn,
+            password=password,
+            user=user,
+            force_admin=force_admin,
+            get_ldap_info=get_ldap_info
+        )
         self.refresh_server_info()
 
     def refresh_server_info(self):

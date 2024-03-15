@@ -49,17 +49,21 @@ class TestViewSet(BaseViewSet):
 
 		ldap_server = self.ldap_connection.server_pool.get_current_server(self.ldap_connection)
 
-		ldap_info = LDAPInfo(force_admin=True)
-		with open(f"{LOG_FILE_FOLDER}/test.log", "w") as f:
-			print(ldap_info.schema.to_json(), file=f)
-			f.close()
-
-		self.ldap_connection.unbind()
+		with LDAPInfo(force_admin=True) as ldap_info:
+			CONNECTION_OPEN = True if ldap_info.connection.bound else False
+			with open(f"{LOG_FILE_FOLDER}/test.log", "w") as f:
+				print(ldap_info)
+				if hasattr(ldap_info, "schema") and ldap_info.schema:
+					f.write(ldap_info.schema.to_json())
+				f.close()
+		CONNECTION_CLOSED = True if not ldap_info.connection.bound else False
 		return Response(
 			 data={
 				'code': code,
 				'code_msg': 'ok',
 				'data' : self.ldap_connection.result,
-				'active_server': ldap_server.host
+				'active_server': ldap_server.host,
+				'connection_open_success': CONNECTION_OPEN,
+				'connection_close_success': CONNECTION_CLOSED,
 			 }
 		)
