@@ -63,25 +63,28 @@ DJANGO_SUPERUSER_USERNAME = 'admin'
 DJANGO_SUPERUSER_PASSWORD = 'interlock'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 # ! ALWAYS LEAVE THIS ON TRUE
 CORS_ALLOW_CREDENTIALS = True
-FRONT_URL = "http://127.0.0.1:3000"
+DEV_URL = "http://127.0.0.1:3000"
+FRONT_URL = DEV_URL
 
+# If you want to restrict to a subnet or host
+# ALLOWED_HOSTS = ['127.0.0.1']
+ALLOW_ALL_HOSTS = ['*']
 if DEBUG:
     # If this is used then `CORS_ORIGIN_WHITELIST` will not have any effect
     # Allows requests from all origins.
-    ALLOW_ALL_HOSTS = ['*']
     CORS_ORIGIN_ALLOW_ALL = True
     ALLOWED_HOSTS = ALLOW_ALL_HOSTS
-    ALLOWED_HOSTS = ['127.0.0.1']
 else:
     # SAFE CORS SETTINGS
     # If this is used, there's no need to use `CORS_ORIGIN_ALLOW_ALL = True`
-    CORS_ALLOWED_ORIGINS = [ FRONT_URL ]
-    CORS_ORIGIN_WHITELIST = [ FRONT_URL ] 
-    CORS_ORIGIN_REGEX_WHITELIST = [ FRONT_URL ]
+    CORS_ALLOWED_ORIGINS = [ FRONT_URL, DEV_URL ]
+    CORS_ORIGIN_WHITELIST = [ FRONT_URL, DEV_URL ] 
+    CORS_ORIGIN_REGEX_WHITELIST = [ FRONT_URL, DEV_URL ]
+    ALLOWED_HOSTS = [ FRONT_URL, DEV_URL, 'localhost', '127.0.0.1' ]
 
 # Application definition
 

@@ -35,6 +35,7 @@ from core.models.dnsRecordFieldValidators import (
 	ipv4_validator,
 	ipv6_validator
 )
+from interlock_backend.settings import DEBUG as INTERLOCK_BACKEND_DEBUG
 from core.utils import dnstool
 from core.utils.dnstool import record_to_dict
 from interlock_backend.ldap.adsi import search_filter_add
@@ -57,6 +58,8 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 		data["name"] = LDAP_DOMAIN or ""
 		data["basedn"] = LDAP_AUTH_SEARCH_BASE or ""
 		data["user_selector"] = LDAP_AUTH_USERNAME_IDENTIFIER or ""
+		if INTERLOCK_BACKEND_DEBUG:
+			data["debug"] = INTERLOCK_BACKEND_DEBUG
 		return Response(
 			 data={
 				'code': code,
