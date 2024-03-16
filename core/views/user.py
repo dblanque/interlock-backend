@@ -460,7 +460,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				del data["values"][k]
 
 		if len(data["values"]) == 0 and len(data["permissions"]) == 0:
-			raise exc_base.NotAcceptable
+			raise exc_base.BadRequest
 
 		# Open LDAP Connection
 		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
@@ -826,7 +826,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		data = request.data
 
 		if 'username' in data or LDAP_AUTH_USER_FIELDS['username'] in data:
-			raise exc_base.NotAcceptable
+			raise exc_base.BadRequest
 
 		# Open LDAP Connection
 		with LDAPConnector(force_admin=True) as ldc:
@@ -895,7 +895,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		data = request.data
 
 		if 'username' in data or LDAP_AUTH_USER_FIELDS['username'] in data:
-			raise exc_base.NotAcceptable
+			raise exc_base.BadRequest
 
 		# Get basic attributes for this user from AD to compare query and get dn
 		self.ldap_filter_attr = [
