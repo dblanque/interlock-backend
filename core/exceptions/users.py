@@ -43,7 +43,7 @@ class UserDNPathException(CoreException):
     default_detail = 'User DN Path Parsing Stage Exception'
     default_code = 'user_dn_path_exception'
 class UserAntiLockout(CoreException):
-    status_code = status.HTTP_406_NOT_ACCEPTABLE
+    status_code = status.HTTP_400_BAD_REQUEST
     default_detail = 'User Anti-lockout Exception, Unacceptable Operation'
     default_code = 'user_anti_lockout'
 class CouldNotUnlockUser(CoreException):
