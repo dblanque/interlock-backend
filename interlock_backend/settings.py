@@ -86,9 +86,9 @@ else:
     # SAFE CORS SETTINGS
     # If this is used, there's no need to use `CORS_ORIGIN_ALLOW_ALL = True`
     CORS_ALLOWED_ORIGINS = URLS
-    CORS_ORIGIN_WHITELIST = URLS 
+    CORS_ORIGIN_WHITELIST = URLS
     CORS_ORIGIN_REGEX_WHITELIST = URLS
-    ALLOWED_HOSTS = URLS + [ 'localhost', '127.0.0.1' ]
+    ALLOWED_HOSTS = [ 'localhost', '127.0.0.1', FRONT_URL ]
 
 # Application definition
 
