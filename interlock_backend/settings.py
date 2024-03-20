@@ -69,7 +69,7 @@ DEBUG = True
 CORS_ALLOW_CREDENTIALS = True
 DEV_URL = "http://127.0.0.1:3000"
 FRONT_URL = DEV_URL
-URLS = [ DEV_URL, FRONT_URL ]
+URLS = [ DEV_URL ]
 if FRONT_URL != DEV_URL:
     URLS.append(f"http://{FRONT_URL}")
     URLS.append(f"https://{FRONT_URL}")
