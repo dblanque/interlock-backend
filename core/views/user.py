@@ -696,7 +696,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code = 0
 		code_msg = 'ok'
 		data = request.data
-		ldap_user_search
+		ldap_user_search = None
 
 		# Open LDAP Connection
 		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
