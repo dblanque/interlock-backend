@@ -91,7 +91,10 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code = 0
 		code_msg = 'ok'
 		data = request.data
-		user_search = data["username"]
+		if LDAP_AUTH_USER_FIELDS['username'] in data:
+			user_search = data[LDAP_AUTH_USER_FIELDS['username']]
+		elif 'username' in data:
+			user_search = data['username']
 
 		self.ldap_filter_object = "(objectclass=" + LDAP_AUTH_OBJECT_CLASS + ")"
 		self.ldap_filter_attr = [
@@ -697,7 +700,10 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
 			self.ldap_connection = ldc.connection
-			ldap_user_search = data['username']
+			if LDAP_AUTH_USER_FIELDS['username'] in data:
+				ldap_user_search = data[LDAP_AUTH_USER_FIELDS['username']]
+			elif 'username' in data:
+				ldap_user_search = data['username']
 
 			# If data request for deletion has user DN
 			if 'distinguishedName' in data.keys() and data['distinguishedName'] != "":
