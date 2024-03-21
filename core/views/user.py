@@ -700,6 +700,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
 			self.ldap_connection = ldc.connection
+			ldap_user_search
 			if LDAP_AUTH_USER_FIELDS['username'] in data:
 				ldap_user_search = data[LDAP_AUTH_USER_FIELDS['username']]
 			elif 'username' in data:
