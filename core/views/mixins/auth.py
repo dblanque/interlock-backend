@@ -54,7 +54,11 @@ def RemoveTokenResponse(request, remove_refresh=False, bad_login_count=False) ->
 		)
 
 	if bad_login_count:
-		bad_login_count = int(request.COOKIES.get("X_BAD_LOGIN_COUNT")) or 0
+		try:
+			bad_login_count = int(request.COOKIES.get("X_BAD_LOGIN_COUNT"))
+		except:
+			bad_login_count = 0
+			pass
 		if bad_login_count < BAD_LOGIN_LIMIT: bad_login_count = int(bad_login_count)+1
 		else: bad_login_count = 0
 		try:
