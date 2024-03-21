@@ -291,7 +291,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		group_data[LDAP_GROUP_FIELD] = str(group_data['cn']).lower()
 
 		args = {
-			"connection": self.connection,
+			"connection": self.ldap_connection,
 			"ldapFilter": self.ldap_filter_object,
 			"ldapAttributes": self.ldap_filter_attr,
 			"hideErrors": True
@@ -306,7 +306,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		# If group exists, return error
 		if groupExists == True:
-			self.connection.unbind()
+			self.ldap_connection.unbind()
 			group_data = {
 				"group": group_data['cn']
 			}
@@ -314,7 +314,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		# Set group Type
 		if 'groupType' not in group_data or 'groupScope' not in group_data:
-			self.connection.unbind()
+			self.ldap_connection.unbind()
 			group_data = {
 				"group": group_data['cn']
 			}
@@ -339,31 +339,31 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		logger.debug('Creating group in DN Path: ' + group_data['path'])
 		try:
-			self.connection.add(distinguishedName, 'group', attributes=group_dict)
+			self.ldap_connection.add(distinguishedName, 'group', attributes=group_dict)
 		except Exception as e:
-			self.connection.unbind()
+			self.ldap_connection.unbind()
 			print(e)
 			group_data = {
-				"ldap_response": self.connection.result
+				"ldap_response": self.ldap_connection.result
 			}
 			raise exc_groups.GroupCreate(data=group_data)
 
 		if len(membersToAdd) > 0:
 			try:
-				self.connection.extend.microsoft.add_members_to_groups(membersToAdd, distinguishedName)
+				self.ldap_connection.extend.microsoft.add_members_to_groups(membersToAdd, distinguishedName)
 			except Exception as e:
 				try:
-					self.connection.delete(distinguishedName)
+					self.ldap_connection.delete(distinguishedName)
 					group_data = {
-						"ldap_response": self.connection.result
+						"ldap_response": self.ldap_connection.result
 					}
 					raise exc_groups.GroupMembersAdd
 				except Exception as e:
-					self.connection.unbind()
-				self.connection.unbind()
+					self.ldap_connection.unbind()
+				self.ldap_connection.unbind()
 				print(e)
 				group_data = {
-					"ldap_response": self.connection.result
+					"ldap_response": self.ldap_connection.result
 				}
 				raise exc_groups.GroupMembersAdd
 
@@ -375,7 +375,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				objectClass="GROUP",
 				affectedObject=group_dict['cn']
 			)
-		return self.connection
+		return self.ldap_connection
 
 	def update_group(self, group_data: dict, unbind_on_error: bool = True):
 		data = self.request.data
