@@ -832,8 +832,10 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code_msg = 'ok'
 		data = request.data
 
-		if 'username' in data or LDAP_AUTH_USER_FIELDS['username'] in data:
-			raise exc_base.BadRequest
+		excludeKeys = ['username', LDAP_AUTH_USER_FIELDS['username']]
+		for k in excludeKeys:
+			if k in data:
+				del data[k]
 
 		# Open LDAP Connection
 		with LDAPConnector(force_admin=True) as ldc:
