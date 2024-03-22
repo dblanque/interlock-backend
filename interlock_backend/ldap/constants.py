@@ -187,6 +187,9 @@ LDAP_DIRTREE_ATTRIBUTES = [
     'objectSid'
 ]
 
+# See https://en.wikipedia.org/wiki/LDAP_Data_Interchange_Format
+LDAP_LDIF_IDENTIFIERS = ["dn","dc","ou","cn"]
+
 LDAP_OPERATIONS = [
     'BIND',
     'UNBIND',
