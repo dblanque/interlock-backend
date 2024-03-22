@@ -38,7 +38,6 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 	token_exc = [ TokenError, AuthenticationFailed ]
 
 	def post(self, request: Request, *args, **kwargs):
-		print(datetime.now().astimezone(timezone.utc).strftime(DATE_FMT_COOKIE))
 		try:
 			serializer: TokenObtainPairSerializer = self.get_serializer(data=request.data)
 			serializer.is_valid(raise_exception=True)
