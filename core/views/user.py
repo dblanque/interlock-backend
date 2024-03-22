@@ -1003,8 +1003,6 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		data["email"] = request.user.email or ""
 		if request.user.is_superuser:
 			data["admin_allowed"] = True
-		data["access_token_lifetime"] = JWT_SETTINGS["ACCESS_TOKEN_LIFETIME"].total_seconds()
-		data["refresh_token_lifetime"] = JWT_SETTINGS["REFRESH_TOKEN_LIFETIME"].total_seconds()
 		return Response(
 			 data={
 				'code': code,

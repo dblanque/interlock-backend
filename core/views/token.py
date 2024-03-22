@@ -9,7 +9,7 @@
 
 #---------------------------------- IMPORTS -----------------------------------#
 ### Interlock
-from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS
+from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS, BAD_LOGIN_COOKIE_NAME
 
 ### Rest Framework
 from rest_framework_simplejwt import views as jwt_views
@@ -25,7 +25,7 @@ from core.views.mixins.auth import RemoveTokenResponse, DATE_FMT_COOKIE
 
 ### Others
 from datetime import datetime, timezone
-import logging
+import logging, jwt
 ################################################################################
 
 logger = logging.getLogger(__name__)
@@ -38,6 +38,7 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 	token_exc = [ TokenError, AuthenticationFailed ]
 
 	def post(self, request: Request, *args, **kwargs):
+		print(datetime.now().astimezone(timezone.utc).strftime(DATE_FMT_COOKIE))
 		try:
 			serializer: TokenObtainPairSerializer = self.get_serializer(data=request.data)
 			serializer.is_valid(raise_exception=True)
@@ -46,12 +47,29 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 				return RemoveTokenResponse(request, bad_login_count=True)
 			raise e
 
-		access_expire: datetime = datetime.now().astimezone(timezone.utc) + JWT_SETTINGS['ACCESS_TOKEN_LIFETIME']
-		refresh_expire: datetime = datetime.now().astimezone(timezone.utc) + JWT_SETTINGS['REFRESH_TOKEN_LIFETIME']
 		validated_data = serializer.validated_data
 		tokens = dict()
 		for k in ['access', 'refresh']:
 			tokens[k] = validated_data.pop(k)
+
+		# Send expiry date to backend on data as well.
+		decoded_access = jwt.decode(
+			tokens['access'],
+			key=JWT_SETTINGS["SIGNING_KEY"],
+			algorithms=JWT_SETTINGS['ALGORITHM'],
+			leeway=JWT_SETTINGS["LEEWAY"],
+		)
+		decoded_refresh = jwt.decode(
+			tokens['refresh'],
+			key=JWT_SETTINGS["SIGNING_KEY"],
+			algorithms=JWT_SETTINGS['ALGORITHM'],
+			leeway=JWT_SETTINGS["LEEWAY"],
+		)
+		access_expire_epoch_seconds = decoded_access["exp"]
+		refresh_expire_epoch_seconds = decoded_refresh["exp"]
+		validated_data["access_expire"] = access_expire_epoch_seconds * 1000
+		validated_data["refresh_expire"] = refresh_expire_epoch_seconds * 1000
+
 		response = Response(serializer.validated_data, status=status.HTTP_200_OK)
 		response.set_cookie(
 			key=JWT_SETTINGS['AUTH_COOKIE_NAME'],
@@ -59,7 +77,7 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 			httponly=True,
 			samesite=JWT_SETTINGS['AUTH_COOKIE_SAME_SITE'],
 			secure=JWT_SETTINGS['AUTH_COOKIE_SECURE'],
-			expires=access_expire.strftime(DATE_FMT_COOKIE),
+			expires=datetime.fromtimestamp(access_expire_epoch_seconds).strftime(DATE_FMT_COOKIE),
 			domain=JWT_SETTINGS['AUTH_COOKIE_DOMAIN']
 		)
 		response.set_cookie(
@@ -68,7 +86,15 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 			httponly=True,
 			samesite=JWT_SETTINGS['AUTH_COOKIE_SAME_SITE'],
 			secure=JWT_SETTINGS['AUTH_COOKIE_SECURE'],
-			expires=refresh_expire.strftime(DATE_FMT_COOKIE),
+			expires=datetime.fromtimestamp(refresh_expire_epoch_seconds).strftime(DATE_FMT_COOKIE),
+			domain=JWT_SETTINGS['AUTH_COOKIE_DOMAIN']
+		)
+		response.set_cookie(
+			key=BAD_LOGIN_COOKIE_NAME,
+			value=0,
+			httponly=True,
+			samesite=JWT_SETTINGS['AUTH_COOKIE_SAME_SITE'],
+			secure=JWT_SETTINGS['AUTH_COOKIE_SECURE'],
 			domain=JWT_SETTINGS['AUTH_COOKIE_DOMAIN']
 		)
 		return response

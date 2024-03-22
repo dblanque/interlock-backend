@@ -13,7 +13,7 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import AnonymousUser
 
 ### Interlock
-from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS
+from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS, BAD_LOGIN_COOKIE_NAME
 
 ### Core
 from core.exceptions.base import AccessTokenInvalid, RefreshTokenExpired
@@ -55,7 +55,7 @@ def RemoveTokenResponse(request, remove_refresh=False, bad_login_count=False) ->
 
 	if bad_login_count:
 		try:
-			bad_login_count = int(request.COOKIES.get("X_BAD_LOGIN_COUNT"))
+			bad_login_count = int(request.COOKIES.get(BAD_LOGIN_COOKIE_NAME))
 		except:
 			bad_login_count = 0
 			pass
@@ -63,7 +63,7 @@ def RemoveTokenResponse(request, remove_refresh=False, bad_login_count=False) ->
 		else: bad_login_count = 0
 		try:
 			response.set_cookie(
-				key="X_BAD_LOGIN_COUNT",
+				key=BAD_LOGIN_COOKIE_NAME,
 				value=bad_login_count,
 				httponly=False,
 				samesite=JWT_SETTINGS['AUTH_COOKIE_SAME_SITE'],
