@@ -104,8 +104,11 @@ class AuthViewSet(BaseViewSet):
 			samesite=JWT_SETTINGS['AUTH_COOKIE_SAME_SITE'],
 			domain=JWT_SETTINGS['AUTH_COOKIE_DOMAIN']
 		)
-		response.delete_cookie(
+		response.set_cookie(
 			key=BAD_LOGIN_COOKIE_NAME,
+			value=0,
+			httponly=True,
+			samesite=JWT_SETTINGS['AUTH_COOKIE_SAME_SITE'],
 			domain=JWT_SETTINGS['AUTH_COOKIE_DOMAIN']
 		)
 
