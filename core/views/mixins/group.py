@@ -379,28 +379,34 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 	def update_group(self, group_data: dict, unbind_on_error: bool = True):
 		data = self.request.data
+		group_cn = None
+
+		# Set Distinguished Name
 		if 'distinguishedName' not in group_data:
 			if unbind_on_error: self.ldap_connection.unbind()
 			raise exc_groups.GroupDistinguishedNameMissing
 		else:
 			distinguished_name: str = group_data['distinguishedName']
 			relative_dn: str = distinguished_name.split(",")[0]
-		group_cn = None
-		group_cn_modified = False
+
+		# Set Common Name
 		if 'cn' not in group_data:
 			group_cn = relative_dn
+		# If Group CN was modified
 		else:
 			group_cn = f"CN={group_data['cn']}"
-			group_cn_modified = True
-
-		if group_cn_modified:
 			relative_dn = group_cn
 			if relative_dn == distinguished_name:
 				raise exc_dirtree.DirtreeDistinguishedNameConflict
 			try:
-				distinguished_name = OrganizationalUnitMixin.move_or_rename_object(self, distinguished_name=distinguished_name, relative_dn=group_cn)
+				distinguished_name = OrganizationalUnitMixin.move_or_rename_object(
+					self,
+					distinguished_name=distinguished_name,
+					relative_dn=group_cn
+				)
 			except:
 				exc_dirtree.DirtreeRename()
+
 		if group_cn.startswith("CN="):
 			group_cn = group_cn.split("CN=")[-1]
 
@@ -450,8 +456,8 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			'member', 
 			'path',
 			'distinguishedName',
-			'objectSid',
-			'objectRid'
+			'objectSid', # LDAP Bytes attr
+			'objectRid' # LDAP Bytes attr
 		]
 
 		group_dict = deepcopy(group_data)
