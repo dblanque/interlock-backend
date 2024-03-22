@@ -180,12 +180,12 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 
 		ldap_object = data['ldapObject']
 		ldap_path = ldap_object['destination']
-		distinguishedName = ldap_object['distinguishedName']
+		distinguished_name = ldap_object['distinguishedName']
 
 		# Open LDAP Connection
 		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
 			self.ldap_connection = ldc.connection
-			self.move_or_rename_object(distinguished_name=distinguishedName, ldap_path=ldap_path)
+			self.move_or_rename_object(distinguished_name=distinguished_name, ldap_path=ldap_path)
 
 		return Response(
 				data={
@@ -205,50 +205,12 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 
 		ldap_object = data['ldapObject']
 		distinguished_name = ldap_object['distinguishedName']
-		
-		if 'name' in ldap_object:
-			objectName = ldap_object['name']
-		else:
-			objectName = distinguished_name
-
-		relative_distinguished_name = distinguished_name.split(",")[0]
 		new_rdn = ldap_object['newRDN']
-
-		if relative_distinguished_name == new_rdn:
-			raise exc_dirtree.DirtreeDistinguishedNameConflict
-
-		new_rdn = str(distinguished_name).split("=")[0].lower() + "=" + new_rdn
 
 		# Open LDAP Connection
 		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
 			self.ldap_connection = ldc.connection
-
-			try:
-				self.ldap_connection.modify_dn(distinguished_name, new_rdn)
-			except Exception as e:
-				print(e)
-				data = {
-					"ldap_response": self.ldap_connection.result,
-					"ldapObject": objectName,
-				}
-				if self.ldap_connection.result.description == "entryAlreadyExists":
-					data['code'] = 409
-				self.ldap_connection.unbind()
-				raise exc_dirtree.DirtreeMove(data=data)
-
-			if LDAP_LOG_UPDATE == True:
-				if objectName != ldap_object['name']:
-					affected_object = "%s -> %s" % (objectName, ldap_object['name'])
-				else:
-					affected_object = objectName
-				# Log this action to DB
-				logToDB(
-					user_id=request.user.id,
-					actionType="UPDATE",
-					objectClass="LDAP",
-					affectedObject=affected_object,
-					extraMessage="RENAME"
-				)
+			self.move_or_rename_object(distinguished_name=distinguished_name, relative_dn=new_rdn)
 
 		return Response(
 				data={
@@ -279,15 +241,15 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				print(data)
 				raise exc_ou.MissingField
 
-		object_name = ldap_object['name']
-		object_path = ldap_object['path']
-		object_type = ldap_object['type']
+		object_name: str = ldap_object['name']
+		object_path: str = ldap_object['path']
+		object_type: str = ldap_object['type']
 
 		attributes = {
 			"name": object_name
 		}
 
-		if object_type == 'ou' or object_type is None:
+		if not object_type or object_type.lower() == 'ou':
 			object_dn = "OU=" + object_name + "," + object_path
 			object_main = ldap_object['ou']
 			object_type = "organizationalUnit"

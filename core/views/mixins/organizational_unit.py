@@ -89,8 +89,20 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
         """
         operation = "RENAME"
         new_dn = None
+
+        # If relative_dn is passed, namechange will be executed.
         if relative_dn:
             new_relative_dn = relative_dn
+            original_relative_dn = distinguished_name.split(",")[0]
+            original_relative_dn_identifier = original_relative_dn.split("=")[0]
+
+            # Validations
+            if original_relative_dn_identifier.lower() not in LDAP_LDIF_IDENTIFIERS:
+                raise exc_dirtree.DirtreeDistinguishedNameConflict
+            if not new_relative_dn.startswith(original_relative_dn_identifier):
+                new_relative_dn = f"{original_relative_dn_identifier}={new_relative_dn}"
+            if new_relative_dn == original_relative_dn:
+                raise exc_dirtree.DirtreeNewNameIsOld
         else:
             new_relative_dn = distinguished_name.split(",")[0]
 
