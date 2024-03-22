@@ -255,6 +255,7 @@ REST_FRAMEWORK = {
 
 DATE_INPUT_FORMATS = ['%Y-%m-%d']
 
+BAD_LOGIN_COOKIE_NAME="X_BAD_LOGIN_COUNT"
 SIMPLE_JWT = {
     # Change for development (default is minutes=5)
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
@@ -269,7 +270,7 @@ SIMPLE_JWT = {
     'AUDIENCE': None,
     'ISSUER': None,
     'JWK_URL': None,
-    'LEEWAY': 0,
+    'LEEWAY': 1,
 
     ######################## AUTH TOKEN COOKIE ########################
     'AUTH_HEADER_NAME': 'HTTP_COOKIE',
