@@ -150,8 +150,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 		return Response(
 			 data={
 				'code': code,
-				'code_msg': code_msg,
-				'data': data
+				'code_msg': code_msg
 			 }
 		)
 

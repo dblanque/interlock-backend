@@ -181,43 +181,11 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		ldap_object = data['ldapObject']
 		ldap_path = ldap_object['destination']
 		distinguishedName = ldap_object['distinguishedName']
-		
-		if 'name' in ldap_object:
-			objectName = ldap_object['name']
-		else:
-			objectName = distinguishedName
-
-		relativeDistinguishedName = distinguishedName.split(",")[0]
-
-		if relativeDistinguishedName == distinguishedName:
-			raise exc_dirtree.DirtreeDistinguishedNameConflict
 
 		# Open LDAP Connection
 		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
 			self.ldap_connection = ldc.connection
-
-			try:
-				self.ldap_connection.modify_dn(distinguishedName, relativeDistinguishedName, new_superior=ldap_path)
-			except Exception as e:
-				print(e)
-				data = {
-					"ldap_response": self.ldap_connection.result,
-					"ldapObject": objectName,
-				}
-				if self.ldap_connection.result.description == "entryAlreadyExists":
-					data[''] = 409
-				self.ldap_connection.unbind()
-				raise exc_dirtree.DirtreeMove(data=data)
-
-			if LDAP_LOG_UPDATE == True:
-				# Log this action to DB
-				logToDB(
-					user_id=request.user.id,
-					actionType="UPDATE",
-					objectClass="LDAP",
-					affectedObject=objectName,
-					extraMessage="MOVE"
-				)
+			self.move_or_rename_object(distinguished_name=distinguishedName, ldap_path=ldap_path)
 
 		return Response(
 				data={

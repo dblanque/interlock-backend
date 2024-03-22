@@ -11,7 +11,7 @@
 from rest_framework import viewsets
 
 ### Interlock
-from interlock_backend.ldap.adsi import bin_as_hex, search_filter_add
+from interlock_backend.ldap.adsi import search_filter_add
 from interlock_backend.ldap.groupTypes import LDAP_GROUP_TYPES
 from interlock_backend.ldap.securityIdentifier import SID
 from interlock_backend.ldap.connector import LDAPConnector
@@ -23,11 +23,11 @@ from core.models.log import logToDB
 ### Core
 from core.exceptions.ldap import CouldNotOpenConnection
 from core.models.ldapObject import LDAPObject
+from core.views.mixins.organizational_unit import OrganizationalUnitMixin
 
 ### Exceptions
 import traceback
-from core.exceptions import ldap as exc_ldap
-from core.exceptions import groups as exc_groups
+from core.exceptions import ldap as exc_ldap, groups as exc_groups, dirtree as exc_dirtree
 
 ### Others
 from copy import deepcopy
@@ -383,13 +383,32 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			if unbind_on_error: self.ldap_connection.unbind()
 			raise exc_groups.GroupDistinguishedNameMissing
 		else:
-			distinguishedName = group_data['distinguishedName']
+			distinguished_name: str = group_data['distinguishedName']
+			relative_dn: str = distinguished_name.split(",")[0]
+		group_cn = None
+		group_cn_modified = False
+		if 'cn' not in group_data:
+			group_cn = relative_dn
+		else:
+			group_cn = f"CN={group_data['cn']}"
+			group_cn_modified = True
 
-		group_data[LDAP_GROUP_FIELD] = str(group_data['cn']).lower()
+		if group_cn_modified:
+			relative_dn = group_cn
+			if relative_dn == distinguished_name:
+				raise exc_dirtree.DirtreeDistinguishedNameConflict
+			try:
+				distinguished_name = OrganizationalUnitMixin.move_or_rename_object(self, distinguished_name=distinguished_name, relative_dn=group_cn)
+			except:
+				exc_dirtree.DirtreeRename()
+		if group_cn.startswith("CN="):
+			group_cn = group_cn.split("CN=")[-1]
+
+		group_data[LDAP_GROUP_FIELD] = str(group_cn).lower()
 		# Send LDAP Query for user being created to see if it exists
 		args = {
 			"connection": self.ldap_connection,
-			"dn": distinguishedName,
+			"dn": distinguished_name,
 			"ldapAttributes": self.ldap_filter_attr,
 			"hideErrors": True
 		}
@@ -398,16 +417,16 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		# We also need to fetch the existing LDAP group object to know what
 		# kind of operation to apply when updating attributes
 		try:
-			groupEntryInServer = LDAPObject(**args).attributes
-			groupEntryInServer_cond = len(groupEntryInServer) > 0
+			fetched_group_entry = LDAPObject(**args).attributes
+			group_entry_exists = len(fetched_group_entry) > 0
 		except:
-			groupEntryInServer_cond = False
+			group_entry_exists = False
 
 		# If group exists, return error
-		if groupEntryInServer_cond == False:
+		if not group_entry_exists:
 			self.ldap_connection.unbind()
 			data = {
-				"group": group_data['cn']
+				"group": group_cn
 			}
 			raise exc_groups.GroupDoesNotExist(data=data)
 
@@ -415,7 +434,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		if 'groupType' not in group_data or 'groupScope' not in group_data:
 			self.ldap_connection.unbind()
 			data = {
-				"group": group_data['cn']
+				"group": group_cn
 			}
 			raise exc_groups.GroupScopeOrTypeMissing(data=data)
 
@@ -462,16 +481,16 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		operation = None
 		for key in group_dict:
 				try:
-					if key in groupEntryInServer and group_dict[key] == "" and key != 'groupType':
+					if key in fetched_group_entry and group_dict[key] == "" and key != 'groupType':
 						operation = MODIFY_DELETE
 						self.ldap_connection.modify(
-							distinguishedName,
+							distinguished_name,
 							{key: [( operation ), []]},
 						)
 					elif group_dict[key] != "":
 						operation = MODIFY_REPLACE
 						if key == 'groupType':
-							previousGroupTypes = self.getGroupType(groupTypeInt=int(groupEntryInServer[key]))
+							previousGroupTypes = self.getGroupType(groupTypeInt=int(fetched_group_entry[key]))
 							# If we're trying to go from Group Global to Domain Local Scope or viceversa
 							# We need to make it universal first, otherwise the LDAP server denies the update request
 							# Sucks but we have to do this :/
@@ -482,28 +501,28 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 								logger.debug(group_dict[key])
 								# Change to Universal Scope
 								self.ldap_connection.modify(
-									distinguishedName,
+									distinguished_name,
 									{key: [( operation, [ passthroughSum ])]},
 								)
 								# Change to Target Scope (Global or Domain Local)
 								self.ldap_connection.modify(
-									distinguishedName,
+									distinguished_name,
 									{key: [( operation, [ group_dict[key] ])]},
 								)
 							else:
 								self.ldap_connection.modify(
-									distinguishedName,
+									distinguished_name,
 									{key: [( operation, [ group_dict[key] ])]},
 								)
 						else:
 							if isinstance(group_dict[key], list):
 								self.ldap_connection.modify(
-									distinguishedName,
+									distinguished_name,
 									{key: [( operation, group_dict[key])]},
 								)
 							else:
 								self.ldap_connection.modify(
-									distinguishedName,
+									distinguished_name,
 									{key: [( operation, [ group_dict[key] ])]},
 								)
 					else:
@@ -511,7 +530,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 						pass
 				except:
 					logger.error(traceback.format_exc())
-					logger.warn("Unable to update group '" + str(group_data['cn']) + "' with attribute '" + str(key) + "'")
+					logger.warn("Unable to update group '" + str(group_cn) + "' with attribute '" + str(key) + "'")
 					logger.warn("Attribute Value:" + str(group_dict[key]))
 					if operation is not None:
 						logger.warn("Operation Type: " + str(operation))
@@ -523,7 +542,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		if membersToAdd is not None:
 			if len(membersToAdd) > 0:
 				try:
-					self.ldap_connection.extend.microsoft.add_members_to_groups(membersToAdd, distinguishedName)
+					self.ldap_connection.extend.microsoft.add_members_to_groups(membersToAdd, distinguished_name)
 				except Exception as e:
 					self.ldap_connection.unbind()
 					print(e)
@@ -532,7 +551,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		if membersToRemove is not None:
 			if len(membersToRemove) > 0:
 				try:
-					self.ldap_connection.extend.microsoft.remove_members_from_groups(membersToRemove, distinguishedName)
+					self.ldap_connection.extend.microsoft.remove_members_from_groups(membersToRemove, distinguished_name)
 				except Exception as e:
 					self.ldap_connection.unbind()
 					print(e)
@@ -544,7 +563,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				user_id=self.request.user.id,
 				actionType="UPDATE",
 				objectClass="GROUP",
-				affectedObject=group_data['cn']
+				affectedObject=group_cn
 			)
 		return self.ldap_connection
 
