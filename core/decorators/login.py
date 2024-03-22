@@ -19,7 +19,7 @@ def auth_required(require_admin: bool = True):
 			# Check if user logically deleted or disabled
 			if not user.is_authenticated or user.is_anonymous:
 				return RemoveTokenResponse(request=request)
-			if user.deleted == True: raise PermissionDenied()
+			if user.deleted: raise PermissionDenied()
 
 			if require_admin == True or require_admin is None:
 				if user.username != 'admin' and (user.is_superuser == False or not user):
