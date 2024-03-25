@@ -22,7 +22,7 @@ from core.models.log import logToDB
 
 ### Core
 from core.exceptions.ldap import CouldNotOpenConnection
-from core.models.ldapObject import LDAPObject
+from core.models.ldap_object import LDAPObject
 from core.views.mixins.organizational_unit import OrganizationalUnitMixin
 
 ### Exceptions

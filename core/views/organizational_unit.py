@@ -21,7 +21,7 @@ from .base import BaseViewSet
 
 ### Models
 from core.models.log import logToDB
-from core.models.ldapTree import LDAPTree
+from core.models.ldap_tree import LDAPTree, LDAPTreeOptions
 
 ### Mixins
 from .mixins.organizational_unit import OrganizationalUnitMixin
@@ -36,7 +36,6 @@ from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.adsi import search_filter_from_dict
 from core.decorators.login import auth_required
 from interlock_backend.ldap.constants_cache import *
-from ldap3.utils.dn import safe_rdn
 import logging
 ################################################################################
 
@@ -72,15 +71,16 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			# Read-only end-point, build filters from default dictionary
 			filterDict = LDAP_DIRTREE_OU_FILTER
 			ldapFilter = search_filter_from_dict(filterDict)
+			ldap_tree_options: LDAPTreeOptions = {
+				"connection": self.ldap_connection,
+				"recursive": True,
+				"ldapFilter": ldapFilter,
+				"ldapAttributes": attributesToSearch,
+			}
 
 			try:
 				debugTimerStart = perf_counter()
-				dirList = LDAPTree(**{
-					"connection": self.ldap_connection,
-					"recursive": True,
-					"ldapFilter": ldapFilter,
-					"ldapAttributes": attributesToSearch,
-				})
+				dirList = LDAPTree(**ldap_tree_options)
 				debugTimerEnd = perf_counter()
 				logger.info("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
 			except Exception as e:
@@ -135,18 +135,19 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				'groupType',
 				'objectSid'
 			]
+			ldap_tree_options: LDAPTreeOptions = {
+				"connection": self.ldap_connection,
+				"recursive": True,
+				"ldapFilter": ldap_filter_object,
+				"ldapAttributes": ldap_filter_attr,
+			}
 
 			# Should have:
 			# Filter by Object DN
 			# Filter by Attribute
 			try:
 				debugTimerStart = perf_counter()
-				dirList = LDAPTree(**{
-					"connection": self.ldap_connection,
-					"recursive": True,
-					"ldapFilter": ldap_filter_object,
-					"ldapAttributes": ldap_filter_attr,
-				})
+				dirList = LDAPTree(**ldap_tree_options)
 				debugTimerEnd = perf_counter()
 				logger.info("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
 			except Exception as e:

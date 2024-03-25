@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.models.ldapTree
+# Module: core.models.ldap_tree
 # Contains the Models for the LDAP Directory Tree
 
 #---------------------------------- IMPORTS -----------------------------------#
@@ -11,13 +11,33 @@
 from django.utils.translation import gettext_lazy as _
 
 ### Interlock
+from ldap3 import Connection
 from interlock_backend.ldap.adsi import (
     search_filter_from_dict,
     LDAP_BUILTIN_OBJECTS
 )
 from interlock_backend.ldap.securityIdentifier import SID
 from interlock_backend.ldap.constants_cache import *
+
+### Others
+from typing import TypedDict, Union
+from typing_extensions import Required, NotRequired
 ################################################################################
+class LDAPTreeOptions(TypedDict):
+    name: NotRequired[str]
+    searchBase: NotRequired[str]
+    connection: Required[Connection]
+    usernameIdentifier: NotRequired[str]
+    subobjectId: NotRequired[int]
+    excludedLdapAttributes: NotRequired[list[str]]
+    requiredLdapAttributes: NotRequired[list[str]]
+    containerTypes: NotRequired[list[str]]
+    recursive: NotRequired[bool]
+    testFetch: NotRequired[bool]
+    ldapFilter: NotRequired[str]
+    ldapAttributes: NotRequired[list[str]]
+    childrenObjectType: NotRequired[Union[str, type]]
+
 class LDAPTree():
     """
     ## LDAPTree Object

@@ -19,7 +19,7 @@ from interlock_backend.ldap.accountTypes import LDAP_ACCOUNT_TYPES
 
 ### Models
 from core.models import User
-from core.models.ldapObject import LDAPObject
+from core.models.ldap_object import LDAPObject, LDAPObjectOptions
 from interlock_backend.ldap.connector import LDAPConnector
 from core.models.log import logToDB
 from ldap3 import (
@@ -544,12 +544,13 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		# Add filter for username
 		self.ldap_filter_object = ldap_adsi.search_filter_add(self.ldap_filter_object, LDAP_AUTH_USER_FIELDS["username"] + "=" + user_search)
-		
-		user_obj = LDAPObject(**{
+		ldap_object_options: LDAPObjectOptions = {
 			"connection": self.ldap_connection,
 			"ldapFilter": self.ldap_filter_object,
-			"ldapAttributes": self.ldap_filter_attr
-		})
+			"ldapAttributes": self.ldap_filter_attr,
+		}
+
+		user_obj = LDAPObject(**ldap_object_options)
 		user_entry = user_obj.entry
 		user_dict = user_obj.attributes
 

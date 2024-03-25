@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.models.ldapObject
+# Module: core.models.ldap_object
 # Contains the Models for generic LDAP Objects
 
 #---------------------------------- IMPORTS -----------------------------------#
@@ -14,7 +14,27 @@ from django.utils.translation import gettext_lazy as _
 from interlock_backend.ldap.constants_cache import *
 from interlock_backend.ldap.adsi import LDAP_BUILTIN_OBJECTS, search_filter_add
 from interlock_backend.ldap.securityIdentifier import SID
+
+### Others
+from ldap3 import Connection
+from typing import TypedDict
+from typing_extensions import Required, NotRequired
 ################################################################################
+class LDAPObjectOptions(TypedDict):
+    name: NotRequired[str]
+    searchBase: NotRequired[str]
+    connection: Required[Connection]
+    usernameIdentifier: str
+    subobjectId: int
+    excludedLdapAttributes: NotRequired[list[str]]
+    requiredLdapAttributes: NotRequired[list[str]]
+    containerTypes: NotRequired[list[str]]
+    userClasses: NotRequired[list[str]]
+    recursive: NotRequired[bool]
+    testFetch: NotRequired[bool]
+    ldapAttributes: NotRequired[list[str]]
+    ldapFilter: NotRequired[str]
+
 class LDAPObject():
     """
     ## Interlock LDAP Object Abstraction
