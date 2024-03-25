@@ -213,35 +213,3 @@ LDAP_LOG_CLOSE_CONNECTION = False
 LDAP_LOG_LOGIN = False
 LDAP_LOG_LOGOUT = False
 LDAP_LOG_MAX = 100
-
-CMAPS = {
-    "LDAP_AUTH_URL":"ldap_uri",
-    "LDAP_DOMAIN":"string",
-    "LDAP_LOG_MAX":"integer",
-    "LDAP_LOG_READ":"boolean",
-    "LDAP_LOG_CREATE":"boolean",
-    "LDAP_LOG_UPDATE":"boolean",
-    "LDAP_LOG_DELETE":"boolean",
-    "LDAP_LOG_OPEN_CONNECTION":"boolean",
-    "LDAP_LOG_CLOSE_CONNECTION":"boolean",
-    "LDAP_LOG_LOGIN":"boolean",
-    "LDAP_LOG_LOGOUT":"boolean",
-    "LDAP_AUTH_USE_SSL": "boolean", 
-    "LDAP_AUTH_USE_TLS": "boolean", 
-    "LDAP_AUTH_TLS_VERSION": "select",
-    "LDAP_AUTH_SEARCH_BASE":"string",
-    "LDAP_DNS_LEGACY": "boolean",
-    "LDAP_AUTH_OBJECT_CLASS":"string",
-    "EXCLUDE_COMPUTER_ACCOUNTS": "boolean",
-    "LDAP_AUTH_USER_FIELDS": "object",
-    "LDAP_DIRTREE_OU_FILTER": "object",
-    "LDAP_DIRTREE_CN_FILTER": "object",
-    "LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN": "string",
-    "LDAP_AUTH_CONNECTION_USER_DN":"string",
-    "LDAP_AUTH_CONNECTION_USERNAME":"string",
-    "LDAP_AUTH_CONNECTION_PASSWORD": "password",
-    "LDAP_AUTH_CONNECT_TIMEOUT": "integer",
-    "LDAP_AUTH_RECEIVE_TIMEOUT": "integer",
-    "LDAP_AUTH_RECEIVE_TIMEOUT": "integer",
-    "ADMIN_GROUP_TO_SEARCH": "string"
-}

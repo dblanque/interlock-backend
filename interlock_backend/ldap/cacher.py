@@ -7,6 +7,7 @@
 # This module saves new settings to constants_cache.py
 
 #---------------------------------- IMPORTS -----------------------------------#
+from core.models.ldap_settings import CMAPS
 from interlock_backend.ldap import constants
 from interlock_backend.ldap import constants_cache
 from core.exceptions import settings_exc as exc_set
@@ -47,7 +48,7 @@ def saveToCache(newValues):
 
     affectedSettings = list()
     loggableSettings = list()
-    for setting in constants.CMAPS:
+    for setting in CMAPS:
         # Imports old value from current constants cache file
         old_val = getattr(constants_cache, setting)
         # Imports default value from original constants file

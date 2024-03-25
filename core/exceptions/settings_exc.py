@@ -21,3 +21,7 @@ class SettingResetFail(CoreException):
     status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     default_detail = 'Could not reset settings to defaults'
     default_code = 'setting_reset_fail'
+class SettingPresetNotExists(CoreException):
+    status_code = status.HTTP_400_BAD_REQUEST
+    default_detail = 'Settings Preset does not Exist'
+    default_code = 'setting_preset_not_exists'

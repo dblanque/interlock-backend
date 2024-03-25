@@ -8,13 +8,10 @@
 #---------------------------------- IMPORTS -----------------------------------#
 # Core Imports
 from core.models.user import User
+from core.models.ldap_settings import CMAPS, LDAPSetting, LDAPPreset
 
 # Interlock Imports
-from interlock_backend.ldap.constants import (
-    CMAPS,    
-    __dict__ as constantDictionary
-)
-from interlock_backend.ldap import constants_cache
+from interlock_backend.ldap import constants
 from interlock_backend.ldap.encrypt import decrypt
 from rest_framework import serializers
 
@@ -83,7 +80,7 @@ def normalizeValues(settingKey, settingDict):
         raise ValueError(f"Invalid value for {settingKey}: {settingDict['value']} ({type(settingDict['value'])})")
     return settingDict
 
-def getSettingsList(settingList=CMAPS):
+def getSettingsList():
     """Returns a Dictionary with the current setting values in the system
 
         Arguments:
@@ -105,24 +102,26 @@ def getSettingsList(settingList=CMAPS):
         data['DEFAULT_ADMIN'] = False
 
     # Loop for each constant in the ldap_constants.py file
-    for c in constantDictionary:
-        # If the constant is in the settingList array
-        if c in settingList:
-            # Init Object/Dict
-            data[c] = {}
+    for k, value_type in CMAPS.items():
+        # Init Object/Dict
+        data[k] = dict()
+        ldap_setting = None
+        value_type = f"v_{value_type.lower()}"
 
-            data[c]['type'] = getSettingType(c)
-            data[c]['value'] = getattr(constants_cache, c)
+        data[k]['type'] = getSettingType(k).lower()
+        default_value = getattr(constants, k)
+        try:
+            ldap_setting = LDAPSetting.objects.get(name=k)
+        except:
+            pass
+        data[k]['value'] = getattr(ldap_setting, value_type, default_value)
 
-            if c == 'LDAP_AUTH_TLS_VERSION':
-                data[c]['value'] = str(data[c]['value'])
-                data[c]['value'] = data[c]['value'].split('.')[-1]
-            if c == "LDAP_AUTH_CONNECTION_PASSWORD" and data[c]['value'] is not None:
-                try:
-                    data[c]['value'] = decrypt(data[c]['value'])
-                except:
-                    data[c]['value'] = ""
-                    print("Could not decrypt password")
-                    pass
+        if k == "LDAP_AUTH_CONNECTION_PASSWORD" and data[k]['value'] is not None:
+            try:
+                data[k]['value'] = decrypt(data[k]['value'])
+            except:
+                data[k]['value'] = ""
+                print("Could not decrypt password")
+                pass
 
     return data
