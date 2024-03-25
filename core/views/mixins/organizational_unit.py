@@ -22,6 +22,9 @@ from core.models.log import logToDB
 
 ### Others
 import logging
+
+# For future implementation
+from ldap3.utils.dn import safe_rdn
 ################################################################################
 
 logger = logging.getLogger(__name__)
