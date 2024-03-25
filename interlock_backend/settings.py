@@ -20,6 +20,7 @@ import base64
 from importlib import util as importutils
 import mimetypes
 mimetypes.add_type("text/css", ".css", True)
+from django.core.management.utils import get_random_secret_key  
 
 # A little easter egg for you :)
 # from this import d
@@ -30,8 +31,25 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'in2tfy@bhej(5i@h!_04+kes__58rd9mh$=1!o_6ky236d-ue)'
+# SECURITY WARNING: keep the secret and fernet keys used in production secret!
+SECRET_KEY = None
+FERNET_KEY = None
+
+secretFile = BASE_DIR+'/interlock_backend/sec_key.py'
+sec_spec = importutils.find_spec("interlock_backend.sec_key", package="sec_spec")
+if sec_spec is not None:
+    from interlock_backend import sec_key
+    if 'SECRET_KEY' in sec_key.__dict__ and sec_key.SECRET_KEY is not None and len(sec_key.SECRET_KEY) > 0:
+        SECRET_KEY = sec_key.SECRET_KEY
+
+if SECRET_KEY is None or len(str(SECRET_KEY)) < 1:
+    SECRET_KEY = get_random_secret_key()
+    # Write the file
+    with open(secretFile, 'w') as file:
+        file.write("SECRET_KEY = " + str(SECRET_KEY))
+
+if SECRET_KEY is None or len(str(SECRET_KEY)) < 1:
+    raise ImproperlyConfigured("Secret Key is invalid (None or len < 1)")
 
 # Decryption KEY, this is automatically generated in relative path:
 # - interlock_backend/enc_key.py
