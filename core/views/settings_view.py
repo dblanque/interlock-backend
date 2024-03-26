@@ -30,6 +30,9 @@ from .mixins.settings_mixin import SettingsViewMixin
 ### Viewsets
 from .base import BaseViewSet
 
+### Serializers
+from core.serializers.settings import LDAPSettingSerializer
+
 ### REST Framework
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -42,8 +45,7 @@ from core.decorators.login import auth_required
 from interlock_backend.ldap.defaults import *
 from core.models.ldap_settings_db import *
 from interlock_backend.ldap.settings_func import getSettingsList
-import logging
-from time import perf_counter
+import logging, ssl
 ################################################################################
 
 logger = logging.getLogger(__name__)
@@ -55,15 +57,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		user = request.user
 		data = {}
 		code = 0
-		active_preset = None
-
-		# If no settings preset active, enable default.
-		if not LDAPPreset.objects.filter(active=True).exists():
-			active_preset = LDAPPreset.objects.get(name="default")
-			active_preset.active = True
-			active_preset.save()
-		else:
-			active_preset = LDAPPreset.objects.get(active=True)
+		active_preset = self.get_active_settings_preset()
 
 		presets = list()
 		for p in LDAPPreset.objects.all():
@@ -99,12 +93,9 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		data = {}
 		code = 0
 
-		debugTimerStart = perf_counter()
 		# Gets front-end parsed settings
 		data = getSettingsList(preset_id)
 		data['DEFAULT_ADMIN_ENABLED'] = self.get_admin_status()
-		debugTimerEnd = perf_counter()
-		print("Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
 
 		if LDAP_LOG_READ == True:
 			# Log this action to DB
@@ -153,44 +144,53 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		adminPassword = data.pop('DEFAULT_ADMIN_PWD')
 		self.set_admin_status(status=adminEnabled, password=adminPassword)
 		for param_name, param_value in data.items():
-			param_value = param_value.pop("value")
-			param_to_update = None
-			param_to_delete = None
 			if not param_name in CMAPS:
 				raise exc_set.SettingTypeDoesNotMatch
+			param_to_update = None
 			param_type = CMAPS[param_name].lower()
-			is_default = (param_value == getattr(defaults, param_name))
+			param_value = param_value.pop("value")
+			is_default = False
+			if param_name == "LDAP_AUTH_TLS_VERSION":
+				is_default = (getattr(ssl, param_value) == getattr(defaults, param_name, None))
+			else:
+				is_default = (param_value == getattr(defaults, param_name, None))
 			if is_default:
 				try:
-					param_to_delete = LDAPSetting.objects.get(name=param_name)
-					param_to_delete.delete_permanently()
+					if LDAPSetting.objects.filter(name=param_name).exists():
+						LDAPSetting.objects.get(name=param_name).delete_permanently()
 				except:
 					pass
 			else:
 				if param_type == "password":
 					param_value = encrypt(param_value)
-				kwargs = {
+				kwdata = {
 					"name": param_name,
-					"type": param_type,
+					"type": param_type.upper(),
 					f"v_{param_type}": param_value,
 					"preset": settings_preset
 				}
+				for setting_type in LDAP_SETTING_TYPES_LIST:
+					setting_key = f"v_{setting_type.lower()}"
+					# Set other field types in row as null
+					if setting_key != f"v_{param_type}":
+						kwdata[setting_key] = None
+				serializer = LDAPSettingSerializer(data=kwdata)
+				if not serializer.is_valid():
+					raise exc_set.SettingSerializerError(data={
+						'key': setting_key
+					})
+
 				if param_type.upper() in LDAP_SETTINGS_CHOICES_MAP:
 					if param_value not in LDAP_SETTINGS_CHOICES_MAP[param_type.upper()]:
 						raise exc_set.SettingTypeDoesNotMatch
 
 				if LDAPSetting.objects.filter(name=param_name).exists():
 					param_to_update = LDAPSetting.objects.get(name=param_name)
-					for setting_type in LDAP_SETTING_TYPES_LIST:
-						setting_key = f"v_{setting_type.lower()}"
-						# Set other field types in row as null
-						if setting_key != f"v_{param_type}":
-							setattr(param_to_update, setting_key, None)
-					for kw, kw_v in kwargs.items():
+					for kw, kw_v in kwdata.items():
 						setattr(param_to_update, kw, kw_v)
 					param_to_update.save()
 				else:
-					LDAPSetting.objects.create(**kwargs)
+					LDAPSetting.objects.create(**kwdata)
 
 		if LDAP_LOG_UPDATE == True:
 			# Log this action to DB
@@ -215,8 +215,9 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		user = request.user
 		data = request.data
 		code = 0
+		active_preset = self.get_active_settings_preset()
 
-		try: LDAPSetting.objects.all().delete()
+		try: LDAPSetting.objects.filter(preset_id=active_preset.id).delete()
 		except: raise
 
 		self.restart_django()
