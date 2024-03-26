@@ -355,13 +355,6 @@ else
     source "$configPath/db_config.conf"
 fi
 
-if [ ! -f "$configPath/ldap_settings.py" ]; then
-    ln -s "$backendPath/interlock_backend/ldap/constants_cache.py" "$configPath/ldap_settings.py"
-else
-    rm "$configPath/ldap_settings.py"
-    ln -s "$backendPath/interlock_backend/ldap/constants_cache.py" "$configPath/ldap_settings.py"
-fi
-
 if [ ! -f "$configPath/django_settings.py" ]; then
     ln -s "$backendPath/interlock_backend/settings.py" "$configPath/django_settings.py"
 fi
