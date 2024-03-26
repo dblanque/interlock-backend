@@ -3,10 +3,9 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: interlock_backend.ldap.constants
+# Module: interlock_backend.ldap.defaults
 
 ### LDAP SETTINGS
-# ! DO NOT IMPORT THIS FILE, IMPORT constants_cache.py INSTEAD
 
 # If this is set to True then the LDAP Connector will not attempt
 # to decrypt your LDAP Bind Password

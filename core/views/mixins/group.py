@@ -15,7 +15,8 @@ from interlock_backend.ldap.adsi import search_filter_add
 from interlock_backend.ldap.groupTypes import LDAP_GROUP_TYPES
 from interlock_backend.ldap.securityIdentifier import SID
 from interlock_backend.ldap.connector import LDAPConnector
-from interlock_backend.ldap.constants_cache import *
+from interlock_backend.ldap.defaults import *
+from core.models.ldap_settings_db import *
 
 ### Models
 from core.models.log import logToDB

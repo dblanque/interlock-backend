@@ -11,7 +11,7 @@ from core.models.user import User
 from core.models.ldap_settings import CMAPS, LDAPSetting, LDAPPreset
 
 # Interlock Imports
-from interlock_backend.ldap import constants
+from interlock_backend.ldap import defaults
 from interlock_backend.ldap.encrypt import decrypt
 from rest_framework import serializers
 
@@ -80,7 +80,7 @@ def normalizeValues(settingKey, settingDict):
         raise ValueError(f"Invalid value for {settingKey}: {settingDict['value']} ({type(settingDict['value'])})")
     return settingDict
 
-def getSettingsList():
+def getSettingsList(preset_id: int=1):
     """Returns a Dictionary with the current setting values in the system
 
         Arguments:
@@ -102,6 +102,7 @@ def getSettingsList():
         data['DEFAULT_ADMIN'] = False
 
     # Loop for each constant in the ldap_constants.py file
+    relevant_parameters = LDAPSetting.objects.filter(preset_id=preset_id)
     for k, value_type in CMAPS.items():
         # Init Object/Dict
         data[k] = dict()
@@ -109,11 +110,12 @@ def getSettingsList():
         value_type = f"v_{value_type.lower()}"
 
         data[k]['type'] = getSettingType(k).lower()
-        default_value = getattr(constants, k)
-        try:
-            ldap_setting = LDAPSetting.objects.get(name=k)
-        except:
-            pass
+        default_value = getattr(defaults, k)
+        if relevant_parameters.filter(name=k).exists():
+            try:
+                ldap_setting = relevant_parameters.get(name=k)
+            except:
+                pass
         data[k]['value'] = getattr(ldap_setting, value_type, default_value)
 
         if k == "LDAP_AUTH_CONNECTION_PASSWORD" and data[k]['value'] is not None:

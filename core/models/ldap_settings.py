@@ -1,7 +1,6 @@
 from .base import BaseModel
 from django.db import models
 from .validators.ldap_uri import validate_ldap_uri
-from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.contrib.postgres.fields import ArrayField
 
@@ -69,6 +68,8 @@ LDAP_SETTINGS_CHOICES_MAP = {
 class LDAPPreset(BaseModel):
     id = models.BigAutoField(verbose_name=_("id"), primary_key=True)
     name = models.CharField(verbose_name=_("name"), unique=True, null=False, blank=False, max_length=128)
+    label = models.CharField(verbose_name=_("label"), blank=False, null=False, max_length=64, default="Default Preset")
+    active = models.BooleanField(verbose_name=_("active"), unique=True, null=True)
 
 class BaseLDAPSetting(BaseModel):
     id = models.BigAutoField(verbose_name=_("id"), primary_key=True)

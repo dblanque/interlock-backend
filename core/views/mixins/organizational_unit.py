@@ -15,7 +15,8 @@ from core.exceptions import dirtree as exc_dirtree
 
 ### Interlock
 from interlock_backend.ldap.adsi import search_filter_add, search_filter_from_dict
-from interlock_backend.ldap.constants_cache import *
+from interlock_backend.ldap.defaults import *
+from core.models.ldap_settings_db import *
 
 ### Models
 from core.models.log import logToDB

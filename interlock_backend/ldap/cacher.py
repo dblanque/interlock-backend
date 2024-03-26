@@ -8,7 +8,7 @@
 
 #---------------------------------- IMPORTS -----------------------------------#
 from core.models.ldap_settings import CMAPS
-from interlock_backend.ldap import constants
+from interlock_backend.ldap import defaults
 from interlock_backend.ldap import constants_cache
 from core.exceptions import settings_exc as exc_set
 from interlock_backend.settings import BASE_DIR
@@ -32,7 +32,7 @@ def createFileData():
     filedata += "\n# Contains the latest setting constants for Interlock"
     filedata += "\n"
     filedata += "\n#---------------------------------- IMPORTS -----------------------------------#"
-    filedata += "\nfrom interlock_backend.ldap.constants import *"
+    filedata += "\nfrom interlock_backend.ldap.defaults import *"
     filedata += "\nimport ssl"
     filedata += "\n################################################################################"
     filedata += "\n"
@@ -52,7 +52,7 @@ def saveToCache(newValues):
         # Imports old value from current constants cache file
         old_val = getattr(constants_cache, setting)
         # Imports default value from original constants file
-        default_val = getattr(constants, setting)
+        default_val = getattr(defaults, setting)
         if setting == 'LDAP_AUTH_TLS_VERSION':
             old_val = str(default_val).split('.')[-1]
             default_val = str(default_val).split('.')[-1]
@@ -78,7 +78,7 @@ def saveToCache(newValues):
         else:
             set_val = default_val
 
-        if setting == 'LDAP_AUTH_CONNECTION_PASSWORD' and constants.PLAIN_TEXT_BIND_PASSWORD != True:
+        if setting == 'LDAP_AUTH_CONNECTION_PASSWORD' and defaults.PLAIN_TEXT_BIND_PASSWORD != True:
             set_val = encrypt(set_val)
         
         if setting in map(lambda v: v['name'], affectedSettings):

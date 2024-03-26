@@ -24,7 +24,8 @@ from rest_framework.decorators import action
 from core.decorators.login import auth_required
 from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.adsi import search_filter_add
-from interlock_backend.ldap.constants_cache import *
+from interlock_backend.ldap.defaults import *
+from core.models.ldap_settings_db import *
 import logging
 ################################################################################
 

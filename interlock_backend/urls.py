@@ -66,6 +66,9 @@ if DEBUG == True:
 urlpatterns = [
 	# {BASE_URL} /
 	path("", include(router.urls)),
+	path("api/settings/fetch/<int:pk>/", SettingsViewSet.as_view({
+		"get":"fetch"
+	}), name="settings-fetch"),
 
 	# {BASE_URL} /admin
 	path("admin/", admin.site.urls),

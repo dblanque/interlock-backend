@@ -23,7 +23,8 @@ from .base import BaseViewSet
 
 ### Interlock
 from interlock_backend.ldap.connector import LDAPConnector
-from interlock_backend.ldap.constants_cache import *
+from interlock_backend.ldap.defaults import *
+from core.models.ldap_settings_db import *
 
 ### Others
 import struct

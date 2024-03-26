@@ -32,22 +32,18 @@ from .base import BaseViewSet
 
 ### REST Framework
 from rest_framework.response import Response
-from rest_framework.exceptions import NotFound
 from rest_framework.decorators import action
 
 ### Others
-from interlock_backend.ldap import constants
+from interlock_backend.ldap import defaults
 from interlock_backend.ldap.connector import LDAPConnector
-from interlock_backend.ldap.cacher import saveToCache, resetCacheToDefaults
-from interlock_backend.ldap.encrypt import encrypt, decrypt
+from interlock_backend.ldap.encrypt import encrypt
 from core.decorators.login import auth_required
-from interlock_backend.ldap.constants_cache import *
-from interlock_backend.ldap.settings_func import (
-	getSettingsList,
-	normalizeValues
-)
+from interlock_backend.ldap.defaults import *
+from core.models.ldap_settings_db import *
+from interlock_backend.ldap.settings_func import getSettingsList
 import logging
-import ssl
+from time import perf_counter
 ################################################################################
 
 logger = logging.getLogger(__name__)
@@ -59,10 +55,56 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		user = request.user
 		data = {}
 		code = 0
+		active_preset = None
 
+		# If no settings preset active, enable default.
+		if not LDAPPreset.objects.filter(active=True).exists():
+			active_preset = LDAPPreset.objects.get(name="default")
+			active_preset.active = True
+			active_preset.save()
+		else:
+			active_preset = LDAPPreset.objects.get(active=True)
+
+		presets = list()
+		for p in LDAPPreset.objects.all():
+			presets.append({
+				"name": p.name,
+				"id": p.id,
+				"label": p.label
+			})
+
+		if LDAP_LOG_READ == True:
+			# Log this action to DB
+			logToDB(
+				user_id=request.user.id,
+				actionType="READ",
+				objectClass="SET",
+				affectedObject="ALL"
+			)
+
+		return Response(
+			 data={
+				'code': code,
+				'code_msg': 'ok',
+				'presets': presets,
+				'active_preset': active_preset.id
+			 }
+		)
+
+	@auth_required()
+	@action(detail=True, methods=['get'])
+	def fetch(self, request, pk):
+		user = request.user
+		preset_id = int(pk)
+		data = {}
+		code = 0
+
+		debugTimerStart = perf_counter()
 		# Gets front-end parsed settings
-		data = getSettingsList()
+		data = getSettingsList(preset_id)
 		data['DEFAULT_ADMIN_ENABLED'] = self.get_admin_status()
+		debugTimerEnd = perf_counter()
+		print("Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
 
 		if LDAP_LOG_READ == True:
 			# Log this action to DB
@@ -87,15 +129,25 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		user = request.user
 		data: dict = request.data
 		code = 0
+		preset_id = None
+		preset_label = None
+		preset_name = None
 
 		if "PRESET_ID" in data:
-			settings_preset_id = data.pop("PRESET_ID")
-			try:
-				settings_preset = LDAPPreset.objects.get(id=settings_preset_id)
-			except:
-				raise exc_set.SettingPresetNotExists
+			try: settings_preset = LDAPPreset.objects.get(id=data.pop("PRESET_ID"))
+			except: raise exc_set.SettingPresetNotExists
+		elif "PRESET_LABEL" in data:
+			preset_label: str = data.pop("PRESET_LABEL")
+			preset_name = preset_label.replace(" ", "_").lower()
+			preset_id = data.pop("PRESET_ID")
+			if LDAPPreset.objects.filter(active=True, id=preset_id).count() == 0:
+				settings_preset = LDAPPreset.objects.create(label=preset_label, name=preset_name)
 		else:
 			settings_preset = LDAPPreset.objects.get(name="default")
+
+		if 'LDAP_LOG_MAX' in data:
+			if int(data['LDAP_LOG_MAX']['value']) > 10000:
+				raise exc_set.SettingLogMaxLimit
 
 		adminEnabled = data.pop('DEFAULT_ADMIN_ENABLED')
 		adminPassword = data.pop('DEFAULT_ADMIN_PWD')
@@ -107,7 +159,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			if not param_name in CMAPS:
 				raise exc_set.SettingTypeDoesNotMatch
 			param_type = CMAPS[param_name].lower()
-			is_default = (param_value == getattr(constants, param_name))
+			is_default = (param_value == getattr(defaults, param_name))
 			if is_default:
 				try:
 					param_to_delete = LDAPSetting.objects.get(name=param_name)
@@ -127,12 +179,12 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 					if param_value not in LDAP_SETTINGS_CHOICES_MAP[param_type.upper()]:
 						raise exc_set.SettingTypeDoesNotMatch
 
-				param_to_update = LDAPSetting.objects.get(name=param_name)
-				if param_to_update:
+				if LDAPSetting.objects.filter(name=param_name).exists():
+					param_to_update = LDAPSetting.objects.get(name=param_name)
 					for setting_type in LDAP_SETTING_TYPES_LIST:
 						setting_key = f"v_{setting_type.lower()}"
+						# Set other field types in row as null
 						if setting_key != f"v_{param_type}":
-							print(f"{setting_key} does not belong in {param_name}")
 							setattr(param_to_update, setting_key, None)
 					for kw, kw_v in kwargs.items():
 						setattr(param_to_update, kw, kw_v)
@@ -140,23 +192,15 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 				else:
 					LDAPSetting.objects.create(**kwargs)
 
-		# if 'LDAP_LOG_MAX' in data:
-		# 	if int(data['LDAP_LOG_MAX']['value']) > 10000:
-		# 		raise exc_set.SettingLogMaxLimit
+		if LDAP_LOG_UPDATE == True:
+			# Log this action to DB
+			logToDB(
+				user_id=request.user.id,
+				actionType="UPDATE",
+				objectClass="SET",
+			)
 
-		# data['LDAP_AUTH_CONNECTION_USERNAME'] = dict()
-		# data['LDAP_AUTH_CONNECTION_USERNAME']['value'] = data['LDAP_AUTH_CONNECTION_USER_DN']['value'].split(',')[0].split('CN=')[1].lower()
-		# affectedObjects = saveToCache(newValues=data)
-
-		# if LDAP_LOG_UPDATE == True:
-		# 	# Log this action to DB
-		# 	logToDB(
-		# 		user_id=request.user.id,
-		# 		actionType="UPDATE",
-		# 		objectClass="SET",
-		# 		affectedObject=affectedObjects
-		# 	)
-
+		self.restart_django()
 		return Response(
 			 data={
 				'code': code,
@@ -172,8 +216,10 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		data = request.data
 		code = 0
 
-		data = resetCacheToDefaults()
+		try: LDAPSetting.objects.all().delete()
+		except: raise
 
+		self.restart_django()
 		return Response(
 			 data={
 				'code': code,

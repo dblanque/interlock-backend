@@ -34,7 +34,8 @@ from ldap3 import (
 import logging
 import re
 from datetime import datetime
-from interlock_backend.ldap.constants_cache import *
+from interlock_backend.ldap.defaults import *
+from core.models.ldap_settings_db import *
 ################################################################################
 
 DATE_FMT = "%Y%m%d"

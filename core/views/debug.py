@@ -18,7 +18,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### LDAP
-from interlock_backend.ldap.constants import LDAP_OPERATIONS
+from interlock_backend.ldap.defaults import LDAP_OPERATIONS
 
 ### Others
 import logging

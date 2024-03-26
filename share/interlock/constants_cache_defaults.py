@@ -9,6 +9,6 @@
 # Contains the latest setting constants for Interlock
 
 #---------------------------------- IMPORTS -----------------------------------#
-from interlock_backend.ldap.constants import *
+from interlock_backend.ldap.defaults import *
 import ssl
 ################################################################################

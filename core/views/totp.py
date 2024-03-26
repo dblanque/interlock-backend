@@ -37,7 +37,8 @@ from core.models import User
 from core.models.log import logToDB
 
 ### Interlock
-from interlock_backend.ldap.constants_cache import *
+from interlock_backend.ldap.defaults import *
+from core.models.ldap_settings_db import *
 ################################################################################
 
 class TOTPViewSet(BaseViewSet):

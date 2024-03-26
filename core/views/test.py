@@ -18,7 +18,7 @@ import logging
 from core.exceptions.ldap import CouldNotOpenConnection
 from interlock_backend.ldap.connector import LDAPConnector, LDAPInfo
 from core.models.dnsRecordTypes import *
-from interlock_backend.ldap import constants_cache
+from core.models import ldap_settings_db
 from interlock_backend.settings import LOG_FILE_FOLDER
 ################################################################################
 
@@ -34,9 +34,9 @@ class TestViewSet(BaseViewSet):
 		printSettings = False
 
 		if printSettings == True:
-			for i in constants_cache.__dict__:
+			for i in ldap_settings_db.__dict__:
 				if not i.startswith("_"):
-					value = getattr(constants_cache, i)
+					value = getattr(ldap_settings_db, i)
 					print(f"{i} ({type(value)}): {value}")
 
 		# Open LDAP Connection

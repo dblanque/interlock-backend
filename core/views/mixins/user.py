@@ -12,7 +12,8 @@ from rest_framework import viewsets
 
 ### Interlock
 from interlock_backend.ldap.adsi import search_filter_add
-from interlock_backend.ldap.constants_cache import *
+from interlock_backend.ldap.defaults import *
+from core.models.ldap_settings_db import *
 from interlock_backend.ldap import adsi as ldap_adsi
 from interlock_backend.ldap.user_flags import LDAP_UF_NORMAL_ACCOUNT
 from interlock_backend.ldap.accountTypes import LDAP_ACCOUNT_TYPES

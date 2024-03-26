@@ -1,6 +1,7 @@
 from rest_framework import serializers as serializers
 from rest_framework_simplejwt import serializers as jwt_serializers
-from interlock_backend.ldap.constants_cache import *
+from interlock_backend.ldap.defaults import *
+from core.models.ldap_settings_db import *
 from core.exceptions import otp as exc_otp
 from core.models.log import logToDB
 from core.views.mixins.totp import get_user_totp_device, validate_user_otp

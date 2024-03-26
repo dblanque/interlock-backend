@@ -28,12 +28,19 @@ from core.views.mixins.utils import net_port_test
 
 ### Others
 from interlock_backend.ldap.connector import test_ldap_connection
+from interlock_backend.settings import BASE_DIR
 import logging
 ################################################################################
 
 logger = logging.getLogger(__name__)
 
 class SettingsViewMixin(viewsets.ViewSetMixin):
+
+    def restart_django(self):
+        reloader = BASE_DIR+'/interlock_backend/reload.py'
+        # Write the file
+        with open(reloader, 'w') as file:
+            file.write("STUB_RELOAD = False")
 
     def get_admin_status(self):
         userQuerySet = User.objects.filter(username = 'admin')

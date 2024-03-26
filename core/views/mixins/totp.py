@@ -7,6 +7,9 @@
 # Contains the Mixin for Token related operations
 
 #---------------------------------- IMPORTS -----------------------------------#
+### Models
+from core.models.ldap_settings_db import LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN
+
 ### Exceptions
 from core.exceptions import otp as exc_otp
 
@@ -17,7 +20,6 @@ import re
 import logging
 
 from interlock_backend.settings import DEBUG as INTERLOCK_DEBUG
-from interlock_backend.ldap.constants_cache import LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN
 ################################################################################
 
 logger = logging.getLogger(__name__)

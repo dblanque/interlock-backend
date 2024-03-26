@@ -20,7 +20,8 @@ from .base import BaseManager
 from .choices.log import ACTION_CHOICES, CLASS_CHOICES
 
 ### Interlock
-from interlock_backend.ldap.constants_cache import *
+from interlock_backend.ldap.defaults import *
+from core.models.ldap_settings_db import *
 # ---------------------------------------------------------------------------- #
 class BaseLogModel(models.Model):
 

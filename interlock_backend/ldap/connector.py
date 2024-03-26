@@ -22,7 +22,8 @@ from interlock_backend.ldap.encrypt import (
     encrypt
 )
 from interlock_backend.ldap.adsi import search_filter_add
-from interlock_backend.ldap.constants_cache import *
+from interlock_backend.ldap.defaults import *
+from core.models.ldap_settings_db import *
 from ldap3.core.exceptions import LDAPException
 from core.exceptions import ldap as exc_ldap
 from core.models.log import logToDB

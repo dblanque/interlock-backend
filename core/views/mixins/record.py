@@ -26,7 +26,8 @@ from core.models import dnsRecordFieldValidators as dnsValidators
 from core.views.mixins.utils import convert_string_to_bytes
 
 ### Interlock
-from interlock_backend.ldap.constants_cache import *
+from interlock_backend.ldap.defaults import *
+from core.models.ldap_settings_db import *
 from core.views.mixins.domain import DomainViewMixin
 import logging
 

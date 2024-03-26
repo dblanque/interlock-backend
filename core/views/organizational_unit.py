@@ -35,7 +35,8 @@ from time import perf_counter
 from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.adsi import search_filter_from_dict
 from core.decorators.login import auth_required
-from interlock_backend.ldap.constants_cache import *
+from interlock_backend.ldap.defaults import *
+from core.models.ldap_settings_db import *
 import logging
 ################################################################################
 

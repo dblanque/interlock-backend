@@ -36,7 +36,8 @@ from rest_framework.decorators import action
 ### Others
 from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS
 from interlock_backend.ldap.connector import LDAPConnector
-from interlock_backend.ldap.constants_cache import *
+from interlock_backend.ldap.defaults import *
+from core.models.ldap_settings_db import *
 from interlock_backend.ldap import adsi as ldap_adsi
 from interlock_backend.ldap import user as ldap_user
 from core.decorators.login import auth_required
