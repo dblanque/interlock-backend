@@ -28,7 +28,7 @@ from core.views.totp import TOTPViewSet
 from core.views.auth import AuthViewSet
 from core.views.user import UserViewSet
 from core.views.organizational_unit import OrganizationalUnitViewSet
-from core.views.settings_view import SettingsViewSet
+from core.views.ldap_settings import SettingsViewSet
 from core.views.logs import LogsViewSet
 from core.views.groups import GroupsViewSet
 from core.views.test import TestViewSet

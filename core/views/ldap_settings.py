@@ -25,13 +25,13 @@ from core.models.ldap_settings import (
 )
 
 ### Mixins
-from .mixins.settings_mixin import SettingsViewMixin
+from .mixins.ldap_settings import SettingsViewMixin
 
 ### Viewsets
 from .base import BaseViewSet
 
 ### Serializers
-from core.serializers.settings import LDAPSettingSerializer
+from core.serializers.ldap_settings import LDAPSettingSerializer
 
 ### REST Framework
 from rest_framework.response import Response

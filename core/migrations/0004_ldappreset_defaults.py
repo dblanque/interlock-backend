@@ -4,11 +4,11 @@ from django.db import migrations
 
 def create_default_preset(apps, schema_editor):
 	LDAPPreset = apps.get_model('core', 'LDAPPreset')
-	LDAPPreset.objects.create(name='default')
+	LDAPPreset.objects.create(name='default', active=True)
 	
 def remove_default_preset(apps, schema_editor):
 	LDAPPreset = apps.get_model('core', 'LDAPPreset')
-	LDAPPreset.objects.filter(name='default').delete()
+	LDAPPreset.objects.filter(name='default').delete_permanently()
 
 class Migration(migrations.Migration):
 
