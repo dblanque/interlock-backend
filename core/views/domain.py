@@ -10,7 +10,7 @@
 ### Models
 from core.views.mixins.logs import LogMixin
 from core.models.dns import LDAPDNS, LDAPRecord
-from core.models.dnsRecordTypes import *
+from core.models.types.ldap_dns_record import *
 
 ### ViewSets
 from core.views.base import BaseViewSet
@@ -30,7 +30,7 @@ from rest_framework.decorators import action
 
 ### Others
 from core.decorators.login import auth_required
-from core.models.dnsRecordFieldValidators import (
+from core.models.validators.ldap_dns_record import (
 	domain_validator,
 	ipv4_validator,
 	ipv6_validator

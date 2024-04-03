@@ -12,7 +12,7 @@
 from core.exceptions import dns as exc_dns
 
 ### Models
-from core.models.dnsRecordClasses import *
+from core.models.structs.ldap_dns_record import *
 
 ### Interlock
 from interlock_backend.ldap.adsi import search_filter_add

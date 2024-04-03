@@ -11,7 +11,6 @@ import sys
 import logging
 import re
 import socket
-from core.exceptions.dns import DNSFieldValidatorException, DNSFieldValidatorFailed
 from core.utils.ipv6 import ipv6_to_integer
 thismodule = sys.modules[__name__]
 logger = logging.getLogger(__name__)

@@ -8,7 +8,7 @@
 
 #---------------------------------- IMPORTS -----------------------------------#
 ### Models
-from core.models.dnsRecordTypes import *
+from core.models.types.ldap_dns_record import *
 
 ### ViewSets
 from core.views.base import BaseViewSet

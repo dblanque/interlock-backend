@@ -17,10 +17,10 @@ from core.exceptions import (
 ### Models
 from core.views.mixins.logs import LogMixin
 from core.models.dns import LDAPRecord
-from core.models.dnsRecordTypes import *
-from core.models.dnsRecordClasses import RECORD_MAPPINGS
-from core.models.dnsRecordFieldValidators import FIELD_VALIDATORS as DNS_FIELD_VALIDATORS
-from core.models import dnsRecordFieldValidators as dnsValidators
+from core.models.types.ldap_dns_record import *
+from core.models.structs.ldap_dns_record import RECORD_MAPPINGS
+from core.models.validators.ldap_dns_record import FIELD_VALIDATORS as DNS_FIELD_VALIDATORS
+from core.models.validators import ldap_dns_record as dnsValidators
 
 ### Mixins
 from core.views.mixins.utils import convert_string_to_bytes

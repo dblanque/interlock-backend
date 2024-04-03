@@ -34,7 +34,7 @@ import ldap3
 from impacket.ldap import ldaptypes
 import dns.resolver
 import datetime
-from core.models.dnsRecordClasses import *
+from core.models.structs.ldap_dns_record import *
 
 def print_m(string):
     sys.stderr.write('\033[94m[-]\033[0m %s\n' % (string))

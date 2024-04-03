@@ -10,7 +10,7 @@
 from struct import unpack, pack
 from core.utils.ipv6 import ipv6_to_integer
 from impacket.structure import Structure
-from .dnsRecordTypes import *
+from ..types.ldap_dns_record import *
 import socket
 import datetime
 import sys

@@ -9,7 +9,7 @@
 #---------------------------------- IMPORTS -----------------------------------#
 from copy import deepcopy
 from rest_framework import viewsets
-from core.models.dnsRecordTypes import *
+from core.models.types.ldap_dns_record import *
 from core.models.dns import LDAPRecord
 ################################################################################
 

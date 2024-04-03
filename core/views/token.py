@@ -24,7 +24,7 @@ from core.serializers.token import TokenObtainPairSerializer
 from core.views.mixins.auth import RemoveTokenResponse, DATE_FMT_COOKIE
 
 ### Others
-from datetime import datetime, timezone
+from datetime import datetime
 import logging, jwt
 ################################################################################
 

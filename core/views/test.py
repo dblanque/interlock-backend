@@ -17,7 +17,7 @@ import logging
 ################################# Test Imports #################################
 from core.exceptions.ldap import CouldNotOpenConnection
 from interlock_backend.ldap.connector import LDAPConnector, LDAPInfo
-from core.models.dnsRecordTypes import *
+from core.models.types.ldap_dns_record import *
 from core.models import ldap_settings_db
 from interlock_backend.settings import LOG_FILE_FOLDER
 ################################################################################
