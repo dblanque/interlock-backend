@@ -5,7 +5,7 @@
 ################################################################################
 # Module: core.models.ldap_tree
 # Contains the Models for the LDAP Directory Tree
-
+#
 #---------------------------------- IMPORTS -----------------------------------#
 ### Django
 from django.utils.translation import gettext_lazy as _

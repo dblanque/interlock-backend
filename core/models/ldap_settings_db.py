@@ -1,11 +1,23 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.models.ldap_settings_db
+# Description:	Contains required functions to import LDAP Connection constants
+#				from file defaults and database entries.
+#
+#---------------------------------- IMPORTS -----------------------------------#
 from interlock_backend.ldap.defaults import *
 from .ldap_settings import CMAPS, LDAPSetting, LDAPPreset
 from django.db import connection
 import sys
-this_module = sys.modules[__name__]
+################################################################################
 
+this_module = sys.modules[__name__]
 all_tables = connection.introspection.table_names()
 active_preset = None
+
 if "core_ldappreset" in all_tables:
 	active_preset = LDAPPreset.objects.get(active=True)
 

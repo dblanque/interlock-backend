@@ -5,7 +5,7 @@
 ################################################################################
 # Module: core.models.dns.record
 # Contains the Models for DNS Record Types
-
+#
 #---------------------------------- IMPORTS -----------------------------------#
 from struct import unpack, pack
 from core.utils.ipv6 import ipv6_to_integer

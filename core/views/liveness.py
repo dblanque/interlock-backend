@@ -1,4 +1,12 @@
-################################## IMPORTS #####################################
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.views.liveness
+# Description: Contains the ViewSet for Liveness related operations
+#
+#---------------------------------- IMPORTS -----------------------------------#
 from core.views.base import BaseViewSet
 
 ### REST Framework

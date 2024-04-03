@@ -5,7 +5,7 @@
 ################################################################################
 # Module: core.models.log
 # Contains the Model for Log Entries
-
+#
 #---------------------------------- IMPORTS -----------------------------------#
 ### Django
 from django.utils.translation import gettext_lazy as _

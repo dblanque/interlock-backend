@@ -1,8 +1,18 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.models.ldap_settings
+# Description:	Contains default LDAP Setting definitions
+#
+#---------------------------------- IMPORTS -----------------------------------#
 from .base import BaseModel
 from django.db import models
 from .validators.ldap_uri import validate_ldap_uri
 from django.utils.translation import gettext_lazy as _
 from django.contrib.postgres.fields import ArrayField
+################################################################################
 
 LDAP_TYPE_STRING = "STRING"
 LDAP_TYPE_BOOL = "BOOL"

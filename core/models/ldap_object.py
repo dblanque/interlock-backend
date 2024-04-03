@@ -5,7 +5,7 @@
 ################################################################################
 # Module: core.models.ldap_object
 # Contains the Models for generic LDAP Objects
-
+#
 #---------------------------------- IMPORTS -----------------------------------#
 ### Django
 from django.utils.translation import gettext_lazy as _

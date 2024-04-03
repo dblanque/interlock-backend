@@ -5,7 +5,7 @@
 ################################################################################
 # Module: core.models.user
 # Contains the Model for Interlock's LDAP Synced and Local Users
-
+#
 # --------------------------------- IMPORTS ---------------------------------- #
 from django.contrib.auth.base_user import (
     BaseUserManager as DjangoBaseUserManager,

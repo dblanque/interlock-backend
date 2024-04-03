@@ -5,13 +5,13 @@
 ################################################################################
 # Module: core.views.settings
 # Contains the ViewSet for System Setting related operations
-
+#
 #---------------------------------- IMPORTS -----------------------------------#
 ### Exceptions
 from core.exceptions.ldap import ConnectionTestFailed
 from core.exceptions import (
 	base as exc_base,
-	settings_exc as exc_set,
+	ldap_settings as exc_set,
 )
 
 ### Models
@@ -39,11 +39,10 @@ from rest_framework.decorators import action
 
 ### Others
 from interlock_backend.ldap import defaults
-from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.encrypt import encrypt
 from core.decorators.login import auth_required
 from core.models.ldap_settings_db import *
-from interlock_backend.ldap.settings_func import getSettingsList
+from interlock_backend.ldap.settings import getSettingsList
 import logging, ssl
 ################################################################################
 

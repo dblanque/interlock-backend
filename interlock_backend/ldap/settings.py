@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: interlock_backend.ldap.settings_func
+# Module: interlock_backend.ldap.settings
 
 #---------------------------------- IMPORTS -----------------------------------#
 # Core Imports
