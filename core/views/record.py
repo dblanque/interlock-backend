@@ -41,7 +41,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 class RecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
-
+	record_serializer = DNSRecordSerializer()
 	@action(detail=False,methods=['post'])
 	@auth_required()
 	def insert(self, request):
@@ -59,10 +59,10 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 			raise exc_dns.DNSRecordNotInRequest
 
 		record_data = request.data['record']
-		DNSRecordSerializer(self, record_data).is_valid(raise_exception=True)
+		self.record_serializer(record_data).is_valid(raise_exception=True)
 
 		# ! Test record validation with the Mix-in
-		DNSRecordMixin.validate_record_data(
+		self.validate_record_data(
 			self,
 			record_data=record_data,
 			required_values=required_values
@@ -103,21 +103,21 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 		record_data = request.data['record']
 
 		# Basic Serializer Validation
-		DNSRecordSerializer(self, old_record_data).is_valid(raise_exception=True)
-		DNSRecordSerializer(self, record_data).is_valid(raise_exception=True)
+		self.record_serializer(old_record_data).is_valid(raise_exception=True)
+		self.record_serializer(record_data).is_valid(raise_exception=True)
 
 		# Regex Validate Old Record Data
-		DNSRecordMixin.validate_record_data(
-			self, 
+		self.validate_record_data(
 			record_data=old_record_data, 
 			required_values=required_values
 		)
 		# Regex Validate New Record Data
-		DNSRecordMixin.validate_record_data(
-			self, 
+		self.validate_record_data(
 			record_data=record_data, 
 			required_values=required_values
 		)
+
+		# TODO - Maybe implement crosschecking with server-side Old Record Bytes Data?
 
 		# Open LDAP Connection
 		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
@@ -160,7 +160,8 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 					'data': request.data[key]
 				}
 				raise exc_dns.DNSRecordDataMalformed(data=data)
-			DNSRecordMixin.validate_record_data(self, record_data=record_data, required_values=required_values.copy())
+			self.record_serializer(record_data).is_valid(raise_exception=True)
+			self.validate_record_data(self, record_data=record_data, required_values=required_values.copy())
 		elif key == 'records':
 			if not isinstance(request.data[key], list):
 				data = {
@@ -168,7 +169,8 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 				}
 				raise exc_dns.DNSRecordDataMalformed
 			for r in record_data:
-				DNSRecordMixin.validate_record_data(self, record_data=r, required_values=required_values.copy())
+				self.record_serializer(r).is_valid(raise_exception=True)
+				self.validate_record_data(self, record_data=r, required_values=required_values.copy())
 
 		# Open LDAP Connection
 		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
