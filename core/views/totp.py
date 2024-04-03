@@ -34,13 +34,13 @@ from .base import BaseViewSet
 
 ### Models
 from core.models import User
-from core.models.log import logToDB
+from core.views.mixins.logs import LogMixin
 
 ### Interlock
-from interlock_backend.ldap.defaults import *
 from core.models.ldap_settings_db import *
 ################################################################################
 
+DBLogMixin = LogMixin()
 class TOTPViewSet(BaseViewSet):
 	@auth_required()
 	def list(self, request):
@@ -154,7 +154,7 @@ class TOTPViewSet(BaseViewSet):
 			delete_device_totp_for_user(target_user)
 			if LDAP_LOG_UPDATE == True:
 					# Log this action to DB
-					logToDB(
+					DBLogMixin.log(
 						user_id=request.user.id,
 						actionType="DELETE",
 						objectClass="USER",

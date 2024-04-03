@@ -12,7 +12,6 @@ from rest_framework import viewsets
 
 ### Interlock
 from interlock_backend.ldap.adsi import search_filter_add
-from interlock_backend.ldap.defaults import *
 from core.models.ldap_settings_db import *
 from interlock_backend.ldap import adsi as ldap_adsi
 from interlock_backend.ldap.user_flags import LDAP_UF_NORMAL_ACCOUNT
@@ -22,7 +21,7 @@ from interlock_backend.ldap.accountTypes import LDAP_ACCOUNT_TYPES
 from core.models import User
 from core.models.ldap_object import LDAPObject, LDAPObjectOptions
 from interlock_backend.ldap.connector import LDAPConnector
-from core.models.log import logToDB
+from core.views.mixins.logs import LogMixin
 from ldap3 import (
 	MODIFY_ADD,
 	MODIFY_DELETE,
@@ -48,6 +47,7 @@ from django.core.exceptions import ValidationError
 from interlock_backend.ldap.countries import LDAP_COUNTRIES
 ################################################################################
 
+DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
 class UserViewMixin(viewsets.ViewSetMixin):
@@ -172,7 +172,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		if LDAP_LOG_READ == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=self.request.user.id,
 				actionType="READ",
 				objectClass="USER",
@@ -296,7 +296,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		if LDAP_LOG_CREATE == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=self.request.user.id,
 				actionType="CREATE",
 				objectClass="USER",
@@ -409,7 +409,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		if LDAP_LOG_UPDATE == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=self.request.user.id,
 				actionType="UPDATE",
 				objectClass="USER",
@@ -557,7 +557,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		if LDAP_LOG_READ == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=self.request.user.id,
 				actionType="READ",
 				objectClass="USER",
@@ -651,7 +651,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		if LDAP_LOG_UPDATE == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=self.request.user.id,
 				actionType="UPDATE",
 				objectClass="USER",
@@ -701,7 +701,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		if LDAP_LOG_UPDATE == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=self.request.user.id,
 				actionType="UPDATE",
 				objectClass="USER",
@@ -736,7 +736,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		self.ldap_connection.extend.microsoft.unlock_account(user_dn)
 		if LDAP_LOG_UPDATE == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=self.request.user.id,
 				actionType="UPDATE",
 				objectClass="USER",
@@ -794,7 +794,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		if LDAP_LOG_DELETE == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=self.request.user.id,
 				actionType="DELETE",
 				objectClass="USER",

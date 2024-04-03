@@ -1,11 +1,12 @@
 from rest_framework import serializers as serializers
 from rest_framework_simplejwt import serializers as jwt_serializers
-from interlock_backend.ldap.defaults import *
 from core.models.ldap_settings_db import *
 from core.exceptions import otp as exc_otp
-from core.models.log import logToDB
+from core.views.mixins.logs import LogMixin
 from core.views.mixins.totp import get_user_totp_device, validate_user_otp
 import re
+
+DBLogMixin = LogMixin()
 class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
@@ -45,7 +46,7 @@ class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
 
 		if LDAP_LOG_LOGIN == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=self.user.id,
 				actionType="LOGIN",
 				objectClass="USER"

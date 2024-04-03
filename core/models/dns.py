@@ -34,7 +34,6 @@ from ldap3 import (
 import logging
 import re
 from datetime import datetime
-from interlock_backend.ldap.defaults import *
 from core.models.ldap_settings_db import *
 ################################################################################
 

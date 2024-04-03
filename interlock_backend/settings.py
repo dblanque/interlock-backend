@@ -14,7 +14,6 @@ import os
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import gettext_lazy as _
 from datetime import timedelta
-from interlock_backend.ldap.defaults import *
 from interlock_backend.local_django_settings import *
 import base64
 from importlib import util as importutils

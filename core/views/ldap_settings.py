@@ -15,7 +15,7 @@ from core.exceptions import (
 )
 
 ### Models
-from core.models.log import logToDB
+from core.views.mixins.logs import LogMixin
 from core.models.ldap_settings import (
 	CMAPS,
 	LDAPSetting,
@@ -42,12 +42,12 @@ from interlock_backend.ldap import defaults
 from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.encrypt import encrypt
 from core.decorators.login import auth_required
-from interlock_backend.ldap.defaults import *
 from core.models.ldap_settings_db import *
 from interlock_backend.ldap.settings_func import getSettingsList
 import logging, ssl
 ################################################################################
 
+DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
 class SettingsViewSet(BaseViewSet, SettingsViewMixin):
@@ -70,7 +70,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 		if LDAP_LOG_READ == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=request.user.id,
 				actionType="READ",
 				objectClass="SET",
@@ -100,7 +100,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 		if LDAP_LOG_READ == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=request.user.id,
 				actionType="READ",
 				objectClass="SET",
@@ -304,7 +304,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 		if LDAP_LOG_UPDATE == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=request.user.id,
 				actionType="UPDATE",
 				objectClass="SET",

@@ -11,7 +11,6 @@
 from django.utils.translation import gettext_lazy as _
 
 ### Interlock
-from interlock_backend.ldap.defaults import *
 from core.models.ldap_settings_db import *
 from interlock_backend.ldap.adsi import LDAP_BUILTIN_OBJECTS, search_filter_add
 from interlock_backend.ldap.securityIdentifier import SID

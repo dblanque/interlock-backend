@@ -28,7 +28,7 @@ from core.decorators.login import auth_required
 import logging
 ################################################################################
 
-
+DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
 class LogsViewSet(BaseViewSet, LogMixin):

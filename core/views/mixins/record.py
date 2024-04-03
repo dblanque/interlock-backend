@@ -15,7 +15,7 @@ from core.exceptions import (
 )
 
 ### Models
-from core.models.log import logToDB
+from core.views.mixins.logs import LogMixin
 from core.models.dns import LDAPRecord
 from core.models.dnsRecordTypes import *
 from core.models.dnsRecordClasses import RECORD_MAPPINGS
@@ -26,7 +26,6 @@ from core.models import dnsRecordFieldValidators as dnsValidators
 from core.views.mixins.utils import convert_string_to_bytes
 
 ### Interlock
-from interlock_backend.ldap.defaults import *
 from core.models.ldap_settings_db import *
 from core.views.mixins.domain import DomainViewMixin
 import logging
@@ -42,6 +41,7 @@ from ldap3 import (
 )
 ################################################################################
 
+DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
 class DNSRecordMixin(DomainViewMixin):
@@ -191,7 +191,7 @@ class DNSRecordMixin(DomainViewMixin):
 
 		if LDAP_LOG_CREATE == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=self.request.user.id,
 				actionType="CREATE",
 				objectClass="DNSR",
@@ -247,7 +247,7 @@ class DNSRecordMixin(DomainViewMixin):
 
 		if LDAP_LOG_UPDATE == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=self.request.user.id,
 				actionType="UPDATE",
 				objectClass="DNSR",
@@ -280,7 +280,7 @@ class DNSRecordMixin(DomainViewMixin):
 
 		if LDAP_LOG_DELETE == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=user.id,
 				actionType="DELETE",
 				objectClass="DNSR",

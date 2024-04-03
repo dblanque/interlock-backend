@@ -15,11 +15,10 @@ from interlock_backend.ldap.adsi import search_filter_add
 from interlock_backend.ldap.groupTypes import LDAP_GROUP_TYPES
 from interlock_backend.ldap.securityIdentifier import SID
 from interlock_backend.ldap.connector import LDAPConnector
-from interlock_backend.ldap.defaults import *
 from core.models.ldap_settings_db import *
 
 ### Models
-from core.models.log import logToDB
+from core.views.mixins.logs import LogMixin
 
 ### Core
 from core.exceptions.ldap import CouldNotOpenConnection
@@ -42,6 +41,7 @@ from ldap3 import (
 import logging
 ################################################################################
 
+DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 class GroupViewMixin(viewsets.ViewSetMixin):
 	ldap_connection = None
@@ -195,7 +195,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		if LDAP_LOG_READ == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=self.request.user.id,
 				actionType="READ",
 				objectClass="GROUP",
@@ -275,7 +275,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		if LDAP_LOG_READ == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=self.request.user.id,
 				actionType="READ",
 				objectClass="GROUP",
@@ -370,7 +370,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		if LDAP_LOG_CREATE == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=self.request.user.id,
 				actionType="CREATE",
 				objectClass="GROUP",
@@ -566,7 +566,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		if LDAP_LOG_UPDATE == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=self.request.user.id,
 				actionType="UPDATE",
 				objectClass="GROUP",
@@ -603,7 +603,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		if LDAP_LOG_DELETE == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=self.request.user.id,
 				actionType="DELETE",
 				objectClass="GROUP",

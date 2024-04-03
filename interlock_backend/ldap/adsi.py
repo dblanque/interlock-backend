@@ -11,7 +11,6 @@
 ###############################################################################
 
 #---------------------------------- IMPORTS -----------------------------------#
-from interlock_backend.ldap.defaults import *
 from core.models.ldap_settings_db import *
 from typing import Union
 import logging

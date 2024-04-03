@@ -15,11 +15,10 @@ from core.exceptions import dirtree as exc_dirtree
 
 ### Interlock
 from interlock_backend.ldap.adsi import search_filter_add, search_filter_from_dict
-from interlock_backend.ldap.defaults import *
 from core.models.ldap_settings_db import *
 
 ### Models
-from core.models.log import logToDB
+from core.views.mixins.logs import LogMixin
 
 ### Others
 import logging
@@ -28,6 +27,7 @@ import logging
 from ldap3.utils.dn import safe_rdn
 ################################################################################
 
+DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 class OrganizationalUnitMixin(viewsets.ViewSetMixin):
     def processFilter(self, data, filterDict=None):
@@ -139,7 +139,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 
         if LDAP_LOG_UPDATE == True:
             # Log this action to DB
-            logToDB(
+            DBLogMixin.log(
                 user_id=self.request.user.id,
                 actionType="UPDATE",
                 objectClass="LDAP",

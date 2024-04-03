@@ -18,10 +18,6 @@ from .base import BaseManager
 
 ### Choices
 from .choices.log import ACTION_CHOICES, CLASS_CHOICES
-
-### Interlock
-from interlock_backend.ldap.defaults import *
-from core.models.ldap_settings_db import *
 # ---------------------------------------------------------------------------- #
 class BaseLogModel(models.Model):
 
@@ -61,37 +57,3 @@ class Log(BaseLogModel):
     objectClass = models.CharField(_("objectClass"), choices=CLASS_CHOICES, max_length=256, null=False, blank=False)
     affectedObject = models.JSONField(_("affectedObject"), null=True, blank=True)
     extraMessage = models.CharField(_("extraMessage"), max_length=256, null=True, blank=True)
-
-def logToDB(**kwargs):
-    # This function rotates logs based on a Maximum Limit Setting
-    logLimit = LDAP_LOG_MAX
-
-    # Truncate Logs if necessary
-    if Log.objects.count() > logLimit:
-        Log.objects.filter(id__gt=logLimit).delete()
-
-    unrotatedLogCount = Log.objects.filter(rotated=False).count()
-    lastUnrotatedLog = Log.objects.filter(rotated=False).last()
-    # If there's no last unrotated log, set to 0 to avoid conditional issues
-    if lastUnrotatedLog is None:
-        lastUnrotatedLogId = 0
-    else:
-        lastUnrotatedLogId = lastUnrotatedLog.id
-
-    # If there are no unrotated logs or the range is exceeded, restart sequence
-    if unrotatedLogCount < 1 or lastUnrotatedLogId >= logLimit:
-        Log.objects.all().update(rotated=True)
-        logId = 1
-    else:
-        logId = Log.objects.filter(rotated=False).last().id + 1
-
-    logWithCurrentId = Log.objects.filter(id=logId)
-    if logWithCurrentId.count() > 0:
-        logWithCurrentId.delete()
-        logAction = Log(id=logId, rotated=False, **kwargs)
-        logAction.save()
-    else:
-        logAction = Log(id=logId, rotated=False, **kwargs)
-        logAction.save()
-
-    return logAction.id

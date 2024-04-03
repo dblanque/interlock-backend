@@ -18,7 +18,7 @@ from interlock_backend.ldap.encrypt import encrypt
 
 ### Models
 from core.models import User
-from core.models.log import logToDB
+from core.views.mixins.logs import LogMixin
 
 ### Mixins
 from .mixins.user import UserViewMixin, UserViewLDAPMixin
@@ -36,7 +36,6 @@ from rest_framework.decorators import action
 ### Others
 from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS
 from interlock_backend.ldap.connector import LDAPConnector
-from interlock_backend.ldap.defaults import *
 from core.models.ldap_settings_db import *
 from interlock_backend.ldap import adsi as ldap_adsi
 from interlock_backend.ldap import user as ldap_user
@@ -45,6 +44,7 @@ import ldap3
 import logging
 ################################################################################
 
+DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
 class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
@@ -324,7 +324,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				imported_users.append(row[mapped_user_key])
 				if LDAP_LOG_CREATE == True:
 					# Log this action to DB
-					logToDB(
+					DBLogMixin.log(
 						user_id=request.user.id,
 						actionType="CREATE",
 						objectClass="USER",
@@ -744,7 +744,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		if LDAP_LOG_UPDATE == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=request.user.id,
 				actionType="UPDATE",
 				objectClass="USER",
@@ -879,7 +879,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		if LDAP_LOG_UPDATE == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=request.user.id,
 				actionType="UPDATE",
 				objectClass="USER",
@@ -957,7 +957,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		if LDAP_LOG_UPDATE == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=request.user.id,
 				actionType="UPDATE",
 				objectClass="USER",

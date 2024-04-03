@@ -17,7 +17,6 @@ from interlock_backend.ldap.adsi import (
     LDAP_BUILTIN_OBJECTS
 )
 from interlock_backend.ldap.securityIdentifier import SID
-from interlock_backend.ldap.defaults import *
 from core.models.ldap_settings_db import *
 
 ### Others

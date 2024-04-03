@@ -22,11 +22,10 @@ from interlock_backend.ldap.encrypt import (
     encrypt
 )
 from interlock_backend.ldap.adsi import search_filter_add
-from interlock_backend.ldap.defaults import *
 from core.models.ldap_settings_db import *
 from ldap3.core.exceptions import LDAPException
 from core.exceptions import ldap as exc_ldap
-from core.models.log import logToDB
+from core.views.mixins.logs import LogMixin
 from uuid import (
 	uuid1,
     getnode as uuid_getnode
@@ -34,6 +33,7 @@ from uuid import (
 from random import getrandbits
 ###############################################################################
 
+DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
 def recursive_member_search(user_dn: str, connection, group_dn: str = ADMIN_GROUP_TO_SEARCH):
@@ -129,7 +129,7 @@ class LDAPConnector(object):
         logger.info(f"Connection {self.uuid} opened.")
         # LOG Open Connection Events
         if LDAP_LOG_OPEN_CONNECTION == True and self.is_authenticating == False:
-            logToDB(
+            DBLogMixin.log(
                 user_id=self.user.id,
                 actionType="OPEN",
                 objectClass="CONN",
@@ -141,7 +141,7 @@ class LDAPConnector(object):
         self.connection.unbind()
         # LOG Open Connection Events
         if LDAP_LOG_CLOSE_CONNECTION == True and self.is_authenticating == False:
-            logToDB(
+            DBLogMixin.log(
                 user_id=self.user.id,
                 actionType="CLOSE",
                 objectClass="CONN",

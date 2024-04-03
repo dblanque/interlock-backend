@@ -33,7 +33,6 @@ from rest_framework.decorators import action
 ### Others
 from core.utils.dnstool import record_to_dict
 from core.decorators.login import auth_required
-from interlock_backend.ldap.defaults import *
 from core.models.ldap_settings_db import *
 from interlock_backend.ldap.connector import LDAPConnector
 import logging

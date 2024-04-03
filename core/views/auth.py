@@ -9,7 +9,7 @@
 #---------------------------------- IMPORTS -----------------------------------#
 ### Core
 from core.views.mixins.auth import CookieJWTAuthentication
-from core.models.log import logToDB
+from core.views.mixins.logs import LogMixin
 
 ### ViewSets
 from .base import BaseViewSet
@@ -18,7 +18,6 @@ from .base import BaseViewSet
 from rest_framework.response import Response
 
 ### Interlock
-from interlock_backend.ldap.defaults import *
 from core.models.ldap_settings_db import *
 from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS, BAD_LOGIN_COOKIE_NAME
 
@@ -28,6 +27,7 @@ import logging, jwt
 from core.views.mixins.auth import DATE_FMT_COOKIE
 ################################################################################
 
+DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
 class AuthViewSet(BaseViewSet):
@@ -77,7 +77,7 @@ class AuthViewSet(BaseViewSet):
 
 		if LDAP_LOG_LOGOUT == True:
 			# Log this action to DB
-			logToDB(
+			DBLogMixin.log(
 				user_id=request.user.id,
 				actionType="LOGOUT",
 				objectClass="USER",

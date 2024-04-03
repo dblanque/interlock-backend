@@ -8,7 +8,7 @@
 
 #---------------------------------- IMPORTS -----------------------------------#
 ### Models
-from core.models.log import logToDB
+from core.views.mixins.logs import LogMixin
 from core.models.dns import LDAPDNS, LDAPRecord
 from core.models.dnsRecordTypes import *
 
@@ -39,12 +39,12 @@ from interlock_backend.settings import DEBUG as INTERLOCK_DEBUG
 from core.utils import dnstool
 from core.utils.dnstool import record_to_dict
 from interlock_backend.ldap.adsi import search_filter_add
-from interlock_backend.ldap.defaults import *
 from core.models.ldap_settings_db import *
 from interlock_backend.ldap.connector import LDAPConnector
 import logging
 ################################################################################
 
+DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
 class DomainViewSet(BaseViewSet, DomainViewMixin):
@@ -172,7 +172,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 
 					if LDAP_LOG_READ == True:
 						# Log this action to DB
-						logToDB(
+						DBLogMixin.log(
 							user_id=request.user.id,
 							actionType="READ",
 							objectClass="DNSZ",
@@ -370,7 +370,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 
 			if LDAP_LOG_CREATE == True:
 				# Log this action to DB
-				logToDB(
+				DBLogMixin.log(
 					user_id=request.user.id,
 					actionType="CREATE",
 					objectClass="DNSZ",
@@ -452,7 +452,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 
 			if LDAP_LOG_DELETE == True:
 				# Log this action to DB
-				logToDB(
+				DBLogMixin.log(
 					user_id=request.user.id,
 					actionType="DELETE",
 					objectClass="DNSZ",
