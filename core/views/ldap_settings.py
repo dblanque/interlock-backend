@@ -10,8 +10,8 @@
 ### Exceptions
 from core.exceptions.ldap import ConnectionTestFailed
 from core.exceptions import (
+	base as exc_base,
 	settings_exc as exc_set,
-	ldap as exc_ldap
 )
 
 ### Models
@@ -31,7 +31,7 @@ from .mixins.ldap_settings import SettingsViewMixin
 from .base import BaseViewSet
 
 ### Serializers
-from core.serializers.ldap_settings import LDAPSettingSerializer
+from core.serializers.ldap_settings import LDAPSettingSerializer, LDAPPresetSerializer
 
 ### REST Framework
 from rest_framework.response import Response
@@ -54,8 +54,8 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 	@auth_required()
 	def list(self, request, pk=None):
-		user = request.user
-		data = {}
+		# user = request.user
+		# data = {}
 		code = 0
 		active_preset = self.get_active_settings_preset()
 
@@ -64,7 +64,8 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			presets.append({
 				"name": p.name,
 				"id": p.id,
-				"label": p.label
+				"label": p.label,
+				"active": p.active or False
 			})
 
 		if LDAP_LOG_READ == True:
@@ -88,7 +89,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@auth_required()
 	@action(detail=True, methods=['get'])
 	def fetch(self, request, pk):
-		user = request.user
+		# user = request.user
 		preset_id = int(pk)
 		data = {}
 		code = 0
@@ -116,34 +117,143 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 	@action(detail=False, methods=['post'])
 	@auth_required()
-	def save(self, request, pk=None):
-		user = request.user
+	def preset_create(self, request, pk=None):
+		# user = request.user
+		# data: dict = request.data
+		code = 0
+		if not "label" in request.data:
+			raise exc_base.MissingDataKey(data={"detail":"label"})
+		preset_label = str(request.data["label"])
+		preset_name = self.normalize_preset_name(preset_label)
+		if LDAPPreset.objects.filter(name=preset_name).exists():
+			raise exc_set.SettingPresetExists
+		preset = {
+			"name": preset_name,
+			"label": preset_label
+		}
+		serializer = LDAPPresetSerializer(data=preset)
+		if not serializer.is_valid():
+			raise exc_set.SettingPresetSerializerError(data={
+				"errors": serializer.errors
+			})
+		LDAPPreset.objects.create(**preset)
+
+		return Response(
+			data={
+				'code': code,
+				'code_msg': 'ok'
+			}
+		)
+
+	@action(detail=False, methods=['post'])
+	@auth_required()
+	def preset_delete(self, request, pk=None):
+		# user = request.user
 		data: dict = request.data
 		code = 0
-		preset_id = None
-		preset_label = None
-		preset_name = None
+		if not "id" in data:
+			raise exc_base.MissingDataKey(data={"key":"id"})
+		preset_id = data["id"]
+		if not LDAPPreset.objects.filter(id=preset_id).exists():
+			raise exc_set.SettingPresetNotExists
+		active_preset = self.get_active_settings_preset()
+		if active_preset.id == preset_id:
+			raise exc_set.SettingPresetMustBeDisabled
+		LDAPPreset.objects.get(id=preset_id).delete_permanently()
+		return Response(
+			data={
+				'code': code,
+				'code_msg': 'ok'
+			}
+		)
 
-		if "PRESET_ID" in data:
-			try: settings_preset = LDAPPreset.objects.get(id=data.pop("PRESET_ID"))
+	@action(detail=False, methods=['post'])
+	@auth_required()
+	def preset_enable(self, request, pk=None):
+		# user = request.user
+		data: dict = request.data
+		code = 0
+		if not "id" in data:
+			raise exc_base.MissingDataKey(data={"key":"id"})
+		preset_id = data["id"]
+		if not LDAPPreset.objects.filter(id=preset_id).exists():
+			raise exc_set.SettingPresetNotExists
+		active_preset = self.get_active_settings_preset()
+		active_preset.active = None # Don't set this to False, DB Constraints
+		active_preset.save()
+		inactive_preset = LDAPPreset.objects.get(id=preset_id)
+		inactive_preset.active = True
+		inactive_preset.save()
+
+		self.restart_django()
+		return Response(
+			data={
+				'code': code,
+				'code_msg': 'ok'
+			}
+		)
+
+	@action(detail=False, methods=['post'])
+	@auth_required()
+	def preset_rename(self, request, pk=None):
+		# user = request.user
+		data: dict = request.data
+		code = 0
+		for k in ["id","label"]:
+			if not k in data:
+				raise exc_base.MissingDataKey(data={"key": k})
+		preset_id = data["id"]
+		preset_label = data["label"]
+		if not LDAPPreset.objects.filter(id=preset_id).exists():
+			raise exc_set.SettingPresetNotExists
+		preset = LDAPPreset.objects.get(id=preset_id)
+
+		serializer = LDAPPresetSerializer(data={
+			"label": preset_label,
+			"name": self.normalize_preset_name(preset_label),
+		})
+		if not serializer.is_valid():
+			raise exc_set.SettingPresetSerializerError(data={
+				"errors": serializer.errors
+			})
+		preset.label = serializer.data["label"]
+		preset.name = serializer.data["name"]
+		preset.save()
+
+		return Response(
+			data={
+				'code': code,
+				'code_msg': 'ok'
+			}
+		)
+
+	@action(detail=False, methods=['post'])
+	@auth_required()
+	def save(self, request, pk=None):
+		# user = request.user
+		data_preset: dict = request.data["preset"]
+		data_settings: dict = request.data["settings"]
+		code = 0
+		settings_preset = None
+		active_preset = None
+
+		if "id" in data_preset:
+			try: settings_preset = LDAPPreset.objects.get(id=data_preset["id"])
 			except: raise exc_set.SettingPresetNotExists
-		elif "PRESET_LABEL" in data:
-			preset_label: str = data.pop("PRESET_LABEL")
-			preset_name = preset_label.replace(" ", "_").lower()
-			preset_id = data.pop("PRESET_ID")
-			if LDAPPreset.objects.filter(active=True, id=preset_id).count() == 0:
-				settings_preset = LDAPPreset.objects.create(label=preset_label, name=preset_name)
 		else:
-			settings_preset = LDAPPreset.objects.get(name="default")
+			raise exc_base.MissingDataKey(data={"key":"data.preset.id"})
 
-		if 'LDAP_LOG_MAX' in data:
-			if int(data['LDAP_LOG_MAX']['value']) > 10000:
+		try: active_preset = self.get_active_settings_preset()
+		except: raise
+
+		if 'LDAP_LOG_MAX' in data_settings:
+			if int(data_settings['LDAP_LOG_MAX']['value']) > 10000:
 				raise exc_set.SettingLogMaxLimit
 
-		adminEnabled = data.pop('DEFAULT_ADMIN_ENABLED')
-		adminPassword = data.pop('DEFAULT_ADMIN_PWD')
+		adminEnabled = data_settings.pop('DEFAULT_ADMIN_ENABLED')
+		adminPassword = data_settings.pop('DEFAULT_ADMIN_PWD')
 		self.set_admin_status(status=adminEnabled, password=adminPassword)
-		for param_name, param_value in data.items():
+		for param_name, param_value in data_settings.items():
 			if not param_name in CMAPS:
 				raise exc_set.SettingTypeDoesNotMatch
 			param_to_update = None
@@ -156,8 +266,8 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 				is_default = (param_value == getattr(defaults, param_name, None))
 			if is_default:
 				try:
-					if LDAPSetting.objects.filter(name=param_name).exists():
-						LDAPSetting.objects.get(name=param_name).delete_permanently()
+					if LDAPSetting.objects.filter(name=param_name, preset_id=settings_preset).exists():
+						LDAPSetting.objects.get(name=param_name, preset_id=settings_preset).delete_permanently()
 				except:
 					pass
 			else:
@@ -184,8 +294,8 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 					if param_value not in LDAP_SETTINGS_CHOICES_MAP[param_type.upper()]:
 						raise exc_set.SettingTypeDoesNotMatch
 
-				if LDAPSetting.objects.filter(name=param_name).exists():
-					param_to_update = LDAPSetting.objects.get(name=param_name)
+				if LDAPSetting.objects.filter(name=param_name, preset_id=settings_preset).exists():
+					param_to_update = LDAPSetting.objects.get(name=param_name, preset_id=settings_preset)
 					for kw, kw_v in kwdata.items():
 						setattr(param_to_update, kw, kw_v)
 					param_to_update.save()
@@ -200,19 +310,22 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 				objectClass="SET",
 			)
 
-		self.restart_django()
+		restart_django = settings_preset.id == active_preset.id
+		if restart_django:
+			self.restart_django()
 		return Response(
 			 data={
 				'code': code,
 				'code_msg': 'ok',
-				'settings': data
+				'settings': data_settings,
+				'restart': restart_django
 			 }
 		)
 
 	@action(detail=False, methods=['get'])
 	@auth_required()
 	def reset(self, request, pk=None):
-		user = request.user
+		# user = request.user
 		data = request.data
 		code = 0
 		active_preset = self.get_active_settings_preset()
@@ -230,45 +343,42 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		)
 
 	# TODO
-	@action(detail=False, methods=['post'])
-	@auth_required()
-	def manualcmd(self, request, pk=None):
-		user = request.user
-		data = request.data
-		code = 0
+	# @action(detail=False, methods=['post'])
+	# @auth_required()
+	# def manualcmd(self, request, pk=None):
+	# 	user = request.user
+	# 	data = request.data
+	# 	code = 0
 
-		operation = data['operation']
-		op_dn = data['dn']
-		op_object = data['op_object']
-		op_filter = data['op_filter']
-		op_attributes = data['op_attributes']
+	# 	operation = data['operation']
+	# 	op_dn = data['dn']
+	# 	op_object = data['op_object']
+	# 	op_filter = data['op_filter']
+	# 	op_attributes = data['op_attributes']
 
-		# Open LDAP Connection
-		try:
-			self.ldap_connection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
-		except Exception as e:
-			print(e)
-			raise exc_ldap.CouldNotOpenConnection
+	# 	# Open LDAP Connection
+	# 	try:
+	# 		self.ldap_connection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
+	# 	except Exception as e:
+	# 		print(e)
+	# 		raise exc_ldap.CouldNotOpenConnection
 
-		# Unbind the connection
-		self.ldap_connection.unbind()
-		return Response(
-			 data={
-				'code': code,
-				'code_msg': 'ok',
-				'data': data
-			 }
-		)
+	# 	# Unbind the connection
+	# 	self.ldap_connection.unbind()
+	# 	return Response(
+	# 		 data={
+	# 			'code': code,
+	# 			'code_msg': 'ok',
+	# 			'data': data
+	# 		 }
+	# 	)
 
 	@action(detail=False, methods=['post'])
 	@auth_required()
 	def test(self, request, pk=None):
-		user = request.user
 		data = request.data
 		code = 0
-
-		data = self.test_ldap_settings(user, data)
-
+		data = self.test_ldap_settings(data)
 		if not data:
 			raise ConnectionTestFailed
 

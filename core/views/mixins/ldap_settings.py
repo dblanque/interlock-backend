@@ -36,15 +36,11 @@ import logging
 logger = logging.getLogger(__name__)
 
 class SettingsViewMixin(viewsets.ViewSetMixin):
+	def normalize_preset_name(self, name: str) -> str:
+		return name.replace(" ", "_").lower()
+
 	def get_active_settings_preset(self):
-		# If no settings preset active, enable default.
-		if not LDAPPreset.objects.filter(active=True).exists():
-			active_preset = LDAPPreset.objects.get(name="default")
-			active_preset.active = True
-			active_preset.save()
-			return active_preset
-		else:
-			return LDAPPreset.objects.get(active=True)
+		return LDAPPreset.objects.get(active=True)
 
 	def restart_django(self):
 		reloader = BASE_DIR+'/interlock_backend/reload.py'
@@ -75,10 +71,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 			defaultAdmin.set_password(password)
 			defaultAdmin.save()
 
-	def test_ldap_settings(self, user, data):
-		if user == None:
-			raise exc_user.UserPermissionError
-
+	def test_ldap_settings(self, data):
 		ldapAuthConnectionUser = data['LDAP_AUTH_CONNECTION_USER_DN']['value']
 		ldapAuthConnectionPassword = data['LDAP_AUTH_CONNECTION_PASSWORD']['value']
 		ldapAuthURL = data['LDAP_AUTH_URL']['value']
@@ -105,11 +98,8 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 				raise exception
 			logger.info("Test successful")
 
-		username = user.username
-		if username == "admin":
-			user_dn = ldapAuthConnectionUser
-		else:
-			user_dn = user.dn
+		username = "admin"
+		user_dn = ldapAuthConnectionUser
 
 		logger.info("Test Connection Endpoint Parameters: ")
 		logger.info(f'User: {username}')
@@ -128,7 +118,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 			c = test_ldap_connection(
 				username = username,
 				user_dn = user_dn,
-				password = user.encryptedPassword,
+				password = ldapAuthConnectionPassword,
 				ldapAuthConnectionUser = ldapAuthConnectionUser,
 				ldapAuthConnectionPassword = ldapAuthConnectionPassword,
 				ldapAuthURL = ldapAuthURL,

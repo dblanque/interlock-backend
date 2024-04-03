@@ -69,12 +69,12 @@ LDAP_SETTINGS_CHOICES_MAP = {
 class LDAPPreset(BaseModel):
     id = models.BigAutoField(verbose_name=_("id"), primary_key=True)
     name = models.CharField(verbose_name=_("name"), unique=True, null=False, blank=False, max_length=128)
-    label = models.CharField(verbose_name=_("label"), blank=False, null=False, max_length=64, default="Default Preset")
+    label = models.CharField(verbose_name=_("label"), blank=False, null=False, max_length=64)
     active = models.BooleanField(verbose_name=_("active"), unique=True, null=True)
 
 class BaseLDAPSetting(BaseModel):
     id = models.BigAutoField(verbose_name=_("id"), primary_key=True)
-    name = models.CharField(verbose_name=_("name"), unique=True, null=False, blank=False, max_length=128)
+    name = models.CharField(verbose_name=_("name"), choices=[(k, f"lds_{k.lower()}") for k in CMAPS.keys()], unique=False, null=False, blank=False, max_length=128)
     type = models.CharField(verbose_name=_("type"), choices=LDAP_SETTING_TYPES, null=False)
     preset = models.ForeignKey(LDAPPreset, verbose_name=_("ldap_preset"), on_delete=models.CASCADE)
 

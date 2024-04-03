@@ -25,7 +25,19 @@ class SettingPresetNotExists(CoreException):
     status_code = status.HTTP_400_BAD_REQUEST
     default_detail = 'Settings Preset does not Exist'
     default_code = 'setting_preset_not_exists'
+class SettingPresetExists(CoreException):
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = 'Settings Preset Already Exists'
+    default_code = 'setting_preset_exists'
 class SettingSerializerError(CoreException):
     status_code = status.HTTP_400_BAD_REQUEST
-    default_detail = 'Settings Serialization Error'
+    default_detail = 'Settings Serializer Error'
     default_code = 'settings_serializer_error'
+class SettingPresetSerializerError(CoreException):
+    status_code = status.HTTP_400_BAD_REQUEST
+    default_detail = 'Settings Preset Serializer Error'
+    default_code = 'settings_preset_serializer_error'
+class SettingPresetMustBeDisabled(CoreException):
+    status_code = status.HTTP_400_BAD_REQUEST
+    default_detail = 'Settings Preset must be Disabled'
+    default_code = 'settings_preset_must_be_disabled'
