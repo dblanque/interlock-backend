@@ -181,7 +181,6 @@ class LDAPRecord(LDAPDNS):
 		else:
 			return f"{self.name}.{self.zone} ({RECORD_MAPPINGS[self.type]['name']})"
 
-
 	def make_record_bytes(self, values, serial, ttl=180):
 		## Check if class type is supported for creation ##
 		if (self.type in RECORD_MAPPINGS):
