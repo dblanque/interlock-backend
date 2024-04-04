@@ -311,8 +311,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				if user_placeholder_password:
 					row[mapped_pwd_key] = user_placeholder_password
 					set_pwd = True
-				elif 'password' in data and len(data['password']) > 0:
-					row[mapped_pwd_key] = data['password']
+				elif mapped_pwd_key in data["headers"] and len(row[mapped_pwd_key]) > 0:
 					set_pwd = True
 
 				if set_pwd:
@@ -399,7 +398,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			user_entry = self.ldap_connection.entries[0]
 			user_dn = str(user_entry.distinguishedName)
 			# Check overlapping email
-			if RunningSettings.LDAP_AUTH_USER_FIELDS["email"] in data and len(data[LDAP_AUTH_USER_FIELDS["email"]]) > 0:
+			if RunningSettings.LDAP_AUTH_USER_FIELDS["email"] in data and len(data[RunningSettings.LDAP_AUTH_USER_FIELDS["email"]]) > 0:
 				self.ldap_user_with_email_exists(
 					email_search=data[RunningSettings.LDAP_AUTH_USER_FIELDS["email"]],
 					user_check=data
