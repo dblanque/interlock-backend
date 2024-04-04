@@ -28,7 +28,7 @@ from core.exceptions import (
 from core.views.mixins.utils import net_port_test
 
 ### Others
-from interlock_backend.ldap.connector import test_ldap_connection
+from interlock_backend.ldap.connector import test_ldap_connection, LDAPConnector, LDAPConnectionOptions
 from interlock_backend.settings import BASE_DIR
 import logging
 ################################################################################
@@ -36,6 +36,24 @@ import logging
 logger = logging.getLogger(__name__)
 
 class SettingsViewMixin(viewsets.ViewSetMixin):
+	def resync_users(self) -> None:
+		ldc_opts = LDAPConnectionOptions()
+		ldc_opts['force_admin'] = True
+		# Open LDAP Connection
+		with LDAPConnector(**ldc_opts) as ldc:
+			ldc.__refetch_options__()
+			self.ldap_connection = ldc.connection
+			for user in User.objects.all():
+				try:
+					u: User = ldc.get_user(username=user.username)
+					if u:
+						u.save()
+				except Exception as e:
+					logger.warning(f"Could not re-sync user {user.username} on settings change.")
+					logger.exception(e)
+					pass
+		return None
+
 	def normalize_preset_name(self, name: str) -> str:
 		return name.replace(" ", "_").lower()
 
