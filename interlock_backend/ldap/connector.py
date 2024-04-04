@@ -103,7 +103,7 @@ def authenticate(*args, **kwargs):
 	# Connect to LDAP and fetch user DN, create or update user if necessary
 	with LDAPConnector(password=password, force_admin=True, is_authenticating=True) as ldc:
 		if ldc.connection is None: return None
-		user = ldc.get_user(**ldap_kwargs)
+		user: User = ldc.get_user(**ldap_kwargs)
 		ldc.connection.unbind()
 		if user is None: return None
 
