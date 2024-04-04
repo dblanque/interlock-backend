@@ -14,10 +14,7 @@ from core.models.types.ldap_dns_record import *
 from core.views.base import BaseViewSet
 
 ### Exceptions
-from core.exceptions import (
-	ldap as exc_ldap,
-	dns as exc_dns
-)
+from core.exceptions import dns as exc_dns
 
 ### Mixins
 from .mixins.record import DNSRecordMixin
