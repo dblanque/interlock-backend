@@ -6,6 +6,10 @@
 # Module: interlock_backend.ldap.defaults
 
 ### LDAP SETTINGS
+# ! You also have to add the settings to the following files:
+# core.models.ldap_settings
+# core.models.ldap_settings_db
+# interlock_backend.ldap.defaults	<------------ You're Here
 
 # If this is set to True then the LDAP Connector will not attempt
 # to decrypt your LDAP Bind Password
