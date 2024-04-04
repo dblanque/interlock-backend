@@ -23,7 +23,7 @@ from .base import BaseViewSet
 
 ### Interlock
 from interlock_backend.ldap.connector import LDAPConnector
-from core.models.ldap_settings_db import *
+from core.models.ldap_settings_db import RunningSettings
 
 ### Others
 import struct
@@ -60,7 +60,7 @@ class GPOViewSet(BaseViewSet):
 			}, operator="&", reverse_key=False)
 			try:
 				self.ldap_connection.search(
-					LDAP_AUTH_SEARCH_BASE,
+					RunningSettings.LDAP_AUTH_SEARCH_BASE,
 					self.ldap_filter_object,
 					attributes=ALL_ATTRIBUTES
 				)

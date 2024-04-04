@@ -1,6 +1,6 @@
 from rest_framework import serializers as serializers
 from rest_framework_simplejwt import serializers as jwt_serializers
-from core.models.ldap_settings_db import *
+from core.models.ldap_settings_db import RunningSettings
 from core.exceptions import otp as exc_otp
 from core.views.mixins.logs import LogMixin
 from core.views.mixins.totp import get_user_totp_device, validate_user_otp
@@ -44,7 +44,7 @@ class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
 		if self.user.is_superuser or self.user.username == 'admin':
 			data["admin_allowed"] = True
 
-		if LDAP_LOG_LOGIN == True:
+		if RunningSettings.LDAP_LOG_LOGIN == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=self.user.id,

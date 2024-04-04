@@ -30,6 +30,7 @@ from core.views.mixins.utils import net_port_test
 ### Others
 from interlock_backend.ldap.connector import test_ldap_connection, LDAPConnector, LDAPConnectionOptions
 from interlock_backend.settings import BASE_DIR
+from core.models.ldap_settings_db import RunningSettings
 import logging
 ################################################################################
 
@@ -41,11 +42,11 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 		ldc_opts['force_admin'] = True
 		# Open LDAP Connection
 		with LDAPConnector(**ldc_opts) as ldc:
-			ldc.__refetch_options__()
-			self.ldap_connection = ldc.connection
 			for user in User.objects.all():
 				try:
-					u: User = ldc.get_user(username=user.username)
+					u: User = ldc.get_user(**{
+						"username": user.username
+					})
 					if u:
 						u.save()
 				except Exception as e:
@@ -60,7 +61,11 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 	def get_active_settings_preset(self):
 		return LDAPPreset.objects.get(active=True)
 
-	def restart_django(self):
+	def resync_settings(self):
+		RunningSettings.resync()
+		self.resync_users()
+
+	def reload_django(self):
 		reloader = BASE_DIR+'/interlock_backend/reload.py'
 		# Write the file
 		with open(reloader, 'w') as file:

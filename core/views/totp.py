@@ -37,7 +37,7 @@ from core.models import User
 from core.views.mixins.logs import LogMixin
 
 ### Interlock
-from core.models.ldap_settings_db import *
+from core.models.ldap_settings_db import RunningSettings
 ################################################################################
 
 DBLogMixin = LogMixin()
@@ -152,7 +152,7 @@ class TOTPViewSet(BaseViewSet):
 
 		try:
 			delete_device_totp_for_user(target_user)
-			if LDAP_LOG_UPDATE == True:
+			if RunningSettings.LDAP_LOG_UPDATE == True:
 					# Log this action to DB
 					DBLogMixin.log(
 						user_id=request.user.id,

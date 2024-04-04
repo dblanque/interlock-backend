@@ -11,7 +11,7 @@
 from django.utils.translation import gettext_lazy as _
 
 ### Interlock
-from core.models.ldap_settings_db import *
+from core.models.ldap_settings_db import RunningSettings
 from interlock_backend.ldap.adsi import LDAP_BUILTIN_OBJECTS, search_filter_add
 from interlock_backend.ldap.securityIdentifier import SID
 
@@ -64,10 +64,10 @@ class LDAPObject():
             raise Exception("LDAP Object requires a distinguishedName or a valid ldapFilter to search for the object")
 
         # Set LDAPTree Default Values
-        self.name = LDAP_AUTH_SEARCH_BASE
-        self.searchBase = LDAP_AUTH_SEARCH_BASE
+        self.name = RunningSettings.LDAP_AUTH_SEARCH_BASE
+        self.searchBase = RunningSettings.LDAP_AUTH_SEARCH_BASE
         self.connection = kwargs.pop('connection')
-        self.usernameIdentifier = LDAP_AUTH_USER_FIELDS["username"]
+        self.usernameIdentifier = RunningSettings.LDAP_AUTH_USER_FIELDS["username"]
         self.subobjectId = 0
         self.excludedLdapAttributes = [
             'objectGUID',
@@ -89,7 +89,7 @@ class LDAPObject():
         ]
         self.recursive = False
         self.testFetch = False
-        self.ldapAttributes = LDAP_DIRTREE_ATTRIBUTES
+        self.ldapAttributes = RunningSettings.LDAP_DIRTREE_ATTRIBUTES
         if 'dn' in kwargs:
             self.ldapFilter = search_filter_add("", "distinguishedName=" + str(kwargs['dn']))
 

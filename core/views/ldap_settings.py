@@ -41,7 +41,7 @@ from rest_framework.decorators import action
 from interlock_backend.ldap import defaults
 from interlock_backend.ldap.encrypt import encrypt
 from core.decorators.login import auth_required
-from core.models.ldap_settings_db import *
+from core.models.ldap_settings_db import RunningSettings
 from interlock_backend.ldap.settings import getSettingsList
 import logging, ssl
 ################################################################################
@@ -67,7 +67,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 				"active": p.active or False
 			})
 
-		if LDAP_LOG_READ == True:
+		if RunningSettings.LDAP_LOG_READ == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=request.user.id,
@@ -97,7 +97,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		data = getSettingsList(preset_id)
 		data['DEFAULT_ADMIN_ENABLED'] = self.get_admin_status()
 
-		if LDAP_LOG_READ == True:
+		if RunningSettings.LDAP_LOG_READ == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=request.user.id,
@@ -184,7 +184,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		inactive_preset.active = True
 		inactive_preset.save()
 
-		self.restart_django()
+		self.resync_settings()
 		return Response(
 			data={
 				'code': code,
@@ -301,7 +301,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 				else:
 					LDAPSetting.objects.create(**kwdata)
 
-		if LDAP_LOG_UPDATE == True:
+		if RunningSettings.LDAP_LOG_UPDATE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=request.user.id,
@@ -309,15 +309,13 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 				objectClass="SET",
 			)
 
-		restart_django = settings_preset.id == active_preset.id
-		if restart_django:
-			self.restart_django()
+		self.resync_settings()
 		return Response(
 			 data={
 				'code': code,
 				'code_msg': 'ok',
 				'settings': data_settings,
-				'restart': restart_django
+				'restart': True
 			 }
 		)
 
@@ -332,7 +330,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		try: LDAPSetting.objects.filter(preset_id=active_preset.id).delete()
 		except: raise
 
-		self.restart_django()
+		self.resync_settings()
 		return Response(
 			 data={
 				'code': code,

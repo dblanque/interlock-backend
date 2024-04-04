@@ -35,7 +35,7 @@ from time import perf_counter
 from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.adsi import search_filter_from_dict
 from core.decorators.login import auth_required
-from core.models.ldap_settings_db import *
+from core.models.ldap_settings_db import RunningSettings
 import logging
 ################################################################################
 
@@ -59,7 +59,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				# User Attrs
 				'objectClass',
 				'objectCategory',
-				LDAP_OU_FIELD,
+				RunningSettings.LDAP_OU_FIELD,
 
 				# Group Attrs
 				'cn',
@@ -70,7 +70,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			]
 
 			# Read-only end-point, build filters from default dictionary
-			filterDict = LDAP_DIRTREE_OU_FILTER
+			filterDict = RunningSettings.LDAP_DIRTREE_OU_FILTER
 			ldapFilter = search_filter_from_dict(filterDict)
 			ldap_tree_options: LDAPTreeOptions = {
 				"connection": self.ldap_connection,
@@ -88,7 +88,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				print(e)
 				raise exc_ldap.CouldNotFetchDirtree
 
-			if LDAP_LOG_READ == True:
+			if RunningSettings.LDAP_LOG_READ == True:
 				# Log this action to DB
 				DBLogMixin.log(
 					user_id=request.user.id,
@@ -127,7 +127,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				# User Attrs
 				'objectClass',
 				'objectCategory',
-				LDAP_OU_FIELD,
+				RunningSettings.LDAP_OU_FIELD,
 
 				# Group Attrs
 				'cn',
@@ -155,7 +155,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				print(e)
 				raise exc_ldap.CouldNotFetchDirtree
 
-			if LDAP_LOG_READ == True:
+			if RunningSettings.LDAP_LOG_READ == True:
 				# Log this action to DB
 				DBLogMixin.log(
 					user_id=request.user.id,
@@ -278,7 +278,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				self.ldap_connection.unbind()
 				raise exc_ou.OUCreate(data=data)
 
-			if LDAP_LOG_CREATE == True:
+			if RunningSettings.LDAP_LOG_CREATE == True:
 				# Log this action to DB
 				DBLogMixin.log(
 					user_id=request.user.id,
@@ -323,7 +323,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				}
 				raise exc_base.CoreException(data=data)
 
-			if LDAP_LOG_DELETE == True:
+			if RunningSettings.LDAP_LOG_DELETE == True:
 				# Log this action to DB
 				DBLogMixin.log(
 					user_id=request.user.id,

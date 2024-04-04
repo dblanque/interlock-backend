@@ -15,7 +15,7 @@ from core.exceptions import dirtree as exc_dirtree
 
 ### Interlock
 from interlock_backend.ldap.adsi import search_filter_add, search_filter_from_dict
-from core.models.ldap_settings_db import *
+from core.models.ldap_settings_db import RunningSettings
 
 ### Models
 from core.views.mixins.logs import LogMixin
@@ -60,7 +60,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
         else:
             logger.debug("Dirtree fetching with Standard Exclusion Filter")
             if filterDict is None:
-                filterDict = {**LDAP_DIRTREE_CN_FILTER, **LDAP_DIRTREE_OU_FILTER}
+                filterDict = {**RunningSettings.LDAP_DIRTREE_CN_FILTER, **RunningSettings.LDAP_DIRTREE_OU_FILTER}
             if 'filter' in data and 'exclude' in data['filter']:
                 if len(data['filter']['exclude']) > 0:
                     for f in data['filter']['exclude']:
@@ -101,7 +101,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
             original_relative_dn_identifier = original_relative_dn.split("=")[0]
 
             # Validations
-            if original_relative_dn_identifier.lower() not in LDAP_LDIF_IDENTIFIERS:
+            if original_relative_dn_identifier.lower() not in RunningSettings.LDAP_LDIF_IDENTIFIERS:
                 raise exc_dirtree.DirtreeDistinguishedNameConflict
             if not new_relative_dn.startswith(original_relative_dn_identifier):
                 new_relative_dn = f"{original_relative_dn_identifier}={new_relative_dn}"
@@ -137,7 +137,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
             self.ldap_connection.unbind()
             raise exc_dirtree.DirtreeMove(data=data)
 
-        if LDAP_LOG_UPDATE == True:
+        if RunningSettings.LDAP_LOG_UPDATE == True:
             # Log this action to DB
             DBLogMixin.log(
                 user_id=self.request.user.id,

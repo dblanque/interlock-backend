@@ -39,7 +39,7 @@ from interlock_backend.settings import DEBUG as INTERLOCK_DEBUG
 from core.utils import dnstool
 from core.utils.dnstool import record_to_dict
 from interlock_backend.ldap.adsi import search_filter_add
-from core.models.ldap_settings_db import *
+from core.models.ldap_settings_db import RunningSettings
 from interlock_backend.ldap.connector import LDAPConnector
 import logging
 ################################################################################
@@ -55,10 +55,10 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 		user = request.user
 		data = {}
 		code = 0
-		data["realm"] = LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN or ""
-		data["name"] = LDAP_DOMAIN or ""
-		data["basedn"] = LDAP_AUTH_SEARCH_BASE or ""
-		data["user_selector"] = LDAP_AUTH_USERNAME_IDENTIFIER or ""
+		data["realm"] = RunningSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN or ""
+		data["name"] = RunningSettings.LDAP_DOMAIN or ""
+		data["basedn"] = RunningSettings.LDAP_AUTH_SEARCH_BASE or ""
+		data["user_selector"] = RunningSettings.LDAP_AUTH_USERNAME_IDENTIFIER or ""
 		if INTERLOCK_DEBUG:
 			data["debug"] = INTERLOCK_DEBUG
 		return Response(
@@ -111,7 +111,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 			if zoneFilter is not None:
 				target_zone = zoneFilter
 			else:
-				target_zone = LDAP_DOMAIN
+				target_zone = RunningSettings.LDAP_DOMAIN
 			search_target = 'DC=%s,%s' % (target_zone, dnsList.dnsroot)
 			try:
 				ldapConnection.search(
@@ -170,7 +170,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 						if zoneName == 'RootDNSServers':
 							dnsZones[i] = "Root DNS Servers"
 
-					if LDAP_LOG_READ == True:
+					if RunningSettings.LDAP_LOG_READ == True:
 						# Log this action to DB
 						DBLogMixin.log(
 							user_id=request.user.id,
@@ -182,7 +182,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 					responseData['dnsZones'] = dnsZones
 					responseData['forestZones'] = forestZones
 					responseData['records'] = result
-					responseData['legacy'] = LDAP_DNS_LEGACY or False
+					responseData['legacy'] = RunningSettings.LDAP_DNS_LEGACY or False
 
 		return Response(
 			 data={
@@ -212,7 +212,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 			}
 			raise exc_dns.DNSFieldValidatorFailed(data=data)
 
-		if target_zone == LDAP_DOMAIN or target_zone == 'RootDNSServers':
+		if target_zone == RunningSettings.LDAP_DOMAIN or target_zone == 'RootDNSServers':
 			raise exc_dns.DNSZoneNotDeletable
 
 		# Open LDAP Connection
@@ -368,7 +368,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 					"aaaa": aaaaCreateResult
 				})
 
-			if LDAP_LOG_CREATE == True:
+			if RunningSettings.LDAP_LOG_CREATE == True:
 				# Log this action to DB
 				DBLogMixin.log(
 					user_id=request.user.id,
@@ -406,7 +406,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 			}
 			raise exc_dns.DNSFieldValidatorFailed(data=data)
 
-		if target_zone == LDAP_DOMAIN or target_zone == 'RootDNSServers':
+		if target_zone == RunningSettings.LDAP_DOMAIN or target_zone == 'RootDNSServers':
 			raise exc_dns.DNSZoneNotDeletable
 
 		# Open LDAP Connection
@@ -450,7 +450,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 
 			ldapConnection.unbind()
 
-			if LDAP_LOG_DELETE == True:
+			if RunningSettings.LDAP_LOG_DELETE == True:
 				# Log this action to DB
 				DBLogMixin.log(
 					user_id=request.user.id,

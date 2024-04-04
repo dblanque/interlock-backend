@@ -24,7 +24,7 @@ from rest_framework.decorators import action
 from core.decorators.login import auth_required
 from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.adsi import search_filter_add
-from core.models.ldap_settings_db import *
+from core.models.ldap_settings_db import RunningSettings
 import logging
 ################################################################################
 
@@ -115,7 +115,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 			group_data = data['group']
 			# Make sure Group doesn't exist check with CN and authUserField
 			self.ldap_filter_object = search_filter_add("", "cn="+group_data['cn'])
-			self.ldap_filter_object = search_filter_add(self.ldap_filter_object, LDAP_AUTH_USER_FIELDS["username"]+"="+group_data['cn'], "|")
+			self.ldap_filter_object = search_filter_add(self.ldap_filter_object, RunningSettings.LDAP_AUTH_USER_FIELDS["username"]+"="+group_data['cn'], "|")
 
 			# Send LDAP Query for user being created to see if it exists
 			self.ldap_filter_attr = [

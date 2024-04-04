@@ -8,7 +8,7 @@
 
 #---------------------------------- IMPORTS -----------------------------------#
 ### Models
-from core.models.ldap_settings_db import LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN
+from core.models.ldap_settings_db import RunningSettings
 
 ### Exceptions
 from core.exceptions import otp as exc_otp
@@ -39,11 +39,11 @@ def parse_config_url(url: str):
 	if re.match(r'^.*totp/.*:.*$', url):
 		return url
 	if INTERLOCK_DEBUG:
-		label = f"Interlock DEVELOPMENT {LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN}"
+		label = f"Interlock DEVELOPMENT {RunningSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN}"
 	else:
-		label = f"Interlock {LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN}"
+		label = f"Interlock {RunningSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN}"
 	regex = r'^(.*totp/)(?!.*:)(.*)(\?.*)$'
-	return re.sub(regex, rf"\1{label}:\2@{LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN}\3", url)
+	return re.sub(regex, rf"\1{label}:\2@{RunningSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN}\3", url)
 
 def get_random_string(length):
     # With combination of lower and upper case

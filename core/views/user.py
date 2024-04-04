@@ -36,7 +36,7 @@ from rest_framework.decorators import action
 ### Others
 from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS
 from interlock_backend.ldap.connector import LDAPConnector
-from core.models.ldap_settings_db import *
+from core.models.ldap_settings_db import RunningSettings
 from interlock_backend.ldap import adsi as ldap_adsi
 from interlock_backend.ldap import user as ldap_user
 from core.decorators.login import auth_required
@@ -57,12 +57,12 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code = 0
 		code_msg = 'ok'
 
-		self.ldap_filter_object = "(objectclass=" + LDAP_AUTH_OBJECT_CLASS + ")"
+		self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
 		self.ldap_filter_attr = [
 			"givenName",
 			"sn",
 			"displayName",
-			LDAP_AUTH_USER_FIELDS["username"],
+			RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
 			"mail",
 			"distinguishedName",
 			"userAccountControl"
@@ -92,17 +92,17 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code = 0
 		code_msg = 'ok'
 		data = request.data
-		if LDAP_AUTH_USER_FIELDS['username'] in data:
-			user_search = data[LDAP_AUTH_USER_FIELDS['username']]
+		if RunningSettings.LDAP_AUTH_USER_FIELDS['username'] in data:
+			user_search = data[RunningSettings.LDAP_AUTH_USER_FIELDS['username']]
 		elif 'username' in data:
 			user_search = data['username']
 
-		self.ldap_filter_object = "(objectclass=" + LDAP_AUTH_OBJECT_CLASS + ")"
+		self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
 		self.ldap_filter_attr = [
 			'givenName', 
 			'sn', 
 			'displayName', 
-			LDAP_AUTH_USER_FIELDS["username"], 
+			RunningSettings.LDAP_AUTH_USER_FIELDS["username"], 
 			'mail',
 			'telephoneNumber',
 			'streetAddress',
@@ -174,8 +174,8 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			self.ldap_connection = ldc.connection
 			try:
 				self.ldap_user_exists(user_search=user_search)
-				if LDAP_AUTH_USER_FIELDS["email"] in data and len(data[LDAP_AUTH_USER_FIELDS["email"]]) > 0:
-					self.ldap_user_with_email_exists(email_search=data[LDAP_AUTH_USER_FIELDS["email"]])
+				if RunningSettings.LDAP_AUTH_USER_FIELDS["email"] in data and len(data[RunningSettings.LDAP_AUTH_USER_FIELDS["email"]]) > 0:
+					self.ldap_user_with_email_exists(email_search=data[RunningSettings.LDAP_AUTH_USER_FIELDS["email"]])
 				user_dn = self.ldap_user_insert(user_data=data)
 				user_pwd = data['password']
 				self.set_ldap_password(user_dn=user_dn, user_pwd=user_pwd)
@@ -216,7 +216,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		######################## Set LDAP Attributes ###########################
 		self.ldap_filter_attr = [
-			LDAP_AUTH_USER_FIELDS["username"],
+			RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
 			'distinguishedName',
 			'userPrincipalName',
 		]
@@ -291,9 +291,9 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 					continue
 
 				# Check overlapping email
-				if LDAP_AUTH_USER_FIELDS["email"] in data and len(data[LDAP_AUTH_USER_FIELDS["email"]]) > 0:
+				if RunningSettings.LDAP_AUTH_USER_FIELDS["email"] in data and len(data[RunningSettings.LDAP_AUTH_USER_FIELDS["email"]]) > 0:
 					self.ldap_user_with_email_exists(
-						email_search=data[LDAP_AUTH_USER_FIELDS["email"]],
+						email_search=data[RunningSettings.LDAP_AUTH_USER_FIELDS["email"]],
 						user_check=data
 					)
 
@@ -322,7 +322,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 						failed_users.append({'username': row[mapped_user_key], 'stage': 'password'})
 
 				imported_users.append(row[mapped_user_key])
-				if LDAP_LOG_CREATE == True:
+				if RunningSettings.LDAP_LOG_CREATE == True:
 					# Log this action to DB
 					DBLogMixin.log(
 						user_id=request.user.id,
@@ -352,7 +352,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		######################## Set LDAP Attributes ###########################
 		self.ldap_filter_attr = [
-			LDAP_AUTH_USER_FIELDS["username"],
+			RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
 			'distinguishedName',
 			'userPrincipalName',
 			'userAccountControl',
@@ -383,7 +383,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			'objectRid'
 		]
 
-		user_to_update = data[LDAP_AUTH_USER_FIELDS["username"]]
+		user_to_update = data[RunningSettings.LDAP_AUTH_USER_FIELDS["username"]]
 		if 'permission_list' in data: permission_list = data['permission_list']
 		else: permission_list = None
 		for key in EXCLUDE_KEYS:
@@ -399,9 +399,9 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			user_entry = self.ldap_connection.entries[0]
 			user_dn = str(user_entry.distinguishedName)
 			# Check overlapping email
-			if LDAP_AUTH_USER_FIELDS["email"] in data and len(data[LDAP_AUTH_USER_FIELDS["email"]]) > 0:
+			if RunningSettings.LDAP_AUTH_USER_FIELDS["email"] in data and len(data[LDAP_AUTH_USER_FIELDS["email"]]) > 0:
 				self.ldap_user_with_email_exists(
-					email_search=data[LDAP_AUTH_USER_FIELDS["email"]],
+					email_search=data[RunningSettings.LDAP_AUTH_USER_FIELDS["email"]],
 					user_check=data
 				)
 			self.get_user_object(user_to_update, attributes=ldap3.ALL_ATTRIBUTES)
@@ -441,7 +441,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			'type',
 
 			# Samba keys to intentionally exclude
-			LDAP_AUTH_USER_FIELDS["email"],
+			RunningSettings.LDAP_AUTH_USER_FIELDS["email"],
 			'password', 
 			'passwordConfirm',
 			'path',
@@ -476,9 +476,9 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				user_entry = self.ldap_connection.entries[0]
 				user_dn = str(user_entry.distinguishedName)
 				# Check overlapping email
-				if LDAP_AUTH_USER_FIELDS["email"] in data and len(data[LDAP_AUTH_USER_FIELDS["email"]]) > 0:
+				if RunningSettings.LDAP_AUTH_USER_FIELDS["email"] in data and len(data[RunningSettings.LDAP_AUTH_USER_FIELDS["email"]]) > 0:
 					self.ldap_user_with_email_exists(
-						email_search=data[LDAP_AUTH_USER_FIELDS["email"]],
+						email_search=data[RunningSettings.LDAP_AUTH_USER_FIELDS["email"]],
 						user_check=data["values"]
 					)
 				self.get_user_object(user_to_update, attributes=ldap3.ALL_ATTRIBUTES)
@@ -512,9 +512,9 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			raise BadRequest
 
 		######################## Set LDAP Attributes ###########################
-		self.ldap_filter_object = "(objectclass=" + LDAP_AUTH_OBJECT_CLASS + ")"
+		self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
 		self.ldap_filter_attr = [
-			LDAP_AUTH_USER_FIELDS["username"],
+			RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
 			'distinguishedName',
 			'userPrincipalName',
 			'userAccountControl',
@@ -560,9 +560,9 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			raise BadRequest
 
 		######################## Set LDAP Attributes ###########################
-		self.ldap_filter_object = "(objectclass=" + LDAP_AUTH_OBJECT_CLASS + ")"
+		self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
 		self.ldap_filter_attr = [
-			LDAP_AUTH_USER_FIELDS["username"],
+			RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
 			'distinguishedName',
 			'userPrincipalName',
 			'userAccountControl'
@@ -596,9 +596,9 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		data = request.data
 
 		######################## Set LDAP Attributes ###########################
-		self.ldap_filter_object = "(objectclass=" + LDAP_AUTH_OBJECT_CLASS + ")"
+		self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
 		self.ldap_filter_attr = [
-			LDAP_AUTH_USER_FIELDS["username"],
+			RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
 			'distinguishedName',
 			'userPrincipalName',
 			'userAccountControl'
@@ -637,8 +637,8 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			try:
 				self.ldap_user_delete(user_object=data)
 				username = data['username']
-				if LDAP_AUTH_USER_FIELDS["username"] in data:
-					username = data[LDAP_AUTH_USER_FIELDS["username"]]
+				if RunningSettings.LDAP_AUTH_USER_FIELDS["username"] in data:
+					username = data[RunningSettings.LDAP_AUTH_USER_FIELDS["username"]]
 
 				userToDelete = None
 				try:
@@ -670,7 +670,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			raise exc_base.CoreException
 
 		self.ldap_settings = {
-			"authUsernameIdentifier": LDAP_AUTH_USER_FIELDS["username"]
+			"authUsernameIdentifier": RunningSettings.LDAP_AUTH_USER_FIELDS["username"]
 		}
 
 		# Open LDAP Connection
@@ -702,8 +702,8 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
 			self.ldap_connection = ldc.connection
-			if LDAP_AUTH_USER_FIELDS['username'] in data:
-				ldap_user_search = data[LDAP_AUTH_USER_FIELDS['username']]
+			if RunningSettings.LDAP_AUTH_USER_FIELDS['username'] in data:
+				ldap_user_search = data[RunningSettings.LDAP_AUTH_USER_FIELDS['username']]
 			elif 'username' in data:
 				ldap_user_search = data['username']
 
@@ -742,7 +742,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			django_user.set_unusable_password()
 			django_user.save()
 
-		if LDAP_LOG_UPDATE == True:
+		if RunningSettings.LDAP_LOG_UPDATE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=request.user.id,
@@ -833,7 +833,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code_msg = 'ok'
 		data = request.data
 
-		excKeys = ['username', LDAP_AUTH_USER_FIELDS['username']]
+		excKeys = ['username', RunningSettings.LDAP_AUTH_USER_FIELDS['username']]
 		for k in excKeys:
 			if k in data: raise exc_base.BadRequest
 
@@ -841,7 +841,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		with LDAPConnector(force_admin=True) as ldc:
 			self.ldap_connection = ldc.connection
 			ldap_user_search = user.username
-			self.get_user_object(ldap_user_search, attributes=[LDAP_AUTH_USER_FIELDS["username"], 'distinguishedName', 'userAccountControl'])
+			self.get_user_object(ldap_user_search, attributes=[RunningSettings.LDAP_AUTH_USER_FIELDS["username"], 'distinguishedName', 'userAccountControl'])
 			ldapUser = self.ldap_connection.entries
 
 			if 'distinguishedName' in data.keys() and data['distinguishedName'] != "":
@@ -877,7 +877,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			django_user.set_unusable_password()
 			django_user.save()
 
-		if LDAP_LOG_UPDATE == True:
+		if RunningSettings.LDAP_LOG_UPDATE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=request.user.id,
@@ -903,12 +903,12 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code_msg = 'ok'
 		data = request.data
 
-		if 'username' in data or LDAP_AUTH_USER_FIELDS['username'] in data:
+		if 'username' in data or RunningSettings.LDAP_AUTH_USER_FIELDS['username'] in data:
 			raise exc_base.BadRequest
 
 		# Get basic attributes for this user from AD to compare query and get dn
 		self.ldap_filter_attr = [
-			LDAP_AUTH_USER_FIELDS["username"],
+			RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
 			'distinguishedName',
 			'userPrincipalName',
 			'userAccountControl',
@@ -955,7 +955,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		logger.debug(self.ldap_connection.result)
 
-		if LDAP_LOG_UPDATE == True:
+		if RunningSettings.LDAP_LOG_UPDATE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=request.user.id,
@@ -972,8 +972,8 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			pass
 
 		if django_user:
-			for key in LDAP_AUTH_USER_FIELDS:
-				mapped_key = LDAP_AUTH_USER_FIELDS[key]
+			for key in RunningSettings.LDAP_AUTH_USER_FIELDS:
+				mapped_key = RunningSettings.LDAP_AUTH_USER_FIELDS[key]
 				if mapped_key in data:
 					setattr(django_user, key, data[mapped_key])
 				if 'mail' not in data:
@@ -1027,7 +1027,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				'givenName', 
 				'sn', 
 				'displayName', 
-				LDAP_AUTH_USER_FIELDS["username"], 
+				RunningSettings.LDAP_AUTH_USER_FIELDS["username"], 
 				'mail',
 				'telephoneNumber',
 				'streetAddress',
@@ -1048,12 +1048,12 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				'userAccountControl'
 			]
 
-			self.ldap_filter_object = "(objectclass=" + LDAP_AUTH_OBJECT_CLASS + ")"
+			self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
 
 			# Add filter for username
-			self.ldap_filter_object = ldap_adsi.search_filter_add(self.ldap_filter_object, LDAP_AUTH_USER_FIELDS["username"] + "=" + user_search)
+			self.ldap_filter_object = ldap_adsi.search_filter_add(self.ldap_filter_object, RunningSettings.LDAP_AUTH_USER_FIELDS["username"] + "=" + user_search)
 			self.ldap_connection.search(
-				LDAP_AUTH_SEARCH_BASE,
+				RunningSettings.LDAP_AUTH_SEARCH_BASE,
 				self.ldap_filter_object,
 				attributes=self.ldap_filter_attr
 			)
@@ -1071,7 +1071,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 						user_data[str_key] = ""
 					else:
 						user_data[str_key] = str_value
-				if attr_key == LDAP_AUTH_USER_FIELDS["username"]:
+				if attr_key == RunningSettings.LDAP_AUTH_USER_FIELDS["username"]:
 					user_data['username'] = str_value
 
 				# Check if user can change password based on perms

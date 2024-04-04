@@ -17,7 +17,7 @@ from interlock_backend.ldap.adsi import (
     LDAP_BUILTIN_OBJECTS
 )
 from interlock_backend.ldap.securityIdentifier import SID
-from core.models.ldap_settings_db import *
+from core.models.ldap_settings_db import RunningSettings
 
 ### Others
 from typing import TypedDict, Union
@@ -50,7 +50,7 @@ class LDAPTree():
     })
 
     #### Arguments
-     - searchBase: (OPTIONAL) | Default: LDAP_AUTH_SEARCH_BASE
+     - searchBase: (OPTIONAL) | Default: RunningSettings.LDAP_AUTH_SEARCH_BASE
      - connection: (REQUIRED) | LDAP Connection Object
      - recursive: (OPTIONAL) | Whether or not the Tree should be Recursively searched
      - ldapFilter: (OPTIONAL) | LDAP Formatted Filter
@@ -66,10 +66,10 @@ class LDAPTree():
             raise Exception("LDAPTree object requires an LDAP Connection to Initialize")
 
         # Set LDAPTree Default Values
-        self.name = LDAP_AUTH_SEARCH_BASE
-        self.searchBase = LDAP_AUTH_SEARCH_BASE
+        self.name = RunningSettings.LDAP_AUTH_SEARCH_BASE
+        self.searchBase = RunningSettings.LDAP_AUTH_SEARCH_BASE
         self.connection = kwargs.pop('connection')
-        self.usernameIdentifier = LDAP_AUTH_USER_FIELDS["username"]
+        self.usernameIdentifier = RunningSettings.LDAP_AUTH_USER_FIELDS["username"]
         self.subobjectId = 0
         self.excludedLdapAttributes = [
             'objectGUID',
@@ -86,8 +86,8 @@ class LDAPTree():
         ]
         self.recursive = False
         self.testFetch = False        
-        self.ldapFilter = search_filter_from_dict({**LDAP_DIRTREE_CN_FILTER, **LDAP_DIRTREE_OU_FILTER})
-        self.ldapAttributes = LDAP_DIRTREE_ATTRIBUTES
+        self.ldapFilter = search_filter_from_dict({**RunningSettings.LDAP_DIRTREE_CN_FILTER, **RunningSettings.LDAP_DIRTREE_OU_FILTER})
+        self.ldapAttributes = RunningSettings.LDAP_DIRTREE_ATTRIBUTES
         self.childrenObjectType = 'array'
 
         # Set passed kwargs from Object Call

@@ -33,6 +33,7 @@ LDAP_SETTING_TYPES = (
 )
 LDAP_SETTING_TYPES_LIST = [x[0] for x in LDAP_SETTING_TYPES]
 
+# ! Only add non-constant values with DB Save-able overrides here.
 # ! You also have to add the settings to the following files:
 # core.models.ldap_settings			<------------ You're Here
 # core.models.ldap_settings_db
@@ -64,7 +65,6 @@ CMAPS = {
 	"LDAP_AUTH_CONNECTION_USERNAME":LDAP_TYPE_STRING,
 	"LDAP_AUTH_CONNECTION_PASSWORD": LDAP_TYPE_PASSWORD,
 	"LDAP_AUTH_CONNECT_TIMEOUT": LDAP_TYPE_INTEGER,
-	"LDAP_AUTH_RECEIVE_TIMEOUT": LDAP_TYPE_INTEGER,
 	"LDAP_AUTH_RECEIVE_TIMEOUT": LDAP_TYPE_INTEGER,
 	"ADMIN_GROUP_TO_SEARCH": LDAP_TYPE_STRING
 }
