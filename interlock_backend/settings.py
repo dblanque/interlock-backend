@@ -47,7 +47,7 @@ if SECRET_KEY is None or len(str(SECRET_KEY)) < 1:
     SECRET_KEY = get_random_secret_key()
     # Write the file
     with open(secretFile, 'w') as file:
-        file.write("SECRET_KEY = " + str(SECRET_KEY))
+        file.write("SECRET_KEY = " + '"' + str(SECRET_KEY) + '"')
 
 if SECRET_KEY is None or len(str(SECRET_KEY)) < 1:
     raise ImproperlyConfigured("Secret Key is invalid (None or len < 1)")
@@ -72,7 +72,7 @@ if FERNET_KEY is None or len(str(FERNET_KEY)) < 1:
     FERNET_KEY = base64.urlsafe_b64encode(os.urandom(32))
     # Write the file
     with open(fernetFile, 'w') as file:
-        file.write("FERNET_KEY = " + str(FERNET_KEY))
+        file.write("FERNET_KEY = " + 'b"' + str(FERNET_KEY) + '"')
 
 if FERNET_KEY is None or len(str(FERNET_KEY)) < 1:
     raise ImproperlyConfigured("Fernet Key is invalid (None or len < 1)")
