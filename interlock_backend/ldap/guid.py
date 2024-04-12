@@ -63,7 +63,7 @@ class GUID():
 			self.data[d_index] = "".join(sliced_hex_list)
 		return None
 
-	def from_bytes(self, guid_bytes: bytearray | list):
+	def from_bytes(self, guid_bytes: Union[bytearray, list]):
 		self.uuid_str = ""
 		# If param is passed within a list of raw entry attributes
 		if isinstance(guid_bytes, list):
