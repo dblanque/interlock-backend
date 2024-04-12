@@ -10,6 +10,7 @@
 #---------------------------------- IMPORTS -----------------------------------#
 import struct, uuid, logging
 from impacket.structure import Structure
+from typing import Union
 ################################################################################
 
 logger = logging.getLogger(__name__)
@@ -43,7 +44,7 @@ class GUID():
 	output on samba-tool with SAMBA LDAP Server(s). Might be a difference between ADDS and LDAP.
 	"""
 
-	def __init__(self, guid: bytearray | list | str):
+	def __init__(self, guid: Union[bytearray, list, str]):
 		self.data = dict()
 		if isinstance(guid, str):
 			self.from_str(guid_str=guid)
