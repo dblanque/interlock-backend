@@ -5,9 +5,11 @@ __pycache__/*
 *.pyc
 bin/
 lib/
+
 interlock_backend/local_settings.py
 interlock_backend/ldap/dev
 interlock_backend/ldap/constants_cache*.py
+interlock_backend/local_django_settings.py
 interlock_backend/enc_key.py
 interlock_backend/*_key.py
 pyvenv.cfg
