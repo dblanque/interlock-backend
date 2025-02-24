@@ -5,6 +5,8 @@ __pycache__/*
 *.pyc
 bin/
 lib/
+lib64/
+venv/
 
 interlock_backend/local_settings.py
 interlock_backend/ldap/dev
