@@ -241,7 +241,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		# TODO Add customizable default user path
 		try:
 			if 'path' in user_data and user_data['path'] is not None and user_data['path'] != "":
-				user_dn = 'CN='+user_data['username']+','+user_data['path']
+				user_dn = f"CN={user_data['username']},{user_data['path']}"
 				user_data.pop('path')
 			else:
 				user_dn = 'CN='+user_data['username']+',OU=Users,'+RunningSettings.LDAP_AUTH_SEARCH_BASE
