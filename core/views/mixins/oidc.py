@@ -2,6 +2,7 @@ from core.models.user import User
 from django.utils.translation import ugettext_lazy as _
 from oidc_provider.lib.claims import ScopeClaims
 
+# TODO - Fetch current User LDAP Groups
 class CustomScopeClaims(ScopeClaims):
     def setup(self):
         # Define which claims are included for each scope
