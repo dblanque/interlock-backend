@@ -5,6 +5,17 @@
 * check totp support for non admin users
 * add oidc client support
 * add native user/group management for Interlock as IdP
+* change tabs to sidebar
+* create applications model
+	* FK to groups
+* create groups model (support local and foreign, e.g: LDAP)
+* add backend provider group sync feature
+* add ldap user pruning
+* add home dashboard
+	* local user/group count
+	* ldap users count (synced only)
+	* ldap backend status
+	* ldap config data
 
 ## Other Tasks
 * Add "Enforce 2FA for Administrators on Interlock" option
