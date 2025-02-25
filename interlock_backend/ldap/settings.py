@@ -128,6 +128,6 @@ def getSettingsList(preset_id: int=1):
 				pass
 		if k == "LDAP_AUTH_TLS_VERSION":
 			if isinstance(data[k]['value'], Enum):
-				data[k]['value'] = str(data[k]['value']).split('.')[-1]
+				data[k]['value'] = data[k]['value'].name
 
 	return data
