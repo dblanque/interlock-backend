@@ -1,5 +1,5 @@
 ## Urgent Issues
-* Fix usage of Fernet to encrypt, use AES or RSA instead.
+* Migrate usage of Fernet to encrypt to use AES/RSA instead.
 * Add OIDC Support
 * Add self tab for admin users
 * check totp support for non admin users
