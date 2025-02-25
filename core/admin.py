@@ -1,24 +1,23 @@
 ################################## IMPORTS #####################################
 ### Django
-from django.contrib import admin, messages
+from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.utils.translation import gettext_lazy as _
-from django.contrib import admin, messages
 from django.contrib.auth.forms import (
     UserChangeForm,
     UserCreationForm as DjangoUserCreationForm,
     AdminPasswordChangeForm,
 )
-from django.forms import CharField, EmailField
+from django.forms import CharField
 
 ### Core
 from core import models
-from core.utils import flatten
 ################################################################################
 class UserCreationForm(DjangoUserCreationForm):
     class Meta:
         fields = ("username",)
         field_classes = {"username": CharField}
+
 @admin.register(models.User)
 class UserAdmin(DjangoUserAdmin):
     add_form_template = "admin/auth/user/add_form.html"
@@ -75,4 +74,3 @@ class UserAdmin(DjangoUserAdmin):
     readonly_fields = ("created_at", "modified_at", "deleted_at", "deleted")
     search_fields = ("email",)
     ordering = ("-created_at",)
-

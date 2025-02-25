@@ -62,21 +62,33 @@ def recursive_member_search(user_dn: str, connection, group_dn):
 				if r == True: return r
 	return False
 
-def sync_user_relations(user, ldap_attributes, *, connection=None, dn=None):
+def sync_user_relations(
+		user: User,
+		ldap_attributes,
+		*,
+		connection=None,
+		dn=None
+	):
 	user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
 	if 'Administrator' in ldap_attributes[RunningSettings.LDAP_AUTH_USER_FIELDS["username"]]:
 		user.is_staff = True
 		user.is_superuser = True
+		if 'memberOf' in ldap_attributes:
+			user.ldap_groups = ldap_attributes['memberOf']
 		user.save()
 	elif recursive_member_search(user_dn=user.dn, connection=connection, group_dn=RunningSettings.ADMIN_GROUP_TO_SEARCH):
 		user.is_staff = True
 		user.is_superuser = True
+		if 'memberOf' in ldap_attributes:
+			user.ldap_groups = ldap_attributes['memberOf']
 		if user.email is not None and 'mail' in ldap_attributes:
 			user.email = str(ldap_attributes['mail']).lstrip("['").rstrip("']") or ""
 		user.save()
 	else:
 		user.is_staff = False
 		user.is_superuser = False
+		if 'memberOf' in ldap_attributes:
+			user.ldap_groups = ldap_attributes['memberOf']
 		if user.email is not None and 'mail' in ldap_attributes:
 			user.email = str(ldap_attributes['mail']).lstrip("['").rstrip("']") or ""
 		user.save()
@@ -93,7 +105,6 @@ def authenticate(*args, **kwargs):
 	if username == 'admin':
 		return None
 	password = kwargs.pop("password", None)
-	print(RunningSettings.uuid)
 	auth_user_lookup_fields = RunningSettings.LDAP_AUTH_USER_LOOKUP_FIELDS
 	ldap_kwargs = {
 		key: value for (key, value) in kwargs.items()
@@ -106,10 +117,12 @@ def authenticate(*args, **kwargs):
 
 	# Connect to LDAP and fetch user DN, create or update user if necessary
 	with LDAPConnector(password=password, force_admin=True, is_authenticating=True) as ldc:
-		if ldc.connection is None: return None
+		if ldc.connection is None:
+			return None
 		user: User = ldc.get_user(**ldap_kwargs)
 		ldc.connection.unbind()
-		if user is None: return None
+		if user is None:
+			return None
 
 		# ! I went insane with this garbage ! #
 		# Test user credentials against server, keep in mind LDAP Passwords have history
@@ -119,7 +132,8 @@ def authenticate(*args, **kwargs):
 		# sources: 
 		# https://learn.microsoft.com/en-US/troubleshoot/windows-server/windows-security/new-setting-modifies-ntlm-network-authentication
 		# https://unix.stackexchange.com/questions/737113/samba-4-change-password-old-enable
-		if not ldc.rebind(user_dn=user.dn, password=password): return None
+		if not ldc.rebind(user_dn=user.dn, password=password):
+			return None
 
 	user.encryptedPassword = encrypt(password)
 	del password

@@ -15,3 +15,5 @@ interlock_backend/local_django_settings.py
 interlock_backend/enc_key.py
 interlock_backend/*_key.py
 pyvenv.cfg
+private/**
+!private/.gitkeep

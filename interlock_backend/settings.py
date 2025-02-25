@@ -11,17 +11,16 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+import base64
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import gettext_lazy as _
 from datetime import timedelta
-from interlock_backend.local_django_settings import *
-import base64
 from importlib import util as importutils
+from django.core.management.utils import get_random_secret_key  
 import mimetypes
 mimetypes.add_type("text/css", ".css", True)
-from django.core.management.utils import get_random_secret_key  
-# Force Process Reload through file saving.
-from interlock_backend.reload import STUB_RELOAD
+
+# ! Override settings in interlock_backend/local_django_settings.py
 
 # A little easter egg for you :)
 # from this import d
@@ -36,7 +35,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = None
 FERNET_KEY = None
 
-secretFile = BASE_DIR+'/interlock_backend/sec_key.py'
+secretFile = os.path.join(BASE_DIR, 'interlock_backend', 'sec_key.py')
 sec_spec = importutils.find_spec("interlock_backend.sec_key", package="sec_spec")
 if sec_spec is not None:
     from interlock_backend import sec_key
@@ -61,7 +60,7 @@ if SECRET_KEY is None or len(str(SECRET_KEY)) < 1:
 # FERNET_KEY = base64.urlsafe_b64encode(os.urandom(32))
 
 FERNET_KEY = None
-fernetFile = BASE_DIR+'/interlock_backend/enc_key.py'
+fernetFile = os.path.join(BASE_DIR, 'interlock_backend', 'enc_key.py')
 enc_spec = importutils.find_spec("interlock_backend.enc_key", package="enc_spec")
 if enc_spec is not None:
     from interlock_backend import enc_key
@@ -78,8 +77,8 @@ if FERNET_KEY is None or len(str(FERNET_KEY)) < 1:
     raise ImproperlyConfigured("Fernet Key is invalid (None or len < 1)")
 
 # Default admin username and password
-DJANGO_SUPERUSER_USERNAME = 'admin'
-DJANGO_SUPERUSER_PASSWORD = 'interlock'
+DEFAULT_SUPERUSER_USERNAME = 'admin'
+DEFAULT_SUPERUSER_PASSWORD = 'interlock'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -129,6 +128,7 @@ INSTALLED_APPS = [
     "drf_yasg",
     "corsheaders",
     "core",
+    "oidc_provider",
 ]
 
 MIDDLEWARE = [
@@ -174,6 +174,9 @@ AUTH_USER_MODEL = "core.User"
 
 LOG_FILE_FOLDER = f'{BASE_DIR}/logs'
 LOG_FILE_PATH = f'{LOG_FILE_FOLDER}/interlock.drf.log'
+
+OIDC_USERINFO = 'core.views.mixins.oidc.userinfo'
+OIDC_EXTRA_SCOPE_CLAIMS = 'core.views.mixins.oidc.CustomScopeClaims'
 
 if not os.path.exists(LOG_FILE_FOLDER):
     os.makedirs(LOG_FILE_FOLDER)
@@ -227,8 +230,9 @@ LOGGING = {
 }
 
 # Database
-# https://docs.djangoproject.com/en/3.0/ref/settings/#databases
+# https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
+DATABASES = None
 if not DATABASES:
     DATABASES = {
         "default": {
@@ -261,6 +265,8 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
     "COERCE_DECIMAL_TO_STRING": False,
@@ -348,3 +354,8 @@ EMAIL_TIMEOUT = 30
 EMAIL_SSL_KEYFILE = None
 EMAIL_SSL_CERTFILE = None
 PUBLIC_STAFF_EMAIL = ""
+
+try:
+    from interlock_backend.local_django_settings import *
+except ImportError:
+    pass

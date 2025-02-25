@@ -323,7 +323,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@auth_required()
 	def reset(self, request, pk=None):
 		# user = request.user
-		data = request.data
+		data: dict = request.data
 		code = 0
 		active_preset = self.get_active_settings_preset()
 
@@ -373,8 +373,15 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@action(detail=False, methods=['post'])
 	@auth_required()
 	def test(self, request, pk=None):
-		data = request.data
+		data: dict = request.data
 		code = 0
+
+		for param_name, param_data in data.items():
+			param_type = CMAPS[param_name].lower()
+			if param_type.upper() in LDAP_SETTINGS_CHOICES_MAP:
+				if param_data["value"] not in LDAP_SETTINGS_CHOICES_MAP[param_type.upper()]:
+					raise exc_set.SettingTypeDoesNotMatch({"field": param_type})
+
 		data = self.test_ldap_settings(data)
 		if not data:
 			raise ConnectionTestFailed

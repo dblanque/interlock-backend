@@ -52,7 +52,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@auth_required()
 	def list(self, request):
-		user = request.user
+		user: User = request.user
 		data = dict()
 		code = 0
 		code_msg = 'ok'
@@ -71,10 +71,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
 			self.ldap_connection = ldc.connection
-			try:
-				data = self.ldap_user_list()
-			except:
-				raise
+			data = self.ldap_user_list()
 
 		return Response(
 			 data={
@@ -88,7 +85,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@action(detail=False,methods=['post'])
 	@auth_required()
 	def fetch(self, request):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data
@@ -132,10 +129,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
 			self.ldap_connection = ldc.connection
-			try:
-				user_data = self.ldap_user_fetch(user_search=user_search)
-			except:
-				raise
+			user_data = self.ldap_user_fetch(user_search=user_search)
 
 		return Response(
 			 data={
@@ -148,7 +142,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@action(detail=False,methods=['post'])
 	@auth_required()
 	def insert(self, request):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data
@@ -172,15 +166,12 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
 			self.ldap_connection = ldc.connection
-			try:
-				self.ldap_user_exists(user_search=user_search)
-				if RunningSettings.LDAP_AUTH_USER_FIELDS["email"] in data and len(data[RunningSettings.LDAP_AUTH_USER_FIELDS["email"]]) > 0:
-					self.ldap_user_with_email_exists(email_search=data[RunningSettings.LDAP_AUTH_USER_FIELDS["email"]])
-				user_dn = self.ldap_user_insert(user_data=data)
-				user_pwd = data['password']
-				self.set_ldap_password(user_dn=user_dn, user_pwd=user_pwd)
-			except:
-				raise
+			self.ldap_user_exists(user_search=user_search)
+			if RunningSettings.LDAP_AUTH_USER_FIELDS["email"] in data and len(data[RunningSettings.LDAP_AUTH_USER_FIELDS["email"]]) > 0:
+				self.ldap_user_with_email_exists(email_search=data[RunningSettings.LDAP_AUTH_USER_FIELDS["email"]])
+			user_dn = self.ldap_user_insert(user_data=data)
+			user_pwd = data['password']
+			self.set_ldap_password(user_dn=user_dn, user_pwd=user_pwd)
 
 		return Response(
 			 data={
@@ -193,7 +184,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@action(detail=False,methods=['post'])
 	@auth_required()
 	def bulkInsert(self, request):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data
@@ -343,7 +334,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@auth_required()
 	def update(self, request, pk=None):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data
@@ -423,7 +414,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@action(detail=False,methods=['post'])
 	@auth_required()
 	def bulkUpdate(self, request, pk=None):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data
@@ -500,7 +491,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@action(detail=False,methods=['post'])
 	@auth_required()
 	def bulkAccountStatusChange(self, request):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		request_data = request.data
@@ -526,17 +517,11 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			success = list()
 			for user_object in data:
 				if disable_users and user_object["is_enabled"]:
-					try:
-						self.ldap_user_disable(user_object=user_object)
-						success.append(user_object["username"])
-					except:
-						raise
+					self.ldap_user_disable(user_object=user_object)
+					success.append(user_object["username"])
 				elif not disable_users and not user_object["is_enabled"]:
-					try:
-						self.ldap_user_enable(user_object=user_object)
-						success.append(user_object["username"])
-					except:
-						raise
+					self.ldap_user_enable(user_object=user_object)
+					success.append(user_object["username"])
 				else: continue
 
 		return Response(
@@ -550,7 +535,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@action(detail=False,methods=['post'])
 	@auth_required()
 	def disable(self, request):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data
@@ -574,10 +559,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
 			self.ldap_connection = ldc.connection
-			try:
-				self.ldap_user_disable(user_object=data)
-			except:
-				raise
+			self.ldap_user_disable(user_object=data)
 
 		return Response(
 			 data={
@@ -589,7 +571,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@action(detail=False,methods=['post'])
 	@auth_required()
 	def enable(self, request):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data
@@ -607,10 +589,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
 			self.ldap_connection = ldc.connection
-			try:
-				self.ldap_user_enable(user_object=data)
-			except:
-				raise
+			self.ldap_user_enable(user_object=data)
 
 		return Response(
 			 data={
@@ -622,7 +601,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@action(detail=False, methods=['post'])
 	@auth_required()
 	def delete(self, request, pk=None):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data
@@ -633,21 +612,18 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
 			self.ldap_connection = ldc.connection
-			try:
-				self.ldap_user_delete(user_object=data)
-				username = data['username']
-				if RunningSettings.LDAP_AUTH_USER_FIELDS["username"] in data:
-					username = data[RunningSettings.LDAP_AUTH_USER_FIELDS["username"]]
+			self.ldap_user_delete(user_object=data)
+			username = data['username']
+			if RunningSettings.LDAP_AUTH_USER_FIELDS["username"] in data:
+				username = data[RunningSettings.LDAP_AUTH_USER_FIELDS["username"]]
 
-				userToDelete = None
-				try:
-					userToDelete = User.objects.get(username=username)
-				except:
-					pass
-				if userToDelete:
-					userToDelete.delete_permanently()
+			userToDelete = None
+			try:
+				userToDelete = User.objects.get(username=username)
 			except:
-				raise
+				pass
+			if userToDelete:
+				userToDelete.delete_permanently()
 
 		return Response(
 			 data={
@@ -660,7 +636,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@action(detail=False, methods=['post'])
 	@auth_required()
 	def bulkDelete(self, request, pk=None):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data
@@ -676,10 +652,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
 			self.ldap_connection = ldc.connection
 			for user in data:
-				try:
-					self.ldap_user_delete(user_object=user)
-				except:
-					raise
+				self.ldap_user_delete(user_object=user)
 
 		return Response(
 			 data={
@@ -692,7 +665,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@action(detail=False, methods=['post'])
 	@auth_required()
 	def changePassword(self, request, pk=None):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data
@@ -725,10 +698,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 			if data['password'] != data['passwordConfirm']:
 				raise exc_user.UserPasswordsDontMatch
-			try:
-				self.set_ldap_password(user_dn=dn, user_pwd=data['password'])
-			except:
-				raise
+			self.set_ldap_password(user_dn=dn, user_pwd=data['password'])
 
 		django_user = None
 		try:
@@ -762,7 +732,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@action(detail=False, methods=['post'])
 	@auth_required()
 	def unlock(self, request, pk=None):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data
@@ -770,15 +740,12 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
 			self.ldap_connection = ldc.connection
-			try:
-				self.ldap_user_unlock(user_object=data)
-				result = self.ldap_connection.result
-				if result['description'] == 'success':
-					response_result = data['username']
-				else:
-					raise exc_user.CouldNotUnlockUser
-			except:
-				raise
+			self.ldap_user_unlock(user_object=data)
+			result = self.ldap_connection.result
+			if result['description'] == 'success':
+				response_result = data['username']
+			else:
+				raise exc_user.CouldNotUnlockUser
 
 		return Response(
 			 data={
@@ -791,7 +758,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@action(detail=False, methods=['post'])
 	@auth_required()
 	def bulkUnlock(self, request, pk=None):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data
@@ -804,11 +771,8 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			self.ldap_connection = ldc.connection
 			success = list()
 			for user_object in data:
-				try:
-					self.ldap_user_unlock(user_object=user_object)
-					success.append(user_object['username'])
-				except:
-					raise
+				self.ldap_user_unlock(user_object=user_object)
+				success.append(user_object['username'])
 
 			result = self.ldap_connection.result
 			if result['description'] == 'success':
@@ -827,7 +791,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@action(detail=False, methods=['post'])
 	@auth_required(require_admin=False)
 	def changePasswordSelf(self, request, pk=None):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data
@@ -897,7 +861,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@action(detail=False, methods=['put', 'post'])
 	@auth_required(require_admin=False)
 	def updateSelf(self, request, pk=None):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data
@@ -993,14 +957,14 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@action(detail=False, methods=['get'])
 	@auth_required(require_admin=False)
 	def me(self, request):
-		user = request.user
+		user: User = request.user
 		data = {}
 		code = 0
-		data["username"] = request.user.username or ""
-		data["first_name"] = request.user.first_name or ""
-		data["last_name"] = request.user.last_name or ""
-		data["email"] = request.user.email or ""
-		if request.user.is_superuser:
+		data["username"] = user.username or ""
+		data["first_name"] = user.first_name or ""
+		data["last_name"] = user.last_name or ""
+		data["email"] = user.email or ""
+		if user.is_superuser:
 			data["admin_allowed"] = True
 		return Response(
 			 data={
@@ -1013,7 +977,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@action(detail=False,methods=['get'])
 	@auth_required(require_admin=False)
 	def fetchme(self, request):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data

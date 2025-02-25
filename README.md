@@ -84,9 +84,10 @@ pip3 install -r requirements.txt
 # Make migrations and apply them to DB
 python3 ./manage.py makemigrations
 python3 ./manage.py migrate
+python3 ./manage.py creatersakey
 
 # Create Default Superuser
-python3 ./manage.py shell < create_default_superuser.py
+python3 ./manage.py shell < install/create_default_superuser.py
 
 # Optionally: Create Superuser Manually
 python3 ./manage.py createsuperuser

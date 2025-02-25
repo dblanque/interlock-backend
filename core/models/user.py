@@ -23,8 +23,8 @@ from django.utils.translation import gettext_lazy as _
 
 from .base import BaseModel
 from interlock_backend.settings import (
-    DJANGO_SUPERUSER_USERNAME,
-    DJANGO_SUPERUSER_PASSWORD
+    DEFAULT_SUPERUSER_USERNAME,
+    DEFAULT_SUPERUSER_PASSWORD
 )
 # ---------------------------------------------------------------------------- #
 class BaseUserManager(DjangoBaseUserManager):
@@ -73,7 +73,7 @@ class BaseUserManager(DjangoBaseUserManager):
         if extra_fields.get("is_superuser") is not True:
             raise ValueError("Superuser must have is_superuser=True.")
 
-        return self._create_user(DJANGO_SUPERUSER_USERNAME, DJANGO_SUPERUSER_PASSWORD, **extra_fields)
+        return self._create_user(DEFAULT_SUPERUSER_USERNAME, DEFAULT_SUPERUSER_PASSWORD, **extra_fields)
 
 class BaseUser(BaseModel, PermissionsMixin):
     USERNAME_FIELD = "username"
@@ -192,6 +192,7 @@ class User(BaseUser):
     email = models.EmailField(_("Email"), null=True, blank=True)
     dn = models.CharField(_("distinguishedName"), max_length=128, null=True, blank=True)
     is_local = models.BooleanField(null=False, default=True)
+    ldap_groups = ArrayField(models.CharField(max_length=512), verbose_name="LDAP Groups", null=False, blank=False, default=list)
     recovery_codes = ArrayField(models.CharField(max_length=32), verbose_name="Recovery Codes", null=True, blank=True)
 
     def get_distinguishedname(self):

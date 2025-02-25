@@ -77,4 +77,7 @@ urlpatterns = [
 	path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
 	path('api/token/refresh/', AuthViewSet.as_view({'post':'refresh'}), name='token_refresh'),
 	path('api/token/revoke/', AuthViewSet.as_view({'post':'logout'}), name='token_revoke'),
+
+	# {BASE_URL} / openid
+	path('openid/', include('oidc_provider.urls', namespace='oidc_provider')),
 ]
