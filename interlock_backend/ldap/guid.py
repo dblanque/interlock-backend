@@ -68,8 +68,7 @@ class GUID():
 		# If param is passed within a list of raw entry attributes
 		if isinstance(guid_bytes, list):
 			guid_bytes = bytearray(guid_bytes[0])
-		try: assert type(guid_bytes) == bytearray
-		except: raise
+		assert type(guid_bytes) == bytearray
 		self.data_bytes_raw = guid_bytes
 		# Unpack with Network Byte Ordering
 		self.data_bytes_int = struct.unpack('!16B', guid_bytes)
@@ -92,8 +91,7 @@ class GUID():
 
 		for ds in self.data.values():
 			self.uuid_str = ds if self.uuid_str == "" else f"{self.uuid_str}-{ds}"
-		try: uuid.UUID(self.uuid_str.replace("-",""))
-		except: raise
+		uuid.UUID(self.uuid_str.replace("-",""))
 		return None
 
 	def __str__(self):
