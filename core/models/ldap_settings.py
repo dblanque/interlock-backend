@@ -32,6 +32,15 @@ LDAP_SETTING_TYPES = (
 	(LDAP_AUTH_TLS_VERSION, "LDAP TLS Version")
 )
 LDAP_SETTING_TYPES_LIST = [x[0] for x in LDAP_SETTING_TYPES]
+LDAP_TLS_TYPES = (
+	# Identifier, Pretty Name
+	("PROTOCOL_TLSv1", "TLSv1"),
+	("PROTOCOL_TLSv1_1", "TLSv1_1"),
+	("PROTOCOL_TLSv1_2", "TLSv1_2"),
+	("PROTOCOL_TLSv1_3", "TLSv1_3"),
+	("PROTOCOL_TLS", "TLS"),
+	("PROTOCOL_TLS_CLIENT", "TLS_CLIENT"),
+)
 
 # ! Only add non-constant values with DB Save-able overrides here.
 # ! You also have to add the settings to the following files:
@@ -96,12 +105,12 @@ class BaseLDAPSetting(BaseModel):
 		abstract = True
 
 class LDAPSetting(BaseLDAPSetting):
-	v_string = models.CharField(verbose_name=_("param_v_string"), null=True, blank=True, max_length=128)
+	v_string = models.CharField(verbose_name=_("param_v_string"), null=True, blank=True, max_length=256)
 	v_password = models.CharField(verbose_name=_("param_v_password"), null=True, blank=True)
 	v_bool = models.BooleanField(verbose_name=_("param_v_bool"), null=True, blank=True)
 	v_json = models.JSONField(verbose_name=_("param_v_json"), null=True, blank=True)
 	v_integer = models.IntegerField(verbose_name=_("param_v_integer"), null=True, blank=True)
-	v_tls = models.CharField(verbose_name=_("param_v_tls"), null=True, blank=True)
+	v_tls = models.CharField(verbose_name=_("param_v_tls"), null=True, blank=True, choices=LDAP_TLS_TYPES)
 	v_ldap_uri = ArrayField(
 		models.CharField(_("param_v_ldap_uri"), max_length=255),
 		verbose_name=_("param_v_ldap_uri_list"),
