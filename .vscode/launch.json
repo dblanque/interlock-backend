@@ -6,9 +6,9 @@
     "configurations": [
         {
             "name": "Python: Django",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
-            "python":"${workspaceRoot}/bin/python",
+            "python":"${workspaceRoot}/venv/bin/python",
             "program": "${workspaceFolder}/manage.py",
             "args": [
                 "runserver"
