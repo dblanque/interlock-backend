@@ -132,7 +132,6 @@ def get_settings(uuid) -> dict:
 					decrypt_args.append(getattr(s, field))
 				except:
 					raise ValueError(f"Missing crypt object for {setting_key}")
-			
 			v = aes_decrypt(*decrypt_args)
 		else:
 			v = getattr(s, f"{LDAP_SETTING_PREFIX}_{setting_type.lower()}", d)
