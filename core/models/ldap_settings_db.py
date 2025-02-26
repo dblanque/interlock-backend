@@ -9,7 +9,15 @@
 #
 #---------------------------------- IMPORTS -----------------------------------#
 from interlock_backend.ldap import defaults
-from .ldap_settings import CMAPS, LDAPSetting, LDAPPreset
+from .ldap_settings import (
+	CMAPS,
+	LDAPSetting,
+	LDAPPreset,
+	LDAP_TYPE_PASSWORD,
+	LDAP_SETTING_PREFIX,
+	LDAP_TYPE_PASSWORD_FIELDS,
+)
+from interlock_backend.encrypt import aes_decrypt
 from django.db import connection
 import sys
 import logging
@@ -90,11 +98,13 @@ class RunningSettingsClass():
 	def resync(self) -> bool:
 		self.__newUuid__()
 		try:
-			for k, v in get_settings(self.uuid).items(): setattr(self, k, v)
+			_current_settings: dict = get_settings(self.uuid)
+			for k, v in _current_settings.items():
+				setattr(self, k, v)
 		except: return False
 		return True
 
-def get_settings(uuid):
+def get_settings(uuid) -> dict:
 	logger.info(f"Re-synchronizing settings for {this_module} (Configuration Instance {uuid})")
 	all_tables = connection.introspection.table_names()
 	active_preset = None
@@ -104,18 +114,29 @@ def get_settings(uuid):
 		active_preset = LDAPPreset.objects.get(active=True)
 
 	# For constant, value_type in...
-	for k, value_type in CMAPS.items():
+	for setting_key, setting_type in CMAPS.items():
 		s = None
 		if "core_ldapsetting" in all_tables:
 			# Setting
-			s = LDAPSetting.objects.filter(name=k, preset_id=active_preset)
+			s = LDAPSetting.objects.filter(name=setting_key, preset_id=active_preset)
 			if s.exists():
 				s = s[0]
 		# Default
-		d = getattr(defaults, k)
+		d = getattr(defaults, setting_key)
 		# Value
-		v = getattr(s, f"v_{value_type.lower()}", d)
-		r[k] = v
+
+		if setting_type == LDAP_TYPE_PASSWORD:
+			decrypt_args = []
+			for field in LDAP_TYPE_PASSWORD_FIELDS:
+				try:
+					decrypt_args.append(getattr(s, field))
+				except:
+					raise ValueError(f"Missing crypt object for {setting_key}")
+			
+			v = aes_decrypt(*decrypt_args)
+		else:
+			v = getattr(s, f"{LDAP_SETTING_PREFIX}_{setting_type.lower()}", d)
+		r[setting_key] = v
 	return r
 
 RunningSettings = RunningSettingsClass()

@@ -8,12 +8,16 @@
 #---------------------------------- IMPORTS -----------------------------------#
 # Core Imports
 from core.models.user import User
-from core.models.ldap_settings import CMAPS, LDAPSetting
+from core.models.ldap_settings import (
+	CMAPS,
+	LDAPSetting,
+	LDAP_SETTING_PREFIX,
+	LDAP_TYPE_PASSWORD_FIELDS,
+)
 from enum import Enum
-
 # Interlock Imports
 from interlock_backend.ldap import defaults
-from interlock_backend.ldap.encrypt import decrypt
+from interlock_backend.encrypt import aes_decrypt
 from rest_framework import serializers
 
 # Full imports
@@ -104,30 +108,38 @@ def getSettingsList(preset_id: int=1):
 
 	# Loop for each constant in the ldap_constants.py file
 	relevant_parameters = LDAPSetting.objects.filter(preset_id=preset_id)
-	for k, value_type in CMAPS.items():
+	for setting_key, setting_type in CMAPS.items():
+		setting_type: str
 		# Init Object/Dict
-		data[k] = dict()
+		data[setting_key] = dict()
 		ldap_setting = None
-		value_type = f"v_{value_type.lower()}"
+		if not setting_type.startswith(f"{LDAP_SETTING_PREFIX}_"):
+			normalized_type = f"{LDAP_SETTING_PREFIX}_{setting_type.lower()}"
+		else:
+			normalized_type = setting_type
 
-		data[k]['type'] = getSettingType(k).lower()
-		default_value = getattr(defaults, k)
-		if relevant_parameters.filter(name=k).exists():
+		data[setting_key]['type'] = getSettingType(setting_key).lower()
+		default_value = getattr(defaults, setting_key)
+		if relevant_parameters.filter(name=setting_key).exists():
 			try:
-				ldap_setting = relevant_parameters.get(name=k)
+				ldap_setting = relevant_parameters.get(name=setting_key)
 			except:
 				pass
-		data[k]['value'] = getattr(ldap_setting, value_type, default_value)
 
-		if k == "LDAP_AUTH_CONNECTION_PASSWORD" and data[k]['value'] is not None:
+		if setting_key == "LDAP_AUTH_CONNECTION_PASSWORD":
 			try:
-				data[k]['value'] = decrypt(data[k]['value'])
+				data[setting_key]['value'] = aes_decrypt(
+					*[getattr(ldap_setting, field) for field in LDAP_TYPE_PASSWORD_FIELDS]
+				)
 			except:
-				data[k]['value'] = ""
+				data[setting_key]['value'] = ""
 				print("Could not decrypt password")
 				pass
-		if k == "LDAP_AUTH_TLS_VERSION":
-			if isinstance(data[k]['value'], Enum):
-				data[k]['value'] = data[k]['value'].name
+		else:
+			data[setting_key]['value'] = getattr(ldap_setting, normalized_type, default_value)
 
+			if setting_key == "LDAP_AUTH_TLS_VERSION":
+				_value = getattr(ldap_setting, normalized_type, default_value)
+				if isinstance(_value, Enum):
+					data[setting_key]['value'] = _value.name
 	return data

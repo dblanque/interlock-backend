@@ -9,6 +9,9 @@
 #---------------------------------- IMPORTS -----------------------------------#
 from core.views.base import BaseViewSet
 
+### Models
+from core.models.user import User
+
 ### REST Framework
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -25,7 +28,7 @@ class LivenessViewSet(BaseViewSet):
 	@action(detail=False, methods=['get'])
 	@auth_required(require_admin=False)
 	def check(self, request, pk=None):
-		user = request.user
+		user: User = request.user
 		data = {}
 		code = 0
 		return Response(

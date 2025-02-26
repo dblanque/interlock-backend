@@ -9,6 +9,7 @@
 #---------------------------------- IMPORTS -----------------------------------#
 ### Models
 from core.models.types.ldap_dns_record import *
+from core.models.user import User
 
 ### ViewSets
 from core.views.base import BaseViewSet
@@ -41,7 +42,7 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 	@action(detail=False,methods=['post'])
 	@auth_required()
 	def insert(self, request):
-		user = request.user
+		user: User = request.user
 		data = {}
 		code = 0
 		required_values = [
@@ -78,7 +79,7 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 
 	@auth_required()
 	def update(self, request, pk=None):
-		user = request.user
+		user: User = request.user
 		data = {}
 		code = 0
 		required_values = [
@@ -130,7 +131,7 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 	@action(detail=False, methods=['post'])
 	@auth_required()
 	def delete(self, request):
-		user = request.user
+		user: User = request.user
 		data = {}
 		code = 0
 		required_values = [

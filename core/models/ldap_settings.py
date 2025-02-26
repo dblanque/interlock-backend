@@ -9,18 +9,21 @@
 #---------------------------------- IMPORTS -----------------------------------#
 from .base import BaseModel
 from django.db import models
+from django.core.exceptions import ImproperlyConfigured
 from .validators.ldap_uri import validate_ldap_uri
 from django.utils.translation import gettext_lazy as _
 from django.contrib.postgres.fields import ArrayField
+from .types.settings import (
+	TYPE_STRING as LDAP_TYPE_STRING,
+	TYPE_BOOL as LDAP_TYPE_BOOL,
+	TYPE_JSON as LDAP_TYPE_JSON,
+	TYPE_PASSWORD as LDAP_TYPE_PASSWORD,
+	TYPE_INTEGER as LDAP_TYPE_INTEGER,
+	TYPE_LDAP_URI as LDAP_TYPE_LDAP_URI,
+	TYPE_LDAP_TLS_VERSION as LDAP_AUTH_TLS_VERSION
+)
 ################################################################################
 
-LDAP_TYPE_STRING = "STRING"
-LDAP_TYPE_BOOL = "BOOL"
-LDAP_TYPE_JSON = "JSON"
-LDAP_TYPE_INTEGER = "INTEGER"
-LDAP_TYPE_PASSWORD = "PASSWORD"
-LDAP_AUTH_TLS_VERSION = "TLS"
-LDAP_TYPE_LDAP_URI = "LDAP_URI"
 LDAP_SETTING_TYPES = (
 	# Identifier, Pretty Name
 	(LDAP_TYPE_STRING, "String"),
@@ -40,6 +43,13 @@ LDAP_TLS_TYPES = (
 	("PROTOCOL_TLSv1_3", "TLSv1_3"),
 	("PROTOCOL_TLS", "TLS"),
 	("PROTOCOL_TLS_CLIENT", "TLS_CLIENT"),
+)
+LDAP_SETTING_PREFIX = "v"
+LDAP_TYPE_PASSWORD_FIELDS = (
+	f"{LDAP_SETTING_PREFIX}_password_aes",
+	f"{LDAP_SETTING_PREFIX}_password_ct",
+	f"{LDAP_SETTING_PREFIX}_password_nonce",
+	f"{LDAP_SETTING_PREFIX}_password_tag",
 )
 
 # ! Only add non-constant values with DB Save-able overrides here.
@@ -91,33 +101,119 @@ LDAP_SETTINGS_CHOICES_MAP = {
 
 class LDAPPreset(BaseModel):
 	id = models.BigAutoField(verbose_name=_("id"), primary_key=True)
-	name = models.CharField(verbose_name=_("name"), unique=True, null=False, blank=False, max_length=128)
-	label = models.CharField(verbose_name=_("label"), blank=False, null=False, max_length=64)
+	name = models.CharField(
+		verbose_name=_("name"),
+		unique=True,
+		null=False,
+		blank=False,
+		max_length=128
+	)
+	label = models.CharField(
+		verbose_name=_("label"),
+		blank=False,
+		null=False,
+		max_length=64
+	)
 	active = models.BooleanField(verbose_name=_("active"), unique=True, null=True)
 
 class BaseLDAPSetting(BaseModel):
 	id = models.BigAutoField(verbose_name=_("id"), primary_key=True)
-	name = models.CharField(verbose_name=_("name"), choices=[(k, f"lds_{k.lower()}") for k in CMAPS.keys()], unique=False, null=False, blank=False, max_length=128)
-	type = models.CharField(verbose_name=_("type"), choices=LDAP_SETTING_TYPES, null=False)
-	preset = models.ForeignKey(LDAPPreset, verbose_name=_("ldap_preset"), on_delete=models.CASCADE)
+	name = models.CharField(
+		verbose_name=_("name"),
+		choices=[(k, f"{LDAP_SETTING_PREFIX}_{k.lower()}") for k in CMAPS.keys()],
+		unique=False,
+		null=False,
+		blank=False,
+		max_length=128
+	)
+	type = models.CharField(
+		verbose_name=_("type"),
+		choices=LDAP_SETTING_TYPES,
+		null=False
+	)
+	preset = models.ForeignKey(
+		LDAPPreset,
+		verbose_name=_("ldap_preset"),
+		on_delete=models.CASCADE
+	)
 
 	class Meta:
 		abstract = True
 
 class LDAPSetting(BaseLDAPSetting):
-	v_string = models.CharField(verbose_name=_("param_v_string"), null=True, blank=True, max_length=256)
-	v_password = models.CharField(verbose_name=_("param_v_password"), null=True, blank=True)
-	v_bool = models.BooleanField(verbose_name=_("param_v_bool"), null=True, blank=True)
-	v_json = models.JSONField(verbose_name=_("param_v_json"), null=True, blank=True)
-	v_integer = models.IntegerField(verbose_name=_("param_v_integer"), null=True, blank=True)
-	v_tls = models.CharField(verbose_name=_("param_v_tls"), null=True, blank=True, choices=LDAP_TLS_TYPES)
+	v_string = models.CharField(
+		verbose_name=_(f"param_{LDAP_SETTING_PREFIX}_string"),
+		null=True,
+		blank=True,
+		max_length=256
+	)
+	v_password_aes = models.BinaryField(
+		verbose_name=_(f"param_{LDAP_SETTING_PREFIX}_aes"),
+		null=True,
+		blank=True
+	)
+	v_password_ct = models.BinaryField(
+		verbose_name=_(f"param_{LDAP_SETTING_PREFIX}_ct"),
+		null=True,
+		blank=True
+	)
+	v_password_nonce = models.BinaryField(
+		verbose_name=_(f"param_{LDAP_SETTING_PREFIX}_nonce"),
+		null=True,
+		blank=True
+	)
+	v_password_tag = models.BinaryField(
+		verbose_name=_(f"param_{LDAP_SETTING_PREFIX}_tag"),
+		null=True,
+		blank=True
+	)
+	v_bool = models.BooleanField(
+		verbose_name=_(f"param_{LDAP_SETTING_PREFIX}_bool"),
+		null=True,
+		blank=True
+	)
+	v_json = models.JSONField(
+		verbose_name=_(f"param_{LDAP_SETTING_PREFIX}_json"),
+		null=True,
+		blank=True
+	)
+	v_integer = models.IntegerField(
+		verbose_name=_(f"param_{LDAP_SETTING_PREFIX}_integer"),
+		null=True,
+		blank=True
+	)
+	v_tls = models.CharField(
+		verbose_name=_(f"param_{LDAP_SETTING_PREFIX}_tls"),
+		null=True,
+		blank=True,
+		choices=LDAP_TLS_TYPES
+	)
 	v_ldap_uri = ArrayField(
-		models.CharField(_("param_v_ldap_uri"), max_length=255),
-		verbose_name=_("param_v_ldap_uri_list"),
+		models.CharField(_(f"param_{LDAP_SETTING_PREFIX}_ldap_uri"), max_length=255),
+		verbose_name=_(f"param_{LDAP_SETTING_PREFIX}_ldap_uri_list"),
 		null=True,
 		blank=True,
 		validators=[validate_ldap_uri]
 	)
 
+	class Meta:
+		constraints = [
+			models.CheckConstraint(
+				check=models.Q(
+						v_password_aes=None,
+						v_password_ct=None,
+						v_password_nonce=None,
+						v_password_tag=None
+						) |
+					  models.Q(
+						v_password_aes__isnull=False,
+						v_password_ct__isnull=False,
+						v_password_nonce__isnull=False,
+						v_password_tag__isnull=False
+					  ),
+				name=f'{LDAP_SETTING_PREFIX}_password_crypt_data_all_or_none'
+			)
+		]
+
 	def __str__(self):
-		return getattr(self, f"v_{self.type.lower()}", None)
+		return getattr(self, f"{LDAP_SETTING_PREFIX}_{self.type.lower()}", None)

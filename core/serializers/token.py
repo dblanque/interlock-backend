@@ -1,6 +1,7 @@
 from rest_framework import serializers as serializers
 from rest_framework_simplejwt import serializers as jwt_serializers
 from core.models.ldap_settings_db import RunningSettings
+from core.models.user import User
 from core.exceptions import otp as exc_otp
 from core.views.mixins.logs import LogMixin
 from core.views.mixins.totp import get_user_totp_device, validate_user_otp
@@ -15,6 +16,7 @@ class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
 		self.fields['recovery_code'] = serializers.CharField(required=False)
 
 	def validate(self, attrs):
+		self.user: User
 		data = []
 		data = super().validate(attrs)
 		""" self.user is set in super().validate() which also calls super().validate() """

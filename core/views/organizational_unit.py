@@ -22,6 +22,7 @@ from .base import BaseViewSet
 ### Models
 from core.views.mixins.logs import LogMixin
 from core.models.ldap_tree import LDAPTree, LDAPTreeOptions
+from core.models.user import User
 
 ### Mixins
 from .mixins.organizational_unit import OrganizationalUnitMixin
@@ -46,7 +47,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 
 	@auth_required()
 	def list(self, request):
-		user = request.user
+		user: User = request.user
 		data = request.data
 		code = 0
 		code_msg = 'ok'
@@ -108,7 +109,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 	@action(detail=False,methods=['post'])
 	@auth_required()
 	def dirtree(self, request):
-		user = request.user
+		user: User = request.user
 		data = request.data
 		code = 0
 		code_msg = 'ok'
@@ -175,7 +176,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 	@action(detail=False,methods=['post'])
 	@auth_required()
 	def move(self, request):
-		user = request.user
+		user: User = request.user
 		data = request.data
 		code = 0
 		code_msg = 'ok'
@@ -200,7 +201,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 	@action(detail=False,methods=['post'])
 	@auth_required()
 	def rename(self, request):
-		user = request.user
+		user: User = request.user
 		data = request.data
 		code = 0
 		code_msg = 'ok'
@@ -225,7 +226,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 	@action(detail=False,methods=['post'])
 	@auth_required()
 	def insert(self, request):
-		user = request.user
+		user: User = request.user
 		data = request.data
 		code = 0
 		code_msg = 'ok'
@@ -298,7 +299,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 	@action(detail=False, methods=['post'])
 	@auth_required()
 	def delete(self, request, pk=None):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data

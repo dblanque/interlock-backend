@@ -12,6 +12,7 @@ from core.exceptions.logs import LogTruncateMinmaxNotFound
 
 ### Models
 from core.models.log import Log
+from core.models.user import User
 
 ### Mixins
 from .mixins.logs import LogMixin
@@ -35,7 +36,7 @@ class LogsViewSet(BaseViewSet, LogMixin):
 
 	@auth_required()
 	def list(self, request, pk=None):
-		user = request.user
+		user: User = request.user
 		data = {}
 		code = 0
 		headers = [
@@ -78,7 +79,7 @@ class LogsViewSet(BaseViewSet, LogMixin):
 	@action(detail=False, methods=['get'])
 	@auth_required()
 	def reset(self, request, pk=None):
-		user = request.user
+		user: User = request.user
 		data = request.data
 		code = 0
 
@@ -95,7 +96,7 @@ class LogsViewSet(BaseViewSet, LogMixin):
 	@action(detail=False, methods=['post'])
 	@auth_required()
 	def truncate(self, request, pk=None):
-		user = request.user
+		user: User = request.user
 		data = request.data
 		code = 0
 

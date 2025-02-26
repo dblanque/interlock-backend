@@ -14,15 +14,15 @@ import traceback, ldap3, ssl, logging, sys
 from django_python3_ldap.utils import import_func
 from inspect import getfullargspec
 from django.contrib.auth import get_user_model
-from interlock_backend.ldap.encrypt import (
-	decrypt,
-	encrypt
+from interlock_backend.encrypt import (
+	aes_encrypt,
+	aes_decrypt
 )
 from interlock_backend.ldap.adsi import search_filter_add
 from ldap3.core.exceptions import LDAPException
 from core.exceptions import ldap as exc_ldap
 from core.views.mixins.logs import LogMixin
-from core.models.user import User
+from core.models.user import User, USER_PASSWORD_FIELDS
 from typing import TypedDict
 from typing_extensions import NotRequired
 from core.models.ldap_settings_db import RunningSettings
@@ -135,7 +135,9 @@ def authenticate(*args, **kwargs):
 		if not ldc.rebind(user_dn=user.dn, password=password):
 			return None
 
-	user.encryptedPassword = encrypt(password)
+	encrypted_data = aes_encrypt(password)
+	for index, field in enumerate(USER_PASSWORD_FIELDS):
+		setattr(user, field, encrypted_data[index])
 	del password
 	user.is_local = False
 	user.save()
@@ -195,14 +197,7 @@ class LDAPConnector(object):
 		self.default_user_pwd = RunningSettings.LDAP_AUTH_CONNECTION_PASSWORD
 		self.__newUuid__()
 		self.is_authenticating = is_authenticating
-		if not RunningSettings.PLAIN_TEXT_BIND_PASSWORD and self.default_user_pwd:
-			try:
-				decrypted_password = decrypt(self.default_user_pwd)
-			except Exception as e:
-				print(e)
-				decrypted_password = self.default_user_pwd
-		else:
-			decrypted_password = self.default_user_pwd
+		decrypted_password = self.default_user_pwd
 
 		if not isinstance(RunningSettings.LDAP_AUTH_TLS_VERSION, Enum):
 			ldapAuthTLSVersion = getattr(ssl, RunningSettings.LDAP_AUTH_TLS_VERSION)
@@ -231,7 +226,9 @@ class LDAPConnector(object):
 		logger.debug(f'LDAP TLS Version: {ldapAuthTLSVersion}')
 
 		if password != decrypted_password and plain_text_password == False:
-			password = str(decrypt(password))
+			password = aes_decrypt(
+				*[getattr(user, field) for field in USER_PASSWORD_FIELDS]
+			)
 
 		# Initialize Server Args Dictionary
 		server_args = {
@@ -481,7 +478,7 @@ def test_ldap_connection(
 	format_username = import_func(RunningSettings.LDAP_AUTH_FORMAT_USERNAME)
 
 	if password != ldapAuthConnectionPassword and username != 'admin':
-		password = str(decrypt(password))
+		password = password
 	elif username == 'admin':
 		user_dn = ldapAuthConnectionUser
 		password = ldapAuthConnectionPassword

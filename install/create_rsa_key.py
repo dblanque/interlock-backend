@@ -1,0 +1,3 @@
+from interlock_backend.encrypt import import_or_create_rsa_key
+
+import_or_create_rsa_key()

@@ -11,6 +11,7 @@
 from core.views.mixins.logs import LogMixin
 from core.models.dns import LDAPDNS, LDAPRecord
 from core.models.types.ldap_dns_record import *
+from core.models.user import User
 
 ### ViewSets
 from core.views.base import BaseViewSet
@@ -52,7 +53,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 	@action(detail=False, methods=['get'])
 	@auth_required(require_admin=False)
 	def details(self, request):
-		user = request.user
+		user: User = request.user
 		data = {}
 		code = 0
 		data["realm"] = RunningSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN or ""
@@ -72,7 +73,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 	@action(detail=False, methods=['post'])
 	@auth_required()
 	def zones(self, request):
-		user = request.user
+		user: User = request.user
 		data = dict()
 		code = 0
 		reqData = request.data
@@ -195,7 +196,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 	@action(detail=False, methods=['post'])
 	@auth_required()
 	def insert(self, request):
-		user = request.user
+		user: User = request.user
 		data = dict()
 		code = 0
 		reqData = request.data
@@ -388,7 +389,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 	@action(detail=False, methods=['post'])
 	@auth_required()
 	def delete(self, request):
-		user = request.user
+		user: User = request.user
 		data = {}
 		code = 0
 		reqData = request.data

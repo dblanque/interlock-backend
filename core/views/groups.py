@@ -10,6 +10,9 @@
 ### Exceptions
 from core.exceptions import ldap as exc_ldap
 
+### Models
+from core.models.user import User
+
 ### Mixins
 from .mixins.group import GroupViewMixin
 
@@ -34,7 +37,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
 	@auth_required()
 	def list(self, request):
-		user = request.user
+		user: User = request.user
 		data = []
 		code = 0
 		code_msg = 'ok'
@@ -65,7 +68,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 	@action(detail=False,methods=['post'])
 	@auth_required()
 	def fetch(self, request):
-		user = request.user
+		user: User = request.user
 		data = []
 		code = 0
 		code_msg = 'ok'
@@ -103,7 +106,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 	@action(detail=False,methods=['post'])
 	@auth_required()
 	def insert(self, request):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data
@@ -135,7 +138,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 
 	@auth_required()
 	def update(self, request, pk=None):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data
@@ -157,7 +160,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 	@action(detail=False, methods=['post'])
 	@auth_required()
 	def delete(self, request, pk=None):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data

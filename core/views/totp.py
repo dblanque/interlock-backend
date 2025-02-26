@@ -44,7 +44,7 @@ DBLogMixin = LogMixin()
 class TOTPViewSet(BaseViewSet):
 	@auth_required()
 	def list(self, request):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 
@@ -70,7 +70,7 @@ class TOTPViewSet(BaseViewSet):
 	@action(detail=False,methods=['get'])
 	@auth_required()
 	def create_device(self, request):
-		user = request.user
+		user: User = request.user
 		data = request.data
 		code = 0
 		code_msg = 'ok'
@@ -94,7 +94,7 @@ class TOTPViewSet(BaseViewSet):
 	@action(detail=False,methods=['put', 'post'])
 	@auth_required()
 	def validate_device(self, request):
-		user = request.user
+		user: User = request.user
 		data = request.data
 		code = 0
 		code_msg = 'ok'
@@ -116,7 +116,7 @@ class TOTPViewSet(BaseViewSet):
 	@action(detail=False,methods=['post', 'delete'])
 	@auth_required()
 	def delete_device(self, request):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 
@@ -134,7 +134,7 @@ class TOTPViewSet(BaseViewSet):
 	@action(detail=False,methods=['post', 'delete'])
 	@auth_required()
 	def delete_for_user(self, request):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		data = request.data

@@ -10,6 +10,9 @@
 ### ViewSets
 from .base import BaseViewSet
 
+### Models
+from core.models.user import User
+
 ### Decorators
 from core.decorators.login import auth_required
 
@@ -29,7 +32,7 @@ logger = logging.getLogger(__name__)
 class DebugViewSet(BaseViewSet):
 	@auth_required()
 	def list(self, request):
-		user = request.user
+		user: User = request.user
 		data = []
 		NON_DEBUGGABLE_OPERATIONS = [
 			"BIND",
@@ -53,7 +56,7 @@ class DebugViewSet(BaseViewSet):
 	@action(detail=False,methods=['post'])
 	@auth_required()
 	def action(self, request):
-		user = request.user
+		user: User = request.user
 		data = request.data
 		code = 0
 		code_msg = 'ok'

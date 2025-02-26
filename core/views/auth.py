@@ -10,6 +10,7 @@
 ### Core
 from core.views.mixins.auth import CookieJWTAuthentication
 from core.views.mixins.logs import LogMixin
+from core.models.user import User
 
 ### ViewSets
 from .base import BaseViewSet
@@ -71,7 +72,7 @@ class AuthViewSet(BaseViewSet):
 		return response
 
 	def logout(self, request):
-		user = request.user
+		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 

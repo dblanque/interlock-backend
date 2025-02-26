@@ -14,10 +14,10 @@ from core.exceptions import (
 	users as exc_user, 
 	ldap as exc_ldap
 )
-from interlock_backend.ldap.encrypt import encrypt
+from interlock_backend.encrypt import aes_encrypt
 
 ### Models
-from core.models import User
+from core.models.user import User, USER_PASSWORD_FIELDS
 from core.views.mixins.logs import LogMixin
 
 ### Mixins
@@ -706,8 +706,9 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		except Exception as e:
 			logger.error(e)
 		if django_user:
-			encryptedPass = encrypt(data['password'])
-			django_user.encryptedPassword = encryptedPass
+			encrypted_data = aes_encrypt(data['password'])
+			for index, field in enumerate(USER_PASSWORD_FIELDS):
+				setattr(django_user, field, encrypted_data[index])
 			django_user.set_unusable_password()
 			django_user.save()
 
@@ -835,8 +836,9 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		except Exception as e:
 			logger.error(e)
 		if django_user:
-			encryptedPass = encrypt(data['password'])
-			django_user.encryptedPassword = encryptedPass
+			encrypted_data = aes_encrypt(data['password'])
+			for index, field in enumerate(USER_PASSWORD_FIELDS):
+				setattr(django_user, field, encrypted_data[index])
 			django_user.set_unusable_password()
 			django_user.save()
 

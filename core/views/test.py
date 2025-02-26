@@ -19,6 +19,7 @@ from core.exceptions.ldap import CouldNotOpenConnection
 from interlock_backend.ldap.connector import LDAPConnector, LDAPInfo
 from core.models.types.ldap_dns_record import *
 from core.models import ldap_settings_db
+from core.models.user import User
 from interlock_backend.settings import LOG_FILE_FOLDER
 ################################################################################
 
@@ -28,7 +29,7 @@ class TestViewSet(BaseViewSet):
 
 	@auth_required()
 	def list(self, request, pk=None):
-		user = request.user
+		user: User = request.user
 		data = {}
 		code = 0
 		printSettings = False

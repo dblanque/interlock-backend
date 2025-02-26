@@ -541,10 +541,16 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 	def ldap_user_fetch(self, user_search):
 		# Exclude Computer Accounts if settings allow it
 		if RunningSettings.EXCLUDE_COMPUTER_ACCOUNTS == True:
-			self.ldap_filter_object = ldap_adsi.search_filter_add(self.ldap_filter_object, "!(objectclass=computer)")
+			self.ldap_filter_object = ldap_adsi.search_filter_add(
+				self.ldap_filter_object,
+				"!(objectclass=computer)"
+			)
 
 		# Add filter for username
-		self.ldap_filter_object = ldap_adsi.search_filter_add(self.ldap_filter_object, RunningSettings.LDAP_AUTH_USER_FIELDS["username"] + "=" + user_search)
+		self.ldap_filter_object = ldap_adsi.search_filter_add(
+			self.ldap_filter_object,
+			RunningSettings.LDAP_AUTH_USER_FIELDS["username"] + "=" + user_search
+		)
 		ldap_object_options: LDAPObjectOptions = {
 			"connection": self.ldap_connection,
 			"ldapFilter": self.ldap_filter_object,

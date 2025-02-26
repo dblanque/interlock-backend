@@ -21,7 +21,8 @@ from core.models.ldap_settings import (
 	LDAPSetting,
 	LDAPPreset,
 	LDAP_SETTING_TYPES_LIST,
-	LDAP_SETTINGS_CHOICES_MAP
+	LDAP_SETTINGS_CHOICES_MAP,
+	LDAP_SETTING_PREFIX,
 )
 
 ### Mixins
@@ -39,7 +40,7 @@ from rest_framework.decorators import action
 
 ### Others
 from interlock_backend.ldap import defaults
-from interlock_backend.ldap.encrypt import encrypt
+from interlock_backend.encrypt import aes_encrypt
 from core.decorators.login import auth_required
 from core.models.ldap_settings_db import RunningSettings
 from interlock_backend.ldap.settings import getSettingsList
@@ -53,8 +54,6 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 	@auth_required()
 	def list(self, request, pk=None):
-		# user = request.user
-		# data = {}
 		code = 0
 		active_preset = self.get_active_settings_preset()
 
@@ -88,7 +87,6 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@auth_required()
 	@action(detail=True, methods=['get'])
 	def fetch(self, request, pk):
-		# user = request.user
 		preset_id = int(pk)
 		data = {}
 		code = 0
@@ -117,8 +115,6 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@action(detail=False, methods=['post'])
 	@auth_required()
 	def preset_create(self, request, pk=None):
-		# user = request.user
-		# data: dict = request.data
 		code = 0
 		if not "label" in request.data:
 			raise exc_base.MissingDataKey(data={"detail":"label"})
@@ -147,7 +143,6 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@action(detail=False, methods=['post'])
 	@auth_required()
 	def preset_delete(self, request, pk=None):
-		# user = request.user
 		data: dict = request.data
 		code = 0
 		if not "id" in data:
@@ -169,7 +164,6 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@action(detail=False, methods=['post'])
 	@auth_required()
 	def preset_enable(self, request, pk=None):
-		# user = request.user
 		data: dict = request.data
 		code = 0
 		if not "id" in data:
@@ -195,7 +189,6 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@action(detail=False, methods=['post'])
 	@auth_required()
 	def preset_rename(self, request, pk=None):
-		# user = request.user
 		data: dict = request.data
 		code = 0
 		for k in ["id","label"]:
@@ -229,7 +222,6 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@action(detail=False, methods=['post'])
 	@auth_required()
 	def save(self, request, pk=None):
-		# user = request.user
 		data_preset: dict = request.data["preset"]
 		data_settings: dict = request.data["settings"]
 		code = 0
@@ -270,18 +262,27 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 				except:
 					pass
 			else:
-				if param_type == "password":
-					param_value = encrypt(param_value)
 				kwdata = {
 					"name": param_name,
 					"type": param_type.upper(),
-					f"v_{param_type}": param_value,
-					"preset": settings_preset
+					"preset": settings_preset,
 				}
+
+				if param_type == "password":
+					encrypted_data = aes_encrypt(param_value)
+					kwdata = kwdata | {
+						f"{LDAP_SETTING_PREFIX}_password_aes": encrypted_data[0],
+						f"{LDAP_SETTING_PREFIX}_password_ct": encrypted_data[1],
+						f"{LDAP_SETTING_PREFIX}_password_nonce": encrypted_data[2],
+						f"{LDAP_SETTING_PREFIX}_password_tag": encrypted_data[3],
+					}
+				else:
+					kwdata[f"{LDAP_SETTING_PREFIX}_{param_type}"] = param_value
+
 				for setting_type in LDAP_SETTING_TYPES_LIST:
-					setting_key = f"v_{setting_type.lower()}"
+					setting_key = f"{LDAP_SETTING_PREFIX}_{setting_type.lower()}"
 					# Set other field types in row as null
-					if setting_key != f"v_{param_type}":
+					if setting_key != f"{LDAP_SETTING_PREFIX}_{param_type}":
 						kwdata[setting_key] = None
 				serializer = LDAPSettingSerializer(data=kwdata)
 				if not serializer.is_valid():
@@ -322,7 +323,6 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@action(detail=False, methods=['get'])
 	@auth_required()
 	def reset(self, request, pk=None):
-		# user = request.user
 		data: dict = request.data
 		code = 0
 		active_preset = self.get_active_settings_preset()
