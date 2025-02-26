@@ -25,7 +25,7 @@ from core.views.mixins.logs import LogMixin
 from core.models.user import User, USER_PASSWORD_FIELDS
 from typing import TypedDict
 from typing_extensions import NotRequired
-from core.models.ldap_settings_db import RunningSettings
+from core.models.ldap_settings_runtime import RunningSettings
 from uuid import (
 	uuid1,
 	getnode as uuid_getnode

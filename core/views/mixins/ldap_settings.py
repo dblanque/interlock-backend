@@ -30,7 +30,7 @@ from core.views.mixins.utils import net_port_test
 ### Others
 from interlock_backend.ldap.connector import test_ldap_connection, LDAPConnector, LDAPConnectionOptions
 from interlock_backend.settings import BASE_DIR
-from core.models.ldap_settings_db import RunningSettings
+from core.models.ldap_settings_runtime import RunningSettings
 import logging
 ################################################################################
 

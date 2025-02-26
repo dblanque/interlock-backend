@@ -8,7 +8,7 @@ from core.models.user import User
 from rest_framework.test import APIClient
 from core.views.mixins.ldap_settings import test_ldap_connection
 from interlock_backend.ldap.defaults import *
-from core.models.ldap_settings_db import RunningSettings
+from core.models.ldap_settings_runtime import RunningSettings
 from core.exceptions import ldap as exc_ldap
 from interlock_backend.ldap.connector import LDAPConnector
 from core.views.mixins.user import UserViewLDAPMixin

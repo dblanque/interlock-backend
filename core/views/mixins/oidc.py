@@ -1,5 +1,5 @@
 from core.models.user import User
-from core.models.ldap_settings_db import RunningSettings
+from core.models.ldap_settings_runtime import RunningSettings
 from core.models.ldap_object import LDAPObject, LDAPObjectOptions
 from django.utils.translation import ugettext_lazy as _
 from oidc_provider.lib.claims import ScopeClaims

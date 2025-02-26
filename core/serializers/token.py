@@ -1,6 +1,6 @@
 from rest_framework import serializers as serializers
 from rest_framework_simplejwt import serializers as jwt_serializers
-from core.models.ldap_settings_db import RunningSettings
+from core.models.ldap_settings_runtime import RunningSettings
 from core.models.user import User
 from core.exceptions import otp as exc_otp
 from core.views.mixins.logs import LogMixin

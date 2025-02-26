@@ -11,7 +11,7 @@
 ###############################################################################
 
 #---------------------------------- IMPORTS -----------------------------------#
-from core.models.ldap_settings_db import RunningSettings
+from core.models.ldap_settings_runtime import RunningSettings
 from typing import Union
 import logging
 

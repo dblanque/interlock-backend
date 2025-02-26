@@ -17,7 +17,7 @@ from interlock_backend.ldap.adsi import (
     LDAP_BUILTIN_OBJECTS
 )
 from interlock_backend.ldap.securityIdentifier import SID
-from core.models.ldap_settings_db import RunningSettings
+from core.models.ldap_settings_runtime import RunningSettings
 
 ### Others
 from typing import TypedDict, Union

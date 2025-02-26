@@ -37,7 +37,7 @@ from core.models import User
 from core.views.mixins.logs import LogMixin
 
 ### Interlock
-from core.models.ldap_settings_db import RunningSettings
+from core.models.ldap_settings_runtime import RunningSettings
 ################################################################################
 
 DBLogMixin = LogMixin()

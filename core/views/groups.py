@@ -27,7 +27,7 @@ from rest_framework.decorators import action
 from core.decorators.login import auth_required
 from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.adsi import search_filter_add
-from core.models.ldap_settings_db import RunningSettings
+from core.models.ldap_settings_runtime import RunningSettings
 import logging
 ################################################################################
 

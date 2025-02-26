@@ -42,8 +42,8 @@ from rest_framework.decorators import action
 from interlock_backend.ldap import defaults
 from interlock_backend.encrypt import aes_encrypt
 from core.decorators.login import auth_required
-from core.models.ldap_settings_db import RunningSettings
-from interlock_backend.ldap.settings import getSettingsList
+from core.models.ldap_settings_runtime import RunningSettings
+from interlock_backend.ldap.ldap_settings import getSettingsList
 import logging, ssl
 ################################################################################
 
