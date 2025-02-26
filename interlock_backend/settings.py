@@ -192,6 +192,7 @@ LOG_LEVEL = "INFO"
 LDAP3_MODULE_LOG_LEVEL = "WARNING"
 LDAP_CONNECTOR_LOG_LEVEL = "INFO"
 LDAP_DNS_LOG_LEVEL = "WARNING"
+AES_RSA_PERF_LOGGING = True
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
