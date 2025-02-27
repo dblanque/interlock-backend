@@ -28,7 +28,11 @@ from core.exceptions import (
 from core.views.mixins.utils import net_port_test
 
 ### Others
-from interlock_backend.ldap.connector import test_ldap_connection, LDAPConnector, LDAPConnectionOptions
+from interlock_backend.ldap.connector import (
+	test_ldap_connection,
+	LDAPConnector,
+	LDAPConnectionOptions
+)
 from interlock_backend.settings import BASE_DIR
 from core.models.ldap_settings_runtime import RunningSettings
 import logging
@@ -83,7 +87,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 	def set_admin_status(self, status, password=None):
 		userQuerySet = User.objects.get_full_queryset().filter(username = 'admin')
 		if status == True and userQuerySet.count() == 0:
-			defaultAdmin = User.objects.create_default_superuser()
+			defaultAdmin: User = User.objects.create_default_superuser()
 
 		if userQuerySet.count() > 0:
 			defaultAdmin = userQuerySet.get(username = 'admin')
