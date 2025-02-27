@@ -15,6 +15,7 @@ from core.models.interlock_settings import (
 	TYPE_BYTES,
 	SETTING_KEY_AES
 )
+from django.db import transaction
 from Crypto.Random import get_random_bytes
 from cryptography.fernet import Fernet
 from time import perf_counter
@@ -49,6 +50,7 @@ def fernet_decrypt(data, bytes_encoding="utf-8") -> str:
 	decMessage = fernet.decrypt(data).decode()
 	return decMessage
 
+@transaction.atomic
 def create_rsa_key() -> RSA.RsaKey:
 	key = RSA.generate(RSA_KEY_BITS)
 	key_db_obj = InterlockSetting.objects.create(
