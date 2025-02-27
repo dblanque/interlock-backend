@@ -1,9 +1,20 @@
 from .base import BaseModel
 from django.db import models
+from django.utils.crypto import get_random_string
+import secrets
+
+def generate_client_id():
+    while True:
+        client_id = get_random_string(24, "abcdefghijklmnopqrstuvwxyz0123456789")
+        if not Application.objects.filter(client_id=client_id).exists():
+            return client_id
+
+def generate_client_secret():
+    return secrets.token_urlsafe(48)  # Cryptographically secure
 
 class Application(BaseModel):
     name = models.CharField(max_length=255)
-    client_id = models.CharField(max_length=255, unique=True)
-    client_secret = models.CharField(max_length=255)
+    client_id = models.CharField(max_length=255, default=generate_client_id, unique=True)
+    client_secret = models.CharField(max_length=255, default=generate_client_secret)
     redirect_uris = models.TextField(help_text="Comma-separated redirect URIs")
     scopes = models.TextField(default="openid profile email groups")

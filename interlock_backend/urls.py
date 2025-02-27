@@ -36,6 +36,7 @@ from core.views.gpo import GPOViewSet
 from core.views.liveness import LivenessViewSet
 from core.views.record import RecordViewSet
 from core.views.debug import DebugViewSet
+from core.views.application import ApplicationViewSet
 from interlock_backend.settings import DEBUG
 
 # Initalizes Router
@@ -49,7 +50,8 @@ named_view_sets = {
 	r"settings": SettingsViewSet,
 	r"logs": LogsViewSet,
 	r"liveness": LivenessViewSet,
-	r"totp": TOTPViewSet
+	r"totp": TOTPViewSet,
+	r"application": ApplicationViewSet
 }
 
 if DEBUG == True:
