@@ -226,7 +226,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		result["users"] = user_list
 		result["headers"] = valid_attributes
 		return result
-	
+
 	def ldap_user_insert(
 			self,
 			user_data,
