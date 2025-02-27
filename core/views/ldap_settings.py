@@ -39,6 +39,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
+from django.db import transaction, IntegrityError
 from interlock_backend.ldap import defaults
 from interlock_backend.encrypt import aes_encrypt
 from core.decorators.login import auth_required
@@ -171,12 +172,13 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		preset_id = data["id"]
 		if not LDAPPreset.objects.filter(id=preset_id).exists():
 			raise exc_set.SettingPresetNotExists
-		active_preset = self.get_active_settings_preset()
-		active_preset.active = None # Don't set this to False, DB Constraints
-		active_preset.save()
-		inactive_preset = LDAPPreset.objects.get(id=preset_id)
-		inactive_preset.active = True
-		inactive_preset.save()
+		with transaction.atomic():
+			active_preset = self.get_active_settings_preset()
+			active_preset.active = None # Don't set this to False, DB Constraints
+			active_preset.save()
+			inactive_preset = LDAPPreset.objects.get(id=preset_id)
+			inactive_preset.active = True
+			inactive_preset.save()
 
 		self.resync_settings()
 		return Response(
@@ -244,63 +246,67 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		adminEnabled = data_settings.pop('DEFAULT_ADMIN_ENABLED')
 		adminPassword = data_settings.pop('DEFAULT_ADMIN_PWD')
 		self.set_admin_status(status=adminEnabled, password=adminPassword)
-		for param_name, param_value in data_settings.items():
-			if not param_name in CMAPS:
-				raise exc_set.SettingTypeDoesNotMatch
-			param_to_update = None
-			param_type = CMAPS[param_name].lower()
-			param_value = param_value.pop("value")
-			is_default = False
-			if param_name == "LDAP_AUTH_TLS_VERSION":
-				is_default = (getattr(ssl, param_value) == getattr(defaults, param_name, None))
-			else:
-				is_default = (param_value == getattr(defaults, param_name, None))
-			if is_default:
-				try:
-					if LDAPSetting.objects.filter(name=param_name, preset_id=settings_preset).exists():
-						LDAPSetting.objects.get(name=param_name, preset_id=settings_preset).delete_permanently()
-				except:
-					pass
-			else:
-				kwdata = {
-					"name": param_name,
-					"type": param_type.upper(),
-					"preset": settings_preset,
-				}
 
-				if param_type == "password":
-					encrypted_data = aes_encrypt(param_value)
-					kwdata = kwdata | {
-						f"{LDAP_SETTING_PREFIX}_password_aes": encrypted_data[0],
-						f"{LDAP_SETTING_PREFIX}_password_ct": encrypted_data[1],
-						f"{LDAP_SETTING_PREFIX}_password_nonce": encrypted_data[2],
-						f"{LDAP_SETTING_PREFIX}_password_tag": encrypted_data[3],
+		with transaction.atomic():
+			for param_name, param_value in data_settings.items():
+				param_name: str
+				param_value: dict
+				if not param_name in CMAPS:
+					raise exc_set.SettingTypeDoesNotMatch
+				param_to_update = None
+				param_type = CMAPS[param_name].lower()
+				param_value = param_value.pop("value")
+				is_default = False
+				if param_name == "LDAP_AUTH_TLS_VERSION":
+					is_default = (getattr(ssl, param_value) == getattr(defaults, param_name, None))
+				else:
+					is_default = (param_value == getattr(defaults, param_name, None))
+				if is_default:
+					try:
+						if LDAPSetting.objects.filter(name=param_name, preset_id=settings_preset).exists():
+							LDAPSetting.objects.get(name=param_name, preset_id=settings_preset).delete_permanently()
+					except:
+						pass
+				else:
+					kwdata = {
+						"name": param_name,
+						"type": param_type.upper(),
+						"preset": settings_preset,
 					}
-				else:
-					kwdata[f"{LDAP_SETTING_PREFIX}_{param_type}"] = param_value
 
-				for setting_type in LDAP_SETTING_TYPES_LIST:
-					setting_key = f"{LDAP_SETTING_PREFIX}_{setting_type.lower()}"
-					# Set other field types in row as null
-					if setting_key != f"{LDAP_SETTING_PREFIX}_{param_type}":
-						kwdata[setting_key] = None
-				serializer = LDAPSettingSerializer(data=kwdata)
-				if not serializer.is_valid():
-					raise exc_set.SettingSerializerError(data={
-						'key': setting_key
-					})
+					if param_type == "password":
+						encrypted_data = aes_encrypt(param_value)
+						kwdata = kwdata | {
+							f"{LDAP_SETTING_PREFIX}_password_aes": encrypted_data[0],
+							f"{LDAP_SETTING_PREFIX}_password_ct": encrypted_data[1],
+							f"{LDAP_SETTING_PREFIX}_password_nonce": encrypted_data[2],
+							f"{LDAP_SETTING_PREFIX}_password_tag": encrypted_data[3],
+						}
+					else:
+						kwdata[f"{LDAP_SETTING_PREFIX}_{param_type}"] = param_value
 
-				if param_type.upper() in LDAP_SETTINGS_CHOICES_MAP:
-					if param_value not in LDAP_SETTINGS_CHOICES_MAP[param_type.upper()]:
-						raise exc_set.SettingTypeDoesNotMatch
+					for setting_type in LDAP_SETTING_TYPES_LIST:
+						setting_key = f"{LDAP_SETTING_PREFIX}_{setting_type.lower()}"
+						# Set other field types in row as null
+						if setting_key != f"{LDAP_SETTING_PREFIX}_{param_type}":
+							kwdata[setting_key] = None
+					serializer = LDAPSettingSerializer(data=kwdata)
+					if not serializer.is_valid():
+						raise exc_set.SettingSerializerError(data={
+							'key': setting_key
+						})
 
-				if LDAPSetting.objects.filter(name=param_name, preset_id=settings_preset).exists():
-					param_to_update = LDAPSetting.objects.get(name=param_name, preset_id=settings_preset)
-					for kw, kw_v in kwdata.items():
-						setattr(param_to_update, kw, kw_v)
-					param_to_update.save()
-				else:
-					LDAPSetting.objects.create(**kwdata)
+					if param_type.upper() in LDAP_SETTINGS_CHOICES_MAP:
+						if param_value not in LDAP_SETTINGS_CHOICES_MAP[param_type.upper()]:
+							raise exc_set.SettingTypeDoesNotMatch
+
+					if LDAPSetting.objects.filter(name=param_name, preset_id=settings_preset).exists():
+						param_to_update = LDAPSetting.objects.get(name=param_name, preset_id=settings_preset)
+						for kw, kw_v in kwdata.items():
+							setattr(param_to_update, kw, kw_v)
+						param_to_update.save()
+					else:
+						LDAPSetting.objects.create(**kwdata)
 
 		if RunningSettings.LDAP_LOG_UPDATE == True:
 			# Log this action to DB
@@ -327,8 +333,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		code = 0
 		active_preset = self.get_active_settings_preset()
 
-		try: LDAPSetting.objects.filter(preset_id=active_preset.id).delete()
-		except: raise
+		LDAPSetting.objects.filter(preset_id=active_preset.id).delete()
 
 		self.resync_settings()
 		return Response(
