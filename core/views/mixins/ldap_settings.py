@@ -42,15 +42,15 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 		ldc_opts['force_admin'] = True
 		# Open LDAP Connection
 		with LDAPConnector(**ldc_opts) as ldc:
-			for user in User.objects.all():
+			for local_user in User.objects.all():
 				try:
-					u: User = ldc.get_user(**{
-						"username": user.username
+					user: User = ldc.get_user(**{
+						"username": local_user.username
 					})
-					if u:
-						u.save()
+					if user:
+						user.save()
 				except Exception as e:
-					logger.warning(f"Could not re-sync user {user.username} on settings change.")
+					logger.warning(f"Could not re-sync user {local_user.username} on settings change.")
 					logger.exception(e)
 					pass
 		return None
