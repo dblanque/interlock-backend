@@ -20,8 +20,7 @@ from core.exceptions.base import BadRequest
 from core.exceptions.application import (
 	ApplicationExists,
 	ApplicationDoesNotExist,
-	ApplicationFieldDoesNotExist,
-	ApplicationOidcClientDoesNotExist
+	ApplicationFieldDoesNotExist
 )
 
 ### Mixins
@@ -29,14 +28,14 @@ from .mixins.application import ApplicationViewMixin
 
 ### Serializers
 from core.serializers.application import ApplicationSerializer
-from django.core import serializers
+from core.serializers.oidc import ClientSerializer
 
 ### REST Framework
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
-from django.db import transaction, IntegrityError
+from django.db import transaction
 from typing import Iterable
 from core.decorators.login import auth_required
 import logging
@@ -46,6 +45,7 @@ logger = logging.getLogger(__name__)
 class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 	queryset = Application.objects.all()
 	serializer_class = ApplicationSerializer
+	client_serializer_class = ClientSerializer
 
 	@auth_required()
 	def list(self, request):
@@ -57,6 +57,7 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 			"id",
 			"name",
 			"redirect_uris",
+			"enabled",
 		]
 
 		application_query =  Application.objects.all()
@@ -112,7 +113,7 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 		if not isinstance(data["scopes"], str) and isinstance(data["scopes"], Iterable):
 			data["scopes"] = " ".join(data["scopes"])
 
-		serializer = ApplicationSerializer(data=data)
+		serializer = self.serializer_class(data=data)
 		if not serializer.is_valid():
 			raise BadRequest(data={
 				"errors": serializer.errors
@@ -171,7 +172,7 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 			 data={
 				"code": code,
 				"code_msg": code_msg,
-				"id": application_id
+				"data": {"id":application_id}
 			 }
 		)
 
@@ -186,8 +187,10 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 		APPLICATION_FIELDS = [
 			"id",
 			"name",
+			"redirect_uris",
 			"client_id",
 			"client_secret",
+			"scopes",
 			"enabled",
 		]
 		CLIENT_FIELDS = [
@@ -195,23 +198,17 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 			"reuse_consent",
 		]
 
-		if not Application.objects.filter(id=application_id).exists():
-			raise ApplicationDoesNotExist
-
 		data = {}
-		application = Application.objects.get(id=application_id)
-		client_id = application.client_id
-		client = None
-		if Client.objects.filter(client_id=client_id).exists():
-			client = Client.objects.get(client_id=client_id)
-		else:
-			raise ApplicationOidcClientDoesNotExist
+		application, client = self.get_application_and_client(application_id=application_id)
 
 		for field in APPLICATION_FIELDS:
 			if hasattr(application, field):
 				data[field] = getattr(application, field)
 			else:
 				raise ApplicationFieldDoesNotExist(data={"field":field})
+
+		if isinstance(data["scopes"], str):
+			data["scopes"] = data["scopes"].split()
 
 		for field in CLIENT_FIELDS:
 			if hasattr(client, field):
@@ -224,5 +221,75 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 				"code": code,
 				"code_msg": code_msg,
 				"data": data
+			 }
+		)
+
+	@auth_required()
+	def update(self, request, pk):
+		user: User = request.user
+		data: dict = request.data
+		code = 0
+		code_msg = "ok"
+		application_id = int(pk)
+		APPLICATION_FIELDS = [
+			"name",
+			"redirect_uris",
+			"scopes",
+			"enabled",
+		]
+		CLIENT_FIELDS = [
+			"require_consent",
+			"reuse_consent",
+		]
+		FIELDS_EXCLUDE = [
+			"id",
+			"client_id",
+			"client_secret",
+		]
+
+		for field in FIELDS_EXCLUDE:
+			if field in data:
+				data.pop(field)
+
+		application, client = self.get_application_and_client(application_id=application_id)
+		application: Application
+		client: Client
+		new_application = {}
+		new_client = {}
+
+		for field in APPLICATION_FIELDS:
+			if hasattr(application, field) and field in data:
+				new_application[field] = data.pop(field)
+
+		if (
+			"scopes" in new_application and
+			not isinstance(new_application["scopes"], str) and
+	  		isinstance(new_application["scopes"], Iterable)
+		):
+			new_application["scopes"] = " ".join(new_application["scopes"])
+
+		serializer = self.serializer_class(data=new_application)
+		if not serializer.is_valid():
+			raise BadRequest(data={
+				"errors": serializer.errors
+			})
+
+		for field in CLIENT_FIELDS:
+			if hasattr(client, field) and field in data:
+				new_client[field] = data.pop(field)
+
+		with transaction.atomic():
+			for attr in new_application:
+				setattr(application, attr, new_application[attr])
+			application.save()
+			for attr in new_client:
+				setattr(client, attr, new_client[attr])
+			client.save()
+
+		return Response(
+			 data={
+				"code": code,
+				"code_msg": code_msg,
+				"data": {"id":application_id}
 			 }
 		)

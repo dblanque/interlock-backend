@@ -1,4 +1,3 @@
-# serializers.py
 from rest_framework import serializers
 from django.core.validators import RegexValidator
 from core.models.application import Application
