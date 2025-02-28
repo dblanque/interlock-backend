@@ -21,8 +21,8 @@ def auth_required(require_admin: bool = True):
 				return RemoveTokenResponse(request=request)
 			if user.deleted: raise PermissionDenied()
 
-			if require_admin == True or require_admin is None:
-				if user.username != 'admin' and (user.is_superuser == False or not user):
+			if require_admin is True or require_admin is None:
+				if user.is_superuser is False or not user:
 					raise PermissionDenied()
 			return view_func(request, *args, **kwargs)
 		return _wrapped
