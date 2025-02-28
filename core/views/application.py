@@ -13,10 +13,16 @@ from core.views.base import BaseViewSet
 ### Models
 from core.models.user import User
 from core.models.application import Application
+from oidc_provider.models import Client
 
 ### Exception
 from core.exceptions.base import BadRequest
-from core.exceptions.application import ApplicationExists
+from core.exceptions.application import (
+	ApplicationExists,
+	ApplicationDoesNotExist,
+	ApplicationFieldDoesNotExist,
+	ApplicationOidcClientDoesNotExist
+)
 
 ### Mixins
 from .mixins.application import ApplicationViewMixin
@@ -30,6 +36,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
+from django.db import transaction, IntegrityError
 from typing import Iterable
 from core.decorators.login import auth_required
 import logging
@@ -47,6 +54,7 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 		code = 0
 		code_msg = "ok"
 		FIELDS_TO_SEND = [
+			"id",
 			"name",
 			"redirect_uris",
 		]
@@ -64,6 +72,8 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 			"applications": application_data,
 			"headers": FIELDS_TO_SEND
 		}
+		data_headers: list = data["headers"]
+		data_headers.remove("id")
 
 		return Response(
 			 data={
@@ -81,14 +91,23 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 		data: dict = request.data
 		code = 0
 		code_msg = "ok"
-		FIELDS_DISALLOWED = [
+		FIELDS_EXCLUDE = [
 			"client_id",
 			"client_secret",
 			"enabled"
 		]
-		for field in FIELDS_DISALLOWED:
+		FIELDS_EXTRA = [
+			"require_consent",
+			"reuse_consent"
+		]
+		for field in FIELDS_EXCLUDE:
 			if field in data:
 				data.pop(field)
+
+		extra_fields = {}
+		for field in FIELDS_EXTRA:
+			if field in data:
+				extra_fields[field] = data.pop(field)
 
 		if not isinstance(data["scopes"], str) and isinstance(data["scopes"], Iterable):
 			data["scopes"] = " ".join(data["scopes"])
@@ -101,8 +120,21 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 
 		if Application.objects.filter(name=serializer.data["name"]).exists():
 			raise ApplicationExists
-		application = Application.objects.create(**serializer.data)
-		application.save()
+
+		with transaction.atomic():
+			application = Application.objects.create(**serializer.data)
+			client = Client.objects.create(
+				name=application.name,
+				client_id=application.client_id,
+				client_secret=application.client_secret,
+				redirect_uris=application.redirect_uris.split(','),
+				scope=application.scopes.split(),
+				require_consent=extra_fields["require_consent"] or False,
+				reuse_consent=extra_fields["reuse_consent"] or False,
+				# Other OIDC client settings (e.g., token expiration)
+			)
+			application.save()
+			client.save()
 
 		return Response(
 			 data={
@@ -113,5 +145,84 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 					application.client_id,
 					application.client_secret,
 				}
+			 }
+		)
+
+	@action(detail=True, methods=["delete"], url_path="delete")
+	@auth_required()
+	def delete(self, request, pk):
+		user: User = request.user
+		data: dict = request.data
+		code = 0
+		code_msg = "ok"
+		application_id = int(pk)
+
+		if not Application.objects.filter(id=application_id).exists():
+			raise ApplicationDoesNotExist
+
+		with transaction.atomic():
+			application = Application.objects.get(id=application_id)
+			client_id = application.client_id
+			if Client.objects.filter(client_id=client_id).exists():
+				Client.objects.get(client_id=client_id).delete()
+			application.delete_permanently()
+
+		return Response(
+			 data={
+				"code": code,
+				"code_msg": code_msg,
+				"id": application_id
+			 }
+		)
+
+	@action(detail=True, methods=["get"])
+	@auth_required()
+	def fetch(self, request, pk):
+		user: User = request.user
+		data: dict = request.data
+		code = 0
+		code_msg = "ok"
+		application_id = int(pk)
+		APPLICATION_FIELDS = [
+			"id",
+			"name",
+			"client_id",
+			"client_secret",
+			"enabled",
+		]
+		CLIENT_FIELDS = [
+			"require_consent",
+			"reuse_consent",
+		]
+
+		if not Application.objects.filter(id=application_id).exists():
+			raise ApplicationDoesNotExist
+
+		data = {}
+		application = Application.objects.get(id=application_id)
+		client_id = application.client_id
+		client = None
+		if Client.objects.filter(client_id=client_id).exists():
+			client = Client.objects.get(client_id=client_id)
+		else:
+			raise ApplicationOidcClientDoesNotExist
+
+		for field in APPLICATION_FIELDS:
+			if hasattr(application, field):
+				data[field] = getattr(application, field)
+			else:
+				raise ApplicationFieldDoesNotExist(data={"field":field})
+
+		for field in CLIENT_FIELDS:
+			if hasattr(client, field):
+				data[field] = getattr(client, field)
+			else:
+				raise ApplicationFieldDoesNotExist(data={"field":field})
+
+		return Response(
+			 data={
+				"code": code,
+				"code_msg": code_msg,
+				"data": data
 			 }
 		)
