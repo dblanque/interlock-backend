@@ -5,7 +5,7 @@ from django.utils.translation import ugettext_lazy as _
 from oidc_provider.lib.claims import ScopeClaims
 from core.views.mixins.user import UserViewLDAPMixin
 from interlock_backend.ldap.connector import LDAPConnector
-from interlock_backend.ldap import adsi as ldap_adsi
+from interlock_backend.ldap.adsi import search_filter_add
 
 class CustomScopeClaims(ScopeClaims, UserViewLDAPMixin):
     def setup(self):
@@ -36,9 +36,9 @@ class CustomScopeClaims(ScopeClaims, UserViewLDAPMixin):
                 ]
 
                 # Add filter for username
-                self.ldap_filter_object = ldap_adsi.search_filter_add(
+                self.ldap_filter_object = search_filter_add(
                     self.ldap_filter_object,
-                    RunningSettings.LDAP_AUTH_USER_FIELDS["username"] + "=" + self.user.username
+                    f"{RunningSettings.LDAP_AUTH_USER_FIELDS['username']}={self.user.username}"
                 )
                 ldap_object_options: LDAPObjectOptions = {
                     "connection": self.ldap_connection,
