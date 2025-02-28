@@ -180,7 +180,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			)
 
 		# Remove attributes to return as table headers
-		valid_attributes = self.ldap_filter_attr
+		valid_attributes: list = self.ldap_filter_attr
 		remove_attributes = [ 
 			'distinguishedName', 
 			'userAccountControl', 
