@@ -14,6 +14,7 @@ def generate_client_secret():
 
 class Application(BaseModel):
     name = models.CharField(max_length=255)
+    enabled = models.BooleanField(default=True)
     client_id = models.CharField(max_length=255, default=generate_client_id, unique=True)
     client_secret = models.CharField(max_length=255, default=generate_client_secret)
     redirect_uris = models.TextField(help_text="Comma-separated redirect URIs")
