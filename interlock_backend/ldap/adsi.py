@@ -12,7 +12,7 @@
 
 #---------------------------------- IMPORTS -----------------------------------#
 from core.models.ldap_settings_runtime import RunningSettings
-from typing import Union
+from typing import Union, Literal
 import logging
 
 logger = logging.getLogger(__name__)
@@ -133,7 +133,9 @@ LDAP_PERMS = {
 }
 
 LDAP_PERM_BIN_BASE = "0"*32
-
+LDAP_FILTER_OR = "|"
+LDAP_FILTER_AND = "&"
+LDAP_FILTER_OPERATORS = Literal["|","&"]
 LDAP_BUILTIN_OBJECTS = [
     "Domain Controllers",
     "Computers",
@@ -145,7 +147,12 @@ LDAP_BUILTIN_OBJECTS = [
     "Managed Service Accounts"
 ]
 
-def search_filter_add(filter_string, filter_to_add, operator="&", negate=False):
+def search_filter_add(
+        filter_string: str,
+        filter_to_add: str,
+        operator: LDAP_FILTER_OPERATORS=LDAP_FILTER_AND,
+        negate=False
+    ):
     """ Adds search filter to LDAP Filter string
 
     ARGUMENTS
@@ -156,14 +163,14 @@ def search_filter_add(filter_string, filter_to_add, operator="&", negate=False):
     Returns a string.
     """
     if operator == 'or':
-        operator = '|'
+        operator = LDAP_FILTER_OR
     if operator == 'and':
-        operator = '&'
+        operator = LDAP_FILTER_AND
 
-    if operator == '|' and filter_string.startswith('(!('):
-        logger.warn(filter_to_add)
-        logger.warn('Changed operator to & since you are comparing to a negation with an or')
-        operator = '&'
+    # if operator == LDAP_FILTER_OR and filter_string.startswith('(!('):
+    #     logger.warning(filter_to_add)
+    #     logger.warning(f'Changed operator to {LDAP_FILTER_AND} since you are comparing to a negation with an or')
+    #     operator = LDAP_FILTER_AND
 
     if negate == True:
         prefix = "(!("
@@ -172,7 +179,7 @@ def search_filter_add(filter_string, filter_to_add, operator="&", negate=False):
         prefix = "("
         suffix = ")"
 
-    if operator != "&" and operator != "|" and filter_string != "":
+    if operator != LDAP_FILTER_AND and operator != LDAP_FILTER_OR and filter_string != "":
         raise Exception(f"Invalid Filter Operator {operator}")
     if not filter_string or filter_string == "":
         newFilter = prefix + filter_to_add + suffix
@@ -180,7 +187,11 @@ def search_filter_add(filter_string, filter_to_add, operator="&", negate=False):
     newFilter = "(" + operator + filter_string + prefix + filter_to_add + suffix + ")"
     return newFilter
 
-def search_filter_from_dict(filter_dict: dict, operator: str="|", reverse_key=False):
+def search_filter_from_dict(
+        filter_dict: dict,
+        operator: LDAP_FILTER_OPERATORS=LDAP_FILTER_OR,
+        reverse_key=False
+    ):
     """
     Valid Operators: | &
     """
@@ -192,10 +203,18 @@ def search_filter_from_dict(filter_dict: dict, operator: str="|", reverse_key=Fa
             _ldap_obj_key = object_type
             _ldap_obj_type = object_key
         if type(_ldap_obj_type) == list:
-            for o in _ldap_obj_type:
-                search_filter = search_filter_add(search_filter, o + "=" + _ldap_obj_key, operator)
+            for obj in _ldap_obj_type:
+                search_filter = search_filter_add(
+                    search_filter,
+                    obj + "=" + _ldap_obj_key,
+                    operator
+                )
         else:
-            search_filter = search_filter_add(search_filter, _ldap_obj_type + "=" + _ldap_obj_key, operator)
+            search_filter = search_filter_add(
+                search_filter,
+                _ldap_obj_type + "=" + _ldap_obj_key,
+                operator
+            )
     return search_filter
 
 def bin_as_str(value):

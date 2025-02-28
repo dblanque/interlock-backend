@@ -91,7 +91,10 @@ class LDAPObject():
         self.testFetch = False
         self.ldapAttributes = RunningSettings.LDAP_DIRTREE_ATTRIBUTES
         if 'dn' in kwargs:
-            self.ldapFilter = search_filter_add("", "distinguishedName=" + str(kwargs['dn']))
+            self.ldapFilter = search_filter_add(
+                "",
+                f"distinguishedName={str(kwargs['dn'])}"
+            )
 
         self.__resetKwargs__(kwargs)
 

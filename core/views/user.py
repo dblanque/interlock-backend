@@ -1016,7 +1016,10 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
 
 			# Add filter for username
-			self.ldap_filter_object = ldap_adsi.search_filter_add(self.ldap_filter_object, RunningSettings.LDAP_AUTH_USER_FIELDS["username"] + "=" + user_search)
+			self.ldap_filter_object = ldap_adsi.search_filter_add(
+				self.ldap_filter_object,
+				f"{RunningSettings.LDAP_AUTH_USER_FIELDS['username']}={user_search}"
+			)
 			self.ldap_connection.search(
 				RunningSettings.LDAP_AUTH_SEARCH_BASE,
 				self.ldap_filter_object,

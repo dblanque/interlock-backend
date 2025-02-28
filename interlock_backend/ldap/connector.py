@@ -18,7 +18,10 @@ from interlock_backend.encrypt import (
 	aes_encrypt,
 	aes_decrypt
 )
-from interlock_backend.ldap.adsi import search_filter_add
+from interlock_backend.ldap.adsi import (
+	search_filter_add,
+	LDAP_FILTER_OR
+)
 from ldap3.core.exceptions import LDAPException
 from core.exceptions import ldap as exc_ldap
 from core.views.mixins.logs import LogMixin
@@ -340,7 +343,11 @@ class LDAPConnector(object):
 		"""
 		searchFilter = ""
 		for i in RunningSettings.LDAP_AUTH_USER_LOOKUP_FIELDS:
-			searchFilter = search_filter_add(searchFilter, RunningSettings.LDAP_AUTH_USER_FIELDS[i]+"="+kwargs['username'], '|')
+			searchFilter = search_filter_add(
+				searchFilter,
+				f"{RunningSettings.LDAP_AUTH_USER_FIELDS[i]}={kwargs['username']}",
+				LDAP_FILTER_OR
+			)
 		# Search the LDAP database.
 		if self.connection.search(
 			search_base=RunningSettings.LDAP_AUTH_SEARCH_BASE,

@@ -55,9 +55,11 @@ class GPOViewSet(BaseViewSet):
 			# ! Might have to add cifs-utils as a dependency
 
 			### List GPOs here
-			self.ldap_filter_object = ldap_adsi.search_filter_from_dict({
-				"*":["gpLink", "objectClass"],
-			}, operator="&", reverse_key=False)
+			self.ldap_filter_object = ldap_adsi.search_filter_from_dict(
+				{"*":["gpLink", "objectClass"]},
+				operator=ldap_adsi.LDAP_FILTER_AND,
+				reverse_key=False
+			)
 			try:
 				self.ldap_connection.search(
 					RunningSettings.LDAP_AUTH_SEARCH_BASE,
@@ -89,6 +91,7 @@ class GPOViewSet(BaseViewSet):
 
 			self.ldap_filter_object = ldap_adsi.search_filter_from_dict({
 				"*":"objectClass",
+				# This is from a dev environment, doesn't matter
 				"CN={6AC1786C-016F-11D2-945F-00C04FB984F9},CN=Policies,CN=System,DC=brconsulting":"distinguishedName"
 			}, operator="&", reverse_key=False)
 			try:

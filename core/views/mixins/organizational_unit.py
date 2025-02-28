@@ -14,7 +14,12 @@ from rest_framework import viewsets
 from core.exceptions import dirtree as exc_dirtree
 
 ### Interlock
-from interlock_backend.ldap.adsi import search_filter_add, search_filter_from_dict
+from interlock_backend.ldap.adsi import (
+    search_filter_add,
+    search_filter_from_dict,
+    LDAP_FILTER_AND,
+    LDAP_FILTER_OR,
+)
 from core.models.ldap_settings_runtime import RunningSettings
 
 ### Models
@@ -50,17 +55,25 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
                             fOr = False
 
                         if fOr == True:
-                            operator = "|"
+                            operator = LDAP_FILTER_AND
                         else:
-                            operator = "&"
-                        ldapFilter = search_filter_add(ldapFilter, fType + "=" + f, operator=operator, negate=fExclude)
+                            operator = LDAP_FILTER_OR
+                        ldapFilter = search_filter_add(
+                            ldapFilter,
+                            f"{fType}={f}",
+                            operator=operator,
+                            negate=fExclude
+                        )
                     else:
                         fType = fVal
                         ldapFilter = search_filter_add(ldapFilter, fType + "=" + f)
         else:
             logger.debug("Dirtree fetching with Standard Exclusion Filter")
             if filterDict is None:
-                filterDict = {**RunningSettings.LDAP_DIRTREE_CN_FILTER, **RunningSettings.LDAP_DIRTREE_OU_FILTER}
+                filterDict = {
+                    **RunningSettings.LDAP_DIRTREE_CN_FILTER,
+                    **RunningSettings.LDAP_DIRTREE_OU_FILTER
+                }
             if 'filter' in data and 'exclude' in data['filter']:
                 if len(data['filter']['exclude']) > 0:
                     for f in data['filter']['exclude']:
@@ -78,7 +91,11 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
                 if len(data['filter']['exclude']) > 0:
                     for f in data['filter']['exclude']:
                         fType = data['filter']['exclude'][f]
-                        ldapFilter = search_filter_add(ldapFilter, fType + "=" + f, negate=True)
+                        ldapFilter = search_filter_add(
+                            ldapFilter,
+                            f"{fType}={f}",
+                            negate=True
+                        )
 
         logger.debug("LDAP Filter for Dirtree: ")
         logger.debug(ldapFilter)

@@ -110,7 +110,10 @@ class LDAPRecord(LDAPDNS):
 			raise exc_dns.DNSZoneInRecord
 
 		searchFilter = search_filter_add("", "objectClass=dnsNode")
-		searchFilter = search_filter_add(searchFilter, "distinguishedName=" + self.distinguishedName)
+		searchFilter = search_filter_add(
+			searchFilter,
+			f"distinguishedName={self.distinguishedName}"
+		)
 		attributes=['dnsRecord','dNSTombstoned','name']
 
 		search_target = f"DC={self.zone},{self.dnsroot}"

@@ -86,7 +86,10 @@ class LDAPTree():
         ]
         self.recursive = False
         self.testFetch = False        
-        self.ldapFilter = search_filter_from_dict({**RunningSettings.LDAP_DIRTREE_CN_FILTER, **RunningSettings.LDAP_DIRTREE_OU_FILTER})
+        self.ldapFilter = search_filter_from_dict({
+            **RunningSettings.LDAP_DIRTREE_CN_FILTER,
+            **RunningSettings.LDAP_DIRTREE_OU_FILTER
+        })
         self.ldapAttributes = RunningSettings.LDAP_DIRTREE_ATTRIBUTES
         self.childrenObjectType = 'array'
 
