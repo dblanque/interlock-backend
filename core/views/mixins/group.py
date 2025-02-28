@@ -537,10 +537,10 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 						pass
 				except:
 					logger.error(traceback.format_exc())
-					logger.warn("Unable to update group '" + str(group_cn) + "' with attribute '" + str(key) + "'")
-					logger.warn("Attribute Value:" + str(group_dict[key]))
+					logger.warning("Unable to update group '" + str(group_cn) + "' with attribute '" + str(key) + "'")
+					logger.warning("Attribute Value:" + str(group_dict[key]))
 					if operation is not None:
-						logger.warn("Operation Type: " + str(operation))
+						logger.warning("Operation Type: " + str(operation))
 					self.ldap_connection.unbind()
 					raise exc_groups.GroupUpdate
 

@@ -397,11 +397,11 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 						pass
 				except:
 					print(traceback.format_exc())
-					logger.warn("Unable to update user '" + str(user_name) + "' with attribute '" + str(key) + "'")
-					logger.warn("Attribute Value: " + str(user_data[key]))
-					logger.warn("Attribute Type: " + str(type(user_data[key])))
+					logger.warning("Unable to update user '" + str(user_name) + "' with attribute '" + str(key) + "'")
+					logger.warning("Attribute Value: " + str(user_data[key]))
+					logger.warning("Attribute Type: " + str(type(user_data[key])))
 					if operation is not None:
-						logger.warn("Operation Type: " + str(operation))
+						logger.warning("Operation Type: " + str(operation))
 					self.ldap_connection.unbind()
 					raise exc_user.UserUpdateError
 
@@ -680,7 +680,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		self.ldap_filter_object = ldap_adsi.search_filter_add(
 			self.ldap_filter_object, 
 			RunningSettings.LDAP_AUTH_USER_FIELDS["username"] + "=" + user_to_disable
-			)
+		)
 
 		self.ldap_connection.search(
 			RunningSettings.LDAP_AUTH_SEARCH_BASE, 
