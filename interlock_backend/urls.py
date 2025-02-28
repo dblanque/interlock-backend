@@ -64,13 +64,15 @@ if DEBUG == True:
 [router.register(f"api/{name}", view_set, basename=name) for name, view_set in named_view_sets.items()]
 
 # URL PATTERNS SET HERE
-
 urlpatterns = [
 	# {BASE_URL} /
 	path("", include(router.urls)),
-	path("api/settings/fetch/<int:pk>/", SettingsViewSet.as_view({
+	path("api/settings/fetch/<int:pk>/",
+		SettingsViewSet.as_view({
 		"get":"fetch"
-	}), name="settings-fetch"),
+		}),
+		name="settings-fetch"
+	),
 
 	# {BASE_URL} /admin
 	path("admin/", admin.site.urls),
