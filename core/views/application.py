@@ -59,6 +59,9 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 			"redirect_uris",
 			"enabled",
 		]
+		HEADERS_EXCLUDE = [
+			"id"
+		]
 
 		application_query =  Application.objects.all()
 		application_data = []
@@ -74,8 +77,9 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 			"headers": FIELDS_TO_SEND
 		}
 		data_headers: list = data["headers"]
-		data_headers.remove("id")
 
+		for field in HEADERS_EXCLUDE:
+			data_headers.remove(field)
 		return Response(
 			 data={
 				"code": code,
@@ -199,7 +203,7 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 		]
 
 		data = {}
-		application, client = self.get_application_and_client(application_id=application_id)
+		application, client, response_types = self.get_application_data(application_id=application_id)
 
 		for field in APPLICATION_FIELDS:
 			if hasattr(application, field):
@@ -216,6 +220,11 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 			else:
 				raise ApplicationFieldDoesNotExist(data={"field":field})
 
+		data["response_types"] = {}
+		if response_types:
+			for r_type in response_types.values():
+				code = r_type["value"]
+				data["response_types"][code] = r_type
 		return Response(
 			 data={
 				"code": code,
@@ -251,7 +260,7 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 			if field in data:
 				data.pop(field)
 
-		application, client = self.get_application_and_client(application_id=application_id)
+		application, client = self.get_application_data(application_id=application_id)
 		application: Application
 		client: Client
 		new_application = {}
@@ -277,6 +286,9 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 		for field in CLIENT_FIELDS:
 			if hasattr(client, field) and field in data:
 				new_client[field] = data.pop(field)
+
+		if "redirect_uris" in new_application:
+			new_client["redirect_uris"] = new_application["redirect_uris"].split(",")
 
 		with transaction.atomic():
 			for attr in new_application:
