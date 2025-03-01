@@ -23,6 +23,7 @@ from core.models.ldap_object import LDAPObject, LDAPObjectOptions
 from interlock_backend.ldap.connector import LDAPConnector
 from core.views.mixins.logs import LogMixin
 from ldap3 import (
+	Connection,
 	MODIFY_ADD,
 	MODIFY_DELETE,
 	MODIFY_INCREMENT,
@@ -54,7 +55,7 @@ class UserViewMixin(viewsets.ViewSetMixin):
 	pass
 
 class UserViewLDAPMixin(viewsets.ViewSetMixin):
-	ldap_connection = None
+	ldap_connection: Connection = None
 	ldap_filter_object = None
 	ldap_filter_attr = None
 
@@ -643,7 +644,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		user = self.ldap_connection.entries
 		dn = str(user[0].distinguishedName)
 		permList = ldap_adsi.list_user_perms(user=user[0], user_is_object=False)
-		
+
 		try:
 			newPermINT = ldap_adsi.calc_permissions(permList, perm_remove='LDAP_UF_ACCOUNT_DISABLE')
 		except:
