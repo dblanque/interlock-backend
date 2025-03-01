@@ -156,6 +156,8 @@ class LDAPConnectionOptions(TypedDict):
 	is_authenticating: NotRequired[bool]
 
 class LDAPConnector(object):
+	connection: ldap3.Connection
+
 	def __enter__(self):
 		logger.info(f"Connection {self.uuid} opened.")
 		# LOG Open Connection Events
@@ -167,7 +169,7 @@ class LDAPConnector(object):
 				affectedObject=f"{self.uuid}"
 			)
 		return self
-	
+
 	def __exit__(self, exc_type, exc_value, traceback) -> None:
 		self.connection.unbind()
 		# LOG Open Connection Events
