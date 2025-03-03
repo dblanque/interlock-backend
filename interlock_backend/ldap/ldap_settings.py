@@ -111,7 +111,7 @@ def getSettingsList(preset_id: int=1):
 	for setting_key, setting_type in CMAPS.items():
 		setting_type: str
 		# Init Object/Dict
-		data[setting_key] = dict()
+		data[setting_key] = {}
 		ldap_setting = None
 		if not setting_type.startswith(f"{LDAP_SETTING_PREFIX}_"):
 			normalized_type = f"{LDAP_SETTING_PREFIX}_{setting_type.lower()}"

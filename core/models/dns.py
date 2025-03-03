@@ -133,7 +133,7 @@ class LDAPRecord(LDAPDNS):
 		]
 
 		result = list()
-		record_dict = dict()
+		record_dict = {}
 
 		if self.rawEntry['type'] == 'searchResEntry':
 			if self.rawEntry['dn'] == self.distinguishedName:

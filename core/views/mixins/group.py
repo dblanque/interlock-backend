@@ -484,7 +484,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		# We need to check if the attributes exist in the LDAP Object already
 		# To know what operation to apply. This is VERY important.
-		arguments = dict()
+		arguments = {}
 		operation = None
 		for key in group_dict:
 				try:

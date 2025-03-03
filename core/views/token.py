@@ -47,7 +47,7 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 			raise e
 
 		validated_data = serializer.validated_data
-		tokens = dict()
+		tokens = {}
 		for k in ['access', 'refresh']:
 			tokens[k] = validated_data.pop(k)
 

@@ -108,7 +108,7 @@ def get_settings(uuid) -> dict:
 	logger.info(f"Re-synchronizing settings for {this_module} (Configuration Instance {uuid})")
 	all_tables = connection.introspection.table_names()
 	active_preset = None
-	r = dict()
+	r = {}
 
 	if "core_ldappreset" in all_tables:
 		active_preset = LDAPPreset.objects.get(active=True)

@@ -45,7 +45,7 @@ class GUID():
 	"""
 
 	def __init__(self, guid: Union[bytearray, list, str]):
-		self.data = dict()
+		self.data = {}
 		if isinstance(guid, str):
 			self.from_str(guid_str=guid)
 		else:

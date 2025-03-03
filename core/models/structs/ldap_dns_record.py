@@ -181,7 +181,7 @@ def record_to_dict(record, ts=False):
     except KeyError:
         rtype = 'Unsupported'
 
-    record_dict = dict()
+    record_dict = {}
 
     # Check if record is Tombstoned / Inactive
     if ts and len(ts) > 0:

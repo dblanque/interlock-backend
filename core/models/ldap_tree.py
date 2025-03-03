@@ -118,7 +118,7 @@ class LDAPTree():
         if self.childrenObjectType == 'array':
             children = list()
         else:
-            children = dict()
+            children = {}
 
         if self.testFetch == True:
             baseLevelList = [ baseLevelList[0] ]
@@ -189,7 +189,7 @@ class LDAPTree():
         if self.childrenObjectType == 'array':
             result = list()
         else:
-            result = dict()
+            result = {}
 
         # Send Query to LDAP Server(s)
         ldapSearch = self.connection.extend.standard.paged_search(
@@ -206,7 +206,7 @@ class LDAPTree():
         ]
 
         for entry in ldapSearch:
-            currentObject = dict()
+            currentObject = {}
             # Set sub-object main attributes
             self.subobjectId += 1
             currentObject['id'] = self.subobjectId
@@ -226,7 +226,7 @@ class LDAPTree():
             if self.childrenObjectType == 'array' and 'children' not in currentObject:
                 currentObject['children'] = list()
             elif 'children' not in currentObject:
-                currentObject['children'] = dict()
+                currentObject['children'] = {}
 
             # Set all other attributes
             for attr in entry['attributes']:
