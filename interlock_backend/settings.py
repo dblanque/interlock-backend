@@ -196,6 +196,10 @@ OIDC_SKIP_CONSENT_ENABLE = False
 OIDC_EXTRA_SCOPE_CLAIMS = 'core.views.mixins.oidc.CustomScopeClaims'
 OIDC_TOKEN_EXPIRE = 86400 # Default is 1 day
 
+##########################################################################################
+######################################### LOGGING ########################################
+##########################################################################################
+
 if not os.path.exists(LOG_FILE_FOLDER):
     os.makedirs(LOG_FILE_FOLDER)
 
@@ -205,6 +209,15 @@ if not os.path.exists(LOG_FILE_PATH):
 
 if not LOG_FILE_PATH:
     raise ImproperlyConfigured("No LOG_FILE_PATH found.")
+
+# ! DO NOT EVER
+# ! FOR ANY REASON
+# ! USE THIS IN PRODUCTION
+DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS = False
+# ! NO MATTER WHAT
+# ! NO MATTER WHERE
+# ! FOR ANY REASON
+# ! - Michael Scott
 
 LOG_LEVEL = "INFO"
 LDAP3_MODULE_LOG_LEVEL = "WARNING"
@@ -248,6 +261,10 @@ LOGGING = {
     },
 }
 
+##########################################################################################
+####################################### DATABASE #########################################
+##########################################################################################
+
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
@@ -290,7 +307,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 DEFAULT_RENDERER_CLASSES = (
     'rest_framework.renderers.JSONRenderer',
 )
-
 if DEBUG:
     DEFAULT_RENDERER_CLASSES = DEFAULT_RENDERER_CLASSES + (
         'rest_framework.renderers.BrowsableAPIRenderer',
