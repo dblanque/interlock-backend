@@ -144,7 +144,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			return groupTypes
 		
 	def list_groups(self):
-		data = list()
+		data = []
 		self.ldap_connection.search(
 			RunningSettings.LDAP_AUTH_SEARCH_BASE, 
 			self.ldap_filter_object,
@@ -336,7 +336,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		if 'membersToAdd' in group_dict:
 			membersToAdd = group_dict.pop('membersToAdd')
 		else:
-			membersToAdd = list()
+			membersToAdd = []
 
 		logger.debug('Creating group in DN Path: ' + group_data['path'])
 		try:
@@ -468,7 +468,10 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				group_dict.pop(key)
 
 		if 'membersToAdd' in data and 'membersToRemove' in data:
-			if data['membersToAdd'] == data['membersToRemove'] and data['membersToAdd'] != list():
+			if (
+				data['membersToAdd'] == data['membersToRemove'] and
+				data['membersToAdd']
+			) != []:
 				self.ldap_connection.unbind()
 				logger.error(data)
 				raise exc_groups.BadMemberSelection

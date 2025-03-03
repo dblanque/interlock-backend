@@ -291,7 +291,7 @@ class DNS_RPC_NAME(Structure):
 
     def toRPCName(self, valueString):
         length = len(valueString)
-        dnsName = list()
+        dnsName = []
         for i in range(length):
             # Convert character to ASCII single byte character.
             dnsName.append(ord(valueString[i]))

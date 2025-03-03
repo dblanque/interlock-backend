@@ -124,7 +124,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		group = LDAPObject(**args)
 		return group.attributes
 
-	def calc_perms_from_list(self, permission_list=list()):
+	def calc_perms_from_list(self, permission_list=None):
+		if permission_list is None:
+			permission_list = []
 		user_perms = 0
 		if len(permission_list) > 0:
 			# Add permissions selected in user creation
@@ -151,7 +153,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		* headers: Headers list() for the front-end data-table
 		* users: Users dict()
 		"""
-		user_list = list()
+		user_list = []
 
 		# Exclude Computer Accounts if settings allow it
 		if RunningSettings.EXCLUDE_COMPUTER_ACCOUNTS == True:
@@ -223,7 +225,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				print(f"Could not get user status for DN: {user_dict['distinguishedName']}")
 
 			user_list.append(user_dict)
-		result = dict()
+		result = {}
 		result["users"] = user_list
 		result["headers"] = valid_attributes
 		return result
@@ -249,7 +251,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		except:
 			raise exc_user.UserDNPathException
 
-		arguments = dict()
+		arguments = {}
 		if 'permission_list' in user_data:
 			arguments['userAccountControl'] = self.calc_perms_from_list(user_data['permission_list'])
 		else:
@@ -351,7 +353,10 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		# Catch rare occurring exception
 		if 'groupsToAdd' in user_data and 'groupsToRemove' in user_data:
-			if user_data['groupsToAdd'] == user_data['groupsToRemove'] and user_data['groupsToAdd'] != list():
+			if (
+				user_data['groupsToAdd'] == user_data['groupsToRemove']
+				and user_data['groupsToAdd']
+			) != []:
 				self.ldap_connection.unbind()
 				print(user_data)
 				raise exc_user.BadGroupSelection
@@ -371,7 +376,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			user_data.pop('memberOf')
 
 		################### START STANDARD ARGUMENT UPDATES ####################
-		arguments = dict()
+		arguments = {}
 		operation = None
 		for key in user_data:
 				try:
@@ -571,7 +576,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				affectedObject=user_search
 			)
 
-		memberOfObjects = list()
+		memberOfObjects = []
 		if 'memberOf' in user_dict:
 			memberOf = user_dict.pop('memberOf')
 			if isinstance(memberOf, list):
@@ -621,19 +626,22 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				user_dict['sAMAccountType'] = accountType
 		return user_dict
 
-	def ldap_user_enable(self, user_object):
-		user_to_enable = user_object['username']
+	def ldap_user_change_status(self, user_object, enabled: bool):
+		affected_user = user_object['username']
 		self.ldap_filter_object = ""
 
 		# Exclude Computer Accounts if settings allow it
 		if RunningSettings.EXCLUDE_COMPUTER_ACCOUNTS == True:
-			self.ldap_filter_object = ldap_adsi.search_filter_add(self.ldap_filter_object, "!(objectclass=computer)")
+			self.ldap_filter_object = ldap_adsi.search_filter_add(
+				self.ldap_filter_object, 
+				"!(objectclass=computer)"
+			)
 
 		# Add filter for username
 		self.ldap_filter_object = ldap_adsi.search_filter_add(
 			self.ldap_filter_object, 
-			RunningSettings.LDAP_AUTH_USER_FIELDS["username"] + "=" + user_to_enable
-			)
+			RunningSettings.LDAP_AUTH_USER_FIELDS["username"] + "=" + affected_user
+		)
 
 		self.ldap_connection.search(
 			RunningSettings.LDAP_AUTH_SEARCH_BASE, 
@@ -645,63 +653,19 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		dn = str(user[0].distinguishedName)
 		permList = ldap_adsi.list_user_perms(user=user[0], user_is_object=False)
 
+		if dn == RunningSettings.LDAP_AUTH_CONNECTION_USER_DN:
+			raise exc_user.UserAntiLockout
+
 		try:
-			newPermINT = ldap_adsi.calc_permissions(permList, perm_remove='LDAP_UF_ACCOUNT_DISABLE')
+			if enabled is True:
+				newPermINT = ldap_adsi.calc_permissions(permList, perm_remove='LDAP_UF_ACCOUNT_DISABLE')
+			else:
+				newPermINT = ldap_adsi.calc_permissions(permList, perm_add='LDAP_UF_ACCOUNT_DISABLE')		
 		except:
 			print(traceback.format_exc())
 			self.ldap_connection.unbind()
 			raise exc_user.UserPermissionError
-
-		self.ldap_connection.modify(dn,
-			{'userAccountControl':[(MODIFY_REPLACE, [ newPermINT ])]}
-		)
-
-		if RunningSettings.LDAP_LOG_UPDATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=self.request.user.id,
-				actionType="UPDATE",
-				objectClass="USER",
-				affectedObject=user_to_enable,
-				extraMessage="ENABLE"
-			)
 		
-		logger.debug(self.ldap_connection.result)
-		return self.ldap_connection
-
-	def ldap_user_disable(self, user_object):
-		user_to_disable = user_object['username']
-		self.ldap_filter_object = ""
-
-		# Exclude Computer Accounts if settings allow it
-		if RunningSettings.EXCLUDE_COMPUTER_ACCOUNTS == True:
-			self.ldap_filter_object = ldap_adsi.search_filter_add(self.ldap_filter_object, "!(objectclass=computer)")
-
-		# Add filter for username
-		self.ldap_filter_object = ldap_adsi.search_filter_add(
-			self.ldap_filter_object, 
-			RunningSettings.LDAP_AUTH_USER_FIELDS["username"] + "=" + user_to_disable
-		)
-
-		self.ldap_connection.search(
-			RunningSettings.LDAP_AUTH_SEARCH_BASE, 
-			self.ldap_filter_object, 
-			attributes=self.ldap_filter_attr
-		)
-
-		user = self.ldap_connection.entries
-		dn = str(user[0].distinguishedName)
-		permList = ldap_adsi.list_user_perms(user=user[0], user_is_object=False)
-
-		if dn == RunningSettings.LDAP_AUTH_CONNECTION_USER_DN: raise exc_user.UserAntiLockout
-
-		try:
-			newPermINT = ldap_adsi.calc_permissions(permList, perm_add='LDAP_UF_ACCOUNT_DISABLE')
-		except:
-			print(traceback.format_exc())
-			self.ldap_connection.unbind()
-			raise exc_user.UserPermissionError
-
 		self.ldap_connection.modify(dn,
 			{'userAccountControl':[(MODIFY_REPLACE, [ newPermINT ])]}
 		)
@@ -712,8 +676,8 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				user_id=self.request.user.id,
 				actionType="UPDATE",
 				objectClass="USER",
-				affectedObject=user_to_disable,
-				extraMessage="DISABLE"
+				affectedObject=affected_user,
+				extraMessage="ENABLE" if enabled is True else "DISABLE"
 			)
 
 		logger.debug("Located in: "+__name__+".disable")

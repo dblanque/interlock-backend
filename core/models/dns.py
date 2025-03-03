@@ -132,7 +132,7 @@ class LDAPRecord(LDAPDNS):
 			'DomainDnsZones'
 		]
 
-		result = list()
+		result = []
 		record_dict = {}
 
 		if self.rawEntry['type'] == 'searchResEntry':

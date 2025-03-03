@@ -116,7 +116,7 @@ class LDAPTree():
         )
         baseLevelList = self.connection.entries
         if self.childrenObjectType == 'array':
-            children = list()
+            children = []
         else:
             children = {}
 
@@ -187,7 +187,7 @@ class LDAPTree():
 
         # If children object type should be Array
         if self.childrenObjectType == 'array':
-            result = list()
+            result = []
         else:
             result = {}
 
@@ -224,7 +224,7 @@ class LDAPTree():
                 currentObject['builtin'] = True
             # Set the sub-object children
             if self.childrenObjectType == 'array' and 'children' not in currentObject:
-                currentObject['children'] = list()
+                currentObject['children'] = []
             elif 'children' not in currentObject:
                 currentObject['children'] = {}
 
@@ -275,7 +275,7 @@ class LDAPTree():
             if self.recursive == True and currentObject['type'].lower() in self.containerTypes and self.__getCN__(distinguishedName).lower() != "system":
                 children = self.__getObjectChildren__(entry['dn'])
             else:
-                children = list()
+                children = []
 
             # Set the sub-object children
             if self.childrenObjectType == 'array' and children:

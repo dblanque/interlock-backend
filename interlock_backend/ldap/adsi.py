@@ -238,7 +238,7 @@ def parse_permissions_int(raw_user_permissions: int, user_name=None):
     """
     Parses a raw LDAP Permission Integer Bitmap to a list.
     """
-    permissions_list = list()
+    permissions_list = []
     i = 0
 
     for n in range(0, 32): # Loop for each bit in 0-32

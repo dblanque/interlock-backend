@@ -52,7 +52,7 @@ def get_random_string(length: int) -> str:
     return result_str
 
 def generate_recovery_codes(amount: int) -> list[str]:
-	codes = list()
+	codes = []
 	for i in range(amount):
 		codes.append(f"{get_random_string(4)}-{get_random_string(4)}-{get_random_string(4)}")
 	return codes
@@ -76,7 +76,7 @@ def delete_device_totp_for_user(user: User) -> tuple[int, dict[str, int]]:
 	if not device:
 		return True
 	totp_device = TOTPDevice.objects.get(user_id=user.id)
-	user.recovery_codes = list()
+	user.recovery_codes = []
 	user.save()
 	return totp_device.delete()
 

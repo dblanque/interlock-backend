@@ -58,7 +58,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		code = 0
 		active_preset = self.get_active_settings_preset()
 
-		presets = list()
+		presets = []
 		for p in LDAPPreset.objects.all():
 			presets.append({
 				"name": p.name,

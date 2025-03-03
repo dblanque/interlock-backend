@@ -172,7 +172,7 @@ class LDAPObject():
                     print(e)
             elif str_key not in self.attributes and str_value != "[]":
                 if len(attr_value) > 1:
-                    self.attributes[str_key] = list()
+                    self.attributes[str_key] = []
                     for k, v in enumerate(attr_value):
                         self.attributes[str_key].append(attr_value[k])
                 else:

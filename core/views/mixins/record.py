@@ -47,7 +47,9 @@ logger = logging.getLogger(__name__)
 class DNSRecordMixin(DomainViewMixin):
 	ldap_connection = None
 
-	def validate_record_data(self, record_data, required_values=list()):
+	def validate_record_data(self, record_data, required_values=None):
+		if required_values is None:
+			required_values = []
 		if 'type' not in record_data:
 			raise exc_dns.DNSRecordTypeMissing
 
