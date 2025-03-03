@@ -24,6 +24,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
+from core.constants.group import GroupViewsetFilterAttributeBuilder
 from core.decorators.login import auth_required
 from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.adsi import (
@@ -37,6 +38,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 class GroupsViewSet(BaseViewSet, GroupViewMixin):
+	filter_attr_builder = GroupViewsetFilterAttributeBuilder
 
 	@auth_required()
 	def list(self, request):
@@ -50,12 +52,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 			self.ldap_connection = ldc.connection
 
 			self.ldap_filter_object = search_filter_add("", "objectclass=" + 'group')
-			self.ldap_filter_attr = [
-				'cn',
-				'distinguishedName',
-				'groupType',
-				'member'
-			]
+			self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_list_filter()
 
 			data, valid_attributes = self.list_groups()
 
@@ -79,14 +76,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 		########################################################################
 		group_search = request.data['group']
 		group_object_class = 'group'
-		self.ldap_filter_attr = [
-			'cn',
-			'mail',
-			'member',
-			'distinguishedName',
-			'groupType',
-			'objectSid'
-		]
+		self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_fetch_filter()
 		self.ldap_filter_object = ""
 		self.ldap_filter_object = search_filter_add(
 			self.ldap_filter_object,
@@ -134,11 +124,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 			)
 
 			# Send LDAP Query for user being created to see if it exists
-			self.ldap_filter_attr = [
-				'cn',
-				'distinguishedName',
-				'userPrincipalName',
-			]
+			self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_insert_filter()
 			self.create_group(group_data=group_data)
 
 		return Response(
