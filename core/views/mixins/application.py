@@ -9,25 +9,46 @@
 #---------------------------------- IMPORTS -----------------------------------#
 ### Models
 from core.models.application import Application
-from oidc_provider.models import Client, ResponseType
+from oidc_provider.models import (
+	Client,
+	ResponseType
+)
 
 ### Exceptions
 from core.exceptions.application import (
+	ApplicationExists,
 	ApplicationDoesNotExist,
+	ApplicationFieldDoesNotExist,
 	ApplicationOidcClientDoesNotExist
 )
+from core.exceptions.base import BadRequest
+
+### Serializers
+from core.serializers.application import ApplicationSerializer
+from core.serializers.oidc import ClientSerializer
 
 ### ViewSets
 from rest_framework import viewsets
 
 ### Others
+from django.db.models.query import QuerySet
+from django.db import transaction
+from typing import Iterable
 import logging
 ################################################################################
 logger = logging.getLogger()
 
-class ApplicationViewMixin(viewsets.ViewSetMixin):
+RESPONSE_TYPE_ID_MAP = {
+	rt.value: rt.id
+	for rt in ResponseType.objects.all()
+}
+RESPONSE_TYPE_CODES = ResponseType.objects.all().values_list("value", flat=True)
 
-	def get_application_data(self, application_id: int) -> tuple[object]:
+class ApplicationViewMixin(viewsets.ViewSetMixin):
+	serializer_class = ApplicationSerializer
+	client_serializer_class = ClientSerializer
+
+	def get_application_data(self, application_id: int) -> tuple[Application, Client, QuerySet[ResponseType]]:
 		"""
 		:returns: (application, client, response_types)
 		:rtype: Application, Client, ResponseType | None
@@ -38,16 +59,230 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 		application = Application.objects.get(id=application_id)
 		client_id = application.client_id
 		client = None
-		response_types = None
 		if Client.objects.filter(client_id=client_id).exists():
 			client = Client.objects.get(client_id=client_id)
 		else:
 			raise ApplicationOidcClientDoesNotExist
 
-		if ResponseType.objects.filter(client=client.id).exists():
-			response_types = ResponseType.objects.filter(client=client.id)
+		return application, client
 
-		return application, client, response_types
+	def set_client_response_types(self, new_response_types: dict, client: Client) -> Client:
+		for key, value in new_response_types.items():
+			# Add key if in update
+			if value is True:
+				client.response_types.add(RESPONSE_TYPE_ID_MAP[key])
+			# Remove key if not present in update
+			else:
+				client.response_types.remove(RESPONSE_TYPE_ID_MAP[key])
+		return client
 
-	def get_all_response_types(self):
-		return ResponseType.objects.all()
+	def list_applications(self):
+		data = {}
+		FIELDS_TO_SEND = [
+			"id",
+			"name",
+			"redirect_uris",
+			"enabled",
+		]
+		HEADERS_EXCLUDE = [
+			"id"
+		]
+
+		application_query =  Application.objects.all()
+		application_data = []
+		for app in application_query:
+			_build_data = {}
+			for field in FIELDS_TO_SEND:
+				if not hasattr(app, field):
+					raise Exception(f"Missing field ({field}) in queryset, is there a database issue?")
+				_build_data[field] = getattr(app, field)
+			application_data.append(_build_data)
+		data = {
+			"applications": application_data,
+			"headers": FIELDS_TO_SEND
+		}
+		data_headers: list = data["headers"]
+
+		for field in HEADERS_EXCLUDE:
+			data_headers.remove(field)
+		data["headers"] = data_headers
+		return data
+
+	def fetch_application(self, application_id: int) -> dict:
+		APPLICATION_FIELDS = [
+			"id",
+			"name",
+			"redirect_uris",
+			"client_id",
+			"client_secret",
+			"scopes",
+			"enabled",
+		]
+		CLIENT_FIELDS = [
+			"require_consent",
+			"reuse_consent",
+		]
+
+		data = {}
+		application, client = self.get_application_data(application_id=application_id)
+		response_types = client.response_type_values()
+
+		for field in APPLICATION_FIELDS:
+			if hasattr(application, field):
+				data[field] = getattr(application, field)
+			else:
+				raise ApplicationFieldDoesNotExist(data={"field":field})
+
+		if isinstance(data["scopes"], str):
+			data["scopes"] = data["scopes"].split()
+
+		for field in CLIENT_FIELDS:
+			if hasattr(client, field):
+				data[field] = getattr(client, field)
+			else:
+				raise ApplicationFieldDoesNotExist(data={"field":field})
+
+		data["response_types"] = {}
+		if response_types:
+			for r_type in RESPONSE_TYPE_CODES:
+				data["response_types"][r_type] = True if r_type in response_types else False
+		return data
+
+	def insert_clean_data(self, data: dict) -> tuple[ApplicationSerializer, dict]:
+		FIELDS_EXCLUDE = [
+			"client_id",
+			"client_secret",
+			"enabled",
+		]
+		FIELDS_EXTRA = [
+			"require_consent",
+			"reuse_consent",
+			"response_types"
+		]
+		for field in FIELDS_EXCLUDE:
+			if field in data:
+				data.pop(field)
+
+		extra_fields = {}
+		for field in FIELDS_EXTRA:
+			if field in data:
+				extra_fields[field] = data.pop(field)
+
+		if not isinstance(data["scopes"], str) and isinstance(data["scopes"], Iterable):
+			data["scopes"] = " ".join(data["scopes"])
+
+		serializer = self.serializer_class(data=data)
+		if not serializer.is_valid():
+			raise BadRequest(data={
+				"errors": serializer.errors
+			})
+		return serializer, extra_fields
+
+	def insert_application(
+			self,
+			serializer: ApplicationSerializer,
+			extra_fields: dict
+		) -> Application:
+		if Application.objects.filter(name=serializer.data["name"]).exists():
+			raise ApplicationExists
+
+		if "response_types" in extra_fields:
+			new_response_types = extra_fields.pop("response_types")
+
+		with transaction.atomic():
+			# APPLICATION
+			application = Application.objects.create(**serializer.data)
+			application.save()
+
+			# CLIENT
+			client = Client.objects.create(
+				name=application.name,
+				client_id=application.client_id,
+				client_secret=application.client_secret,
+				redirect_uris=application.redirect_uris.split(','),
+				scope=application.scopes.split(),
+				**extra_fields
+				# Other OIDC client settings (e.g., token expiration)
+			)
+			if new_response_types:
+				client = self.set_client_response_types(new_response_types, client)
+			client.save()
+		return application
+
+	def update_application(self, application_id: int, data: dict) -> None:
+		APPLICATION_FIELDS = [
+			"name",
+			"redirect_uris",
+			"scopes",
+			"enabled",
+		]
+		CLIENT_FIELDS = [
+			"require_consent",
+			"reuse_consent",
+		]
+		FIELDS_EXCLUDE = [
+			"id",
+			"client_id",
+			"client_secret",
+		]
+
+		for field in FIELDS_EXCLUDE:
+			if field in data:
+				data.pop(field)
+
+		application, client = self.get_application_data(application_id=application_id)
+		application: Application
+		client: Client
+		new_application = {}
+		new_client = {}
+		if "response_types" in data:
+			new_response_types: list = data.pop("response_types")
+
+		for field in APPLICATION_FIELDS:
+			if hasattr(application, field) and field in data:
+				new_application[field] = data.pop(field)
+
+		if (
+			"scopes" in new_application and
+			not isinstance(new_application["scopes"], str) and
+	  		isinstance(new_application["scopes"], Iterable)
+		):
+			new_application["scopes"] = " ".join(new_application["scopes"])
+
+		serializer = self.serializer_class(data=new_application)
+		if not serializer.is_valid():
+			raise BadRequest(data={
+				"errors": serializer.errors
+			})
+
+		for field in CLIENT_FIELDS:
+			if hasattr(client, field) and field in data:
+				new_client[field] = data.pop(field)
+
+		if "redirect_uris" in new_application:
+			new_client["redirect_uris"] = new_application["redirect_uris"].split(",")
+
+		with transaction.atomic():
+			# APPLICATION
+			for attr in new_application:
+				setattr(application, attr, new_application[attr])
+			application.save()
+
+			# CLIENT
+			for attr in new_client:
+				setattr(client, attr, new_client[attr])
+			if new_response_types:
+				client = self.set_client_response_types(new_response_types, client)
+			client.save()
+		return
+
+	def delete_application(self, application_id: int):
+		if not Application.objects.filter(id=application_id).exists():
+			raise ApplicationDoesNotExist
+
+		with transaction.atomic():
+			application = Application.objects.get(id=application_id)
+			client_id = application.client_id
+			if Client.objects.filter(client_id=client_id).exists():
+				Client.objects.get(client_id=client_id).delete()
+			application.delete_permanently()
