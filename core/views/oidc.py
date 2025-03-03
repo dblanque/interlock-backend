@@ -93,16 +93,19 @@ class OidcAuthorizeView(AuthorizeView):
 			redirect_response: HttpResponse = super().get(request, *args, **kwargs)
 			redirect_response.delete_cookie(OIDC_INTERLOCK_LOGIN_COOKIE)
 
-			_redirect_url = redirect_response.headers["Location"]
-			_parsed_url = urlparse(_redirect_url)
-			_parsed_query = parse_qs(_parsed_url.query)
+			if hasattr(redirect_response, "headers"):
+				for location_key in ("Location", "location"):
+					if location_key in redirect_response.headers:
+						_redirect_url = redirect_response.headers[location_key]
+						_parsed_url = urlparse(_redirect_url)
+						_parsed_query = parse_qs(_parsed_url.query)
 
-			if "error" in _parsed_query:
-				_error = _parsed_query["error"][0]
-				login_url = f"{LOGIN_URL}/?{Q_OIDC_FAILED}=true&{Q_OIDC_ERROR}={_error}"
-				redirect_response = redirect(login_url)
-				redirect_response.delete_cookie(OIDC_INTERLOCK_LOGIN_COOKIE)
-				return redirect_response
+				if "error" in _parsed_query:
+					_error = _parsed_query["error"][0]
+					login_url = f"{LOGIN_URL}/?{Q_OIDC_FAILED}=true&{Q_OIDC_ERROR}={_error}"
+					redirect_response = redirect(login_url)
+					redirect_response.delete_cookie(OIDC_INTERLOCK_LOGIN_COOKIE)
+					return redirect_response
 		return redirect_response
 
 	def post(self, request, *args, **kwargs):
