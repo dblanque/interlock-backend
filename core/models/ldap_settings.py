@@ -9,7 +9,6 @@
 #---------------------------------- IMPORTS -----------------------------------#
 from .base import BaseModel
 from django.db import models
-from django.core.exceptions import ImproperlyConfigured
 from .validators.ldap_uri import validate_ldap_uri
 from django.utils.translation import gettext_lazy as _
 from django.contrib.postgres.fields import ArrayField
@@ -55,7 +54,7 @@ LDAP_TYPE_PASSWORD_FIELDS = (
 # ! Only add non-constant values with DB Save-able overrides here.
 # ! You also have to add the settings to the following files:
 # core.models.ldap_settings			<------------ You're Here
-# core.models.ldap_settings_db
+# core.models.ldap_settings_runtime
 # interlock_backend.ldap.defaults
 CMAPS = {
 	"LDAP_AUTH_URL": LDAP_TYPE_LDAP_URI,
