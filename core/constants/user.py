@@ -1,7 +1,7 @@
 
 from core.models.ldap_settings_runtime import RunningSettingsClass
 
-class UserViewsetFilterBuilder():
+class UserViewsetFilterAttributeBuilder():
 	def __init__(self, settings: RunningSettingsClass):
 		self.RunningSettings = settings
 
