@@ -50,7 +50,7 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 	@auth_required()
 	def list(self, request):
 		user: User = request.user
-		data = dict()
+		data = {}
 		code = 0
 		code_msg = "ok"
 		FIELDS_TO_SEND = [
@@ -260,7 +260,7 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 			if field in data:
 				data.pop(field)
 
-		application, client = self.get_application_data(application_id=application_id)
+		application, client, response_types = self.get_application_data(application_id=application_id)
 		application: Application
 		client: Client
 		new_application = {}
