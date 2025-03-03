@@ -21,3 +21,37 @@ class DNSRecordSerializer(serializers.Serializer):
     dwMinimumTtl = serializers.IntegerField(required=False)
     namePrimaryServer = serializers.CharField(required=False)
     zoneAdminEmail = serializers.CharField(required=False)
+
+class DNSRecordASerializer(DNSRecordSerializer):
+    address = serializers.IPAddressField(protocol='ipv4')
+
+class DNSRecordAAAASerializer(DNSRecordSerializer):
+    ipv6Address = serializers.IPAddressField(protocol='ipv6')
+
+class DNSRecordCNAMESerializer(DNSRecordSerializer):
+    nameNode = serializers.CharField()
+
+class DNSRecordNSSerializer(DNSRecordCNAMESerializer):
+    pass
+
+class DNSRecordMXSerializer(DNSRecordSerializer):
+    nameExchange = serializers.CharField()
+    wPreference = serializers.IntegerField()
+
+class DNSRecordTXTSerializer(DNSRecordSerializer):
+    stringData = serializers.CharField()
+
+class DNSRecordSOASerializer(DNSRecordSerializer):
+    namePrimaryServer = serializers.CharField()
+    zoneAdminEmail = serializers.CharField()
+    dwSerialNo = serializers.IntegerField()
+    dwRefresh = serializers.IntegerField()
+    dwRetry = serializers.IntegerField()
+    dwExpire = serializers.IntegerField()
+    dwMinimumTtl = serializers.IntegerField()
+
+class DNSRecordSRVSerializer(DNSRecordSerializer):
+    nameTarget = serializers.CharField()
+    wPriority = serializers.IntegerField()
+    wWeight = serializers.IntegerField()
+    wPort = serializers.IntegerField()
