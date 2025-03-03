@@ -46,7 +46,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 		code_msg = 'ok'
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
 			self.ldap_filter_object = search_filter_add("", "objectclass=" + 'group')
@@ -99,7 +99,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 		########################################################################
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			group_dict, valid_attributes = self.fetch_group()
 
@@ -121,7 +121,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 		data = request.data
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
 			group_data = data['group']
@@ -157,7 +157,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 		data = request.data
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			group_data = data['group']
 			self.ldap_filter_attr = list(group_data.keys())
@@ -180,7 +180,7 @@ class GroupsViewSet(BaseViewSet, GroupViewMixin):
 		group_data = data['group']
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			self.delete_group(group_data=group_data)
 

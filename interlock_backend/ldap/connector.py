@@ -28,6 +28,10 @@ from core.views.mixins.logs import LogMixin
 from core.models.user import User, USER_PASSWORD_FIELDS
 from typing import TypedDict
 from typing_extensions import NotRequired
+from interlock_backend.settings import (
+	DEFAULT_SUPERUSER_USERNAME,
+	DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS
+)
 from core.models.ldap_settings_runtime import RunningSettings
 from uuid import (
 	uuid1,
@@ -138,6 +142,7 @@ def authenticate(*args, **kwargs):
 		if not ldc.rebind(user_dn=user.dn, password=password):
 			return None
 
+	# Save user password in DB (encrypted) for LDAP Operations
 	encrypted_data = aes_encrypt(password)
 	for index, field in enumerate(USER_PASSWORD_FIELDS):
 		setattr(user, field, encrypted_data[index])
@@ -189,20 +194,25 @@ class LDAPConnector(object):
 		self.uuid = uuid1(node=uuid_getnode(), clock_seq=getrandbits(14))
 
 	def __init__(self,
-		user_dn=None,
-		password=None,
-		user: User=None,
-		force_admin=False,
-		plain_text_password=False,
-		get_ldap_info=ldap3.NONE,
-		is_authenticating=False,
-		**kwargs
+			user: User=None,
+			force_admin=False,
+			get_ldap_info=ldap3.NONE,
+			is_authenticating=False,
+			**kwargs
 		):
+		if user:
+			user_dn = getattr(user, "dn", None)
+			user_password = aes_decrypt(*user.encryptedPassword)
+			is_local_superadmin = (
+				hasattr(user, "username") and
+				user.username == DEFAULT_SUPERUSER_USERNAME and
+				user.is_local is True
+			)
 		self.default_user_dn = RunningSettings.LDAP_AUTH_CONNECTION_USER_DN
 		self.default_user_pwd = RunningSettings.LDAP_AUTH_CONNECTION_PASSWORD
 		self.__newUuid__()
 		self.is_authenticating = is_authenticating
-		decrypted_password = self.default_user_pwd
+		super_bind_password = self.default_user_pwd
 
 		if not isinstance(RunningSettings.LDAP_AUTH_TLS_VERSION, Enum):
 			ldapAuthTLSVersion = getattr(ssl, RunningSettings.LDAP_AUTH_TLS_VERSION)
@@ -210,11 +220,13 @@ class LDAPConnector(object):
 			ldapAuthTLSVersion = RunningSettings.LDAP_AUTH_TLS_VERSION
 
 		# If it's an Initial Authentication we need to use the bind user first
-		if force_admin == True or user is not None:
+		if force_admin or user is not None:
 			# If initial auth or user is local interlock superadmin
-			if force_admin == True or (user.username == 'admin' and user.is_local == True):
+			if force_admin or is_local_superadmin:
 				user_dn = self.default_user_dn
-				password = decrypted_password
+				password = super_bind_password
+			else:
+				password = user_password
 
 		if not user_dn and not force_admin:
 			print(traceback.format_exc())
@@ -229,11 +241,6 @@ class LDAPConnector(object):
 		logger.debug(f'LDAP Use SSL: {RunningSettings.LDAP_AUTH_USE_SSL}')
 		logger.debug(f'LDAP Use TLS: {RunningSettings.LDAP_AUTH_USE_TLS}')
 		logger.debug(f'LDAP TLS Version: {ldapAuthTLSVersion}')
-
-		if password != decrypted_password and plain_text_password == False:
-			password = aes_decrypt(
-				*[getattr(user, field) for field in USER_PASSWORD_FIELDS]
-			)
 
 		# Initialize Server Args Dictionary
 		server_args = {
@@ -281,6 +288,8 @@ class LDAPConnector(object):
 				"receive_timeout": RunningSettings.LDAP_AUTH_RECEIVE_TIMEOUT,
 				"check_names": True,
 			}
+			if DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS is True:
+				logger.info(connection_args)
 
 			# ! LDAP / LDAPS
 			c = ldap3.Connection(

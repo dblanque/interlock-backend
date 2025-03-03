@@ -74,10 +74,10 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 	@auth_required()
 	def zones(self, request):
 		user: User = request.user
-		data = dict()
+		data = {}
 		code = 0
 		reqData = request.data
-		responseData = dict()
+		responseData = {}
 
 		if 'filter' in reqData:
 			if 'dnsZone' in reqData['filter']:
@@ -89,7 +89,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 				zoneFilter = None
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			ldapConnection = ldc.connection
 
 			responseData['headers'] = [
@@ -125,7 +125,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 				print(searchFilter)
 				print(e)
 
-			result = list()
+			result = []
 
 			excludeEntries = [
 				'ForestDnsZones',
@@ -197,10 +197,10 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 	@auth_required()
 	def insert(self, request):
 		user: User = request.user
-		data = dict()
+		data = {}
 		code = 0
 		reqData = request.data
-		result = dict()
+		result = {}
 
 		if 'dnsZone' not in reqData:
 			raise exc_dns.DNSZoneNotInRequest
@@ -217,7 +217,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 			raise exc_dns.DNSZoneNotDeletable
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			ldapConnection = ldc.connection
 			dnsList = LDAPDNS(ldapConnection)
 			dnsZones = dnsList.dnszones
@@ -230,10 +230,10 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 			zoneToCreate_forest = 'DC=_msdcs.%s,%s' % (target_zone, dnsList.forestroot)
 			forest_dc = "_msdcs.%s" % (target_zone)
 
-			attributes_dns = dict()
+			attributes_dns = {}
 			attributes_dns['dc'] = target_zone
 
-			attributes_forest = dict()
+			attributes_forest = {}
 			attributes_forest['dc'] = forest_dc
 
 			ldapConnection.add(dn=zoneToCreate_dns, object_class=[ 'dnsZone', 'top' ], attributes=attributes_dns)
@@ -411,7 +411,7 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 			raise exc_dns.DNSZoneNotDeletable
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			ldapConnection = ldc.connection
 			dnsList = LDAPDNS(ldapConnection)
 			dnsZones = dnsList.dnszones
@@ -424,10 +424,10 @@ class DomainViewSet(BaseViewSet, DomainViewMixin):
 			zoneToCreate_forest = 'DC=_msdcs.%s,%s' % (target_zone, dnsList.forestroot)
 			forest_dc = "_msdcs.%s" % (target_zone)
 
-			attributes_dns = dict()
+			attributes_dns = {}
 			attributes_dns['dc'] = target_zone
 
-			attributes_forest = dict()
+			attributes_forest = {}
 			attributes_forest['dc'] = forest_dc
 
 			search_target = 'DC=%s,%s' % (target_zone, dnsList.dnsroot)

@@ -34,7 +34,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
-from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS
+from core.constants.user import UserViewsetFilterBuilder
 from interlock_backend.ldap.connector import LDAPConnector
 from core.models.ldap_settings_runtime import RunningSettings
 from interlock_backend.ldap import adsi as ldap_adsi
@@ -49,27 +49,20 @@ logger = logging.getLogger(__name__)
 
 class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	queryset = User.objects.all()
+	filter_builder_class = UserViewsetFilterBuilder
 
 	@auth_required()
 	def list(self, request):
 		user: User = request.user
-		data = dict()
+		data = {}
 		code = 0
 		code_msg = 'ok'
 
 		self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
-		self.ldap_filter_attr = [
-			"givenName",
-			"sn",
-			"displayName",
-			RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
-			"mail",
-			"distinguishedName",
-			"userAccountControl"
-		]
+		self.ldap_filter_attr = self.filter_builder_class(RunningSettings).get_list_filter()
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			data = self.ldap_user_list()
 
@@ -95,39 +88,10 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			user_search = data['username']
 
 		self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
-		self.ldap_filter_attr = [
-			'givenName', 
-			'sn', 
-			'displayName', 
-			RunningSettings.LDAP_AUTH_USER_FIELDS["username"], 
-			'mail',
-			'telephoneNumber',
-			'streetAddress',
-			'postalCode',
-			'l', # Local / City
-			'st', # State/Province
-			'countryCode', # INT
-			'co', # 2 Letter Code for Country
-			'c', # Full Country Name
-			'wWWHomePage',
-			'distinguishedName',
-			'userPrincipalName',
-			'userAccountControl', # Permission ACLs
-			'whenCreated',
-			'whenChanged',
-			'lastLogon',
-			'badPwdCount',
-			'pwdLastSet',
-			'primaryGroupID',
-			'objectClass',
-			'objectCategory',
-			'objectSid',
-			'sAMAccountType',
-			'memberOf',
-		]
+		self.ldap_filter_attr = self.filter_builder_class(RunningSettings).get_fetch_filter()
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			user_data = self.ldap_user_fetch(user_search=user_search)
 
@@ -164,7 +128,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		user_search = data["username"]
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			self.ldap_user_exists(user_search=user_search)
 			if RunningSettings.LDAP_AUTH_USER_FIELDS["email"] in data and len(data[RunningSettings.LDAP_AUTH_USER_FIELDS["email"]]) > 0:
@@ -189,9 +153,9 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code_msg = 'ok'
 		data = request.data
 		data_keys = ["headers", "users", "path", "mapping"]
-		imported_users = list()
-		skipped_users = list()
-		failed_users = list()
+		imported_users = []
+		skipped_users = []
+		failed_users = []
 
 		for k in data_keys:
 			if k not in data:
@@ -206,11 +170,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		header_mapping = data['mapping']
 
 		######################## Set LDAP Attributes ###########################
-		self.ldap_filter_attr = [
-			RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
-			'distinguishedName',
-			'userPrincipalName',
-		]
+		self.ldap_filter_attr = self.filter_builder_class(RunningSettings).get_bulk_insert_filter()
 
 		# Check if data has a requested placeholder_password
 		required_fields = ['username']
@@ -271,7 +231,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 								raise exc_user.UserFieldValidatorFailed(data=data)
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			for row in user_list:
 				user_search = row[mapped_user_key]
@@ -341,37 +301,10 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		data = data['user']
 
 		######################## Set LDAP Attributes ###########################
-		self.ldap_filter_attr = [
-			RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
-			'distinguishedName',
-			'userPrincipalName',
-			'userAccountControl',
-		]
+		self.ldap_filter_attr = self.filter_builder_class(RunningSettings).get_update_filter()
 		########################################################################
 
-		EXCLUDE_KEYS = [
-			# Added keys for front-end normalization
-			'name',
-			'type',
-
-			# Samba keys to intentionally exclude
-			'password', 
-			'passwordConfirm',
-			'path',
-			'permission_list', # This array is parsed and calculated later
-			'distinguishedName', # We don't want the front-end generated DN
-			'username', # LDAP Uses sAMAccountName
-			'whenChanged',
-			'whenCreated',
-			'lastLogon',
-			'badPwdCount',
-			'pwdLastSet',
-			'is_enabled',
-			'sAMAccountType',
-			'objectCategory',
-			'objectSid',
-			'objectRid'
-		]
+		EXCLUDE_KEYS = self.filter_builder_class(RunningSettings).get_update_exclude_keys()
 
 		user_to_update = data[RunningSettings.LDAP_AUTH_USER_FIELDS["username"]]
 		if 'permission_list' in data: permission_list = data['permission_list']
@@ -381,7 +314,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				del data[key]
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
 			if not self.ldap_user_exists(user_search=user_to_update, return_exception=False):
@@ -425,30 +358,8 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		permission_list = None
 		if len(data["permissions"]) > 0: permission_list = data["permissions"]
 
-		EXCLUDE_KEYS = [
-			# Added keys for front-end normalization
-			'name',
-			'type',
-
-			# Samba keys to intentionally exclude
-			RunningSettings.LDAP_AUTH_USER_FIELDS["email"],
-			'password', 
-			'passwordConfirm',
-			'path',
-			'permission_list', # This array is parsed and calculated later
-			'distinguishedName', # We don't want the front-end generated DN
-			'username', # LDAP Uses sAMAccountName
-			'whenChanged',
-			'whenCreated',
-			'lastLogon',
-			'badPwdCount',
-			'pwdLastSet',
-			'is_enabled',
-			'sAMAccountType',
-			'objectCategory',
-			'objectSid',
-			'objectRid',
-		]
+		EXCLUDE_KEYS = self.filter_builder_class(RunningSettings).get_update_exclude_keys()
+		EXCLUDE_KEYS.append(RunningSettings.LDAP_AUTH_USER_FIELDS["email"])
 		for k in EXCLUDE_KEYS:
 			if k in data["values"]:
 				del data["values"][k]
@@ -457,7 +368,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			raise exc_base.BadRequest
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			for user_to_update in data["users"]:
 				self.ldap_connection = ldc.connection
 
@@ -503,24 +414,19 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		######################## Set LDAP Attributes ###########################
 		self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
-		self.ldap_filter_attr = [
-			RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
-			'distinguishedName',
-			'userPrincipalName',
-			'userAccountControl',
-		]
+		self.ldap_filter_attr = self.filter_builder_class(RunningSettings).get_update_filter()
 		########################################################################
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			success = list()
+			success = []
 			for user_object in data:
 				if disable_users and user_object["is_enabled"]:
-					self.ldap_user_disable(user_object=user_object)
+					self.ldap_user_change_status(user_object=user_object, enabled=False)
 					success.append(user_object["username"])
 				elif not disable_users and not user_object["is_enabled"]:
-					self.ldap_user_enable(user_object=user_object)
+					self.ldap_user_change_status(user_object=user_object, enabled=True)
 					success.append(user_object["username"])
 				else: continue
 
@@ -534,62 +440,29 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@action(detail=False,methods=['post'])
 	@auth_required()
-	def disable(self, request):
+	def changeAccountStatus(self, request):
 		user: User = request.user
+		data: dict = request.data
 		code = 0
 		code_msg = 'ok'
-		data = request.data
 
-		if 'username' not in data:
-			raise BadRequest
+		for required_key in [ "username", "enabled" ]:
+			if required_key not in data:
+				raise BadRequest
+		enabled = data.pop("enabled")
 
 		######################## Set LDAP Attributes ###########################
 		self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
-		self.ldap_filter_attr = [
-			RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
-			'distinguishedName',
-			'userPrincipalName',
-			'userAccountControl'
-		]
+		self.ldap_filter_attr = self.filter_builder_class(RunningSettings).get_update_filter()
 		########################################################################
 
 		if data['username'] == self.request.user: 
 			raise exc_user.UserAntiLockout
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			self.ldap_user_disable(user_object=data)
-
-		return Response(
-			 data={
-				'code': code,
-				'code_msg': code_msg
-			 }
-		)
-
-	@action(detail=False,methods=['post'])
-	@auth_required()
-	def enable(self, request):
-		user: User = request.user
-		code = 0
-		code_msg = 'ok'
-		data = request.data
-
-		######################## Set LDAP Attributes ###########################
-		self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
-		self.ldap_filter_attr = [
-			RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
-			'distinguishedName',
-			'userPrincipalName',
-			'userAccountControl'
-		]
-		########################################################################
-
-		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
-			self.ldap_connection = ldc.connection
-			self.ldap_user_enable(user_object=data)
+			self.ldap_user_change_status(user_object=data, enabled=enabled)
 
 		return Response(
 			 data={
@@ -610,7 +483,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			raise exc_base.CoreException
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			self.ldap_user_delete(user_object=data)
 			username = data['username']
@@ -649,7 +522,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		}
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			for user in data:
 				self.ldap_user_delete(user_object=user)
@@ -672,7 +545,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		ldap_user_search = None
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			if RunningSettings.LDAP_AUTH_USER_FIELDS['username'] in data:
 				ldap_user_search = data[RunningSettings.LDAP_AUTH_USER_FIELDS['username']]
@@ -739,7 +612,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		data = request.data
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			self.ldap_user_unlock(user_object=data)
 			result = self.ldap_connection.result
@@ -768,9 +641,9 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			raise exc_base.CoreException
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			success = list()
+			success = []
 			for user_object in data:
 				self.ldap_user_unlock(user_object=user_object)
 				success.append(user_object['username'])
@@ -802,6 +675,9 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			if k in data: raise exc_base.BadRequest
 
 		# Open LDAP Connection
+		# User doesn't have rights to change any data in LDAP Server
+		# so admin must be forced, auth_required decorator with
+		# require_admin flag is very important
 		with LDAPConnector(force_admin=True) as ldc:
 			self.ldap_connection = ldc.connection
 			ldap_user_search = user.username
@@ -868,42 +744,25 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code_msg = 'ok'
 		data = request.data
 
-		if 'username' in data or RunningSettings.LDAP_AUTH_USER_FIELDS['username'] in data:
-			raise exc_base.BadRequest
+		BAD_KEYS = [
+			'username',
+			RunningSettings.LDAP_AUTH_USER_FIELDS['username']
+		]
+		for k in BAD_KEYS:
+			if k in data: raise exc_base.BadRequest
 
 		# Get basic attributes for this user from AD to compare query and get dn
-		self.ldap_filter_attr = [
-			RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
-			'distinguishedName',
-			'userPrincipalName',
-			'userAccountControl',
-		]
-		EXCLUDE_KEYS = [
-			'can_change_pwd',
-			'password', 
-			'passwordConfirm',
-			'path',
-			'permission_list', # This array is parsed and calculated later
-			'distinguishedName', # We don't want the front-end generated DN
-			'username', # LDAP Uses sAMAccountName
-			'whenChanged',
-			'whenCreated',
-			'lastLogon',
-			'badPwdCount',
-			'pwdLastSet',
-			'is_enabled',
-			'sAMAccountType',
-			'objectCategory',
-			'userAccountControl',
-			'objectClass',
-			'primaryGroupID'
-		]
+		self.ldap_filter_attr = self.filter_builder_class(RunningSettings).get_update_filter()
+		EXCLUDE_KEYS = self.filter_builder_class(RunningSettings).get_update_self_exclude_keys()
 
 		for key in EXCLUDE_KEYS:
 			if key in data:
 				del data[key]
 
 		# Open LDAP Connection
+		# User doesn't have rights to change any data in LDAP Server
+		# so admin must be forced, auth_required decorator with
+		# require_admin flag is very important
 		with LDAPConnector(force_admin=True) as ldc:
 			self.ldap_connection = ldc.connection
 			ldap_user_search = user.username
@@ -986,32 +845,9 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		user_search = user.username
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			self.ldap_filter_attr = [ 
-				'givenName', 
-				'sn', 
-				'displayName', 
-				RunningSettings.LDAP_AUTH_USER_FIELDS["username"], 
-				'mail',
-				'telephoneNumber',
-				'streetAddress',
-				'postalCode',
-				'l', # Local / City
-				'st', # State/Province
-				'countryCode', # INT
-				'co', # 2 Letter Code for Country
-				'c', # Full Country Name
-				'wWWHomePage',
-				'distinguishedName',
-				'userPrincipalName',
-				'whenCreated',
-				'whenChanged',
-				'lastLogon',
-				'badPwdCount',
-				'pwdLastSet',
-				'userAccountControl'
-			]
+			self.ldap_filter_attr = self.filter_builder_class(RunningSettings).get_fetch_me_filter()
 
 			self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
 

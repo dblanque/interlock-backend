@@ -65,7 +65,7 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 		)
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			record_result_data = self.create_record(record_data=record_data)
 
@@ -116,7 +116,7 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 		# TODO - Maybe implement crosschecking with server-side Old Record Bytes Data?
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			record_result_data = self.update_record(record_data=record_data, old_record_data=old_record_data)
 
@@ -169,13 +169,13 @@ class RecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 				self.validate_record_data(record_data=r, required_values=required_values.copy())
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			if isinstance(record_data, dict):
 				logger.debug(record_data)
 				result = self.delete_record(record_data, user)
 			elif isinstance(record_data, list):
-				result = list()
+				result = []
 				for r in record_data:
 					logger.debug(r)
 					result.append(self.delete_record(r, user))

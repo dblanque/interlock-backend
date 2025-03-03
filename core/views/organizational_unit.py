@@ -53,7 +53,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		code_msg = 'ok'
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
 			attributesToSearch = [
@@ -121,7 +121,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			raise exc_dirtree.DirtreeFilterBad
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
 			ldap_filter_attr = [
@@ -186,7 +186,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		distinguished_name = ldap_object['distinguishedName']
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			self.move_or_rename_object(distinguished_name=distinguished_name, ldap_path=ldap_path)
 
@@ -211,7 +211,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		new_rdn = ldap_object['newRDN']
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			self.move_or_rename_object(distinguished_name=distinguished_name, relative_dn=new_rdn)
 
@@ -261,7 +261,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			object_dn = "CN=" + object_name + "," + object_path
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
 			try:
@@ -305,7 +305,7 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		data = request.data
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
 			object_dn = data['distinguishedName']

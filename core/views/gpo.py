@@ -41,12 +41,12 @@ class GPOViewSet(BaseViewSet):
 	@auth_required()
 	def list(self, request):
 		user = request.user
-		data = dict()
+		data = {}
 		code = 0
 		code_msg = 'ok'
 
 		# Open LDAP Connection
-		with LDAPConnector(user.dn, user.encryptedPassword, request.user) as ldc:
+		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
 			# TODO - Make Configuration Page for GPO Sysvol Integration (Mounting system)
@@ -69,7 +69,7 @@ class GPOViewSet(BaseViewSet):
 			except:
 				self.ldap_connection.unbind()
 				raise
-			data['gpos'] = list()
+			data['gpos'] = []
 			data['headers'] = [
 				'displayName',
 				'gPCFileSysPath',
