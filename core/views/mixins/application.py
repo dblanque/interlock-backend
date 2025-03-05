@@ -45,8 +45,8 @@ RESPONSE_TYPE_ID_MAP = {
 RESPONSE_TYPE_CODES = ResponseType.objects.all().values_list("value", flat=True)
 
 class ApplicationViewMixin(viewsets.ViewSetMixin):
-	serializer_class = ApplicationSerializer
-	client_serializer_class = ClientSerializer
+	application_serializer = ApplicationSerializer
+	client_serializer = ClientSerializer
 
 	def get_application_data(self, application_id: int) -> tuple[Application, Client, QuerySet[ResponseType]]:
 		"""
@@ -125,7 +125,7 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 
 		data = {}
 		application, client = self.get_application_data(application_id=application_id)
-		response_types = client.response_type_values()
+		response_types: list[str] = client.response_type_values()
 
 		for field in APPLICATION_FIELDS:
 			if hasattr(application, field):
@@ -171,7 +171,7 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 		if not isinstance(data["scopes"], str) and isinstance(data["scopes"], Iterable):
 			data["scopes"] = " ".join(data["scopes"])
 
-		serializer = self.serializer_class(data=data)
+		serializer = self.application_serializer(data=data)
 		if not serializer.is_valid():
 			raise BadRequest(data={
 				"errors": serializer.errors
@@ -238,6 +238,7 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 		if "response_types" in data:
 			new_response_types: list = data.pop("response_types")
 
+		### APPLICATION
 		for field in APPLICATION_FIELDS:
 			if hasattr(application, field) and field in data:
 				new_application[field] = data.pop(field)
@@ -249,18 +250,24 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 		):
 			new_application["scopes"] = " ".join(new_application["scopes"])
 
-		serializer = self.serializer_class(data=new_application)
+		serializer = self.application_serializer(data=new_application, partial=True)
 		if not serializer.is_valid():
 			raise BadRequest(data={
 				"errors": serializer.errors
 			})
 
+		### CLIENT
 		for field in CLIENT_FIELDS:
 			if hasattr(client, field) and field in data:
 				new_client[field] = data.pop(field)
 
 		if "redirect_uris" in new_application:
 			new_client["redirect_uris"] = new_application["redirect_uris"].split(",")
+		c_serializer = self.client_serializer(data=new_client, partial=True)
+		if not c_serializer.is_valid():
+			raise BadRequest(data={
+				"errors": c_serializer.errors
+			})
 
 		with transaction.atomic():
 			# APPLICATION
