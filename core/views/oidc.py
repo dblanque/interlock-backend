@@ -7,38 +7,24 @@
 # Contains the ViewSet for SSO Application related operations
 
 #---------------------------------- IMPORTS -----------------------------------#
-### Exceptions
-from core.exceptions.base import PermissionDenied, BadRequest
-from oidc_provider.lib.errors import AuthorizeError
 
 ### Mixins
 from core.views.mixins.auth import CookieJWTAuthentication
 
 ### ViewSets
-from core.views.base import BaseViewSet
 from oidc_provider.views import TokenView, AuthorizeView
 from oidc_provider.lib.endpoints.authorize import AuthorizeEndpoint
 
 ### Models
 from core.models.user import User
-from core.models.application import Application
-from oidc_provider.models import Client
-
-### DRF
-from rest_framework.response import Response
 
 ### Django
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
 from urllib.parse import quote
-from django.utils.http import url_has_allowed_host_and_scheme
-
-### REST Framework
-from rest_framework.request import Request
 
 ### Others
 from urllib.parse import urlparse, parse_qs
-import json
 from interlock_backend.settings import (
 	OIDC_INTERLOCK_LOGIN_COOKIE,
 	SIMPLE_JWT as JWT_SETTINGS
