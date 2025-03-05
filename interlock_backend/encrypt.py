@@ -19,7 +19,13 @@ from django.db import transaction
 from Crypto.Random import get_random_bytes
 from cryptography.fernet import Fernet
 from time import perf_counter
-from interlock_backend.settings import FERNET_KEY, BASE_DIR, SECRET_KEY, AES_RSA_PERF_LOGGING
+from interlock_backend.settings import (
+	FERNET_KEY,
+	BASE_DIR,
+	SECRET_KEY,
+	AES_RSA_PERF_LOGGING,
+	PERF_LOGGING_ROUND
+)
 ################################################################################
 
 logger = logging.getLogger()
@@ -115,7 +121,7 @@ def aes_encrypt(data: str, fernet_pass=False) -> tuple[bytes]:
 
 	if AES_RSA_PERF_LOGGING:
 		end = perf_counter()
-		print(f"Time to encrypt: {end-start}")
+		print(f"Time to encrypt: {str(round(end - start, PERF_LOGGING_ROUND))}")
 
 	# Return ALL components needed for decryption
 	return encrypted_aes_key, ciphertext, nonce, tag
@@ -147,7 +153,7 @@ def aes_decrypt(
 
 	if AES_RSA_PERF_LOGGING:
 		end = perf_counter()
-		print(f"Time to decrypt: {end-start}")
+		print(f"Time to decrypt: {str(round(end - start, PERF_LOGGING_ROUND))}")
 
 	if fernet_pass is True:
 		return fernet_decrypt(decrypted_data.decode())
