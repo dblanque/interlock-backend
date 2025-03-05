@@ -20,21 +20,21 @@ from django.urls import path, include
 
 # Django-rest
 from rest_framework import routers
-from core.views.domain import DomainViewSet
+from core.views.ldap.domain import LDAPDomainViewSet
 
 # CORE VIEWS
 from core.views.token import TokenObtainPairView
 from core.views.totp import TOTPViewSet
 from core.views.auth import AuthViewSet
-from core.views.user import UserViewSet
-from core.views.organizational_unit import OrganizationalUnitViewSet
+from core.views.ldap.user import LDAPUserViewSet
+from core.views.ldap.organizational_unit import LDAPOrganizationalUnitViewSet
 from core.views.ldap_settings import SettingsViewSet
 from core.views.logs import LogsViewSet
-from core.views.groups import GroupsViewSet
+from core.views.ldap.groups import LDAPGroupsViewSet
 from core.views.test import TestViewSet
 from core.views.gpo import GPOViewSet
 from core.views.liveness import LivenessViewSet
-from core.views.record import RecordViewSet
+from core.views.ldap.record import LDAPRecordViewSet
 from core.views.debug import DebugViewSet
 from core.views.application import ApplicationViewSet
 from core.views.oidc import OidcAuthorizeView
@@ -43,11 +43,11 @@ from interlock_backend.settings import DEBUG
 # Initalizes Router
 router = routers.DefaultRouter()
 named_view_sets = {
-	r"users": UserViewSet,
-	r"groups": GroupsViewSet,
-	r"domain": DomainViewSet,
-	r"record": RecordViewSet,
-	r"ou": OrganizationalUnitViewSet,
+	r"users": LDAPUserViewSet,
+	r"groups": LDAPGroupsViewSet,
+	r"domain": LDAPDomainViewSet,
+	r"record": LDAPRecordViewSet,
+	r"ou": LDAPOrganizationalUnitViewSet,
 	r"settings": SettingsViewSet,
 	r"logs": LogsViewSet,
 	r"liveness": LivenessViewSet,

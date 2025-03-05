@@ -14,10 +14,10 @@ from core.exceptions import ldap as exc_ldap
 from core.models.user import User
 
 ### Mixins
-from .mixins.group import GroupViewMixin
+from core.views.mixins.group import GroupViewMixin
 
 ### ViewSets
-from .base import BaseViewSet
+from core.views.base import BaseViewSet
 
 ### REST Framework
 from rest_framework.response import Response
@@ -37,7 +37,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class GroupsViewSet(BaseViewSet, GroupViewMixin):
+class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 	filter_attr_builder = GroupViewsetFilterAttributeBuilder
 
 	@auth_required()

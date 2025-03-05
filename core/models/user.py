@@ -200,17 +200,16 @@ class User(BaseUser):
 	is_local = models.BooleanField(null=False, default=True)
 	recovery_codes = ArrayField(models.CharField(max_length=32), verbose_name="Recovery Codes", null=True, blank=True)
 
-	@property
-	def encryptedPassword(self):
-		return tuple([getattr(self, f) for f in USER_PASSWORD_FIELDS])
-
-	ldap_groups = ArrayField(models.CharField(max_length=512), verbose_name="LDAP Groups", null=False, blank=False, default=list)
 	# Encrypted AES Key
 	ldap_password_aes = models.BinaryField(null=True, blank=True)
 	# Cipher Text
 	ldap_password_ct = models.BinaryField(null=True, blank=True)
 	ldap_password_nonce = models.BinaryField(null=True, blank=True)
 	ldap_password_tag = models.BinaryField(null=True, blank=True)
+
+	@property
+	def encryptedPassword(self):
+		return tuple([getattr(self, f) for f in USER_PASSWORD_FIELDS])
 
 	class Meta:
 		constraints = [

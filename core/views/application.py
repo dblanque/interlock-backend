@@ -52,16 +52,11 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 		code = 0
 		code_msg = "ok"
 		serializer, extra_fields = self.insert_clean_data(data=data)
-		application = self.insert_application(serializer=serializer, extra_fields=extra_fields)
+		self.insert_application(serializer=serializer, extra_fields=extra_fields)
 		return Response(
 			 data={
 				"code": code,
-				"code_msg": code_msg,
-				"application": {
-					application.name,
-					application.client_id,
-					application.client_secret,
-				}
+				"code_msg": code_msg
 			 }
 		)
 
@@ -106,7 +101,6 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 		return Response(
 			 data={
 				"code": code,
-				"code_msg": code_msg,
-				"data": {"id":application_id}
+				"code_msg": code_msg
 			 }
 		)

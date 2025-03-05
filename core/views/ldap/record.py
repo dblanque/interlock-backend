@@ -18,8 +18,8 @@ from core.views.base import BaseViewSet
 from core.exceptions import dns as exc_dns
 
 ### Mixins
-from .mixins.record import DNSRecordMixin
-from .mixins.domain import DomainViewMixin
+from core.views.mixins.record import DNSRecordMixin
+from core.views.mixins.domain import DomainViewMixin
 
 ### Serializers
 from core.serializers.record import DNSRecordSerializer
@@ -37,7 +37,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class RecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
+class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 	record_serializer = DNSRecordSerializer
 	@action(detail=False,methods=['post'])
 	@auth_required()

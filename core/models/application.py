@@ -1,6 +1,8 @@
 from .base import BaseModel
+from .user import User
 from django.db import models
 from django.utils.crypto import get_random_string
+from django.contrib.postgres.fields import ArrayField
 import secrets
 
 def generate_client_id():
@@ -19,3 +21,10 @@ class Application(BaseModel):
     client_secret = models.CharField(max_length=255, default=generate_client_secret)
     redirect_uris = models.TextField(help_text="Comma-separated redirect URIs")
     scopes = models.TextField(default="openid profile email groups")
+
+class ApplicationSecurityGroup(BaseModel):
+    name = models.CharField(max_length=255)
+    enabled = models.BooleanField(default=True)
+    application = models.ForeignKey(Application, on_delete=models.CASCADE)
+    users = models.ManyToManyField(User)
+    ldap_objects = ArrayField(models.CharField(max_length=255))

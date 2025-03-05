@@ -80,22 +80,16 @@ def sync_user_relations(
 	if 'Administrator' in ldap_attributes[RunningSettings.LDAP_AUTH_USER_FIELDS["username"]]:
 		user.is_staff = True
 		user.is_superuser = True
-		if 'memberOf' in ldap_attributes:
-			user.ldap_groups = ldap_attributes['memberOf']
 		user.save()
 	elif recursive_member_search(user_dn=user.dn, connection=connection, group_dn=RunningSettings.ADMIN_GROUP_TO_SEARCH):
 		user.is_staff = True
 		user.is_superuser = True
-		if 'memberOf' in ldap_attributes:
-			user.ldap_groups = ldap_attributes['memberOf']
 		if user.email is not None and 'mail' in ldap_attributes:
 			user.email = str(ldap_attributes['mail']).lstrip("['").rstrip("']") or ""
 		user.save()
 	else:
 		user.is_staff = False
 		user.is_superuser = False
-		if 'memberOf' in ldap_attributes:
-			user.ldap_groups = ldap_attributes['memberOf']
 		if user.email is not None and 'mail' in ldap_attributes:
 			user.email = str(ldap_attributes['mail']).lstrip("['").rstrip("']") or ""
 		user.save()

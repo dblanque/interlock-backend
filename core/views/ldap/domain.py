@@ -23,7 +23,7 @@ from core.exceptions import (
 )
 
 ### Mixins
-from .mixins.domain import DomainViewMixin
+from core.views.mixins.domain import DomainViewMixin
 
 ### REST Framework
 from rest_framework.response import Response
@@ -48,7 +48,7 @@ import logging
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
-class DomainViewSet(BaseViewSet, DomainViewMixin):
+class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 
 	@action(detail=False, methods=['get'])
 	@auth_required(require_admin=False)

@@ -17,7 +17,7 @@ from core.exceptions import (
 )
 
 ### ViewSets
-from .base import BaseViewSet
+from core.views.base import BaseViewSet
 
 ### Models
 from core.views.mixins.logs import LogMixin
@@ -25,7 +25,7 @@ from core.models.ldap_tree import LDAPTree, LDAPTreeOptions
 from core.models.user import User
 
 ### Mixins
-from .mixins.organizational_unit import OrganizationalUnitMixin
+from core.views.mixins.organizational_unit import OrganizationalUnitMixin
 
 ### REST Framework
 from rest_framework.response import Response
@@ -37,13 +37,14 @@ from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.adsi import search_filter_from_dict
 from core.decorators.login import auth_required
 from core.models.ldap_settings_runtime import RunningSettings
+from interlock_backend.settings import PERF_LOGGING_ROUND, DIRTREE_PERF_LOGGING
 import logging
 ################################################################################
 
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
-class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
+class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 
 	@auth_required()
 	def list(self, request):
@@ -81,10 +82,12 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			}
 
 			try:
-				debugTimerStart = perf_counter()
+				if DIRTREE_PERF_LOGGING:
+					debugTimerStart = perf_counter()
 				dirList = LDAPTree(**ldap_tree_options)
-				debugTimerEnd = perf_counter()
-				logger.info("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
+				if DIRTREE_PERF_LOGGING:
+					debugTimerEnd = perf_counter()
+					logger.info("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, PERF_LOGGING_ROUND)))
 			except Exception as e:
 				print(e)
 				raise exc_ldap.CouldNotFetchDirtree
@@ -148,10 +151,12 @@ class OrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			# Filter by Object DN
 			# Filter by Attribute
 			try:
-				debugTimerStart = perf_counter()
+				if DIRTREE_PERF_LOGGING:
+					debugTimerStart = perf_counter()
 				dirList = LDAPTree(**ldap_tree_options)
-				debugTimerEnd = perf_counter()
-				logger.info("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, 3)))
+				if DIRTREE_PERF_LOGGING:
+					debugTimerEnd = perf_counter()
+					logger.info("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, PERF_LOGGING_ROUND)))
 			except Exception as e:
 				print(e)
 				raise exc_ldap.CouldNotFetchDirtree

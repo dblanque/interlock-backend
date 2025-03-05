@@ -21,13 +21,13 @@ from core.models.user import User, USER_PASSWORD_FIELDS
 from core.views.mixins.logs import LogMixin
 
 ### Mixins
-from .mixins.user import UserViewMixin, UserViewLDAPMixin
+from core.views.mixins.user import UserViewMixin, UserViewLDAPMixin
 
 ### Serializers / Validators
 from core.serializers import user as UserValidators
 
 ### ViewSets
-from .base import BaseViewSet
+from core.views.base import BaseViewSet
 
 ### REST Framework
 from rest_framework.response import Response
@@ -47,7 +47,7 @@ import logging
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
-class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
+class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	queryset = User.objects.all()
 	filter_attr_builder = UserViewsetFilterAttributeBuilder
 
@@ -145,9 +145,223 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			 }
 		)
 
+	@auth_required()
+	def update(self, request, pk=None):
+		user: User = request.user
+		code = 0
+		code_msg = 'ok'
+		data = request.data
+		data = data['user']
+
+		######################## Set LDAP Attributes ###########################
+		self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_update_filter()
+		########################################################################
+
+		EXCLUDE_KEYS = self.filter_attr_builder(RunningSettings).get_update_exclude_keys()
+
+		user_to_update = data[RunningSettings.LDAP_AUTH_USER_FIELDS["username"]]
+		if 'permission_list' in data: permission_list = data['permission_list']
+		else: permission_list = None
+		for key in EXCLUDE_KEYS:
+			if key in data:
+				del data[key]
+
+		# Open LDAP Connection
+		with LDAPConnector(user) as ldc:
+			self.ldap_connection = ldc.connection
+
+			if not self.ldap_user_exists(user_search=user_to_update, return_exception=False):
+				raise exc_user.UserDoesNotExist
+			user_entry = self.ldap_connection.entries[0]
+			user_dn = str(user_entry.distinguishedName)
+			# Check overlapping email
+			if RunningSettings.LDAP_AUTH_USER_FIELDS["email"] in data and len(data[RunningSettings.LDAP_AUTH_USER_FIELDS["email"]]) > 0:
+				self.ldap_user_with_email_exists(
+					email_search=data[RunningSettings.LDAP_AUTH_USER_FIELDS["email"]],
+					user_check=data
+				)
+			self.get_user_object(user_to_update, attributes=ldap3.ALL_ATTRIBUTES)
+
+			self.ldap_user_update(
+				user_dn=user_dn,
+				user_name=user_to_update,
+				user_data=data,
+				permissions_list=permission_list
+			)
+
+		return Response(
+			 data={
+				'code': code,
+				'code_msg': code_msg,
+				'data': data
+			 }
+		)
+
 	@action(detail=False,methods=['post'])
 	@auth_required()
-	def bulkInsert(self, request):
+	def change_status(self, request):
+		user: User = request.user
+		data: dict = request.data
+		code = 0
+		code_msg = 'ok'
+
+		for required_key in [ "username", "enabled" ]:
+			if required_key not in data:
+				raise BadRequest
+		enabled = data.pop("enabled")
+
+		######################## Set LDAP Attributes ###########################
+		self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
+		self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_update_filter()
+		########################################################################
+
+		if data['username'] == self.request.user: 
+			raise exc_user.UserAntiLockout
+
+		# Open LDAP Connection
+		with LDAPConnector(user) as ldc:
+			self.ldap_connection = ldc.connection
+			self.ldap_user_change_status(user_object=data, enabled=enabled)
+
+		return Response(
+			 data={
+				'code': code,
+				'code_msg': code_msg
+			 }
+		)
+
+	@action(detail=False, methods=['post'])
+	@auth_required()
+	def delete(self, request, pk=None):
+		user: User = request.user
+		code = 0
+		code_msg = 'ok'
+		data = request.data
+
+		if not isinstance(data, dict):
+			raise exc_base.CoreException
+
+		# Open LDAP Connection
+		with LDAPConnector(user) as ldc:
+			self.ldap_connection = ldc.connection
+			self.ldap_user_delete(user_object=data)
+			username = data['username']
+			if RunningSettings.LDAP_AUTH_USER_FIELDS["username"] in data:
+				username = data[RunningSettings.LDAP_AUTH_USER_FIELDS["username"]]
+
+			userToDelete = None
+			try:
+				userToDelete = User.objects.get(username=username)
+			except:
+				pass
+			if userToDelete:
+				userToDelete.delete_permanently()
+
+		return Response(
+			 data={
+				'code': code,
+				'code_msg': code_msg,
+				'data': data
+			 }
+		)
+
+	@action(detail=False, methods=['post'])
+	@auth_required()
+	def change_password(self, request, pk=None):
+		user: User = request.user
+		code = 0
+		code_msg = 'ok'
+		data = request.data
+		ldap_user_search = None
+
+		# Open LDAP Connection
+		with LDAPConnector(user) as ldc:
+			self.ldap_connection = ldc.connection
+			if RunningSettings.LDAP_AUTH_USER_FIELDS['username'] in data:
+				ldap_user_search = data[RunningSettings.LDAP_AUTH_USER_FIELDS['username']]
+			elif 'username' in data:
+				ldap_user_search = data['username']
+
+			# If data request for deletion has user DN
+			if 'distinguishedName' in data.keys() and data['distinguishedName'] != "":
+				logger.debug('Updating with distinguishedName obtained from front-end')
+				logger.debug(data['distinguishedName'])
+				dn = data['distinguishedName']
+			# Else, search for username dn
+			else:
+				logger.debug('Updating with user dn search method')
+				self.get_user_object(ldap_user_search)
+				
+				user = self.ldap_connection.entries
+				dn = str(user[0].distinguishedName)
+				logger.debug(dn)
+
+			if dn is None or dn == "":
+				raise exc_user.UserDoesNotExist
+
+			if data['password'] != data['passwordConfirm']:
+				raise exc_user.UserPasswordsDontMatch
+			self.set_ldap_password(user_dn=dn, user_pwd=data['password'])
+
+		django_user = None
+		try:
+			django_user = User.objects.get(username=ldap_user_search)
+		except Exception as e:
+			logger.error(e)
+		if django_user:
+			encrypted_data = aes_encrypt(data['password'])
+			for index, field in enumerate(USER_PASSWORD_FIELDS):
+				setattr(django_user, field, encrypted_data[index])
+			django_user.set_unusable_password()
+			django_user.save()
+
+		if RunningSettings.LDAP_LOG_UPDATE == True:
+			# Log this action to DB
+			DBLogMixin.log(
+				user_id=request.user.id,
+				actionType="UPDATE",
+				objectClass="USER",
+				affectedObject=ldap_user_search,
+				extraMessage="CHANGED_PASSWORD"
+			)
+
+		return Response(
+			 data={
+				'code': code,
+				'code_msg': code_msg,
+				'data': data
+			 }
+		)
+
+	@action(detail=False, methods=['post'])
+	@auth_required()
+	def unlock(self, request, pk=None):
+		user: User = request.user
+		code = 0
+		code_msg = 'ok'
+		data = request.data
+
+		# Open LDAP Connection
+		with LDAPConnector(user) as ldc:
+			self.ldap_connection = ldc.connection
+			self.ldap_user_unlock(user_object=data)
+			result = self.ldap_connection.result
+			if result['description'] == 'success':
+				response_result = data['username']
+			else:
+				raise exc_user.CouldNotUnlockUser
+
+		return Response(
+			 data={
+				'code': code,
+				'code_msg': code_msg,
+				'data': response_result
+			 }
+		)
+
+	@action(detail=False,methods=['post'])
+	@auth_required()
+	def bulk_insert(self, request):
 		user: User = request.user
 		code = 0
 		code_msg = 'ok'
@@ -292,61 +506,9 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			 }
 		)
 
-	@auth_required()
-	def update(self, request, pk=None):
-		user: User = request.user
-		code = 0
-		code_msg = 'ok'
-		data = request.data
-		data = data['user']
-
-		######################## Set LDAP Attributes ###########################
-		self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_update_filter()
-		########################################################################
-
-		EXCLUDE_KEYS = self.filter_attr_builder(RunningSettings).get_update_exclude_keys()
-
-		user_to_update = data[RunningSettings.LDAP_AUTH_USER_FIELDS["username"]]
-		if 'permission_list' in data: permission_list = data['permission_list']
-		else: permission_list = None
-		for key in EXCLUDE_KEYS:
-			if key in data:
-				del data[key]
-
-		# Open LDAP Connection
-		with LDAPConnector(user) as ldc:
-			self.ldap_connection = ldc.connection
-
-			if not self.ldap_user_exists(user_search=user_to_update, return_exception=False):
-				raise exc_user.UserDoesNotExist
-			user_entry = self.ldap_connection.entries[0]
-			user_dn = str(user_entry.distinguishedName)
-			# Check overlapping email
-			if RunningSettings.LDAP_AUTH_USER_FIELDS["email"] in data and len(data[RunningSettings.LDAP_AUTH_USER_FIELDS["email"]]) > 0:
-				self.ldap_user_with_email_exists(
-					email_search=data[RunningSettings.LDAP_AUTH_USER_FIELDS["email"]],
-					user_check=data
-				)
-			self.get_user_object(user_to_update, attributes=ldap3.ALL_ATTRIBUTES)
-
-			self.ldap_user_update(
-				user_dn=user_dn,
-				user_name=user_to_update,
-				user_data=data,
-				permissions_list=permission_list
-			)
-
-		return Response(
-			 data={
-				'code': code,
-				'code_msg': code_msg,
-				'data': data
-			 }
-		)
-
 	@action(detail=False,methods=['post'])
 	@auth_required()
-	def bulkUpdate(self, request, pk=None):
+	def bulk_update(self, request, pk=None):
 		user: User = request.user
 		code = 0
 		code_msg = 'ok'
@@ -401,7 +563,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@action(detail=False,methods=['post'])
 	@auth_required()
-	def bulkAccountStatusChange(self, request):
+	def bulk_status_change(self, request):
 		user: User = request.user
 		code = 0
 		code_msg = 'ok'
@@ -438,77 +600,9 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			 }
 		)
 
-	@action(detail=False,methods=['post'])
-	@auth_required()
-	def changeAccountStatus(self, request):
-		user: User = request.user
-		data: dict = request.data
-		code = 0
-		code_msg = 'ok'
-
-		for required_key in [ "username", "enabled" ]:
-			if required_key not in data:
-				raise BadRequest
-		enabled = data.pop("enabled")
-
-		######################## Set LDAP Attributes ###########################
-		self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
-		self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_update_filter()
-		########################################################################
-
-		if data['username'] == self.request.user: 
-			raise exc_user.UserAntiLockout
-
-		# Open LDAP Connection
-		with LDAPConnector(user) as ldc:
-			self.ldap_connection = ldc.connection
-			self.ldap_user_change_status(user_object=data, enabled=enabled)
-
-		return Response(
-			 data={
-				'code': code,
-				'code_msg': code_msg
-			 }
-		)
-
 	@action(detail=False, methods=['post'])
 	@auth_required()
-	def delete(self, request, pk=None):
-		user: User = request.user
-		code = 0
-		code_msg = 'ok'
-		data = request.data
-
-		if not isinstance(data, dict):
-			raise exc_base.CoreException
-
-		# Open LDAP Connection
-		with LDAPConnector(user) as ldc:
-			self.ldap_connection = ldc.connection
-			self.ldap_user_delete(user_object=data)
-			username = data['username']
-			if RunningSettings.LDAP_AUTH_USER_FIELDS["username"] in data:
-				username = data[RunningSettings.LDAP_AUTH_USER_FIELDS["username"]]
-
-			userToDelete = None
-			try:
-				userToDelete = User.objects.get(username=username)
-			except:
-				pass
-			if userToDelete:
-				userToDelete.delete_permanently()
-
-		return Response(
-			 data={
-				'code': code,
-				'code_msg': code_msg,
-				'data': data
-			 }
-		)
-
-	@action(detail=False, methods=['post'])
-	@auth_required()
-	def bulkDelete(self, request, pk=None):
+	def bulk_delete(self, request, pk=None):
 		user: User = request.user
 		code = 0
 		code_msg = 'ok'
@@ -537,101 +631,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@action(detail=False, methods=['post'])
 	@auth_required()
-	def changePassword(self, request, pk=None):
-		user: User = request.user
-		code = 0
-		code_msg = 'ok'
-		data = request.data
-		ldap_user_search = None
-
-		# Open LDAP Connection
-		with LDAPConnector(user) as ldc:
-			self.ldap_connection = ldc.connection
-			if RunningSettings.LDAP_AUTH_USER_FIELDS['username'] in data:
-				ldap_user_search = data[RunningSettings.LDAP_AUTH_USER_FIELDS['username']]
-			elif 'username' in data:
-				ldap_user_search = data['username']
-
-			# If data request for deletion has user DN
-			if 'distinguishedName' in data.keys() and data['distinguishedName'] != "":
-				logger.debug('Updating with distinguishedName obtained from front-end')
-				logger.debug(data['distinguishedName'])
-				dn = data['distinguishedName']
-			# Else, search for username dn
-			else:
-				logger.debug('Updating with user dn search method')
-				self.get_user_object(ldap_user_search)
-				
-				user = self.ldap_connection.entries
-				dn = str(user[0].distinguishedName)
-				logger.debug(dn)
-
-			if dn is None or dn == "":
-				raise exc_user.UserDoesNotExist
-
-			if data['password'] != data['passwordConfirm']:
-				raise exc_user.UserPasswordsDontMatch
-			self.set_ldap_password(user_dn=dn, user_pwd=data['password'])
-
-		django_user = None
-		try:
-			django_user = User.objects.get(username=ldap_user_search)
-		except Exception as e:
-			logger.error(e)
-		if django_user:
-			encrypted_data = aes_encrypt(data['password'])
-			for index, field in enumerate(USER_PASSWORD_FIELDS):
-				setattr(django_user, field, encrypted_data[index])
-			django_user.set_unusable_password()
-			django_user.save()
-
-		if RunningSettings.LDAP_LOG_UPDATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=request.user.id,
-				actionType="UPDATE",
-				objectClass="USER",
-				affectedObject=ldap_user_search,
-				extraMessage="CHANGED_PASSWORD"
-			)
-
-		return Response(
-			 data={
-				'code': code,
-				'code_msg': code_msg,
-				'data': data
-			 }
-		)
-
-	@action(detail=False, methods=['post'])
-	@auth_required()
-	def unlock(self, request, pk=None):
-		user: User = request.user
-		code = 0
-		code_msg = 'ok'
-		data = request.data
-
-		# Open LDAP Connection
-		with LDAPConnector(user) as ldc:
-			self.ldap_connection = ldc.connection
-			self.ldap_user_unlock(user_object=data)
-			result = self.ldap_connection.result
-			if result['description'] == 'success':
-				response_result = data['username']
-			else:
-				raise exc_user.CouldNotUnlockUser
-
-		return Response(
-			 data={
-				'code': code,
-				'code_msg': code_msg,
-				'data': response_result
-			 }
-		)
-
-	@action(detail=False, methods=['post'])
-	@auth_required()
-	def bulkUnlock(self, request, pk=None):
+	def bulk_unlock(self, request, pk=None):
 		user: User = request.user
 		code = 0
 		code_msg = 'ok'
@@ -664,7 +664,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@action(detail=False, methods=['post'])
 	@auth_required(require_admin=False)
-	def changePasswordSelf(self, request, pk=None):
+	def self_change_password(self, request, pk=None):
 		user: User = request.user
 		code = 0
 		code_msg = 'ok'
@@ -738,7 +738,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@action(detail=False, methods=['put', 'post'])
 	@auth_required(require_admin=False)
-	def updateSelf(self, request, pk=None):
+	def self_update(self, request, pk=None):
 		user: User = request.user
 		code = 0
 		code_msg = 'ok'
@@ -817,7 +817,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@action(detail=False, methods=['get'])
 	@auth_required(require_admin=False)
-	def me(self, request):
+	def self_info(self, request):
 		user: User = request.user
 		data = {}
 		code = 0
@@ -837,7 +837,7 @@ class UserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@action(detail=False,methods=['get'])
 	@auth_required(require_admin=False)
-	def fetchme(self, request):
+	def self_fetch(self, request):
 		user: User = request.user
 		code = 0
 		code_msg = 'ok'
