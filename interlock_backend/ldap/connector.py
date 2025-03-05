@@ -25,7 +25,7 @@ from interlock_backend.ldap.adsi import (
 from ldap3.core.exceptions import LDAPException
 from core.exceptions import ldap as exc_ldap
 from core.views.mixins.logs import LogMixin
-from core.models.user import User, USER_PASSWORD_FIELDS
+from core.models.user import User, USER_PASSWORD_FIELDS, USER_TYPE_LDAP
 from typing import TypedDict
 from typing_extensions import NotRequired
 from interlock_backend.settings import (
@@ -141,7 +141,7 @@ def authenticate(*args, **kwargs):
 	for index, field in enumerate(USER_PASSWORD_FIELDS):
 		setattr(user, field, encrypted_data[index])
 	del password
-	user.is_local = False
+	user.user_type = USER_TYPE_LDAP
 	user.save()
 	return user
 
@@ -200,7 +200,7 @@ class LDAPConnector(object):
 			is_local_superadmin = (
 				hasattr(user, "username") and
 				user.username == DEFAULT_SUPERUSER_USERNAME and
-				user.is_local is True
+				user.user_type is USER_TYPE_LDAP
 			)
 		self.default_user_dn = RunningSettings.LDAP_AUTH_CONNECTION_USER_DN
 		self.default_user_pwd = RunningSettings.LDAP_AUTH_CONNECTION_PASSWORD

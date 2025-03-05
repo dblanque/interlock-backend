@@ -21,7 +21,7 @@ from django.db import models
 from django.utils.crypto import salted_hmac
 from django.utils.translation import gettext_lazy as _
 
-from .base import BaseModel
+from core.models.base import BaseModel
 from interlock_backend.settings import (
 	DEFAULT_SUPERUSER_USERNAME,
 	DEFAULT_SUPERUSER_PASSWORD
@@ -188,6 +188,12 @@ USER_PASSWORD_FIELDS = (
 	f"{USER_LDAP_FIELD_PREFIX}_password_nonce",
 	f"{USER_LDAP_FIELD_PREFIX}_password_tag",
 )
+USER_TYPE_LOCAL = "local"
+USER_TYPE_LDAP = "ldap"
+USER_TYPE_CHOICES = (
+	(USER_TYPE_LOCAL, f"{USER_TYPE_LOCAL.capitalize()} User"),
+	(USER_TYPE_LDAP, f"{USER_TYPE_LDAP.upper()} User"),
+)
 
 class User(BaseUser):
 	class Meta:
@@ -197,8 +203,20 @@ class User(BaseUser):
 	last_name = models.CharField(_("Last name"), max_length=255, null=True, blank=True)
 	email = models.EmailField(_("Email"), null=True, blank=True)
 	dn = models.CharField(_("distinguishedName"), max_length=128, null=True, blank=True)
-	is_local = models.BooleanField(null=False, default=True)
-	recovery_codes = ArrayField(models.CharField(max_length=32), verbose_name="Recovery Codes", null=True, blank=True)
+	user_type = models.CharField(
+		_("User Type"),
+		choices=USER_TYPE_CHOICES,
+		null=False,
+		blank=False,
+		default=USER_TYPE_LOCAL
+	)
+	recovery_codes = ArrayField(
+		models.CharField(max_length=32),
+		verbose_name="Recovery Codes",
+		null=True,
+		blank=True
+	)
+	is_enabled = models.BooleanField(null=False, default=True)
 
 	# Encrypted AES Key
 	ldap_password_aes = models.BinaryField(null=True, blank=True)
@@ -231,9 +249,9 @@ class User(BaseUser):
 		]
 
 	def get_distinguishedname(self):
-		if self.is_local:
+		if self.user_type != USER_TYPE_LDAP:
 			return False
 		return self.dn
 		
 	def is_user_local(self):
-		return self.is_local
+		return self.user_type == USER_TYPE_LOCAL

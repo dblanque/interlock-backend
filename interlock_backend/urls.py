@@ -26,6 +26,7 @@ from core.views.ldap.domain import LDAPDomainViewSet
 from core.views.token import TokenObtainPairView
 from core.views.totp import TOTPViewSet
 from core.views.auth import AuthViewSet
+from core.views.user import UserViewSet
 from core.views.ldap.user import LDAPUserViewSet
 from core.views.ldap.organizational_unit import LDAPOrganizationalUnitViewSet
 from core.views.ldap_settings import SettingsViewSet
@@ -43,6 +44,7 @@ from interlock_backend.settings import DEBUG
 # Initalizes Router
 router = routers.DefaultRouter()
 named_view_sets = {
+	r"users/local": UserViewSet,
 	r"users": LDAPUserViewSet,
 	r"groups": LDAPGroupsViewSet,
 	r"domain": LDAPDomainViewSet,

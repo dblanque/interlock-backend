@@ -24,14 +24,12 @@ from interlock_backend.ldap.connector import LDAPConnector
 from core.views.mixins.logs import LogMixin
 from ldap3 import (
 	Connection,
-	MODIFY_ADD,
 	MODIFY_DELETE,
-	MODIFY_INCREMENT,
 	MODIFY_REPLACE
 )
 
 ### Mixins
-from .group import GroupViewMixin
+from core.views.mixins.group import GroupViewMixin
 
 ### Exception Handling
 from core.exceptions import (
@@ -438,7 +436,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			django_user.save()
 		return self.ldap_connection
 
-	def set_ldap_password(self, user_dn: str, user_pwd: str) -> LDAPConnector:
+	def ldap_set_password(self, user_dn: str, user_pwd: str) -> LDAPConnector:
 		"""
 		### Sets the LDAP User's Password with Microsoft Extended LDAP Commands
 		Returns the used LDAP Connection

@@ -32,7 +32,7 @@ class TestModel(TestCase):
                     UserViewLDAPMixin.ldap_user_with_email_exists(self, email_search=data[LDAP_AUTH_USER_FIELDS["email"]])
                 user_dn = UserViewLDAPMixin.ldap_user_insert(user_data=data)
                 user_pwd = data['password']
-                UserViewLDAPMixin.set_ldap_password(self, user_dn=user_dn, user_pwd=user_pwd)
+                UserViewLDAPMixin.ldap_set_password(self, user_dn=user_dn, user_pwd=user_pwd)
             except:
                 raise
         u = User.objects.create_user(username=TEST_USERNAME, email=TEST_EMAIL, password=TEST_PASSWORD)

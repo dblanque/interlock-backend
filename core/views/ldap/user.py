@@ -135,7 +135,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				self.ldap_user_with_email_exists(email_search=data[RunningSettings.LDAP_AUTH_USER_FIELDS["email"]])
 			user_dn = self.ldap_user_insert(user_data=data)
 			user_pwd = data['password']
-			self.set_ldap_password(user_dn=user_dn, user_pwd=user_pwd)
+			self.ldap_set_password(user_dn=user_dn, user_pwd=user_pwd)
 
 		return Response(
 			 data={
@@ -301,7 +301,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 			if data['password'] != data['passwordConfirm']:
 				raise exc_user.UserPasswordsDontMatch
-			self.set_ldap_password(user_dn=dn, user_pwd=data['password'])
+			self.ldap_set_password(user_dn=dn, user_pwd=data['password'])
 
 		django_user = None
 		try:
@@ -481,7 +481,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 				if set_pwd:
 					try:
-						self.set_ldap_password(user_dn=user_dn, user_pwd=row[mapped_pwd_key])
+						self.ldap_set_password(user_dn=user_dn, user_pwd=row[mapped_pwd_key])
 					except:
 						failed_users.append({'username': row[mapped_user_key], 'stage': 'password'})
 
@@ -703,7 +703,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			if data['password'] != data['passwordConfirm']:
 				raise exc_user.UserPasswordsDontMatch
 			
-			self.set_ldap_password(user_dn=distinguishedName, user_pwd=data['password'])
+			self.ldap_set_password(user_dn=distinguishedName, user_pwd=data['password'])
 
 
 		django_user = None
@@ -825,6 +825,8 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		data["first_name"] = user.first_name or ""
 		data["last_name"] = user.last_name or ""
 		data["email"] = user.email or ""
+		# This only informs the front-end it is admin capable
+		# Validation is done on the back-end
 		if user.is_superuser:
 			data["admin_allowed"] = True
 		return Response(
