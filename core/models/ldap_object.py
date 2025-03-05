@@ -19,7 +19,10 @@ from interlock_backend.ldap.securityIdentifier import SID
 from ldap3 import Connection
 from typing import TypedDict
 from typing_extensions import Required, NotRequired
+from logging import getLogger
 ################################################################################
+logger = getLogger()
+
 class LDAPObjectOptions(TypedDict):
     name: NotRequired[str]
     searchBase: NotRequired[str]
@@ -55,6 +58,8 @@ class LDAPObject():
      - ldapAttributes: (OPTIONAL) | LDAP Attributes to Fetch
      - excludedLdapAttributes: (OPTIONAL) | LDAP Attributes to Exclude
     """
+    connection: Connection
+    ldapAttributes: list
     use_in_migrations = False
 
     def __init__(self, **kwargs):
@@ -64,6 +69,8 @@ class LDAPObject():
             raise Exception("LDAP Object requires a distinguishedName or a valid ldapFilter to search for the object")
 
         # Set LDAPTree Default Values
+        self.entry = None
+        self.attributes = None
         self.name = RunningSettings.LDAP_AUTH_SEARCH_BASE
         self.searchBase = RunningSettings.LDAP_AUTH_SEARCH_BASE
         self.connection = kwargs.pop('connection')
@@ -127,15 +134,17 @@ class LDAPObject():
             attributes      = self.ldapAttributes
         )
         searchResult = self.connection.entries
+        if len(searchResult) <= 0:
+            return
         try:
             self.entry = searchResult[0]
         except Exception as e:
             if not hasattr(self, 'hideErrors') == True:
-                print("Search Result")
-                print(searchResult)
-                print("Error")
-                print(e)
-            raise ValueError("Error setting LDAP Object Entry Result")
+                logger.error("Search Result")
+                logger.error(searchResult)
+                logger.error("Error")
+                logger.exception(e)
+            raise ValueError("Error setting LDAP Object Entry Result") from e
 
         # Set DN from Abstract Entry object (LDAP3)
         distinguishedName=str(self.entry['distinguishedName'])
@@ -177,7 +186,6 @@ class LDAPObject():
                         self.attributes[str_key].append(attr_value[k])
                 else:
                     self.attributes[str_key] = str_value
-
         return self.attributes
 
     def __ldapAttributes__(self):
