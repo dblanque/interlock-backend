@@ -22,6 +22,7 @@ from interlock_backend.ldap.adsi import (
 	search_filter_add,
 	LDAP_FILTER_OR
 )
+from django.contrib.auth.models import update_last_login
 from ldap3.core.exceptions import LDAPException
 from core.exceptions import ldap as exc_ldap
 from core.views.mixins.logs import LogMixin
@@ -142,6 +143,7 @@ def authenticate(*args, **kwargs):
 		setattr(user, field, encrypted_data[index])
 	del password
 	user.user_type = USER_TYPE_LDAP
+	update_last_login(None, user)
 	user.save()
 	return user
 
