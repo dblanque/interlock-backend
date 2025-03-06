@@ -1,4 +1,6 @@
 import re
+from rest_framework import serializers
+from core.models.application import User
 
 FIELD_VALIDATORS = {
         "username":         "ldap_user",    # username
@@ -21,3 +23,8 @@ ldap_user_pattern = ".*[\]\[\"\:\;\|\=\+\*\?\<\>\/\\\,]"
 def ldap_user_validator(value):
     containsInvalidChars = lambda s: re.match(ldap_user_pattern, s) != None
     return not containsInvalidChars(value)
+
+class UserSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = User
+		fields = '__all__'
