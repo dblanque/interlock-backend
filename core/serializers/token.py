@@ -4,10 +4,17 @@ from core.models.ldap_settings_runtime import RunningSettings
 from core.models.user import User
 from core.exceptions import otp as exc_otp
 from core.views.mixins.logs import LogMixin
+from rest_framework.exceptions import AuthenticationFailed
 from core.views.mixins.totp import get_user_totp_device, validate_user_otp
 import re
 
 DBLogMixin = LogMixin()
+
+def user_auth_fail_conditions(user: User):
+	if not user.is_enabled:
+		return False
+	return True
+
 class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
@@ -20,6 +27,9 @@ class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
 		data = []
 		data = super().validate(attrs)
 		""" self.user is set in super().validate() which also calls super().validate() """
+
+		if not user_auth_fail_conditions(self.user) is True:
+			raise AuthenticationFailed
 
 		# TOTP
 		if get_user_totp_device(user=self.user, confirmed=True):
@@ -35,10 +45,7 @@ class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
 				regex = r"^[0-9]{6}$"
 				if not re.match(regex, attrs['totp_code']):
 					raise exc_otp.OTPInvalidData
-				try:
-					validate_user_otp(user=self.user, data=attrs)
-				except:
-					raise
+				validate_user_otp(user=self.user, data=attrs)
 
 		data["first_name"] = self.user.first_name or ""
 		data["last_name"] = self.user.last_name or ""
@@ -61,8 +68,10 @@ class TokenRefreshSerializer(jwt_serializers.TokenRefreshSerializer):
 	refresh = serializers.CharField()
 
 	def validate(self, attrs):
+		self.user: User
 		data = super().validate(attrs)
-
+		if not user_auth_fail_conditions(self.user) is True:
+			raise AuthenticationFailed
 		return data
 	
 class OTPTokenSerializer(TokenRefreshSerializer):
