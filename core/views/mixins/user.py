@@ -624,7 +624,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				user_dict['sAMAccountType'] = accountType
 		return user_dict
 
-	def ldap_user_change_status(self, user_object, enabled: bool):
+	def ldap_user_change_status(self, user_object, target_state: bool):
 		affected_user = user_object['username']
 		self.ldap_filter_object = ""
 
@@ -655,7 +655,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			raise exc_user.UserAntiLockout
 
 		try:
-			if enabled is True:
+			if target_state is True:
 				newPermINT = ldap_adsi.calc_permissions(permList, perm_remove='LDAP_UF_ACCOUNT_DISABLE')
 			else:
 				newPermINT = ldap_adsi.calc_permissions(permList, perm_add='LDAP_UF_ACCOUNT_DISABLE')		
@@ -668,6 +668,16 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			{'userAccountControl':[(MODIFY_REPLACE, [ newPermINT ])]}
 		)
 
+		try:
+			django_user = User.objects.get(username=affected_user)
+		except:
+			django_user = None
+			pass
+
+		if django_user:
+			django_user.is_enabled = target_state
+			django_user.save()
+
 		if RunningSettings.LDAP_LOG_UPDATE == True:
 			# Log this action to DB
 			DBLogMixin.log(
@@ -675,7 +685,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				actionType="UPDATE",
 				objectClass="USER",
 				affectedObject=affected_user,
-				extraMessage="ENABLE" if enabled is True else "DISABLE"
+				extraMessage="ENABLE" if target_state is True else "DISABLE"
 			)
 
 		logger.debug("Located in: "+__name__+".disable")
