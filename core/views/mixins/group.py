@@ -33,9 +33,7 @@ from core.exceptions import ldap as exc_ldap, groups as exc_groups, dirtree as e
 from copy import deepcopy
 import ldap3
 from ldap3 import (
-	MODIFY_ADD,
 	MODIFY_DELETE,
-	MODIFY_INCREMENT,
 	MODIFY_REPLACE
 )
 import logging

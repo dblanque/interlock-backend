@@ -7,19 +7,36 @@
 # Contains the Django User ViewSet and related methods
 
 # ---------------------------------- IMPORTS -----------------------------------#
+# Views
 from core.views.base import BaseViewSet
+
+# Models
 from core.models.user import User
+
+# Serializers
 from core.serializers.user import UserSerializer
+
+# Exceptions
+from core.exceptions import users as exc_user
 from core.exceptions.base import BadRequest
 
 # REST Framework
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
+# Mixins
+from core.views.mixins.logs import LogMixin
+
 # Others
+from django.db import transaction
 from core.decorators.login import auth_required
+from core.models.ldap_settings_runtime import RunningSettings
+from core.constants.user import PUBLIC_FIELDS, PUBLIC_FIELDS_SHORT
+import logging
 ################################################################################
 
+DBLogMixin = LogMixin()
+logger = logging.getLogger(__name__)
 
 class UserViewSet(BaseViewSet):
 	serializer_class = UserSerializer
@@ -28,32 +45,49 @@ class UserViewSet(BaseViewSet):
 	def list(self, request, pk=None):
 		code = 0
 		code_msg = "ok"
-		FIELDS = (
-			"id",
-			"username",
-			"email",
-			"dn",
-			"user_type",
-			"is_enabled",
-		)
 		VALUE_ONLY = (
 			"id",
 			"dn",
 		)
-		users = User.objects.all()
+		user_queryset = User.objects.all()
 		return Response(
 			data={
 				"code": code,
 				"code_msg": code_msg,
-				"users": users.values(*FIELDS),
-				"headers": [field for field in FIELDS if not field in VALUE_ONLY]
+				"users": user_queryset.values(*PUBLIC_FIELDS_SHORT),
+				"headers": [field for field in PUBLIC_FIELDS_SHORT if not field in VALUE_ONLY]
 			}
 		)
 
+	@action(detail=False, methods=['post'])
 	@auth_required()
-	def create(self, request, pk=None):
+	def insert(self, request, pk=None):
 		code = 0
 		code_msg = "ok"
+		data: dict = request.data
+		serializer = self.serializer_class(data=data)
+		password = None
+		FIELDS_EXCLUDE = (
+			"permission_list",
+		)
+		for field in FIELDS_EXCLUDE:
+			if field in data:
+				data.pop(field)
+
+		if not serializer.is_valid():
+			raise BadRequest(data={
+				"errors": serializer.errors
+			})
+		elif not serializer.validate_password_confirm():
+			raise exc_user.UserPasswordsDontMatch
+		else:
+			serialized_data = serializer.data
+			password = serialized_data.pop("password")
+			serialized_data.pop("passwordConfirm")
+			with transaction.atomic():
+				user_instance = User.objects.create(**serialized_data)
+				user_instance.set_password(password)
+				user_instance.save()
 		return Response(
 			data={
 				"code": code,
@@ -67,23 +101,10 @@ class UserViewSet(BaseViewSet):
 		code = 0
 		code_msg = "ok"
 		pk = int(pk)
-		user = User.objects.get(id=pk)
-		FIELDS = (
-			"id",
-			"username",
-			"first_name",
-			"last_name",
-			"last_login",
-			"created_at",
-			"modified_at",
-			"email",
-			"dn",
-			"user_type",
-			"is_enabled",
-		)
+		user_instance = User.objects.get(id=pk)
 		data = {}
-		for field in FIELDS:
-			data[field] = getattr(user, field)
+		for field in PUBLIC_FIELDS:
+			data[field] = getattr(user_instance, field)
 		return Response(
 			data={
 				"code": code,
@@ -97,7 +118,9 @@ class UserViewSet(BaseViewSet):
 		code = 0
 		code_msg = "ok"
 		data: dict = request.data
+		pk = int(pk)
 		EXCLUDE_FIELDS = (
+			"id",
 			"modified_at",
 			"created_at",
 			"user_type",
@@ -115,10 +138,10 @@ class UserViewSet(BaseViewSet):
 				"errors": serializer.errors
 			})
 
-		user = User.objects.get(id=data.pop("id"))
+		user_instance = User.objects.get(id=pk)
 		for key in data:
-			setattr(user, key, data[key])
-		user.save()
+			setattr(user_instance, key, data[key])
+		user_instance.save()
 		return Response(
 			data={
 				"code": code,
@@ -126,10 +149,18 @@ class UserViewSet(BaseViewSet):
 			}
 		)
 
+	@action(detail=True,methods=['delete', 'post'])
 	@auth_required()
-	def delete(self, request, pk=None):
+	def delete(self, request, pk):
+		req_user: User = request.user
 		code = 0
 		code_msg = "ok"
+		pk = int(pk)
+		with transaction.atomic():
+			user_instance = User.objects.get(id=pk)
+			if req_user.id == pk:
+				raise exc_user.UserAntiLockout
+			user_instance.delete_permanently()
 		return Response(
 			data={
 				"code": code,
@@ -138,6 +169,7 @@ class UserViewSet(BaseViewSet):
 		)
 
 	@action(detail=True,methods=['post'])
+	@auth_required()
 	def change_status(self, request, pk):
 		code = 0
 		code_msg = "ok"
@@ -147,8 +179,112 @@ class UserViewSet(BaseViewSet):
 			raise BadRequest(data={
 				"errors": "Must contain field enabled (bool)"
 			})
-		user = User.objects.get(id=pk)
-		user.is_enabled = data.pop("enabled")
+		user_instance = User.objects.get(id=pk)
+		user_instance.is_enabled = data.pop("enabled")
+		user_instance.save()
+		return Response(
+			data={
+				"code": code,
+				"code_msg": code_msg,
+			}
+		)
+
+	@action(detail=True,methods=['post'])
+	@auth_required()
+	def change_password(self, request, pk):
+		user: User = request.user
+		code = 0
+		code_msg = "ok"
+		data: dict = request.data
+		pk = int(pk)
+		for field in ("password", "passwordConfirm"):
+			if not field in data:
+				raise BadRequest(data={
+					"errors": f"Must contain field {field}."
+				})
+		if not self.serializer_class().validate_password_confirm(data):
+			raise exc_user.UserPasswordsDontMatch
+		user_instance = User.objects.get(id=pk)
+		user_instance.set_password(data["password"])
+		user_instance.save()
+
+		if RunningSettings.LDAP_LOG_UPDATE == True:
+			# Log this action to DB
+			DBLogMixin.log(
+				user_id=user.id,
+				actionType="UPDATE",
+				objectClass="USER",
+				affectedObject=user_instance.username,
+				extraMessage="CHANGED_PASSWORD"
+			)
+
+		return Response(
+			data={
+				"code": code,
+				"code_msg": code_msg,
+				"data": { "username": user_instance.username }
+			}
+		)
+
+	@action(detail=False,methods=['post', 'put'])
+	@auth_required(require_admin=False)
+	def self_change_password(self, request):
+		user: User = request.user
+		code = 0
+		code_msg = "ok"
+		data: dict = request.data
+		for field in ("password", "passwordConfirm"):
+			if not field in data:
+				raise BadRequest(data={
+					"errors": f"Must contain field {field}."
+				})
+		if not self.serializer_class().validate_password_confirm(data):
+			raise exc_user.UserPasswordsDontMatch
+		user.set_password(data["password"])
+		user.save()
+
+		if RunningSettings.LDAP_LOG_UPDATE == True:
+			# Log this action to DB
+			DBLogMixin.log(
+				user_id=user.id,
+				actionType="UPDATE",
+				objectClass="USER",
+				affectedObject=user.username,
+				extraMessage="CHANGED_PASSWORD"
+			)
+
+		return Response(
+			data={
+				"code": code,
+				"code_msg": code_msg,
+				"data": { "username": user.username }
+			}
+		)
+
+	@action(detail=False,methods=['post', 'put'])
+	@auth_required(require_admin=False)
+	def self_update(self, request, pk=None):
+		user: User = request.user
+		code = 0
+		code_msg = "ok"
+		data: dict = request.data
+		FIELDS = (
+			"first_name",
+			"last_name",
+			"email",
+		)
+		for key in data:
+			if not key in FIELDS:
+				del data[key]
+		serializer = self.serializer_class(data=data, partial=True)
+
+		if not serializer.is_valid():
+			raise BadRequest(data={
+				"errors": serializer.errors
+			})
+
+		for key in data:
+			setattr(user, key, data[key])
 		user.save()
 		return Response(
 			data={

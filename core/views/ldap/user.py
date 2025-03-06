@@ -14,6 +14,7 @@ from core.exceptions import (
 	users as exc_user, 
 	ldap as exc_ldap
 )
+from django.core.exceptions import ObjectDoesNotExist
 from interlock_backend.encrypt import aes_encrypt
 
 ### Models
@@ -33,14 +34,16 @@ from core.views.base import BaseViewSet
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
-### Others
-from core.constants.user import UserViewsetFilterAttributeBuilder
-from interlock_backend.ldap.connector import LDAPConnector
-from core.models.ldap_settings_runtime import RunningSettings
+### Auth
+from core.decorators.login import auth_required
 from interlock_backend.ldap import adsi as ldap_adsi
 from interlock_backend.ldap import user as ldap_user
-from core.decorators.login import auth_required
+from interlock_backend.ldap.connector import LDAPConnector
 import ldap3
+
+### Others
+from core.constants.user import UserViewsetFilterAttributeBuilder, PUBLIC_FIELDS
+from core.models.ldap_settings_runtime import RunningSettings
 import logging
 ################################################################################
 
@@ -251,10 +254,12 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			if RunningSettings.LDAP_AUTH_USER_FIELDS["username"] in data:
 				username = data[RunningSettings.LDAP_AUTH_USER_FIELDS["username"]]
 
+			if username == user.username:
+				raise exc_user.UserAntiLockout
 			userToDelete = None
 			try:
 				userToDelete = User.objects.get(username=username)
-			except:
+			except ObjectDoesNotExist:
 				pass
 			if userToDelete:
 				userToDelete.delete_permanently()
@@ -845,47 +850,50 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		user: User = request.user
 		code = 0
 		code_msg = 'ok'
-		data = request.data
 		user_search = user.username
-
-		# Open LDAP Connection
-		with LDAPConnector(user) as ldc:
-			self.ldap_connection = ldc.connection
-			self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_fetch_me_filter()
-
-			self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
-
-			# Add filter for username
-			self.ldap_filter_object = ldap_adsi.search_filter_add(
-				self.ldap_filter_object,
-				f"{RunningSettings.LDAP_AUTH_USER_FIELDS['username']}={user_search}"
-			)
-			self.ldap_connection.search(
-				RunningSettings.LDAP_AUTH_SEARCH_BASE,
-				self.ldap_filter_object,
-				attributes=self.ldap_filter_attr
-			)
-			user = self.ldap_connection.entries
-
-			self.ldap_filter_attr.remove('userAccountControl')
-
-			# For each attribute in user object attributes
+		if user.user_type == "local":
 			user_data = {}
-			for attr_key in self.ldap_filter_attr:
-				if attr_key in self.ldap_filter_attr:
-					str_key = str(attr_key)
-					str_value = str(getattr(user[0],attr_key))
-					if str_value == "[]":
-						user_data[str_key] = ""
-					else:
-						user_data[str_key] = str_value
-				if attr_key == RunningSettings.LDAP_AUTH_USER_FIELDS["username"]:
-					user_data['username'] = str_value
+			for field in PUBLIC_FIELDS:
+				user_data[field] = getattr(user, field)
+		else:
+			# Open LDAP Connection
+			with LDAPConnector(user) as ldc:
+				self.ldap_connection = ldc.connection
+				self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_fetch_me_filter()
 
-				# Check if user can change password based on perms
-				user_data['can_change_pwd'] = False
-				if not ldap_adsi.list_user_perms(user=user[0], perm_search="LDAP_UF_PASSWD_CANT_CHANGE"):
-					user_data['can_change_pwd'] = True
+				self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
+
+				# Add filter for username
+				self.ldap_filter_object = ldap_adsi.search_filter_add(
+					self.ldap_filter_object,
+					f"{RunningSettings.LDAP_AUTH_USER_FIELDS['username']}={user_search}"
+				)
+				self.ldap_connection.search(
+					RunningSettings.LDAP_AUTH_SEARCH_BASE,
+					self.ldap_filter_object,
+					attributes=self.ldap_filter_attr
+				)
+				user = self.ldap_connection.entries
+
+				self.ldap_filter_attr.remove('userAccountControl')
+
+				# For each attribute in user object attributes
+				user_data = {}
+				for attr_key in self.ldap_filter_attr:
+					if attr_key in self.ldap_filter_attr:
+						str_key = str(attr_key)
+						str_value = str(getattr(user[0],attr_key))
+						if str_value == "[]":
+							user_data[str_key] = ""
+						else:
+							user_data[str_key] = str_value
+					if attr_key == RunningSettings.LDAP_AUTH_USER_FIELDS["username"]:
+						user_data['username'] = str_value
+
+					# Check if user can change password based on perms
+					user_data['can_change_pwd'] = False
+					if not ldap_adsi.list_user_perms(user=user[0], perm_search="LDAP_UF_PASSWD_CANT_CHANGE"):
+						user_data['can_change_pwd'] = True
 
 		return Response(
 			 data={

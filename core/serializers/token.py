@@ -11,9 +11,8 @@ import re
 DBLogMixin = LogMixin()
 
 def user_auth_fail_conditions(user: User):
-	if not user.is_enabled:
-		return False
-	return True
+	if not user.is_anonymous and user.is_enabled:
+		return True
 
 class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
 	def __init__(self, *args, **kwargs):
@@ -50,6 +49,7 @@ class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
 		data["first_name"] = self.user.first_name or ""
 		data["last_name"] = self.user.last_name or ""
 		data["email"] = self.user.email or ""
+		data["user_type"] = self.user.user_type or ""
 		if self.user.is_superuser or self.user.username == 'admin':
 			data["admin_allowed"] = True
 

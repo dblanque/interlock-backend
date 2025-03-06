@@ -23,10 +23,13 @@ from django.utils.translation import gettext_lazy as _
 
 from core.models.base import BaseModel
 from interlock_backend.settings import (
+	SECRET_KEY_FALLBACKS,
 	DEFAULT_SUPERUSER_USERNAME,
 	DEFAULT_SUPERUSER_PASSWORD
 )
 # ---------------------------------------------------------------------------- #
+
+
 class BaseUserManager(DjangoBaseUserManager):
 	use_in_migrations = True
 
@@ -75,6 +78,7 @@ class BaseUserManager(DjangoBaseUserManager):
 
 		return self._create_user(DEFAULT_SUPERUSER_USERNAME, DEFAULT_SUPERUSER_PASSWORD, **extra_fields)
 
+
 class BaseUser(BaseModel, PermissionsMixin):
 	USERNAME_FIELD = "username"
 	REQUIRED_FIELDS = []
@@ -84,7 +88,8 @@ class BaseUser(BaseModel, PermissionsMixin):
 	username = models.CharField(_("username"), max_length=128, unique=True)
 	password = models.CharField(_("password"), max_length=128)
 	last_login = models.DateTimeField(_("last login"), blank=True, null=True)
-	email = models.EmailField(_("email address"), unique=True, db_index=True, null=True)
+	email = models.EmailField(
+		_("email address"), unique=True, db_index=True, null=True)
 	is_staff = models.BooleanField(
 		_("staff status"),
 		default=False,
@@ -132,12 +137,12 @@ class BaseUser(BaseModel, PermissionsMixin):
 	def is_active(self):
 		return not self.deleted
 
-	#This has to be reworked for LDAP Compatibility
+	# This has to be reworked for LDAP Compatibility
 	def set_password(self, raw_password):
 		self.password = make_password(raw_password)
 		self._password = raw_password
 
-	#This has to be reworked for LDAP Compatibility
+	# This has to be reworked for LDAP Compatibility
 	def check_password(self, raw_password):
 		"""
 		Return a boolean of whether the raw_password was correct. Handles
@@ -171,6 +176,10 @@ class BaseUser(BaseModel, PermissionsMixin):
 		)
 		return salted_hmac(key_salt, self.password).hexdigest()
 
+	def get_session_auth_fallback_hash(self):
+		for fallback_secret in []:
+			yield self._get_session_auth_hash(secret=fallback_secret)
+
 	@classmethod
 	def get_email_field_name(cls):
 		try:
@@ -180,6 +189,7 @@ class BaseUser(BaseModel, PermissionsMixin):
 
 	class Meta:
 		abstract = True
+
 
 USER_LDAP_FIELD_PREFIX = "ldap"
 USER_PASSWORD_FIELDS = (
@@ -195,14 +205,18 @@ USER_TYPE_CHOICES = (
 	(USER_TYPE_LDAP, f"{USER_TYPE_LDAP.upper()} User"),
 )
 
+
 class User(BaseUser):
 	class Meta:
 		verbose_name = _('User')
 		verbose_name_plural = _('Users')
-	first_name = models.CharField(_("First name"), max_length=255, null=True, blank=True)
-	last_name = models.CharField(_("Last name"), max_length=255, null=True, blank=True)
+	first_name = models.CharField(
+		_("First name"), max_length=255, null=True, blank=True)
+	last_name = models.CharField(
+		_("Last name"), max_length=255, null=True, blank=True)
 	email = models.EmailField(_("Email"), null=True, blank=True)
-	dn = models.CharField(_("distinguishedName"), max_length=128, null=True, blank=True)
+	dn = models.CharField(_("distinguishedName"),
+						  max_length=128, null=True, blank=True)
 	user_type = models.CharField(
 		_("User Type"),
 		choices=USER_TYPE_CHOICES,
@@ -219,11 +233,12 @@ class User(BaseUser):
 	is_enabled = models.BooleanField(null=False, default=True)
 
 	# Encrypted AES Key
-	ldap_password_aes = models.BinaryField(null=True, blank=True)
+	ldap_password_aes = models.BinaryField(null=True, blank=True, default=None)
 	# Cipher Text
-	ldap_password_ct = models.BinaryField(null=True, blank=True)
-	ldap_password_nonce = models.BinaryField(null=True, blank=True)
-	ldap_password_tag = models.BinaryField(null=True, blank=True)
+	ldap_password_ct = models.BinaryField(null=True, blank=True, default=None)
+	ldap_password_nonce = models.BinaryField(
+		null=True, blank=True, default=None)
+	ldap_password_tag = models.BinaryField(null=True, blank=True, default=None)
 
 	@property
 	def encryptedPassword(self):
@@ -233,17 +248,17 @@ class User(BaseUser):
 		constraints = [
 			models.CheckConstraint(
 				check=models.Q(
-						ldap_password_aes=None,
-						ldap_password_ct=None,
-						ldap_password_nonce=None,
-						ldap_password_tag=None
-						) |
-					  models.Q(
-						ldap_password_aes__isnull=False,
-						ldap_password_ct__isnull=False,
-						ldap_password_nonce__isnull=False,
-						ldap_password_tag__isnull=False
-					  ),
+					ldap_password_aes=None,
+					ldap_password_ct=None,
+					ldap_password_nonce=None,
+					ldap_password_tag=None
+				) |
+				models.Q(
+					ldap_password_aes__isnull=False,
+					ldap_password_ct__isnull=False,
+					ldap_password_nonce__isnull=False,
+					ldap_password_tag__isnull=False
+				),
 				name='user_password_crypt_data_all_or_none'
 			)
 		]
@@ -252,6 +267,6 @@ class User(BaseUser):
 		if self.user_type != USER_TYPE_LDAP:
 			return False
 		return self.dn
-		
+
 	def is_user_local(self):
 		return self.user_type == USER_TYPE_LOCAL

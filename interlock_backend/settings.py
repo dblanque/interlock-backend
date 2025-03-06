@@ -33,6 +33,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # SECURITY WARNING: keep the secret and fernet keys used in production secret!
 SECRET_KEY = None
+SECRET_KEY_FALLBACKS = []
 FERNET_KEY = None
 
 secretFile = os.path.join(BASE_DIR, 'interlock_backend', 'sec_key.py')
@@ -151,11 +152,11 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",  # Must be before Common Middleware
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    "interlock_backend.middleware.AccountStatusMiddleware",
+    "interlock_backend.middleware.AccountStatusMiddleware", # Must be before Authentication Middleware
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+	"django_otp.middleware.OTPMiddleware", # Must be after Authentication Middleware
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-	"django_otp.middleware.OTPMiddleware", # Must be after Authentication Middleware
 ]
 
 ROOT_URLCONF = 'interlock_backend.urls'
