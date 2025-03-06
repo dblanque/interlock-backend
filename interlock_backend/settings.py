@@ -151,6 +151,7 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",  # Must be before Common Middleware
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "interlock_backend.middleware.AccountStatusMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
