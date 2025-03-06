@@ -47,6 +47,8 @@ import logging
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
+# TODO - Make decorator that checks user existence both in LDAP and Django
+# TODO - Make decorator that checks user type being correct (ldap or django/local)
 class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	queryset = User.objects.all()
 	filter_attr_builder = UserViewsetFilterAttributeBuilder
@@ -221,7 +223,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			self.ldap_user_change_status(user_object=data, enabled=enabled)
+			self.ldap_user_change_status(user_object=data, target_state=enabled)
 
 		return Response(
 			 data={
@@ -585,10 +587,10 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			success = []
 			for user_object in data:
 				if disable_users and user_object["is_enabled"]:
-					self.ldap_user_change_status(user_object=user_object, enabled=False)
+					self.ldap_user_change_status(user_object=user_object, target_state=False)
 					success.append(user_object["username"])
 				elif not disable_users and not user_object["is_enabled"]:
-					self.ldap_user_change_status(user_object=user_object, enabled=True)
+					self.ldap_user_change_status(user_object=user_object, target_state=True)
 					success.append(user_object["username"])
 				else: continue
 
