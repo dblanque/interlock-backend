@@ -50,10 +50,11 @@ class OidcAuthorizeView(AuthorizeView):
 	def get(self, request: HttpRequest, *args, **kwargs):
 		cookieauth = CookieJWTAuthentication()
 		request.user, token = cookieauth.authenticate(request)
+		user: User = request.user
 		login_url = None
 
 		# TODO - Check if user is in application's groups (LDAP, Local, etc.)
-		if not request.user.is_authenticated:
+		if not user.is_authenticated or not user.is_enabled:
 			OIDC_FAILED = request.COOKIES.get(OIDC_INTERLOCK_LOGIN_COOKIE, "false").lower() == "true"
 			if OIDC_FAILED:
 				login_url = f"{LOGIN_URL}/?{Q_OIDC_FAILED}=true"
