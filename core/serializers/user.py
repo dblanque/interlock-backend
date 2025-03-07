@@ -20,11 +20,9 @@ FIELD_VALIDATORS = {
 
 ldap_user_pattern = ".*[\]\[\"\:\;\|\=\+\*\?\<\>\/\\\,]"
 
-
 def ldap_user_validator(value):
     def containsInvalidChars(s): return re.match(ldap_user_pattern, s) != None
     return not containsInvalidChars(value)
-
 
 class UserSerializer(serializers.ModelSerializer):
     passwordConfirm = serializers.CharField(required=False)
@@ -34,11 +32,11 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             "username",
             "first_name",
-			"last_name",
-			"email",
+            "last_name",
+            "email",
             "password",
             "passwordConfirm"
-		)
+        )
 
     def validate_password_confirm(self, data=None, raise_exc=True):
         if data is None and not hasattr(self, "data"):
