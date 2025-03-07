@@ -23,8 +23,7 @@ class Application(BaseModel):
     scopes = models.TextField(default="openid profile email groups")
 
 class ApplicationSecurityGroup(BaseModel):
-    name = models.CharField(max_length=255)
+    application = models.OneToOneField(Application, on_delete=models.CASCADE)
     enabled = models.BooleanField(default=True)
-    application = models.ForeignKey(Application, on_delete=models.CASCADE)
-    users = models.ManyToManyField(User)
-    ldap_objects = ArrayField(models.CharField(max_length=255))
+    users = models.ManyToManyField(User, blank=True)
+    ldap_objects = ArrayField(models.CharField(max_length=255), blank=True, null=True)

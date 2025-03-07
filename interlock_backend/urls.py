@@ -31,12 +31,13 @@ from core.views.ldap.user import LDAPUserViewSet
 from core.views.ldap.organizational_unit import LDAPOrganizationalUnitViewSet
 from core.views.ldap_settings import SettingsViewSet
 from core.views.logs import LogsViewSet
-from core.views.ldap.groups import LDAPGroupsViewSet
+from core.views.ldap.group import LDAPGroupsViewSet
 from core.views.test import TestViewSet
 from core.views.gpo import GPOViewSet
 from core.views.liveness import LivenessViewSet
 from core.views.ldap.record import LDAPRecordViewSet
 from core.views.debug import DebugViewSet
+from core.views.application_group import ApplicationGroupViewSet
 from core.views.application import ApplicationViewSet
 from core.views.oidc import OidcAuthorizeView
 from interlock_backend.settings import DEBUG
@@ -54,6 +55,7 @@ named_view_sets = {
 	r"logs": LogsViewSet,
 	r"liveness": LivenessViewSet,
 	r"totp": TOTPViewSet,
+	r"application/group": ApplicationGroupViewSet,
 	r"application": ApplicationViewSet
 }
 
