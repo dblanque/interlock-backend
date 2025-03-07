@@ -21,6 +21,7 @@ from core.exceptions import users as exc_user
 from core.exceptions.base import BadRequest
 
 # REST Framework
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
@@ -42,7 +43,7 @@ class UserViewSet(BaseViewSet):
 	serializer_class = UserSerializer
 
 	@auth_required()
-	def list(self, request, pk=None):
+	def list(self, request: Request, pk=None):
 		code = 0
 		code_msg = "ok"
 		VALUE_ONLY = (
