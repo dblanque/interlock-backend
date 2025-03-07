@@ -42,31 +42,31 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
             logger.debug("Dirtree fetching with Filter iexact")
             if len(data['filter']['iexact']) > 0:
                 for f in data['filter']['iexact']:
-                    fVal = data['filter']['iexact'][f]
-                    if isinstance(fVal, dict):
-                        fType = fVal.pop('attr')
-                        if 'exclude' in fVal:
-                            fExclude = fVal.pop('exclude')
+                    lookup_value = data['filter']['iexact'][f]
+                    if isinstance(lookup_value, dict):
+                        lookup_type = lookup_value.pop('attr')
+                        if 'exclude' in lookup_value:
+                            lookup_exclude = lookup_value.pop('exclude')
                         else:
-                            fExclude = False
-                        if 'or' in fVal:
-                            fOr = fVal.pop('or')
+                            lookup_exclude = False
+                        if 'or' in lookup_value:
+                            lookup_or = lookup_value.pop('or')
                         else:
-                            fOr = False
+                            lookup_or = False
 
-                        if fOr == True:
-                            operator = LDAP_FILTER_AND
-                        else:
+                        if lookup_or:
                             operator = LDAP_FILTER_OR
+                        else:
+                            operator = LDAP_FILTER_AND
                         ldapFilter = search_filter_add(
                             ldapFilter,
-                            f"{fType}={f}",
+                            f"{lookup_type}={f}",
                             operator=operator,
-                            negate=fExclude
+                            negate=lookup_exclude
                         )
                     else:
-                        fType = fVal
-                        ldapFilter = search_filter_add(ldapFilter, fType + "=" + f)
+                        lookup_type = lookup_value
+                        ldapFilter = search_filter_add(ldapFilter, lookup_type + "=" + f)
         else:
             logger.debug("Dirtree fetching with Standard Exclusion Filter")
             if filterDict is None:
@@ -77,7 +77,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
             if 'filter' in data and 'exclude' in data['filter']:
                 if len(data['filter']['exclude']) > 0:
                     for f in data['filter']['exclude']:
-                        fType = data['filter']['exclude'][f]
+                        lookup_type = data['filter']['exclude'][f]
                         if f in filterDict:
                             del filterDict[f]
 
@@ -90,10 +90,10 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
             if 'filter' in data and 'exclude' in data['filter']:
                 if len(data['filter']['exclude']) > 0:
                     for f in data['filter']['exclude']:
-                        fType = data['filter']['exclude'][f]
+                        lookup_type = data['filter']['exclude'][f]
                         ldapFilter = search_filter_add(
                             ldapFilter,
-                            f"{fType}={f}",
+                            f"{lookup_type}={f}",
                             negate=True
                         )
 
