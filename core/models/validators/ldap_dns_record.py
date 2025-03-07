@@ -53,7 +53,7 @@ def natural_validator(value):
     return False
 
 def canonicalHostname_validator(value):
-    pattern = r'^(((?:[a-zA-Z0-9-.]){2,61}(?:\.[a-zA-Z.]{3,})+|(?:[a-zA-Z0-9-]){2,64})+.)?$'
+    pattern = r'^(((?:[a-zA-Z0-9-.]){2,63}(?:\.[a-zA-Z.]{2,})+|(?:[a-zA-Z0-9-]){2,64})+.)?$'
     try:
         if re.match(pattern, str(value)):
             return True
@@ -64,7 +64,7 @@ def canonicalHostname_validator(value):
     return False
 
 def domain_validator(value):
-    pattern = r'^(((?:[a-zA-Z0-9-.]){2,61}(?:\.[a-zA-Z]{2,})+|(?:[a-zA-Z0-9-]){2,64}))?$'
+    pattern = r'^(((?:[a-zA-Z0-9-.]){2,63}(?:\.[a-zA-Z]{2,})+|(?:[a-zA-Z0-9-]){2,64}))?$'
     try:
         if re.match(pattern, str(value)):
             return True
