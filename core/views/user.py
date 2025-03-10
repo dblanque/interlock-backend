@@ -73,7 +73,7 @@ class UserViewSet(BaseViewSet):
 		)
 		for field in FIELDS_EXCLUDE:
 			if field in data:
-				data.pop(field)
+				del data[field]
 
 		if not serializer.is_valid():
 			raise BadRequest(data={
