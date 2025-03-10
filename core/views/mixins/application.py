@@ -109,7 +109,7 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 		return data
 
 	def fetch_application(self, application_id: int) -> dict:
-		APPLICATION_FIELDS = [
+		APPLICATION_FIELDS = (
 			"id",
 			"name",
 			"redirect_uris",
@@ -117,11 +117,11 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 			"client_secret",
 			"scopes",
 			"enabled",
-		]
-		CLIENT_FIELDS = [
+		)
+		CLIENT_FIELDS = (
 			"require_consent",
 			"reuse_consent",
-		]
+		)
 
 		data = {}
 		application, client = self.get_application_data(application_id=application_id)
@@ -149,19 +149,19 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 		return data
 
 	def insert_clean_data(self, data: dict) -> tuple[ApplicationSerializer, dict]:
-		FIELDS_EXCLUDE = [
+		FIELDS_EXCLUDE = (
 			"client_id",
 			"client_secret",
 			"enabled",
-		]
-		FIELDS_EXTRA = [
+		)
+		FIELDS_EXTRA = (
 			"require_consent",
 			"reuse_consent",
 			"response_types"
-		]
+		)
 		for field in FIELDS_EXCLUDE:
 			if field in data:
-				data.pop(field)
+				del data[field]
 
 		extra_fields = {}
 		for field in FIELDS_EXTRA:
@@ -210,25 +210,25 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 		return application
 
 	def update_application(self, application_id: int, data: dict) -> None:
-		APPLICATION_FIELDS = [
+		APPLICATION_FIELDS = (
 			"name",
 			"redirect_uris",
 			"scopes",
 			"enabled",
-		]
-		CLIENT_FIELDS = [
+		)
+		CLIENT_FIELDS = (
 			"require_consent",
 			"reuse_consent",
-		]
-		FIELDS_EXCLUDE = [
+		)
+		FIELDS_EXCLUDE = (
 			"id",
 			"client_id",
 			"client_secret",
-		]
+		)
 
 		for field in FIELDS_EXCLUDE:
 			if field in data:
-				data.pop(field)
+				del data[field]
 
 		application, client = self.get_application_data(application_id=application_id)
 		application: Application
