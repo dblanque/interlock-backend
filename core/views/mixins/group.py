@@ -19,6 +19,7 @@ from core.models.ldap_settings_runtime import RunningSettings
 
 ### Models
 from core.views.mixins.logs import LogMixin
+from core.models.application import ApplicationSecurityGroup
 
 ### Core
 from core.exceptions.ldap import CouldNotOpenConnection
@@ -30,6 +31,7 @@ import traceback
 from core.exceptions import ldap as exc_ldap, groups as exc_groups, dirtree as exc_dirtree
 
 ### Others
+from django.db import transaction
 from copy import deepcopy
 import ldap3
 from ldap3 import (
@@ -601,6 +603,15 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				"ldap_response": self.ldap_connection.result
 			}
 			raise exc_groups.GroupDelete(data=data)
+
+		with transaction.atomic():
+			asg_queryset = ApplicationSecurityGroup.objects.filter(
+				ldap_objects__contains=[distinguishedName]
+			)
+			if asg_queryset.count() > 0:
+				for asg in list(asg_queryset):
+					asg.ldap_objects.remove(distinguishedName)
+					asg.save()
 
 		if RunningSettings.LDAP_LOG_DELETE == True:
 			# Log this action to DB
