@@ -1,5 +1,5 @@
 ################################## IMPORTS #####################################
-### Django
+# Django
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.utils.translation import gettext_lazy as _
@@ -8,15 +8,18 @@ from django.contrib.auth.forms import (
     UserCreationForm as DjangoUserCreationForm,
     AdminPasswordChangeForm,
 )
-from django.forms import CharField
+from django import forms
+from django.contrib.postgres.forms import SimpleArrayField
 
-### Core
+# Core
 from core import models
 ################################################################################
+
 class UserCreationForm(DjangoUserCreationForm):
     class Meta:
         fields = ("username",)
-        field_classes = {"username": CharField}
+        field_classes = {"username": forms.CharField}
+
 
 @admin.register(models.User)
 class UserAdmin(DjangoUserAdmin):
@@ -24,17 +27,17 @@ class UserAdmin(DjangoUserAdmin):
     change_user_password_template = None
     fieldsets = (
         (
-            _("Personal info"), 
+            _("Personal info"),
             {
                 "fields": (
                     "username",
-                    "first_name", 
-                    "last_name", 
-                    "email", 
+                    "first_name",
+                    "last_name",
+                    "email",
                     "password"
-                    )
-                }
-            ),
+                )
+            }
+        ),
         (
             _("Permissions"),
             {
@@ -74,3 +77,30 @@ class UserAdmin(DjangoUserAdmin):
     readonly_fields = ("created_at", "modified_at", "deleted_at", "deleted")
     search_fields = ("email",)
     ordering = ("-created_at",)
+
+
+class ASGForm(forms.ModelForm):
+    ldap_objects = SimpleArrayField(forms.CharField(), delimiter="|")
+
+@admin.register(models.ApplicationSecurityGroup)
+class ASGAdmin(admin.ModelAdmin):
+    form = ASGForm
+    list_display = (
+        "get_application_name",
+        "enabled",
+    )
+
+    def get_application_name(self, obj: models.ApplicationSecurityGroup):
+        return obj.application.name
+
+
+@admin.register(models.Application)
+class ApplicationAdmin(admin.ModelAdmin):
+    list_display = (
+        "name",
+        "enabled",
+        "client_id",
+        "client_secret",
+        "redirect_uris",
+        "scopes",
+    )
