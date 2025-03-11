@@ -11,7 +11,7 @@
 from core.views.base import BaseViewSet
 
 # Models
-from core.models.user import User, USER_TYPE_LOCAL
+from core.models.user import USER_TYPE_LOCAL
 from core.models.application import Application, ApplicationSecurityGroup
 
 # Mixins
@@ -26,12 +26,11 @@ from core.exceptions.application_group import (
 	ApplicationGroupExists,
 	ApplicationGroupDoesNotExist
 )
+from core.exceptions.base import BadRequest
 
 # Others
-from core.exceptions.base import BadRequest
 from core.decorators.login import auth_required
 from django.db import transaction
-from django.forms.models import model_to_dict
 import logging
 ################################################################################
 logger = logging.getLogger(__name__)
