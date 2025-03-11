@@ -42,7 +42,7 @@ from core.models.ldap_settings_runtime import RunningSettings
 
 DBLogMixin = LogMixin()
 class TOTPViewSet(BaseViewSet):
-	@auth_required()
+	@auth_required(require_admin=False)
 	def list(self, request):
 		user: User = request.user
 		code = 0
@@ -68,7 +68,7 @@ class TOTPViewSet(BaseViewSet):
 		)
 
 	@action(detail=False,methods=['get'])
-	@auth_required()
+	@auth_required(require_admin=False)
 	def create_device(self, request):
 		user: User = request.user
 		data = request.data
@@ -92,7 +92,7 @@ class TOTPViewSet(BaseViewSet):
 		)
 
 	@action(detail=False,methods=['put', 'post'])
-	@auth_required()
+	@auth_required(require_admin=False)
 	def validate_device(self, request):
 		user: User = request.user
 		data = request.data
@@ -114,7 +114,7 @@ class TOTPViewSet(BaseViewSet):
 		)
 
 	@action(detail=False,methods=['post', 'delete'])
-	@auth_required()
+	@auth_required(require_admin=False)
 	def delete_device(self, request):
 		user: User = request.user
 		code = 0
