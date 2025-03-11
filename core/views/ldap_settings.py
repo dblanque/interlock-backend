@@ -13,6 +13,7 @@ from core.exceptions import (
 	base as exc_base,
 	ldap_settings as exc_set,
 )
+from django.core.exceptions import ObjectDoesNotExist
 
 ### Models
 from core.views.mixins.logs import LogMixin
@@ -26,7 +27,7 @@ from core.models.ldap_settings import (
 )
 
 ### Mixins
-from .mixins.ldap_settings import SettingsViewMixin
+from core.views.mixins.ldap_settings import SettingsViewMixin
 
 ### Viewsets
 from .base import BaseViewSet
@@ -39,7 +40,6 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
-from django.db import transaction, IntegrityError
 from interlock_backend.ldap import defaults
 from interlock_backend.encrypt import aes_encrypt
 from core.decorators.login import auth_required
