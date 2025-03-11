@@ -14,7 +14,7 @@ from core.exceptions import ldap as exc_ldap
 from core.models.user import User
 
 ### Mixins
-from core.views.mixins.group import GroupViewMixin
+from core.views.mixins.ldap.group import GroupViewMixin
 
 ### ViewSets
 from core.views.base import BaseViewSet

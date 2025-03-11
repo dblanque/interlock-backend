@@ -29,7 +29,7 @@ from ldap3 import (
 )
 
 ### Mixins
-from core.views.mixins.group import GroupViewMixin
+from core.views.mixins.ldap.group import GroupViewMixin
 
 ### Exception Handling
 from core.exceptions import (
