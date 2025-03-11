@@ -88,9 +88,15 @@ python3 ./manage.py creatersakey
 
 # Create Default Superuser
 python3 ./manage.py shell < install/create_default_superuser.py
-
 # Optionally: Create Superuser Manually
 python3 ./manage.py createsuperuser
+
+# Create RSA Encryption Key Pair for LDAP Connections 
+# (It will auto-create on first login if not done like this)
+python3 ./manage.py shell < install/create_rsa_key.py
+
+# Create RSA Encryption Key Pair for OIDC
+python manage.py creatersakey
 ```
 # PROJECT LICENSE
 
