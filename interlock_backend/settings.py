@@ -194,7 +194,6 @@ LOG_FILE_PATH = f'{LOG_FILE_FOLDER}/interlock.drf.log'
 LOGIN_URL = "/login"
 OIDC_INTERLOCK_LOGIN_COOKIE = 'X_REDIRECT_OIDC'
 OIDC_USERINFO = 'core.views.mixins.oidc.userinfo'
-OIDC_SKIP_CONSENT_ENABLE = True # This is handled manually
 OIDC_SKIP_CUSTOM_CONSENT = False
 OIDC_SKIP_CONSENT_EXPIRE = timedelta(days=1)
 OIDC_EXTRA_SCOPE_CLAIMS = 'core.views.mixins.oidc.CustomScopeClaims'
