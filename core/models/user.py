@@ -118,6 +118,10 @@ class BaseUser(BaseModel, PermissionsMixin):
 		return self.id
 
 	@property
+	def date_joined(self):
+		return self.created_at
+
+	@property
 	def is_anonymous(self):
 		"""
 		Always return False. This is a way of comparing User objects to
