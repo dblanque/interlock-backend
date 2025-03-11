@@ -22,7 +22,7 @@ from core.models.user import User, USER_PASSWORD_FIELDS
 from core.views.mixins.logs import LogMixin
 
 ### Mixins
-from core.views.mixins.user import UserViewMixin, UserViewLDAPMixin
+from core.views.mixins.ldap.user import UserViewMixin, UserViewLDAPMixin
 
 ### Serializers / Validators
 from core.serializers import user as UserValidators

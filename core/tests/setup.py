@@ -11,7 +11,7 @@ from interlock_backend.ldap.defaults import *
 from core.models.ldap_settings_runtime import RunningSettings
 from core.exceptions import ldap as exc_ldap
 from interlock_backend.ldap.connector import LDAPConnector
-from core.views.mixins.user import UserViewLDAPMixin
+from core.views.mixins.ldap.user import UserViewLDAPMixin
 
 TEST_USERNAME = "testuser"
 TEST_EMAIL = "testuser@example.com"
