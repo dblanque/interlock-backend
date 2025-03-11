@@ -145,7 +145,7 @@ class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
 			login_redirect_bad_request()
 
 		# FETCH DATA
-		self.get_relevant_objects()
+		self.get_relevant_objects(request=request)
 		require_consent = (
 			prompt == OIDC_PROMPT_CONSENT or
 			self.user_requires_consent(user=user)
@@ -168,6 +168,8 @@ class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
 				return self.login_redirect()
 		# Redirect to login with failure code
 		else:
+			if not self.user_can_access_app(user=user):
+				return login_redirect_bad_request(error_detail=403)
 			redirect_response: HttpResponse = redirect(self.authorize.create_response_uri())
 			redirect_response.delete_cookie(OIDC_INTERLOCK_LOGIN_COOKIE)
 			if hasattr(redirect_response, "headers"):

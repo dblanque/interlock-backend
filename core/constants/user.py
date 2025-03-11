@@ -23,7 +23,7 @@ class UserViewsetFilterAttributeBuilder():
 	def __init__(self, settings: RunningSettingsClass):
 		self.RunningSettings = settings
 
-	def get_list_filter(self):
+	def get_list_attrs(self):
 		return [
 			"givenName",
 			"sn",
@@ -34,7 +34,7 @@ class UserViewsetFilterAttributeBuilder():
 			"userAccountControl"
 		]
 
-	def get_fetch_filter(self):
+	def get_fetch_attrs(self):
 		return [
 			'givenName',
 			'sn',
@@ -66,7 +66,7 @@ class UserViewsetFilterAttributeBuilder():
 			'memberOf',
 		]
 
-	def get_update_filter(self):
+	def get_update_attrs(self):
 		return [
 			self.RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
 			'distinguishedName',
@@ -74,7 +74,7 @@ class UserViewsetFilterAttributeBuilder():
 			'userAccountControl',
 		]
 
-	def get_bulk_insert_filter(self):
+	def get_bulk_insert_attrs(self):
 		return [
 			self.RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
 			'distinguishedName',
@@ -128,7 +128,7 @@ class UserViewsetFilterAttributeBuilder():
 			'primaryGroupID'
 		]
 
-	def get_fetch_me_filter(self):
+	def get_fetch_me_attrs(self):
 		_REMOVE = [
 			"primaryGroupID",
 			"objectClass",
@@ -137,7 +137,7 @@ class UserViewsetFilterAttributeBuilder():
 			"sAMAccountType",
 			"memberOf"
 		]
-		_RESULT = self.get_fetch_filter()
+		_RESULT = self.get_fetch_attrs()
 		for value in _REMOVE:
 			_RESULT.remove(value)
 		return _RESULT

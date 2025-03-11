@@ -41,6 +41,7 @@ import traceback
 import logging
 
 ### Others
+from core.constants.user import UserViewsetFilterAttributeBuilder
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from interlock_backend.ldap.countries import LDAP_COUNTRIES
@@ -56,6 +57,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 	ldap_connection: Connection = None
 	ldap_filter_object = None
 	ldap_filter_attr = None
+	filter_attr_builder = UserViewsetFilterAttributeBuilder
 
 	def get_user_object_filter(self, username: str=None, email: str=None):
 		if (not username and not email) or (username and email):
@@ -543,6 +545,11 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		return False
 
 	def ldap_user_fetch(self, user_search):
+		self.ldap_filter_object = f"(objectclass={RunningSettings.LDAP_AUTH_OBJECT_CLASS})"
+		if not self.ldap_filter_attr:
+			self.ldap_filter_attr = self.filter_attr_builder(RunningSettings)\
+										.get_fetch_attrs()
+
 		# Exclude Computer Accounts if settings allow it
 		if RunningSettings.EXCLUDE_COMPUTER_ACCOUNTS == True:
 			self.ldap_filter_object = ldap_adsi.search_filter_add(
@@ -575,7 +582,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			)
 
 		memberOfObjects = []
-		if 'memberOf' in user_dict:
+		if 'memberOf' in self.ldap_filter_attr and 'memberOf' in user_dict:
 			memberOf = user_dict.pop('memberOf')
 			if isinstance(memberOf, list):
 				for g in memberOf:
@@ -585,11 +592,12 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				memberOfObjects.append( self.get_group_attributes(g) )
 
 		### Also add default Users Group to be available as Selectable PID
-		try:
-			memberOfObjects.append( GroupViewMixin.getGroupByRID(user_dict['primaryGroupID']) )
-		except:
-			self.ldap_connection.unbind()
-			raise
+		if "primaryGroupID" in self.ldap_filter_attr:
+			try:
+				memberOfObjects.append( GroupViewMixin.getGroupByRID(user_dict['primaryGroupID']) )
+			except:
+				self.ldap_connection.unbind()
+				raise
 
 		if len(memberOfObjects) > 0:
 			user_dict['memberOfObjects'] = memberOfObjects
@@ -599,29 +607,31 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		del memberOfObjects
 
-		# Check if user is disabled
-		user_dict['is_enabled'] = True
-		try:
-			if ldap_adsi.list_user_perms(user=user_entry, perm_search="LDAP_UF_ACCOUNT_DISABLE", user_is_object=False):
-				user_dict['is_enabled'] = False
-		except Exception as e:
-			print(e)
-			print(user_dict['distinguishedName'])
+		if "userAccountControl" in self.ldap_filter_attr:
+			# Check if user is disabled
+			user_dict['is_enabled'] = True
+			try:
+				if ldap_adsi.list_user_perms(user=user_entry, perm_search="LDAP_UF_ACCOUNT_DISABLE", user_is_object=False):
+					user_dict['is_enabled'] = False
+			except Exception as e:
+				print(e)
+				print(user_dict['distinguishedName'])
 
-		# Check if user is disabled
-		try:
-			userPermissions = ldap_adsi.list_user_perms(user=user_entry, perm_search=None, user_is_object=False)
-			user_dict['permission_list'] = userPermissions
-		except Exception as e:
-			print(e)
-			print(user_dict['distinguishedName'])
+			# Check if user is disabled
+			try:
+				userPermissions = ldap_adsi.list_user_perms(user=user_entry, perm_search=None, user_is_object=False)
+				user_dict['permission_list'] = userPermissions
+			except Exception as e:
+				print(e)
+				print(user_dict['distinguishedName'])
 
-		# Replace sAMAccountType Value with String Corresponding
-		userAccountType = int(user_dict['sAMAccountType'])
-		for accountType in LDAP_ACCOUNT_TYPES:
-			accountTypeValue = LDAP_ACCOUNT_TYPES[accountType]
-			if accountTypeValue == userAccountType:
-				user_dict['sAMAccountType'] = accountType
+		if "sAMAccountType" in self.ldap_filter_attr:
+			# Replace sAMAccountType Value with String Corresponding
+			userAccountType = int(user_dict['sAMAccountType'])
+			for accountType in LDAP_ACCOUNT_TYPES:
+				accountTypeValue = LDAP_ACCOUNT_TYPES[accountType]
+				if accountTypeValue == userAccountType:
+					user_dict['sAMAccountType'] = accountType
 		return user_dict
 
 	def ldap_user_change_status(self, user_object, target_state: bool):

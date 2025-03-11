@@ -42,7 +42,7 @@ from interlock_backend.ldap.connector import LDAPConnector
 import ldap3
 
 ### Others
-from core.constants.user import UserViewsetFilterAttributeBuilder, PUBLIC_FIELDS
+from core.constants.user import PUBLIC_FIELDS
 from core.models.ldap_settings_runtime import RunningSettings
 import logging
 ################################################################################
@@ -54,7 +54,6 @@ logger = logging.getLogger(__name__)
 # TODO - Make decorator that checks user type being correct (ldap or django/local)
 class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	queryset = User.objects.all()
-	filter_attr_builder = UserViewsetFilterAttributeBuilder
 
 	@auth_required()
 	def list(self, request):
@@ -64,7 +63,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code_msg = 'ok'
 
 		self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
-		self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_list_filter()
+		self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_list_attrs()
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
@@ -91,9 +90,6 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			user_search = data[RunningSettings.LDAP_AUTH_USER_FIELDS['username']]
 		elif 'username' in data:
 			user_search = data['username']
-
-		self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
-		self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_fetch_filter()
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
@@ -159,7 +155,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		data = data['user']
 
 		######################## Set LDAP Attributes ###########################
-		self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_update_filter()
+		self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_update_attrs()
 		########################################################################
 
 		EXCLUDE_KEYS = self.filter_attr_builder(RunningSettings).get_update_exclude_keys()
@@ -217,7 +213,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		######################## Set LDAP Attributes ###########################
 		self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
-		self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_update_filter()
+		self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_update_attrs()
 		########################################################################
 
 		if data['username'] == self.request.user: 
@@ -391,7 +387,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		header_mapping = data['mapping']
 
 		######################## Set LDAP Attributes ###########################
-		self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_bulk_insert_filter()
+		self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_bulk_insert_attrs()
 
 		# Check if data has a requested placeholder_password
 		required_fields = ['username']
@@ -583,7 +579,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		######################## Set LDAP Attributes ###########################
 		self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
-		self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_update_filter()
+		self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_update_attrs()
 		########################################################################
 
 		# Open LDAP Connection
@@ -759,7 +755,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			if k in data: raise exc_base.BadRequest
 
 		# Get basic attributes for this user from AD to compare query and get dn
-		self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_update_filter()
+		self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_update_attrs()
 		EXCLUDE_KEYS = self.filter_attr_builder(RunningSettings).get_update_self_exclude_keys()
 
 		for key in EXCLUDE_KEYS:
@@ -859,7 +855,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			# Open LDAP Connection
 			with LDAPConnector(user) as ldc:
 				self.ldap_connection = ldc.connection
-				self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_fetch_me_filter()
+				self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_fetch_me_attrs()
 
 				self.ldap_filter_object = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
 

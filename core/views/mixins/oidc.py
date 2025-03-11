@@ -36,7 +36,7 @@ from core.models.user import (
 	USER_TYPE_LOCAL,
 	USER_TYPE_LDAP
 )
-from core.models.application import Application
+from core.models.application import Application, ApplicationSecurityGroup
 from oidc_provider.models import Client, UserConsent
 
 # OIDC
@@ -50,68 +50,77 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 
 # Others
+from ldap3 import Connection
 import logging
 from interlock_backend.settings import LOGIN_URL
 from oidc_provider.lib.endpoints.authorize import AuthorizeEndpoint
+from interlock_backend.ldap.connector import LDAPConnector, recursive_member_search
 ################################################################################
 logger = logging.getLogger()
 
-def get_user_groups(user: User) -> list:
-    if user.user_type == USER_TYPE_LOCAL:
-        return list(user.groups.values_list('name', flat=True))
-    elif user.user_type == USER_TYPE_LDAP:
-        # TODO
-        # Fetch LDAP User Groups + Local Groups
-        pass
-    else:
-        return []
+def get_user_groups(user: User, ldc: Connection = None) -> list:
+	if user.user_type == USER_TYPE_LOCAL:
+		return list(user.groups.values_list('name', flat=True))
+	elif user.user_type == USER_TYPE_LDAP:
+		if not ldc:
+			with LDAPConnector(force_admin=True) as ldc:
+				groups = []
+				user_mixin = UserViewLDAPMixin()
+				user_mixin.ldap_filter_attr = ["memberOf"]
+				user_mixin.ldap_connection = ldc.connection
+				ldap_user: dict = user_mixin.ldap_user_fetch(user_search=user.username)
+				for group in ldap_user["memberOfObjects"]:
+					groups.append(group["distinguishedName"])
+				return groups
+	else:
+		return []
 
 class CustomScopeClaims(ScopeClaims, UserViewLDAPMixin):
-    def setup(self):
-        # Define which claims are included for each scope
-        self.claims = {
-            'profile': {
-                'sub': 'Username',
-                'username': 'Username',
-                'email': 'Email',
-                'groups': 'Groups',
-            },
-            'email': {
-                'email': 'Email',
-            },
-            'groups': {
-                'groups': 'Groups',
-            },
-        }
+	def setup(self):
+		# Define which claims are included for each scope
+		self.claims = {
+			'profile': {
+				'sub': 'Username',
+				'username': 'Username',
+				'email': 'Email',
+				'groups': 'Groups',
+			},
+			'email': {
+				'email': 'Email',
+			},
+			'groups': {
+				'groups': 'Groups',
+			},
+		}
 
-    def create_response_dic(self):
-        # Fetch user data based on the requested scopes
-        response_dic = super().create_response_dic()
-        self.user: User
+	def create_response_dic(self):
+		# Fetch user data based on the requested scopes
+		response_dic = super().create_response_dic()
+		self.user: User
 
-        if 'profile' in self.scopes:
-            response_dic['username'] = self.user.username
-            response_dic['email'] = self.user.email
-            response_dic['groups'] = get_user_groups(self.user)
+		if 'profile' in self.scopes:
+			response_dic['username'] = self.user.username
+			response_dic['email'] = self.user.email
+			response_dic['groups'] = get_user_groups(self.user)
 
-        if 'email' in self.scopes:
-            response_dic['email'] = self.user.email
+		if 'email' in self.scopes:
+			response_dic['email'] = self.user.email
 
-        if 'groups' in self.scopes:
-            response_dic['groups'] = get_user_groups()
+		if 'groups' in self.scopes:
+			response_dic['groups'] = get_user_groups()
 
-        return response_dic
+		return response_dic
 
 def userinfo(claims: CustomScopeClaims, user: User):
-    # Fetch user details from LDAP or your database
-    for k in STANDARD_CLAIMS:
-        if hasattr(user, k):
-            claims[k] = getattr(user, k)
-    claims['sub'] = user.username  # Subject identifier
-    claims['preferred_username'] = user.username  # Subject identifier
-    claims['username'] = user.username  # Subject identifier
-    claims['groups'] = get_user_groups(user)
-    return claims
+	# Fetch user details from LDAP or your database
+	for k in STANDARD_CLAIMS:
+		if hasattr(user, k):
+			claims[k] = getattr(user, k)
+	claims['sub'] = user.username  # Subject identifier
+	claims['preferred_username'] = user.username  # Subject identifier
+	claims['username'] = user.username  # Subject identifier
+	claims['groups'] = get_user_groups(user)
+	return claims
 
 class OidcAuthorizeEndpoint(AuthorizeEndpoint):
 	def _extract_params(self) -> None:
@@ -122,10 +131,11 @@ class OidcAuthorizeEndpoint(AuthorizeEndpoint):
 
 class OidcAuthorizeMixin(object):
 	authorize_endpoint_class = OidcAuthorizeEndpoint
-	client_id: int
-	client: Client
-	application: Application
-	request: HttpRequest
+	client_id: int | None
+	client: Client | None
+	application: Application | None
+	request: HttpRequest | None
+
 	def set_extra_params(self, data: dict, login_url: str) -> str:
 		for key, value in data.items():
 			if isinstance(value, bool):
@@ -137,9 +147,9 @@ class OidcAuthorizeMixin(object):
 			login_url = f"{login_url}&{key}={value}"
 		return login_url
 
-	def get_relevant_objects(self):
+	def get_relevant_objects(self, request: HttpRequest):
 		try:
-			self.client_id = self.request.GET.get("client_id")
+			self.client_id = request.GET.get("client_id")
 			self.application = Application.objects.get(
 				client_id=self.client_id)
 			self.client = Client.objects.get(client_id=self.client_id)
@@ -171,6 +181,28 @@ class OidcAuthorizeMixin(object):
 			if timedelta_consent_given < timedelta(minutes=1):
 				return False
 		return True
+
+	def user_can_access_app(self, user: User):
+		try:
+			application_group = ApplicationSecurityGroup.objects.get(
+				application_id=self.application.id)
+		except ObjectDoesNotExist:
+			return True
+		if not application_group.enabled:
+			return True
+		if user.user_type == USER_TYPE_LDAP:
+			with LDAPConnector(force_admin=True) as ldc:
+				for distinguished_name in application_group.ldap_objects:
+					if recursive_member_search(
+						user_dn=user.dn,
+						connection=ldc.connection,
+						group_dn=distinguished_name
+					):
+						return True
+		else:
+			if user in application_group.users.all():
+				return True
+		return False
 
 	def get_login_url(self) -> str:
 		self.authorize: OidcAuthorizeEndpoint
