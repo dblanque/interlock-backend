@@ -7,106 +7,63 @@
 # Contains the ViewSet for SSO Application related operations
 
 # ---------------------------------- IMPORTS -----------------------------------#
+# Constants
+from core.constants.oidc import (
+	QK_ERROR,
+	QK_ERROR_DETAIL,
+	OIDC_ALLOWED_PROMPTS,
+	OIDC_COOKIE_VUE_ABORT,
+	OIDC_COOKIE_VUE_LOGIN,
+	OIDC_COOKIE_VUE_REDIRECT,
+	OIDC_COOKIE_CHOICES,
+	OIDC_PROMPT_CONSENT,
+	OIDC_PROMPT_LOGIN,
+)
 
 # Mixins
 from core.views.mixins.auth import CookieJWTAuthentication
+from core.views.mixins.oidc import OidcAuthorizeMixin
 
 # Views
 from oidc_provider.views import AuthorizeView
-from django.views.generic import View
-from oidc_provider.lib.endpoints.authorize import AuthorizeEndpoint
 
 # Models
 from core.models.user import User
-from core.models.application import Application
 from oidc_provider.models import Client, UserConsent
 
-# Django
-from django.http import HttpRequest, HttpResponse, JsonResponse
+# Http
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
 from urllib.parse import quote
+from rest_framework.response import Response
+from rest_framework.decorators import action
+from urllib.parse import urlparse, parse_qs
 
 # Exceptions
 from django.core.exceptions import ObjectDoesNotExist
-from oidc_provider.lib.errors import AuthorizeError
 
 # ViewSets
 from core.views.base import BaseViewSet
 
-# Others
-from rest_framework.response import Response
-from rest_framework.decorators import action
+# Auth
 from core.decorators.login import auth_required
-from urllib.parse import urlparse, parse_qs
+from interlock_backend.settings import LOGIN_URL
+
+# DB
+from django.db import transaction
+
+# Time
+from django.utils import timezone
+from datetime import datetime
+
+# Others
+import logging
 from interlock_backend.settings import (
 	OIDC_INTERLOCK_LOGIN_COOKIE,
-	OIDC_SKIP_CUSTOM_CONSENT,
 	OIDC_SKIP_CONSENT_EXPIRE,
-	SIMPLE_JWT as JWT_SETTINGS
 )
-from interlock_backend.settings import LOGIN_URL
-import logging
-import json
-from django.utils import timezone
-from django.db import transaction
-from datetime import datetime, timedelta
 ################################################################################
 logger = logging.getLogger(__name__)
-
-QK_ERROR = "error"
-QK_ERROR_DETAIL = "error_detail"
-QK_NEXT = "next"
-OIDC_ATTRS = (
-	"client_id",
-	"redirect_uri",
-	"response_type",
-	"scope",
-	"nonce",
-	"prompt",
-	"code_challenge",
-	"code_challenge_method",
-)
-OIDC_COOKIE_VUE_REDIRECT = "redirect"
-OIDC_COOKIE_VUE_LOGIN = "login"
-OIDC_COOKIE_VUE_ABORT = "abort"
-OIDC_COOKIE_CHOICES = (
-	OIDC_COOKIE_VUE_REDIRECT,
-	OIDC_COOKIE_VUE_LOGIN,
-	OIDC_COOKIE_VUE_ABORT,
-)
-
-class OidcAuthorizeEndpoint(AuthorizeEndpoint):
-	def set_client_user_consent(self):
-		"""
-		Save the user consent given to a specific client.
-
-		Return None.
-		"""
-		date_given = timezone.now()
-		expires_at = date_given + OIDC_SKIP_CONSENT_EXPIRE
-
-		uc, created = UserConsent.objects.get_or_create(
-			user=self.request.user,
-			client=self.client,
-			defaults={
-				"expires_at": expires_at,
-				"date_given": date_given,
-			},
-		)
-		uc.scope = self.params["scope"]
-		# Rewrite expires_at and date_given if object already exists.
-		if not created:
-			uc.expires_at = expires_at
-			uc.date_given = date_given
-		uc.save()
-
-	def _extract_params(self) -> None:
-		super()._extract_params()
-		logger.debug("_extract_params():")
-		logger.debug(self.params)
-		return
 
 def login_redirect_bad_request(error_detail: str | int = 400) -> HttpResponse:
 	response = redirect(
@@ -161,112 +118,20 @@ class CustomOidcViewSet(BaseViewSet):
 		)
 
 
-class OidcAuthorizeView(AuthorizeView):
-	authorize_endpoint_class = OidcAuthorizeEndpoint
-	client_id: int
-	client: Client
-	application: Application
-
-	def set_extra_params(self, data: dict, login_url: str) -> str:
-		for key, value in data.items():
-			if isinstance(value, bool):
-				value = str(value).lower()
-			elif isinstance(value, str):
-				value = quote(value)
-			else:
-				value = quote(str(value))
-			login_url = f"{login_url}&{key}={value}"
-		return login_url
-
-	def get_relevant_objects(self):
-		try:
-			self.client_id = self.request.GET.get("client_id")
-			self.application = Application.objects.get(
-				client_id=self.client_id)
-			self.client = Client.objects.get(client_id=self.client_id)
-		except Exception as e:
-			logger.exception(e)
-			login_url = f"{LOGIN_URL}/?{QK_ERROR}=true&{QK_ERROR_DETAIL}=oidc_application_fetch"
-			redirect_response = redirect(login_url)
-			redirect_response.delete_cookie(
-				OIDC_INTERLOCK_LOGIN_COOKIE)
-			return redirect_response
-
-	def user_requires_consent(self, user: User) -> bool:
-		if OIDC_SKIP_CUSTOM_CONSENT:
-			return False
-		if not self.client.require_consent:
-			return False
-
-		consent = None
-		try:
-			consent = UserConsent.objects.get(
-				user_id=user.id, client_id=self.client.id)
-		except ObjectDoesNotExist:
-			pass
-		if consent:
-			if self.client.reuse_consent:
-				if timezone.make_aware(datetime.now()) < consent.expires_at:
-					return False
-			timedelta_consent_given = (timezone.make_aware(datetime.now())-consent.date_given)
-			if timedelta_consent_given < timedelta(minutes=1):
-				return False
-		return True
-
-	def get_login_url(self) -> str:
-		original_url = self.request.get_full_path()
-		# Encode the URL for safe inclusion in another URL
-		encoded_url = quote(original_url)
-		login_url = f"{LOGIN_URL}/?{QK_NEXT}={encoded_url}"
-
-		extra_params = {
-			"application": self.application.name,
-			"client_id": self.client.client_id,
-			"reuse_consent": self.client.reuse_consent,
-			"require_consent": self.user_requires_consent(user=self.request.user),
-			"redirect_uri": self.client.redirect_uris[0]
-		}
-		for attr in OIDC_ATTRS:
-			if attr in extra_params:
-				continue
-			if attr in self.authorize.params:
-				extra_params[attr] = self.authorize.params[attr]
-		login_url = self.set_extra_params(
-			data=extra_params,
-			login_url=login_url
-		)
-		return login_url
-
-	def login_redirect(self) -> HttpResponse:
-		login_url = self.get_login_url()
-		response = redirect(login_url)
-		response.set_cookie(
-			key=OIDC_INTERLOCK_LOGIN_COOKIE,
-			value=OIDC_COOKIE_VUE_LOGIN,
-			httponly=True,
-			samesite=JWT_SETTINGS['AUTH_COOKIE_SAME_SITE'],
-			secure=JWT_SETTINGS['AUTH_COOKIE_SECURE'],
-			domain=JWT_SETTINGS['AUTH_COOKIE_DOMAIN']
-		)
-		return response
-
-	def abort_redirect(self, response: HttpResponse) -> HttpResponse:
-		response.set_cookie(
-			key=OIDC_INTERLOCK_LOGIN_COOKIE,
-			value=OIDC_COOKIE_VUE_ABORT,
-			httponly=True,
-			samesite=JWT_SETTINGS['AUTH_COOKIE_SAME_SITE'],
-			secure=JWT_SETTINGS['AUTH_COOKIE_SECURE'],
-			domain=JWT_SETTINGS['AUTH_COOKIE_DOMAIN']
-		)
-		return response
-
+class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
 	def get(self, request: HttpRequest, *args, **kwargs):
 		cookie_auth = CookieJWTAuthentication()
 		self.authorize = self.authorize_endpoint_class(request)
 		request.user, token = cookie_auth.authenticate(request)
 		user: User = request.user
 		login_url = None
+
+		# PROMPT
+		prompt = request.GET.get("prompt", None)
+		if isinstance(prompt, str) and prompt.lower() == "none":
+			prompt = None
+		elif not prompt in OIDC_ALLOWED_PROMPTS:
+			login_redirect_bad_request("oidc_prompt_unsupported")
 
 		# VALIDATION
 		try:
@@ -281,7 +146,10 @@ class OidcAuthorizeView(AuthorizeView):
 
 		# FETCH DATA
 		self.get_relevant_objects()
-		require_consent = self.user_requires_consent(user=user)
+		require_consent = (
+			prompt == OIDC_PROMPT_CONSENT or
+			self.user_requires_consent(user=user)
+		)
 
 		# TODO - Check if user is in application's groups (LDAP, Local, etc.)
 		# Redirect to login
@@ -289,6 +157,7 @@ class OidcAuthorizeView(AuthorizeView):
 			user.is_anonymous or
 			not user.is_authenticated or
 			not user.is_enabled or
+			prompt == OIDC_PROMPT_LOGIN or
 			require_consent
 		):
 			if OIDC_COOKIE == OIDC_COOKIE_VUE_ABORT:
@@ -316,7 +185,6 @@ class OidcAuthorizeView(AuthorizeView):
 					login_url = f"{LOGIN_URL}/?{QK_ERROR}=true&{QK_ERROR_DETAIL}={_error}"
 					return self.abort_redirect(redirect(login_url))
 			return redirect_response
-
 
 # class CustomTokenView(TokenView):
 # 	def post(self, request, *args, **kwargs):
