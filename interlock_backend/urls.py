@@ -39,8 +39,9 @@ from core.views.ldap.record import LDAPRecordViewSet
 from core.views.debug import DebugViewSet
 from core.views.application_group import ApplicationGroupViewSet
 from core.views.application import ApplicationViewSet
-from core.views.oidc import OidcAuthorizeView
+from core.views.oidc import OidcAuthorizeView, CustomOidcViewSet
 from interlock_backend.settings import DEBUG
+from django.urls import re_path
 
 # Initalizes Router
 router = routers.DefaultRouter()
@@ -56,7 +57,7 @@ named_view_sets = {
 	r"liveness": LivenessViewSet,
 	r"totp": TOTPViewSet,
 	r"application/group": ApplicationGroupViewSet,
-	r"application": ApplicationViewSet
+	r"application": ApplicationViewSet,
 }
 
 if DEBUG == True:
@@ -68,6 +69,7 @@ if DEBUG == True:
 
 [router.register(f"api/{name}", view_set, basename=name) for name, view_set in named_view_sets.items()]
 
+router.register(f"openid", CustomOidcViewSet, basename="openid")
 # URL PATTERNS SET HERE
 urlpatterns = [
 	# {BASE_URL} /
@@ -88,8 +90,7 @@ urlpatterns = [
 	path('api/token/revoke/', AuthViewSet.as_view({'post':'logout'}), name='token_revoke'),
 
     # Default OIDC endpoint overrides
-    path('openid/authorize', OidcAuthorizeView.as_view(), name='oidc_authorize'),
-
+    re_path(r"openid/authorize/?$", OidcAuthorizeView.as_view(), name="authorize"),
 	# {BASE_URL} / openid
 	path('openid/', include('oidc_provider.urls', namespace='oidc_provider')),
 ]

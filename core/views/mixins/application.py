@@ -235,6 +235,7 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 		client: Client
 		new_application = {}
 		new_client = {}
+		new_response_types = None
 		if "response_types" in data:
 			new_response_types: list = data.pop("response_types")
 
