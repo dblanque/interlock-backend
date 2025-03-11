@@ -204,12 +204,13 @@ class OidcAuthorizeView(AuthorizeView):
 				user_id=user.id, client_id=self.client.id)
 		except ObjectDoesNotExist:
 			pass
-		if consent and self.client.reuse_consent:
-			if timezone.make_aware(datetime.now()) < consent.expires_at:
+		if consent:
+			if self.client.reuse_consent:
+				if timezone.make_aware(datetime.now()) < consent.expires_at:
+					return False
+			timedelta_consent_given = (timezone.make_aware(datetime.now())-consent.date_given)
+			if timedelta_consent_given < timedelta(minutes=1):
 				return False
-		timedelta_consent_given = (timezone.make_aware(datetime.now())-consent.date_given)
-		if timedelta_consent_given < timedelta(minutes=1):
-			return False
 		return True
 
 	def get_login_url(self) -> str:
