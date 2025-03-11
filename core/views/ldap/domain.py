@@ -23,7 +23,7 @@ from core.exceptions import (
 )
 
 ### Mixins
-from core.views.mixins.domain import DomainViewMixin
+from core.views.mixins.ldap.domain import DomainViewMixin
 
 ### REST Framework
 from rest_framework.response import Response

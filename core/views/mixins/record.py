@@ -27,7 +27,7 @@ from core.views.mixins.utils import convert_string_to_bytes
 
 ### Interlock
 from core.models.ldap_settings_runtime import RunningSettings
-from core.views.mixins.domain import DomainViewMixin
+from core.views.mixins.ldap.domain import DomainViewMixin
 import logging
 
 ### Others
