@@ -66,15 +66,14 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 
 		return application, client
 
-	def set_client_response_types(self, new_response_types: dict, client: Client) -> Client:
+	def set_client_response_types(self, new_response_types: dict, client: Client) -> None:
 		for key, value in new_response_types.items():
 			# Add key if in update
 			if value is True:
 				client.response_types.add(RESPONSE_TYPE_ID_MAP[key])
 			# Remove key if not present in update
-			else:
+			elif value is False:
 				client.response_types.remove(RESPONSE_TYPE_ID_MAP[key])
-		return client
 
 	def list_applications(self):
 		data = {}
@@ -143,9 +142,11 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 				raise ApplicationFieldDoesNotExist(data={"field":field})
 
 		data["response_types"] = {}
+		for r_type in RESPONSE_TYPE_CODES:
+			data["response_types"][r_type] = False
 		if response_types:
-			for r_type in RESPONSE_TYPE_CODES:
-				data["response_types"][r_type] = True if r_type in response_types else False
+			for r_type in response_types:
+				data["response_types"][r_type] = True
 		return data
 
 	def insert_clean_data(self, data: dict) -> tuple[ApplicationSerializer, dict]:
@@ -205,7 +206,7 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 				# Other OIDC client settings (e.g., token expiration)
 			)
 			if new_response_types:
-				client = self.set_client_response_types(new_response_types, client)
+				self.set_client_response_types(new_response_types, client)
 			client.save()
 		return application
 
@@ -280,7 +281,7 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 			for attr in new_client:
 				setattr(client, attr, new_client[attr])
 			if new_response_types:
-				client = self.set_client_response_types(new_response_types, client)
+				self.set_client_response_types(new_response_types, client)
 			client.save()
 		return
 
