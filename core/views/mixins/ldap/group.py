@@ -24,7 +24,7 @@ from core.models.application import ApplicationSecurityGroup
 ### Core
 from core.exceptions.ldap import CouldNotOpenConnection
 from core.models.ldap_object import LDAPObject
-from core.views.mixins.organizational_unit import OrganizationalUnitMixin
+from core.views.mixins.ldap.organizational_unit import OrganizationalUnitMixin
 
 ### Exceptions
 import traceback

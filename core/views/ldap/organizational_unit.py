@@ -25,7 +25,7 @@ from core.models.ldap_tree import LDAPTree, LDAPTreeOptions
 from core.models.user import User
 
 ### Mixins
-from core.views.mixins.organizational_unit import OrganizationalUnitMixin
+from core.views.mixins.ldap.organizational_unit import OrganizationalUnitMixin
 
 ### REST Framework
 from rest_framework.response import Response
