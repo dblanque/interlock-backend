@@ -18,7 +18,7 @@ from core.views.base import BaseViewSet
 from core.exceptions import dns as exc_dns
 
 ### Mixins
-from core.views.mixins.record import DNSRecordMixin
+from core.views.mixins.ldap.record import DNSRecordMixin
 from core.views.mixins.ldap.domain import DomainViewMixin
 
 ### Serializers
