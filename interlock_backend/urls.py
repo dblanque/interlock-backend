@@ -69,7 +69,6 @@ if DEBUG == True:
 
 [router.register(f"api/{name}", view_set, basename=name) for name, view_set in named_view_sets.items()]
 
-router.register(f"openid", CustomOidcViewSet, basename="openid")
 # URL PATTERNS SET HERE
 urlpatterns = [
 	# {BASE_URL} /
@@ -91,6 +90,13 @@ urlpatterns = [
 
     # Default OIDC endpoint overrides
     re_path(r"openid/authorize/?$", OidcAuthorizeView.as_view(), name="authorize"),
+	re_path(r"openid/consent/?$",
+		CustomOidcViewSet.as_view({
+		"post":"consent"
+		}),
+		name="consent"
+	),
+
 	# {BASE_URL} / openid
 	path('openid/', include('oidc_provider.urls', namespace='oidc_provider')),
 ]
