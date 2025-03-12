@@ -41,6 +41,7 @@ from core.utils import dnstool
 from core.utils.dnstool import record_to_dict
 from interlock_backend.ldap.adsi import search_filter_add
 from core.models.ldap_settings_runtime import RunningSettings
+from interlock_backend.ldap import defaults
 from interlock_backend.ldap.connector import LDAPConnector
 import logging
 ################################################################################
@@ -56,9 +57,22 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 		user: User = request.user
 		data = {}
 		code = 0
-		data["realm"] = RunningSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN or ""
-		data["name"] = RunningSettings.LDAP_DOMAIN or ""
-		data["basedn"] = RunningSettings.LDAP_AUTH_SEARCH_BASE or ""
+
+		if RunningSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN != defaults.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN:
+			data["realm"] = RunningSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN or ""
+		else:
+			data["realm"] = ""
+
+		if RunningSettings.LDAP_DOMAIN != defaults.LDAP_DOMAIN:
+			data["name"] = RunningSettings.LDAP_DOMAIN or ""
+		else:
+			data["name"] = ""
+
+		if RunningSettings.LDAP_AUTH_SEARCH_BASE != defaults.LDAP_AUTH_SEARCH_BASE:
+			data["basedn"] = RunningSettings.LDAP_AUTH_SEARCH_BASE or ""
+		else:
+			data["basedn"] = ""
+
 		data["user_selector"] = RunningSettings.LDAP_AUTH_USERNAME_IDENTIFIER or ""
 		if INTERLOCK_DEBUG:
 			data["debug"] = INTERLOCK_DEBUG
