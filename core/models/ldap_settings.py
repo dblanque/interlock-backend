@@ -12,6 +12,7 @@ from django.db import models
 from .validators.ldap_uri import validate_ldap_uri
 from django.utils.translation import gettext_lazy as _
 from django.contrib.postgres.fields import ArrayField
+from typing import Iterable
 from .types.settings import (
 	TYPE_STRING as LDAP_TYPE_STRING,
 	TYPE_BOOL as LDAP_TYPE_BOOL,
@@ -213,6 +214,12 @@ class LDAPSetting(BaseLDAPSetting):
 				name=f'{LDAP_SETTING_PREFIX}_password_crypt_data_all_or_none'
 			)
 		]
+
+	@staticmethod
+	def value_field(t: str=None) -> str | Iterable:
+		if t == LDAP_TYPE_PASSWORD:
+			return LDAP_TYPE_PASSWORD_FIELDS
+		return f"{LDAP_SETTING_PREFIX}_{t.lower()}"
 
 	def __str__(self):
 		return getattr(self, f"{LDAP_SETTING_PREFIX}_{self.type.lower()}", None)
