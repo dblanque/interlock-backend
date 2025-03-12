@@ -51,6 +51,13 @@ class UserViewSet(BaseViewSet):
 			"dn",
 		)
 		user_queryset = User.objects.all()
+		if RunningSettings.LDAP_LOG_READ == True:
+			# Log this action to DB
+			DBLogMixin.log(
+				user_id=request.user.id,
+				actionType="READ",
+				objectClass="USER"
+			)
 		return Response(
 			data={
 				"code": code,
@@ -89,6 +96,16 @@ class UserViewSet(BaseViewSet):
 				user_instance = User.objects.create(**serialized_data)
 				user_instance.set_password(password)
 				user_instance.save()
+
+		if RunningSettings.LDAP_LOG_CREATE == True:
+			# Log this action to DB
+			DBLogMixin.log(
+				user_id=request.user.id,
+				actionType="CREATE",
+				objectClass="USER",
+				affectedObject=user_instance.username
+			)
+
 		return Response(
 			data={
 				"code": code,
@@ -104,6 +121,14 @@ class UserViewSet(BaseViewSet):
 		pk = int(pk)
 		user_instance = User.objects.get(id=pk)
 		data = {}
+		if RunningSettings.LDAP_LOG_READ == True:
+			# Log this action to DB
+			DBLogMixin.log(
+				user_id=request.user.id,
+				actionType="READ",
+				objectClass="USER",
+				affectedObject=user_instance.username
+			)
 		for field in PUBLIC_FIELDS:
 			data[field] = getattr(user_instance, field)
 		return Response(
@@ -143,6 +168,14 @@ class UserViewSet(BaseViewSet):
 		for key in data:
 			setattr(user_instance, key, data[key])
 		user_instance.save()
+		if RunningSettings.LDAP_LOG_UPDATE == True:
+			# Log this action to DB
+			DBLogMixin.log(
+				user_id=request.user.id,
+				actionType="UPDATE",
+				objectClass="USER",
+				affectedObject=user_instance.username
+			)
 		return Response(
 			data={
 				"code": code,
@@ -162,6 +195,14 @@ class UserViewSet(BaseViewSet):
 			if req_user.id == pk:
 				raise exc_user.UserAntiLockout
 			user_instance.delete_permanently()
+		if RunningSettings.LDAP_LOG_DELETE == True:
+			# Log this action to DB
+			DBLogMixin.log(
+				user_id=request.user.id,
+				actionType="DELETE",
+				objectClass="USER",
+				affectedObject=user_instance.username
+			)
 		return Response(
 			data={
 				"code": code,
@@ -176,13 +217,23 @@ class UserViewSet(BaseViewSet):
 		code_msg = "ok"
 		data: dict = request.data
 		pk = int(pk)
-		if not "enabled" in data:
+		if not "enabled" in data or not isinstance(data["enabled"], bool):
 			raise BadRequest(data={
 				"errors": "Must contain field enabled (bool)"
 			})
 		user_instance = User.objects.get(id=pk)
 		user_instance.is_enabled = data.pop("enabled")
 		user_instance.save()
+
+		if RunningSettings.LDAP_LOG_UPDATE == True:
+			# Log this action to DB
+			DBLogMixin.log(
+				user_id=request.user.id,
+				actionType="UPDATE",
+				objectClass="USER",
+				affectedObject=user_instance.username,
+				extraMessage="ENABLE" if user_instance.is_enabled is True else "DISABLE"
+			)
 		return Response(
 			data={
 				"code": code,
@@ -287,6 +338,17 @@ class UserViewSet(BaseViewSet):
 		for key in data:
 			setattr(user, key, data[key])
 		user.save()
+
+		if RunningSettings.LDAP_LOG_UPDATE == True:
+			# Log this action to DB
+			DBLogMixin.log(
+				user_id=user.id,
+				actionType="UPDATE",
+				objectClass="USER",
+				affectedObject=user.username,
+				extraMessage="END_USER_UPDATED"
+			)
+
 		return Response(
 			data={
 				"code": code,
