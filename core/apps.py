@@ -13,5 +13,8 @@ class CoreConfig(AppConfig):
         from core.fixtures.interlock_setting import create_default_interlock_settings
         create_default_interlock_settings()
 
+        from core.fixtures.oidc import create_default_oidc_rsa_key
+        create_default_oidc_rsa_key()
+
         print("Core startup complete.")
         pass
