@@ -18,7 +18,11 @@ from django.core.exceptions import ObjectDoesNotExist
 ### Models
 from core.views.mixins.logs import LogMixin
 from core.models.types.settings import TYPE_AES_ENCRYPT
-from core.models.interlock_settings import InterlockSetting, INTERLOCK_SETTING_PUBLIC
+from core.models.interlock_settings import (
+	InterlockSetting,
+	INTERLOCK_SETTING_PUBLIC,
+	INTERLOCK_SETTING_MAP
+)
 from core.models.ldap_settings import (
 	LDAP_SETTING_MAP,
 	LDAPSetting,
@@ -34,6 +38,7 @@ from core.views.base import BaseViewSet
 
 ### Serializers
 from core.serializers.ldap_settings import LDAPSettingSerializer, LDAPPresetSerializer
+from core.serializers.interlock_settings import InterlockSettingSerializer
 
 ### REST Framework
 from rest_framework.response import Response
@@ -256,15 +261,48 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 		adminEnabled = data_settings.pop('DEFAULT_ADMIN_ENABLED')
 		adminPassword = data_settings.pop('DEFAULT_ADMIN_PWD')
+		local_settings: dict = data_settings.pop('local')
+		ldap_settings: dict = data_settings.pop('ldap')
 		self.set_admin_status(status=adminEnabled, password=adminPassword)
 
 		with transaction.atomic():
-			for param_name, param_value in data_settings.items():
-				param_name: str
-				param_value: dict
+			param_name: str
+			param_value: dict
+			for param_name, param_value in local_settings.items():
+				if not param_name in INTERLOCK_SETTING_MAP:
+					raise exc_set.SettingTypeDoesNotMatch(
+						data={
+							"field": param_name
+						})
+				param_type = INTERLOCK_SETTING_MAP[param_name]
+				param_value = param_value.pop("value")
+				kwdata = {
+					"name": param_name,
+					"type": param_type.lower(),
+					"value": param_value
+				}
+
+				serializer = InterlockSettingSerializer(data=kwdata)
+				if not serializer.is_valid():
+					raise exc_set.SettingSerializerError(data={
+						'key': param_name,
+						'errors': serializer.errors
+					})
+
+				try:
+					setting_instance = InterlockSetting.objects.get(name=param_name)
+					for attr in kwdata:
+						setattr(setting_instance, attr, kwdata[attr])
+					setting_instance.save()
+				except ObjectDoesNotExist:
+					InterlockSetting.objects.create(**kwdata)
+
+			for param_name, param_value in ldap_settings.items():
 				if not param_name in LDAP_SETTING_MAP:
-					raise exc_set.SettingTypeDoesNotMatch
-				param_to_update = None
+					raise exc_set.SettingTypeDoesNotMatch(
+						data={
+							"field": param_name
+						})
 				param_type = LDAP_SETTING_MAP[param_name]
 				param_value = param_value.pop("value")
 
@@ -323,8 +361,6 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			 data={
 				'code': code,
 				'code_msg': 'ok',
-				'settings': data_settings,
-				'restart': True
 			 }
 		)
 

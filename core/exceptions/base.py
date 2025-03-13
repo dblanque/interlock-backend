@@ -52,3 +52,7 @@ class LDAPServerUnreachable(CoreException):
     status_code = status.HTTP_502_BAD_GATEWAY
     default_detail = 'LDAP Server Unreachable'
     default_code = 'ldap_unreachable'
+class LDAPBackendDisabled(CoreException):
+    status_code = status.HTTP_418_IM_A_TEAPOT
+    default_detail = 'LDAP Backend is Disabled'
+    default_code = 'ldap_backend_disabled'

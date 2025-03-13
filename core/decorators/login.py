@@ -6,25 +6,36 @@
 # Module: core.decorators.login
 # Contains Login and Authentication related decorators
 from core.models.user import User
+from rest_framework.request import Request
 from core.exceptions.base import PermissionDenied
 from core.views.mixins.auth import RemoveTokenResponse
 from functools import wraps
 
-def auth_required(require_admin: bool = True):
+def auth_required(func=None, *, require_admin: bool = True):
 	def decorator(view_func):
 		@wraps(view_func)
 		def _wrapped(request, *args, **kwargs):
-			actual_request = request.request
+			# Get the actual request object from potential wrapper
+			actual_request: Request = getattr(request, 'request', request)
 			user: User = actual_request.user
-			# Check if user logically deleted or disabled
+
+			# Check auth
 			if not user.is_authenticated or user.is_anonymous:
 				return RemoveTokenResponse(request=request)
-			if user.deleted:
+
+			# Check account status
+			if getattr(user, 'deleted', False):
 				raise PermissionDenied()
 
-			if require_admin is True or require_admin is None:
-				if user.is_superuser is False or not user:
+			# Check admin
+			if require_admin:
+				if not getattr(user, 'is_superuser', False):
 					raise PermissionDenied()
+
 			return view_func(request, *args, **kwargs)
 		return _wrapped
-	return decorator
+
+	# Handle decorator with/without arguments
+	if func is None:
+		return decorator
+	return decorator(func)

@@ -42,6 +42,7 @@ from interlock_backend.ldap.connector import LDAPConnector
 import ldap3
 
 ### Others
+from core.decorators.intercept import ldap_backend_intercept
 from core.constants.user import PUBLIC_FIELDS
 from core.models.ldap_settings_runtime import RuntimeSettings
 import logging
@@ -56,6 +57,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	queryset = User.objects.all()
 
 	@auth_required()
+	@ldap_backend_intercept
 	def list(self, request):
 		user: User = request.user
 		data = {}
@@ -81,6 +83,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@action(detail=False,methods=['post'])
 	@auth_required()
+	@ldap_backend_intercept
 	def fetch(self, request):
 		user: User = request.user
 		code = 0
@@ -106,6 +109,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@action(detail=False,methods=['post'])
 	@auth_required()
+	@ldap_backend_intercept
 	def insert(self, request):
 		user: User = request.user
 		code = 0
@@ -147,6 +151,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		)
 
 	@auth_required()
+	@ldap_backend_intercept
 	def update(self, request, pk=None):
 		user: User = request.user
 		code = 0
@@ -200,6 +205,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@action(detail=False,methods=['post'])
 	@auth_required()
+	@ldap_backend_intercept
 	def change_status(self, request):
 		user: User = request.user
 		data: dict = request.data
@@ -233,6 +239,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@action(detail=False, methods=['post'])
 	@auth_required()
+	@ldap_backend_intercept
 	def delete(self, request, pk=None):
 		user: User = request.user
 		code = 0
@@ -270,6 +277,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@action(detail=False, methods=['post'])
 	@auth_required()
+	@ldap_backend_intercept
 	def change_password(self, request, pk=None):
 		user: User = request.user
 		code = 0
@@ -338,6 +346,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@action(detail=False, methods=['post'])
 	@auth_required()
+	@ldap_backend_intercept
 	def unlock(self, request, pk=None):
 		user: User = request.user
 		code = 0
@@ -364,6 +373,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@action(detail=False,methods=['post'])
 	@auth_required()
+	@ldap_backend_intercept
 	def bulk_insert(self, request):
 		user: User = request.user
 		code = 0
@@ -511,6 +521,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@action(detail=False,methods=['post'])
 	@auth_required()
+	@ldap_backend_intercept
 	def bulk_update(self, request, pk=None):
 		user: User = request.user
 		code = 0
@@ -566,6 +577,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@action(detail=False,methods=['post'])
 	@auth_required()
+	@ldap_backend_intercept
 	def bulk_status_change(self, request):
 		user: User = request.user
 		code = 0
@@ -605,6 +617,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@action(detail=False, methods=['post'])
 	@auth_required()
+	@ldap_backend_intercept
 	def bulk_delete(self, request, pk=None):
 		user: User = request.user
 		code = 0
@@ -634,6 +647,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@action(detail=False, methods=['post'])
 	@auth_required()
+	@ldap_backend_intercept
 	def bulk_unlock(self, request, pk=None):
 		user: User = request.user
 		code = 0
@@ -667,6 +681,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@action(detail=False, methods=['post'])
 	@auth_required(require_admin=False)
+	@ldap_backend_intercept
 	def self_change_password(self, request, pk=None):
 		user: User = request.user
 		code = 0
@@ -741,6 +756,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@action(detail=False, methods=['put', 'post'])
 	@auth_required(require_admin=False)
+	@ldap_backend_intercept
 	def self_update(self, request, pk=None):
 		user: User = request.user
 		code = 0
@@ -842,6 +858,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 	@action(detail=False,methods=['get'])
 	@auth_required(require_admin=False)
+	@ldap_backend_intercept
 	def self_fetch(self, request):
 		user: User = request.user
 		code = 0
@@ -851,7 +868,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			user_data = {}
 			for field in PUBLIC_FIELDS:
 				user_data[field] = getattr(user, field)
-		else:
+		elif user.user_type == "ldap":
 			# Open LDAP Connection
 			with LDAPConnector(user) as ldc:
 				self.ldap_connection = ldc.connection
