@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
-from core.decorators.login import auth_required
+from core.decorators.login import auth_required, admin_required
 import logging
 ################################################################################
 
@@ -27,7 +27,8 @@ logger = logging.getLogger(__name__)
 
 class HomeViewSet(BaseViewSet):
 
-	@auth_required()
+	@auth_required
+	@admin_required
 	def list(self, request, pk=None):
 		user: User = request.user
 		data = {}

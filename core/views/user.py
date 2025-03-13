@@ -30,7 +30,7 @@ from core.views.mixins.logs import LogMixin
 
 # Others
 from django.db import transaction
-from core.decorators.login import auth_required
+from core.decorators.login import auth_required, admin_required
 from core.models.ldap_settings_runtime import RuntimeSettings
 from core.constants.user import PUBLIC_FIELDS, PUBLIC_FIELDS_SHORT
 import logging
@@ -42,7 +42,8 @@ logger = logging.getLogger(__name__)
 class UserViewSet(BaseViewSet):
 	serializer_class = UserSerializer
 
-	@auth_required()
+	@auth_required
+	@admin_required
 	def list(self, request: Request, pk=None):
 		code = 0
 		code_msg = "ok"
@@ -68,7 +69,8 @@ class UserViewSet(BaseViewSet):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def insert(self, request, pk=None):
 		code = 0
 		code_msg = "ok"
@@ -114,7 +116,8 @@ class UserViewSet(BaseViewSet):
 		)
 
 	@action(detail=True, methods=['get'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def fetch(self, request, pk):
 		code = 0
 		code_msg = "ok"
@@ -139,7 +142,8 @@ class UserViewSet(BaseViewSet):
 			}
 		)
 
-	@auth_required()
+	@auth_required
+	@admin_required
 	def update(self, request, pk):
 		code = 0
 		code_msg = "ok"
@@ -184,7 +188,8 @@ class UserViewSet(BaseViewSet):
 		)
 
 	@action(detail=True,methods=['delete', 'post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def delete(self, request, pk):
 		req_user: User = request.user
 		code = 0
@@ -211,7 +216,8 @@ class UserViewSet(BaseViewSet):
 		)
 
 	@action(detail=True,methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def change_status(self, request, pk):
 		code = 0
 		code_msg = "ok"
@@ -242,7 +248,8 @@ class UserViewSet(BaseViewSet):
 		)
 
 	@action(detail=True,methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def change_password(self, request, pk):
 		user: User = request.user
 		code = 0
@@ -279,7 +286,7 @@ class UserViewSet(BaseViewSet):
 		)
 
 	@action(detail=False,methods=['post', 'put'])
-	@auth_required(require_admin=False)
+	@auth_required
 	def self_change_password(self, request):
 		user: User = request.user
 		code = 0
@@ -314,7 +321,7 @@ class UserViewSet(BaseViewSet):
 		)
 
 	@action(detail=False,methods=['post', 'put'])
-	@auth_required(require_admin=False)
+	@auth_required
 	def self_update(self, request, pk=None):
 		user: User = request.user
 		code = 0

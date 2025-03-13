@@ -74,7 +74,7 @@ def login_redirect_bad_request(error_detail: str | int = 400) -> HttpResponse:
 class CustomOidcViewSet(BaseViewSet):
 
 	@action(detail=False, methods=['post'])
-	@auth_required(require_admin=False)
+	@auth_required
 	def consent(self, request, pk=None):
 		user: User = request.user
 		data: dict = request.data

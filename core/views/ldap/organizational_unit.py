@@ -35,7 +35,7 @@ from rest_framework.decorators import action
 from time import perf_counter
 from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.adsi import search_filter_from_dict
-from core.decorators.login import auth_required
+from core.decorators.login import auth_required, admin_required
 from core.models.ldap_settings_runtime import RuntimeSettings
 from interlock_backend.settings import PERF_LOGGING_ROUND, DIRTREE_PERF_LOGGING
 import logging
@@ -46,7 +46,8 @@ logger = logging.getLogger(__name__)
 
 class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 
-	@auth_required()
+	@auth_required
+	@admin_required
 	def list(self, request):
 		user: User = request.user
 		data = request.data
@@ -110,7 +111,8 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		)
 
 	@action(detail=False,methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def dirtree(self, request):
 		user: User = request.user
 		data = request.data
@@ -179,7 +181,8 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		)
 
 	@action(detail=False,methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def move(self, request):
 		user: User = request.user
 		data = request.data
@@ -204,7 +207,8 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		)
 
 	@action(detail=False,methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def rename(self, request):
 		user: User = request.user
 		data = request.data
@@ -229,7 +233,8 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		)
 
 	@action(detail=False,methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def insert(self, request):
 		user: User = request.user
 		data = request.data
@@ -302,7 +307,8 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def delete(self, request, pk=None):
 		user: User = request.user
 		code = 0

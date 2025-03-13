@@ -25,7 +25,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
-from core.decorators.login import auth_required
+from core.decorators.login import auth_required, admin_required
 import logging
 ################################################################################
 
@@ -34,7 +34,8 @@ logger = logging.getLogger(__name__)
 
 class LogsViewSet(BaseViewSet, LogMixin):
 
-	@auth_required()
+	@auth_required
+	@admin_required
 	def list(self, request, pk=None):
 		user: User = request.user
 		data = {}
@@ -77,7 +78,8 @@ class LogsViewSet(BaseViewSet, LogMixin):
 		)
 
 	@action(detail=False, methods=['get'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def reset(self, request, pk=None):
 		user: User = request.user
 		data = request.data
@@ -94,7 +96,8 @@ class LogsViewSet(BaseViewSet, LogMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def truncate(self, request, pk=None):
 		user: User = request.user
 		data = request.data

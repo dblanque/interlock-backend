@@ -19,14 +19,13 @@ logger = getLogger()
 def request_intercept(func=None):
 	def decorator(view_func):
 		@wraps(view_func)
-		def _wrapped(request, *args, **kwargs):
-			actual_request: Request = request.request
-			user: User = actual_request.user
-			logger.info(actual_request)
+		def _wrapped(self, request: Request, *args, **kwargs):
+			user: User = request.user
+			logger.info(request)
 			logger.info(user)
-			logger.info(actual_request.query_params)
-			logger.info(actual_request.data)
-			return view_func(request, *args, **kwargs)
+			logger.info(request.query_params)
+			logger.info(request.data)
+			return view_func(self, request, *args, **kwargs)
 		return _wrapped
 	if func is None:
 		return decorator
@@ -35,7 +34,7 @@ def request_intercept(func=None):
 def ldap_backend_intercept(func=None):
 	def decorator(view_func):
 		@wraps(view_func)
-		def _wrapped(request, *args, **kwargs):            
+		def _wrapped(self, request: Request, *args, **kwargs):            
 			try:
 				ldap_setting = InterlockSetting.objects.get(
 					name=INTERLOCK_SETTING_ENABLE_LDAP
@@ -47,7 +46,7 @@ def ldap_backend_intercept(func=None):
 
 			if not ldap_enabled:
 				raise LDAPBackendDisabled()
-			return view_func(request, *args, **kwargs)
+			return view_func(self, request, *args, **kwargs)
 		return _wrapped
 	# Handle both @decorator and @decorator() usage
 	if func is None:

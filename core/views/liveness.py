@@ -15,7 +15,7 @@ from core.models.user import User
 ### REST Framework
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from core.decorators.login import auth_required
+from core.decorators.login import auth_required, admin_required
 
 ### Others
 import logging
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class LivenessViewSet(BaseViewSet):
 
 	@action(detail=False, methods=['get'])
-	@auth_required(require_admin=False)
+	@auth_required
 	def check(self, request, pk=None):
 		code = 0
 		return Response(

@@ -11,13 +11,11 @@ from core.exceptions.base import PermissionDenied
 from core.views.mixins.auth import RemoveTokenResponse
 from functools import wraps
 
-def auth_required(func=None, *, require_admin: bool = True):
+def auth_required(func=None):
 	def decorator(view_func):
 		@wraps(view_func)
-		def _wrapped(request, *args, **kwargs):
-			# Get the actual request object from potential wrapper
-			actual_request: Request = getattr(request, 'request', request)
-			user: User = actual_request.user
+		def _wrapped(self, request: Request, *args, **kwargs):
+			user: User = request.user
 
 			# Check auth
 			if not user.is_authenticated or user.is_anonymous:
@@ -27,14 +25,23 @@ def auth_required(func=None, *, require_admin: bool = True):
 			if getattr(user, 'deleted', False):
 				raise PermissionDenied()
 
-			# Check admin
-			if require_admin:
-				if not getattr(user, 'is_superuser', False):
-					raise PermissionDenied()
-
-			return view_func(request, *args, **kwargs)
+			return view_func(self, request, *args, **kwargs)
 		return _wrapped
 
+	# Handle decorator with/without arguments
+	if func is None:
+		return decorator
+	return decorator(func)
+
+def admin_required(func=None):
+	def decorator(view_func):
+		@wraps(view_func)
+		def _wrapped(self, request: Request, *args, **kwargs):
+			user: User = request.user
+			if not getattr(user, 'is_superuser', False):
+				raise PermissionDenied()
+			return view_func(self, request, *args, **kwargs)
+		return _wrapped
 	# Handle decorator with/without arguments
 	if func is None:
 		return decorator

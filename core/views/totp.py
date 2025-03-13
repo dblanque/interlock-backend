@@ -27,7 +27,7 @@ from core.exceptions import (
 	otp as exc_otp,
 	base as exc_base
 )
-from core.decorators.login import auth_required
+from core.decorators.login import auth_required, admin_required
 
 ### ViewSets
 from .base import BaseViewSet
@@ -42,7 +42,7 @@ from core.models.ldap_settings_runtime import RuntimeSettings
 
 DBLogMixin = LogMixin()
 class TOTPViewSet(BaseViewSet):
-	@auth_required(require_admin=False)
+	@auth_required
 	def list(self, request):
 		user: User = request.user
 		code = 0
@@ -68,7 +68,7 @@ class TOTPViewSet(BaseViewSet):
 		)
 
 	@action(detail=False,methods=['get'])
-	@auth_required(require_admin=False)
+	@auth_required
 	def create_device(self, request):
 		user: User = request.user
 		data = request.data
@@ -92,7 +92,7 @@ class TOTPViewSet(BaseViewSet):
 		)
 
 	@action(detail=False,methods=['put', 'post'])
-	@auth_required(require_admin=False)
+	@auth_required
 	def validate_device(self, request):
 		user: User = request.user
 		data = request.data
@@ -114,7 +114,7 @@ class TOTPViewSet(BaseViewSet):
 		)
 
 	@action(detail=False,methods=['post', 'delete'])
-	@auth_required(require_admin=False)
+	@auth_required
 	def delete_device(self, request):
 		user: User = request.user
 		code = 0
@@ -132,7 +132,8 @@ class TOTPViewSet(BaseViewSet):
 		)
 
 	@action(detail=False,methods=['post', 'delete'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def delete_for_user(self, request):
 		user: User = request.user
 		code = 0

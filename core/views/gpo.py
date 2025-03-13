@@ -28,7 +28,7 @@ from core.models.ldap_settings_runtime import RuntimeSettings
 ### Others
 import struct
 from ldap3 import ALL_OPERATIONAL_ATTRIBUTES, ALL_ATTRIBUTES
-from core.decorators.login import auth_required
+from core.decorators.login import auth_required, admin_required
 from interlock_backend.ldap.guid import GUID
 from interlock_backend.ldap.securityIdentifier import SID
 from interlock_backend.ldap import adsi as ldap_adsi
@@ -38,7 +38,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 class GPOViewSet(BaseViewSet):
-	@auth_required()
+	@auth_required
+	@admin_required
 	def list(self, request):
 		user = request.user
 		data = {}

@@ -14,7 +14,7 @@ from .base import BaseViewSet
 from core.models.user import User
 
 ### Decorators
-from core.decorators.login import auth_required
+from core.decorators.login import auth_required, admin_required
 
 ### REST Framework
 from rest_framework.response import Response
@@ -30,7 +30,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 class DebugViewSet(BaseViewSet):
-	@auth_required()
+	@auth_required
+	@admin_required
 	def list(self, request):
 		user: User = request.user
 		data = []
@@ -54,7 +55,8 @@ class DebugViewSet(BaseViewSet):
 		)
 
 	@action(detail=False,methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def action(self, request):
 		user: User = request.user
 		data = request.data

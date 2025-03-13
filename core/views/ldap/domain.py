@@ -9,6 +9,10 @@
 #---------------------------------- IMPORTS -----------------------------------#
 ### Models
 from core.views.mixins.logs import LogMixin
+from core.models.interlock_settings import (
+	InterlockSetting,
+	INTERLOCK_SETTING_ENABLE_LDAP
+)
 from core.models.dns import LDAPDNS, LDAPRecord
 from core.models.types.ldap_dns_record import *
 from core.models.user import User
@@ -17,6 +21,7 @@ from core.models.user import User
 from core.views.base import BaseViewSet
 
 ### Exceptions
+from django.core.exceptions import ObjectDoesNotExist
 from core.exceptions import (
 	ldap as exc_ldap,
 	dns as exc_dns
@@ -30,7 +35,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
-from core.decorators.login import auth_required
+from core.decorators.login import auth_required, admin_required
 from core.models.validators.ldap_dns_record import (
 	domain_validator,
 	ipv4_validator,
@@ -52,28 +57,31 @@ logger = logging.getLogger(__name__)
 class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 
 	@action(detail=False, methods=['get'])
-	@auth_required(require_admin=False)
+	@auth_required
 	def details(self, request):
-		user: User = request.user
-		data = {}
+		data = {
+			"realm": "",
+			"name": "",
+			"basedn": "",
+			"user_selector": RuntimeSettings.LDAP_AUTH_USERNAME_IDENTIFIER or ""
+		}
 		code = 0
+		try:
+			ldap_enabled = InterlockSetting.objects.get(name=INTERLOCK_SETTING_ENABLE_LDAP)
+			ldap_enabled = ldap_enabled.value
+		except ObjectDoesNotExist:
+			ldap_enabled = False
 
-		if RuntimeSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN != defaults.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN:
-			data["realm"] = RuntimeSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN or ""
-		else:
-			data["realm"] = ""
+		if ldap_enabled:
+			if RuntimeSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN != defaults.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN:
+				data["realm"] = RuntimeSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN or ""
 
-		if RuntimeSettings.LDAP_DOMAIN != defaults.LDAP_DOMAIN:
-			data["name"] = RuntimeSettings.LDAP_DOMAIN or ""
-		else:
-			data["name"] = ""
+			if RuntimeSettings.LDAP_DOMAIN != defaults.LDAP_DOMAIN:
+				data["name"] = RuntimeSettings.LDAP_DOMAIN or ""
 
-		if RuntimeSettings.LDAP_AUTH_SEARCH_BASE != defaults.LDAP_AUTH_SEARCH_BASE:
-			data["basedn"] = RuntimeSettings.LDAP_AUTH_SEARCH_BASE or ""
-		else:
-			data["basedn"] = ""
+			if RuntimeSettings.LDAP_AUTH_SEARCH_BASE != defaults.LDAP_AUTH_SEARCH_BASE:
+				data["basedn"] = RuntimeSettings.LDAP_AUTH_SEARCH_BASE or ""
 
-		data["user_selector"] = RuntimeSettings.LDAP_AUTH_USERNAME_IDENTIFIER or ""
 		if INTERLOCK_DEBUG:
 			data["debug"] = INTERLOCK_DEBUG
 		return Response(
@@ -85,7 +93,8 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def zones(self, request):
 		user: User = request.user
 		data = {}
@@ -208,7 +217,8 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def insert(self, request):
 		user: User = request.user
 		data = {}
@@ -401,7 +411,8 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def delete(self, request):
 		user: User = request.user
 		data = {}

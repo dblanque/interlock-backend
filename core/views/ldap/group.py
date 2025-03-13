@@ -25,7 +25,7 @@ from rest_framework.decorators import action
 
 ### Others
 from core.constants.group import GroupViewsetFilterAttributeBuilder
-from core.decorators.login import auth_required
+from core.decorators.login import auth_required, admin_required
 from interlock_backend.ldap.connector import LDAPConnector
 from interlock_backend.ldap.adsi import (
 	search_filter_add,
@@ -40,7 +40,8 @@ logger = logging.getLogger(__name__)
 class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 	filter_attr_builder = GroupViewsetFilterAttributeBuilder
 
-	@auth_required()
+	@auth_required
+	@admin_required
 	def list(self, request):
 		user: User = request.user
 		data = []
@@ -66,7 +67,8 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		)
 
 	@action(detail=False,methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def fetch(self, request):
 		user: User = request.user
 		data = []
@@ -103,7 +105,8 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		)
 
 	@action(detail=False,methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def insert(self, request):
 		user: User = request.user
 		code = 0
@@ -135,7 +138,8 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 			 }
 		)
 
-	@auth_required()
+	@auth_required
+	@admin_required
 	def update(self, request, pk=None):
 		user: User = request.user
 		code = 0
@@ -157,7 +161,8 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def delete(self, request, pk=None):
 		user: User = request.user
 		code = 0

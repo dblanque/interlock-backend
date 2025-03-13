@@ -47,7 +47,7 @@ from rest_framework.decorators import action
 ### Others
 from interlock_backend.ldap import defaults
 from interlock_backend.encrypt import aes_encrypt
-from core.decorators.login import auth_required
+from core.decorators.login import auth_required, admin_required
 from core.models.ldap_settings_runtime import RuntimeSettings
 from interlock_backend.ldap.ldap_settings import get_setting_list
 from django.db import transaction
@@ -60,7 +60,8 @@ logger = logging.getLogger(__name__)
 class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	ldap_setting_class = LDAPSetting
 
-	@auth_required()
+	@auth_required
+	@admin_required
 	def list(self, request, pk=None):
 		code = 0
 		active_preset = self.get_active_settings_preset()
@@ -131,7 +132,8 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def preset_create(self, request, pk=None):
 		code = 0
 		if not "label" in request.data:
@@ -159,7 +161,8 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def preset_delete(self, request, pk=None):
 		data: dict = request.data
 		code = 0
@@ -180,7 +183,8 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def preset_enable(self, request, pk=None):
 		data: dict = request.data
 		code = 0
@@ -206,7 +210,8 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def preset_rename(self, request, pk=None):
 		data: dict = request.data
 		code = 0
@@ -239,7 +244,8 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def save(self, request, pk=None):
 		data_preset: dict = request.data["preset"]
 		data_settings: dict = request.data["settings"]
@@ -365,7 +371,8 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		)
 
 	@action(detail=False, methods=['get'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def reset(self, request, pk=None):
 		data: dict = request.data
 		code = 0
@@ -414,7 +421,8 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	# 	)
 
 	@action(detail=False, methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def test(self, request, pk=None):
 		data: dict = request.data
 		code = 0

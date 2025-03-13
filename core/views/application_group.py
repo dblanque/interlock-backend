@@ -29,7 +29,7 @@ from core.exceptions.application_group import (
 from core.exceptions.base import BadRequest
 
 # Others
-from core.decorators.login import auth_required
+from core.decorators.login import auth_required, admin_required
 from django.db import transaction
 import logging
 ################################################################################
@@ -39,7 +39,8 @@ logger = logging.getLogger(__name__)
 class ApplicationGroupViewSet(BaseViewSet, ApplicationSecurityGroupViewMixin):
 
 	@action(detail=False, methods=["post"])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def insert(self, request):
 		data: dict = request.data
 		code = 0
@@ -73,7 +74,8 @@ class ApplicationGroupViewSet(BaseViewSet, ApplicationSecurityGroupViewMixin):
 		)
 
 	@action(detail=False, methods=["get"])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def create_info(self, request):
 		code = 0
 		code_msg = "ok"
@@ -102,7 +104,8 @@ class ApplicationGroupViewSet(BaseViewSet, ApplicationSecurityGroupViewMixin):
 			}
 		)
 
-	@auth_required()
+	@auth_required
+	@admin_required
 	def list(self, request):
 		code = 0
 		code_msg = "ok"
@@ -116,7 +119,8 @@ class ApplicationGroupViewSet(BaseViewSet, ApplicationSecurityGroupViewMixin):
 			}
 		)
 
-	@auth_required()
+	@auth_required
+	@admin_required
 	def retrieve(self, request, pk):
 		code = 0
 		code_msg = "ok"
@@ -144,7 +148,8 @@ class ApplicationGroupViewSet(BaseViewSet, ApplicationSecurityGroupViewMixin):
 			}
 		)
 
-	@auth_required()
+	@auth_required
+	@admin_required
 	def update(self, request, pk):
 		data: dict = request.data
 		code = 0
@@ -174,7 +179,8 @@ class ApplicationGroupViewSet(BaseViewSet, ApplicationSecurityGroupViewMixin):
 		)
 
 	@action(detail=True, methods=["patch"])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def change_status(self, request, pk):
 		data: dict = request.data
 		code = 0
@@ -201,7 +207,8 @@ class ApplicationGroupViewSet(BaseViewSet, ApplicationSecurityGroupViewMixin):
 		)
 
 	@action(detail=True, methods=["delete"])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def delete(self, request, pk):
 		data: dict = request.data
 		code = 0

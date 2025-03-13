@@ -22,7 +22,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
-from core.decorators.login import auth_required
+from core.decorators.login import auth_required, admin_required
 import logging
 ################################################################################
 logger = logging.getLogger(__name__)
@@ -30,7 +30,8 @@ logger = logging.getLogger(__name__)
 class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 	queryset = Application.objects.all()
 
-	@auth_required()
+	@auth_required
+	@admin_required
 	def list(self, request):
 		code = 0
 		code_msg = "ok"
@@ -45,7 +46,8 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 		)
 
 	@action(detail=False,methods=["post"])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def insert(self, request):
 		user: User = request.user
 		data: dict = request.data
@@ -61,7 +63,8 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 		)
 
 	@action(detail=True, methods=["delete"], url_path="delete")
-	@auth_required()
+	@auth_required
+	@admin_required
 	def delete(self, request, pk):
 		code = 0
 		code_msg = "ok"
@@ -76,7 +79,8 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 		)
 
 	@action(detail=True, methods=["get"])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def fetch(self, request, pk):
 		code = 0
 		code_msg = "ok"
@@ -91,7 +95,8 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 			 }
 		)
 
-	@auth_required()
+	@auth_required
+	@admin_required
 	def update(self, request, pk):
 		data: dict = request.data
 		code = 0

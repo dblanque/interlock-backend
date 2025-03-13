@@ -18,7 +18,12 @@ from django.core.exceptions import ObjectDoesNotExist
 from interlock_backend.encrypt import aes_encrypt
 
 ### Models
-from core.models.user import User, USER_PASSWORD_FIELDS
+from core.models.user import (
+	User,
+	USER_PASSWORD_FIELDS,
+	USER_TYPE_LDAP,
+	USER_TYPE_LOCAL,
+)
 from core.views.mixins.logs import LogMixin
 
 ### Mixins
@@ -56,7 +61,7 @@ logger = logging.getLogger(__name__)
 class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	queryset = User.objects.all()
 
-	@auth_required()
+	@auth_required
 	@ldap_backend_intercept
 	def list(self, request):
 		user: User = request.user
@@ -680,7 +685,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required(require_admin=False)
+	@auth_required
 	@ldap_backend_intercept
 	def self_change_password(self, request, pk=None):
 		user: User = request.user
@@ -755,7 +760,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		)
 
 	@action(detail=False, methods=['put', 'post'])
-	@auth_required(require_admin=False)
+	@auth_required
 	@ldap_backend_intercept
 	def self_update(self, request, pk=None):
 		user: User = request.user
@@ -835,7 +840,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		)
 
 	@action(detail=False, methods=['get'])
-	@auth_required(require_admin=False)
+	@auth_required
 	def self_info(self, request):
 		user: User = request.user
 		data = {}
@@ -857,20 +862,20 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		)
 
 	@action(detail=False,methods=['get'])
-	@auth_required(require_admin=False)
+	@auth_required
 	@ldap_backend_intercept
 	def self_fetch(self, request):
 		user: User = request.user
 		code = 0
 		code_msg = 'ok'
 		user_search = user.username
-		if user.user_type == "local":
+		if user.user_type == USER_TYPE_LOCAL:
 			user_data = {}
 			for field in PUBLIC_FIELDS:
 				user_data[field] = getattr(user, field)
-		elif user.user_type == "ldap":
+		elif user.user_type == USER_TYPE_LDAP:
 			# Open LDAP Connection
-			with LDAPConnector(user) as ldc:
+			with LDAPConnector(user, force_admin=True) as ldc:
 				self.ldap_connection = ldc.connection
 				self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings).get_fetch_me_attrs()
 
@@ -886,7 +891,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 					self.ldap_filter_object,
 					attributes=self.ldap_filter_attr
 				)
-				user = self.ldap_connection.entries
+				user_entry = self.ldap_connection.entries
 
 				self.ldap_filter_attr.remove('userAccountControl')
 
@@ -895,7 +900,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				for attr_key in self.ldap_filter_attr:
 					if attr_key in self.ldap_filter_attr:
 						str_key = str(attr_key)
-						str_value = str(getattr(user[0],attr_key))
+						str_value = str(getattr(user_entry[0],attr_key))
 						if str_value == "[]":
 							user_data[str_key] = ""
 						else:
@@ -905,7 +910,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 					# Check if user can change password based on perms
 					user_data['can_change_pwd'] = False
-					if not ldap_adsi.list_user_perms(user=user[0], perm_search="LDAP_UF_PASSWD_CANT_CHANGE"):
+					if not ldap_adsi.list_user_perms(user=user_entry[0], perm_search="LDAP_UF_PASSWD_CANT_CHANGE"):
 						user_data['can_change_pwd'] = True
 
 		return Response(

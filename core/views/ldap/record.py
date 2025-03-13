@@ -30,7 +30,7 @@ from rest_framework.decorators import action
 
 ### Others
 from core.utils.dnstool import record_to_dict
-from core.decorators.login import auth_required
+from core.decorators.login import auth_required, admin_required
 from interlock_backend.ldap.connector import LDAPConnector
 import logging
 ################################################################################
@@ -40,7 +40,8 @@ logger = logging.getLogger(__name__)
 class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 	record_serializer = DNSRecordSerializer
 	@action(detail=False,methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def insert(self, request):
 		user: User = request.user
 		data = {}
@@ -77,7 +78,8 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 			 }
 		)
 
-	@auth_required()
+	@auth_required
+	@admin_required
 	def update(self, request, pk=None):
 		user: User = request.user
 		data = {}
@@ -129,7 +131,8 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 		)
 
 	@action(detail=False, methods=['post'])
-	@auth_required()
+	@auth_required
+	@admin_required
 	def delete(self, request):
 		user: User = request.user
 		data = {}
