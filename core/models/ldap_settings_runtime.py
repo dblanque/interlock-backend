@@ -10,15 +10,15 @@
 #---------------------------------- IMPORTS -----------------------------------#
 from interlock_backend.ldap import defaults
 from .ldap_settings import (
-	CMAPS,
+	LDAP_SETTING_MAP,
 	LDAPSetting,
 	LDAPPreset,
-	LDAP_TYPE_PASSWORD,
-	LDAP_SETTING_PREFIX,
-	LDAP_TYPE_PASSWORD_FIELDS,
+	TYPE_AES_ENCRYPT,
+	LDAP_SETTING_TABLE,
+	LDAP_PRESET_TABLE
 )
 from interlock_backend.encrypt import aes_decrypt
-from django.db import connection
+from core.utils.db import db_table_exists
 import sys
 import logging
 from uuid import (
@@ -106,36 +106,32 @@ class RunningSettingsClass():
 
 def get_settings(uuid) -> dict:
 	logger.info(f"Re-synchronizing settings for {this_module} (Configuration Instance {uuid})")
-	all_tables = connection.introspection.table_names()
 	active_preset = None
 	r = {}
 
-	if "core_ldappreset" in all_tables:
+	if db_table_exists(LDAP_PRESET_TABLE):
 		active_preset = LDAPPreset.objects.get(active=True)
 
 	# For constant, value_type in...
-	for setting_key, setting_type in CMAPS.items():
-		s = None
-		if "core_ldapsetting" in all_tables:
+	for setting_key, setting_type in LDAP_SETTING_MAP.items():
+		setting_instance = None
+		if db_table_exists(LDAP_SETTING_TABLE):
 			# Setting
-			s = LDAPSetting.objects.filter(name=setting_key, preset_id=active_preset)
-			if s.exists():
-				s = s[0]
+			setting_instance = LDAPSetting.objects.filter(
+				name=setting_key,
+				preset_id=active_preset
+			)
+			if setting_instance.exists():
+				setting_instance = setting_instance[0]
 		# Default
-		d = getattr(defaults, setting_key)
-		# Value
+		value_default = getattr(defaults, setting_key)
 
-		if setting_type == LDAP_TYPE_PASSWORD:
-			decrypt_args = []
-			for field in LDAP_TYPE_PASSWORD_FIELDS:
-				try:
-					decrypt_args.append(getattr(s, field))
-				except:
-					raise ValueError(f"Missing crypt object for {setting_key}")
-			v = aes_decrypt(*decrypt_args)
+		# Value
+		if setting_type == TYPE_AES_ENCRYPT and setting_instance:
+			setting_value = aes_decrypt(*setting_instance.value)
 		else:
-			v = getattr(s, f"{LDAP_SETTING_PREFIX}_{setting_type.lower()}", d)
-		r[setting_key] = v
+			setting_value = getattr(setting_instance, "value", value_default)
+		r[setting_key] = setting_value
 	return r
 
-RunningSettings = RunningSettingsClass()
+RuntimeSettings = RunningSettingsClass()

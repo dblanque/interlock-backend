@@ -12,7 +12,7 @@ from rest_framework import viewsets
 
 ### Interlock
 from interlock_backend.ldap.adsi import search_filter_add
-from core.models.ldap_settings_runtime import RunningSettings
+from core.models.ldap_settings_runtime import RuntimeSettings
 from interlock_backend.ldap import adsi as ldap_adsi
 from interlock_backend.ldap.user_flags import LDAP_UF_NORMAL_ACCOUNT
 from interlock_backend.ldap.accountTypes import LDAP_ACCOUNT_TYPES
@@ -62,16 +62,16 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 	def get_user_object_filter(self, username: str=None, email: str=None):
 		if (not username and not email) or (username and email):
 			raise ValueError("XOR Fail: Username OR Email required, single value allowed.")
-		filter = "(objectclass=" + RunningSettings.LDAP_AUTH_OBJECT_CLASS + ")"
+		filter = "(objectclass=" + RuntimeSettings.LDAP_AUTH_OBJECT_CLASS + ")"
 
 		# Exclude Computer Accounts if settings allow it
-		if RunningSettings.EXCLUDE_COMPUTER_ACCOUNTS == True:
+		if RuntimeSettings.EXCLUDE_COMPUTER_ACCOUNTS == True:
 			filter = search_filter_add(filter, "!(objectclass=computer)")
 
 		if username:
-			filter_to_use = RunningSettings.LDAP_AUTH_USER_FIELDS["username"] + "=" + username
+			filter_to_use = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"] + "=" + username
 		elif email:
-			filter_to_use = RunningSettings.LDAP_AUTH_USER_FIELDS["email"] + "=" + email
+			filter_to_use = RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"] + "=" + email
 		# Add filter
 		filter = search_filter_add(
 			filter,
@@ -79,7 +79,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		)
 		return filter
 
-	def get_user_object(self, username, attributes=[RunningSettings.LDAP_AUTH_USER_FIELDS["username"], 'distinguishedName'], object_class_filter=None):
+	def get_user_object(self, username, attributes=[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"], 'distinguishedName'], object_class_filter=None):
 		""" Default: Search for the dn from a username string param.
 		
 		Can also be used to fetch entire object from that username string or filtered attributes.
@@ -100,7 +100,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			object_class_filter = self.get_user_object_filter(username)
 
 		self.ldap_connection.search(
-			RunningSettings.LDAP_AUTH_SEARCH_BASE, 
+			RuntimeSettings.LDAP_AUTH_SEARCH_BASE, 
 			object_class_filter, 
 			attributes=attributes
 		)
@@ -156,7 +156,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		user_list = []
 
 		# Exclude Computer Accounts if settings allow it
-		if RunningSettings.EXCLUDE_COMPUTER_ACCOUNTS == True:
+		if RuntimeSettings.EXCLUDE_COMPUTER_ACCOUNTS == True:
 			self.ldap_filter_object = ldap_adsi.search_filter_add(self.ldap_filter_object, "!(objectclass=computer)")
 		
 		# Exclude Contacts
@@ -164,7 +164,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		try:
 			self.ldap_connection.search(
-				RunningSettings.LDAP_AUTH_SEARCH_BASE,
+				RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
 				self.ldap_filter_object,
 				attributes=self.ldap_filter_attr
 			)
@@ -173,7 +173,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			raise
 		userList = self.ldap_connection.entries
 
-		if RunningSettings.LDAP_LOG_READ == True:
+		if RuntimeSettings.LDAP_LOG_READ == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=self.request.user.id,
@@ -209,7 +209,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 						user_dict[str_key] = ""
 					else:
 						user_dict[str_key] = str_value
-				if attr_key == RunningSettings.LDAP_AUTH_USER_FIELDS["username"]:
+				if attr_key == RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]:
 					user_dict['username'] = str_value
 
 			# Add entry DN to response dictionary
@@ -247,7 +247,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				user_dn = f"CN={user_data['username']},{user_data['path']}"
 				user_data.pop('path')
 			else:
-				user_dn = 'CN='+user_data['username']+',OU=Users,'+RunningSettings.LDAP_AUTH_SEARCH_BASE
+				user_dn = 'CN='+user_data['username']+',OU=Users,'+RuntimeSettings.LDAP_AUTH_SEARCH_BASE
 		except:
 			raise exc_user.UserDNPathException
 
@@ -256,9 +256,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			arguments['userAccountControl'] = self.calc_perms_from_list(user_data['permission_list'])
 		else:
 			arguments['userAccountControl'] = self.calc_perms_from_list()
-		arguments[RunningSettings.LDAP_AUTH_USER_FIELDS["username"]] = str(user_data['username']).lower()
+		arguments[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]] = str(user_data['username']).lower()
 		arguments['objectClass'] = ['top', 'person', 'organizationalPerson', 'user']
-		arguments['userPrincipalName'] = user_data['username'] + '@' + RunningSettings.LDAP_DOMAIN
+		arguments['userPrincipalName'] = user_data['username'] + '@' + RuntimeSettings.LDAP_DOMAIN
 
 		if not exclude_keys:
 			exclude_keys = [
@@ -285,7 +285,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		logger.debug(f'Creating user in DN Path: {user_dn}')
 		try:
-			self.ldap_connection.add(user_dn, RunningSettings.LDAP_AUTH_OBJECT_CLASS, attributes=arguments)
+			self.ldap_connection.add(user_dn, RuntimeSettings.LDAP_AUTH_OBJECT_CLASS, attributes=arguments)
 		except Exception as e:
 			logger.error(e)
 			logger.error(f'Could not create User: {user_dn}')
@@ -297,7 +297,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				raise exc_user.UserCreate(data=user_data)
 			return None
 
-		if RunningSettings.LDAP_LOG_CREATE == True:
+		if RuntimeSettings.LDAP_LOG_CREATE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=self.request.user.id,
@@ -413,7 +413,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		logger.debug(self.ldap_connection.result)
 
-		if RunningSettings.LDAP_LOG_UPDATE == True:
+		if RuntimeSettings.LDAP_LOG_UPDATE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=self.request.user.id,
@@ -429,8 +429,8 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			pass
 
 		if django_user:
-			for key in RunningSettings.LDAP_AUTH_USER_FIELDS:
-				mapped_key = RunningSettings.LDAP_AUTH_USER_FIELDS[key]
+			for key in RuntimeSettings.LDAP_AUTH_USER_FIELDS:
+				mapped_key = RuntimeSettings.LDAP_AUTH_USER_FIELDS[key]
 				if mapped_key in user_data:
 					setattr(django_user, key, user_data[mapped_key])
 				if 'mail' not in user_data:
@@ -469,9 +469,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		"""
 		# Send LDAP Query for user being created to see if it exists
 		ldap_attributes = [
-			RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
+			RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
 			'distinguishedName',
-			RunningSettings.LDAP_AUTH_USER_FIELDS["email"],
+			RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"],
 		]
 		self.get_user_object(
 			user_search, 
@@ -510,12 +510,12 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			raise e
 		# Send LDAP Query for user being created to see if it exists
 		ldap_attributes = [
-			RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
+			RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
 			'distinguishedName',
-			RunningSettings.LDAP_AUTH_USER_FIELDS["email"],
+			RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"],
 		]
 		self.ldap_connection.search(
-			RunningSettings.LDAP_AUTH_SEARCH_BASE, 
+			RuntimeSettings.LDAP_AUTH_SEARCH_BASE, 
 			self.get_user_object_filter(email=email_search), 
 			attributes=ldap_attributes
 		)
@@ -524,7 +524,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		if user != [] and user_check != None:
 			eq_attributes = [ 
 				"distinguishedName",
-				RunningSettings.LDAP_AUTH_USER_FIELDS["username"]
+				RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
 			]
 			# If user with same dn and username exists, return error
 			if not all(
@@ -545,13 +545,13 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		return False
 
 	def ldap_user_fetch(self, user_search):
-		self.ldap_filter_object = f"(objectclass={RunningSettings.LDAP_AUTH_OBJECT_CLASS})"
+		self.ldap_filter_object = f"(objectclass={RuntimeSettings.LDAP_AUTH_OBJECT_CLASS})"
 		if not self.ldap_filter_attr:
-			self.ldap_filter_attr = self.filter_attr_builder(RunningSettings)\
+			self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings)\
 										.get_fetch_attrs()
 
 		# Exclude Computer Accounts if settings allow it
-		if RunningSettings.EXCLUDE_COMPUTER_ACCOUNTS == True:
+		if RuntimeSettings.EXCLUDE_COMPUTER_ACCOUNTS == True:
 			self.ldap_filter_object = ldap_adsi.search_filter_add(
 				self.ldap_filter_object,
 				"!(objectclass=computer)"
@@ -560,7 +560,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		# Add filter for username
 		self.ldap_filter_object = ldap_adsi.search_filter_add(
 			self.ldap_filter_object,
-			RunningSettings.LDAP_AUTH_USER_FIELDS["username"] + "=" + user_search
+			RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"] + "=" + user_search
 		)
 		ldap_object_options: LDAPObjectOptions = {
 			"connection": self.ldap_connection,
@@ -572,7 +572,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		user_entry = user_obj.entry
 		user_dict = user_obj.attributes
 
-		if RunningSettings.LDAP_LOG_READ == True:
+		if RuntimeSettings.LDAP_LOG_READ == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=self.request.user.id,
@@ -639,7 +639,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		self.ldap_filter_object = ""
 
 		# Exclude Computer Accounts if settings allow it
-		if RunningSettings.EXCLUDE_COMPUTER_ACCOUNTS == True:
+		if RuntimeSettings.EXCLUDE_COMPUTER_ACCOUNTS == True:
 			self.ldap_filter_object = ldap_adsi.search_filter_add(
 				self.ldap_filter_object, 
 				"!(objectclass=computer)"
@@ -648,11 +648,11 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		# Add filter for username
 		self.ldap_filter_object = ldap_adsi.search_filter_add(
 			self.ldap_filter_object, 
-			RunningSettings.LDAP_AUTH_USER_FIELDS["username"] + "=" + affected_user
+			RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"] + "=" + affected_user
 		)
 
 		self.ldap_connection.search(
-			RunningSettings.LDAP_AUTH_SEARCH_BASE, 
+			RuntimeSettings.LDAP_AUTH_SEARCH_BASE, 
 			self.ldap_filter_object, 
 			attributes=self.ldap_filter_attr
 		)
@@ -661,7 +661,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		dn = str(user[0].distinguishedName)
 		permList = ldap_adsi.list_user_perms(user=user[0], user_is_object=False)
 
-		if dn == RunningSettings.LDAP_AUTH_CONNECTION_USER_DN:
+		if dn == RuntimeSettings.LDAP_AUTH_CONNECTION_USER_DN:
 			raise exc_user.UserAntiLockout
 
 		try:
@@ -688,7 +688,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			django_user.is_enabled = target_state
 			django_user.save()
 
-		if RunningSettings.LDAP_LOG_UPDATE == True:
+		if RuntimeSettings.LDAP_LOG_UPDATE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=self.request.user.id,
@@ -723,7 +723,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			raise exc_user.UserDoesNotExist
 
 		self.ldap_connection.extend.microsoft.unlock_account(user_dn)
-		if RunningSettings.LDAP_LOG_UPDATE == True:
+		if RuntimeSettings.LDAP_LOG_UPDATE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=self.request.user.id,
@@ -735,8 +735,8 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		return self.ldap_connection
 	
 	def ldap_user_delete(self, user_object):
-		if RunningSettings.LDAP_AUTH_USER_FIELDS["username"] in user_object:
-			user_name = user_object[RunningSettings.LDAP_AUTH_USER_FIELDS["username"]]
+		if RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"] in user_object:
+			user_name = user_object[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]]
 		elif 'username' in user_object:
 			user_name = user_object['username']
 		else:
@@ -781,7 +781,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				}
 				raise exc_base.CoreException(data=data)
 
-		if RunningSettings.LDAP_LOG_DELETE == True:
+		if RuntimeSettings.LDAP_LOG_DELETE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=self.request.user.id,

@@ -15,6 +15,7 @@ from rest_framework import viewsets
 
 ### Core
 #### Models
+from core.models.interlock_settings import InterlockSetting, INTERLOCK_SETTING_ENABLE_LDAP
 from core.models.user import User
 from core.models.ldap_settings import LDAPPreset
 
@@ -34,14 +35,28 @@ from interlock_backend.ldap.connector import (
 	LDAPConnectionOptions
 )
 from interlock_backend.settings import BASE_DIR
-from core.models.ldap_settings_runtime import RunningSettings
+from core.models.ldap_settings_runtime import RuntimeSettings
+from django.core.exceptions import ObjectDoesNotExist
 import logging
 ################################################################################
 
 logger = logging.getLogger(__name__)
 
 class SettingsViewMixin(viewsets.ViewSetMixin):
+
+	def create_default_preset(self):
+		LDAPPreset.objects.create(name='default_preset', label="Default Preset", active=True)
+
+	def remove_default_preset(self):
+		try:
+			LDAPPreset.objects.filter(name='default').delete_permanently()
+		except:
+			pass
+
 	def resync_users(self) -> None:
+		ldap_enabled = InterlockSetting.objects.get(name=INTERLOCK_SETTING_ENABLE_LDAP)
+		if ldap_enabled.value is False:
+			return
 		ldc_opts = LDAPConnectionOptions()
 		ldc_opts['force_admin'] = True
 		# Open LDAP Connection
@@ -63,10 +78,14 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 		return name.replace(" ", "_").lower()
 
 	def get_active_settings_preset(self):
+		try:
+			return LDAPPreset.objects.get(active=True)
+		except ObjectDoesNotExist:
+			self.create_default_preset()
 		return LDAPPreset.objects.get(active=True)
 
 	def resync_settings(self):
-		RunningSettings.resync()
+		RuntimeSettings.resync()
 		self.resync_users()
 
 	def reload_django(self):

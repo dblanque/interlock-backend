@@ -34,20 +34,20 @@ from ldap3 import (
 import logging
 import re
 from datetime import datetime
-from core.models.ldap_settings_runtime import RunningSettings
+from core.models.ldap_settings_runtime import RuntimeSettings
 ################################################################################
 
 DATE_FMT = "%Y%m%d"
 logger = logging.getLogger(__name__)
 class LDAPDNS():
 	def __init__(self, connection):
-		legacy = RunningSettings.LDAP_DNS_LEGACY
+		legacy = RuntimeSettings.LDAP_DNS_LEGACY
 		if legacy == True:
-			self.dnsroot = 'CN=MicrosoftDNS,CN=System,%s' % RunningSettings.LDAP_AUTH_SEARCH_BASE
+			self.dnsroot = 'CN=MicrosoftDNS,CN=System,%s' % RuntimeSettings.LDAP_AUTH_SEARCH_BASE
 		else:
-			self.dnsroot = 'CN=MicrosoftDNS,DC=DomainDnsZones,%s' % RunningSettings.LDAP_AUTH_SEARCH_BASE
+			self.dnsroot = 'CN=MicrosoftDNS,DC=DomainDnsZones,%s' % RuntimeSettings.LDAP_AUTH_SEARCH_BASE
 		
-		self.forestroot = 'CN=MicrosoftDNS,DC=ForestDnsZones,%s' % RunningSettings.LDAP_AUTH_SEARCH_BASE  
+		self.forestroot = 'CN=MicrosoftDNS,DC=ForestDnsZones,%s' % RuntimeSettings.LDAP_AUTH_SEARCH_BASE  
 		self.connection = connection
 		self.list_dns_zones()
 		self.list_forest_zones()
@@ -81,7 +81,7 @@ class LDAPRecord(LDAPDNS):
 	):
 		super().__init__(connection=connection)
 
-		self.schemaNamingContext = "%s,%s" % (RunningSettings.LDAP_SCHEMA_NAMING_CONTEXT, RunningSettings.LDAP_AUTH_SEARCH_BASE)
+		self.schemaNamingContext = "%s,%s" % (RuntimeSettings.LDAP_SCHEMA_NAMING_CONTEXT, RuntimeSettings.LDAP_AUTH_SEARCH_BASE)
 
 		if rName is None:
 			raise ValueError("Name cannot be none (LDAPRecord Object Class)")

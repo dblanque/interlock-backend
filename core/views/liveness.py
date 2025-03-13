@@ -28,8 +28,6 @@ class LivenessViewSet(BaseViewSet):
 	@action(detail=False, methods=['get'])
 	@auth_required(require_admin=False)
 	def check(self, request, pk=None):
-		user: User = request.user
-		data = {}
 		code = 0
 		return Response(
 			 data={

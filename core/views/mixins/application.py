@@ -33,16 +33,11 @@ from rest_framework import viewsets
 ### Others
 from django.db.models.query import QuerySet
 from django.db import transaction
+from core.utils.db import db_table_exists
 from typing import Iterable
 import logging
 ################################################################################
 logger = logging.getLogger()
-
-RESPONSE_TYPE_ID_MAP = {
-	rt.value: rt.id
-	for rt in ResponseType.objects.all()
-}
-RESPONSE_TYPE_CODES = ResponseType.objects.all().values_list("value", flat=True)
 
 class ApplicationViewMixin(viewsets.ViewSetMixin):
 	application_serializer = ApplicationSerializer
@@ -66,7 +61,17 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 
 		return application, client
 
+	def get_response_type_id_map(self):
+		return {
+			rt.value: rt.id
+			for rt in ResponseType.objects.all()
+		}
+
+	def get_response_type_codes(self):
+		return ResponseType.objects.all().values_list("value", flat=True)
+
 	def set_client_response_types(self, new_response_types: dict, client: Client) -> None:
+		RESPONSE_TYPE_ID_MAP = self.get_response_type_id_map()
 		for key, value in new_response_types.items():
 			# Add key if in update
 			if value is True:
@@ -142,7 +147,7 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 				raise ApplicationFieldDoesNotExist(data={"field":field})
 
 		data["response_types"] = {}
-		for r_type in RESPONSE_TYPE_CODES:
+		for r_type in self.get_response_type_codes():
 			data["response_types"][r_type] = False
 		if response_types:
 			for r_type in response_types:

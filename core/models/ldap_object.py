@@ -11,7 +11,7 @@
 from django.utils.translation import gettext_lazy as _
 
 ### Interlock
-from core.models.ldap_settings_runtime import RunningSettings
+from core.models.ldap_settings_runtime import RuntimeSettings
 from interlock_backend.ldap.adsi import LDAP_BUILTIN_OBJECTS, search_filter_add
 from interlock_backend.ldap.securityIdentifier import SID
 
@@ -71,10 +71,10 @@ class LDAPObject():
         # Set LDAPTree Default Values
         self.entry = None
         self.attributes = None
-        self.name = RunningSettings.LDAP_AUTH_SEARCH_BASE
-        self.searchBase = RunningSettings.LDAP_AUTH_SEARCH_BASE
+        self.name = RuntimeSettings.LDAP_AUTH_SEARCH_BASE
+        self.searchBase = RuntimeSettings.LDAP_AUTH_SEARCH_BASE
         self.connection = kwargs.pop('connection')
-        self.usernameIdentifier = RunningSettings.LDAP_AUTH_USER_FIELDS["username"]
+        self.usernameIdentifier = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
         self.subobjectId = 0
         self.excludedLdapAttributes = [
             'objectGUID',
@@ -96,7 +96,7 @@ class LDAPObject():
         ]
         self.recursive = False
         self.testFetch = False
-        self.ldapAttributes = RunningSettings.LDAP_DIRTREE_ATTRIBUTES
+        self.ldapAttributes = RuntimeSettings.LDAP_DIRTREE_ATTRIBUTES
         if 'dn' in kwargs:
             self.ldapFilter = search_filter_add(
                 "",

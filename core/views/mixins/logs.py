@@ -1,10 +1,10 @@
 from rest_framework import viewsets
-from core.models.ldap_settings_runtime import RunningSettings
+from core.models.ldap_settings_runtime import RuntimeSettings
 from core.models.log import Log
 class LogMixin(viewsets.ViewSetMixin):
 	def log(self, **kwargs):
 		# This function rotates logs based on a Maximum Limit Setting
-		logLimit = RunningSettings.LDAP_LOG_MAX
+		logLimit = RuntimeSettings.LDAP_LOG_MAX
 
 		# Truncate Logs if necessary
 		if Log.objects.count() > logLimit:

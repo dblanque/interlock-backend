@@ -40,7 +40,7 @@ from interlock_backend.settings import DEBUG as INTERLOCK_DEBUG
 from core.utils import dnstool
 from core.utils.dnstool import record_to_dict
 from interlock_backend.ldap.adsi import search_filter_add
-from core.models.ldap_settings_runtime import RunningSettings
+from core.models.ldap_settings_runtime import RuntimeSettings
 from interlock_backend.ldap import defaults
 from interlock_backend.ldap.connector import LDAPConnector
 import logging
@@ -58,22 +58,22 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 		data = {}
 		code = 0
 
-		if RunningSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN != defaults.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN:
-			data["realm"] = RunningSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN or ""
+		if RuntimeSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN != defaults.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN:
+			data["realm"] = RuntimeSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN or ""
 		else:
 			data["realm"] = ""
 
-		if RunningSettings.LDAP_DOMAIN != defaults.LDAP_DOMAIN:
-			data["name"] = RunningSettings.LDAP_DOMAIN or ""
+		if RuntimeSettings.LDAP_DOMAIN != defaults.LDAP_DOMAIN:
+			data["name"] = RuntimeSettings.LDAP_DOMAIN or ""
 		else:
 			data["name"] = ""
 
-		if RunningSettings.LDAP_AUTH_SEARCH_BASE != defaults.LDAP_AUTH_SEARCH_BASE:
-			data["basedn"] = RunningSettings.LDAP_AUTH_SEARCH_BASE or ""
+		if RuntimeSettings.LDAP_AUTH_SEARCH_BASE != defaults.LDAP_AUTH_SEARCH_BASE:
+			data["basedn"] = RuntimeSettings.LDAP_AUTH_SEARCH_BASE or ""
 		else:
 			data["basedn"] = ""
 
-		data["user_selector"] = RunningSettings.LDAP_AUTH_USERNAME_IDENTIFIER or ""
+		data["user_selector"] = RuntimeSettings.LDAP_AUTH_USERNAME_IDENTIFIER or ""
 		if INTERLOCK_DEBUG:
 			data["debug"] = INTERLOCK_DEBUG
 		return Response(
@@ -126,7 +126,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 			if zoneFilter is not None:
 				target_zone = zoneFilter
 			else:
-				target_zone = RunningSettings.LDAP_DOMAIN
+				target_zone = RuntimeSettings.LDAP_DOMAIN
 			search_target = 'DC=%s,%s' % (target_zone, dnsList.dnsroot)
 			try:
 				ldapConnection.search(
@@ -185,7 +185,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 						if zoneName == 'RootDNSServers':
 							dnsZones[i] = "Root DNS Servers"
 
-					if RunningSettings.LDAP_LOG_READ == True:
+					if RuntimeSettings.LDAP_LOG_READ == True:
 						# Log this action to DB
 						DBLogMixin.log(
 							user_id=request.user.id,
@@ -197,7 +197,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 					responseData['dnsZones'] = dnsZones
 					responseData['forestZones'] = forestZones
 					responseData['records'] = result
-					responseData['legacy'] = RunningSettings.LDAP_DNS_LEGACY or False
+					responseData['legacy'] = RuntimeSettings.LDAP_DNS_LEGACY or False
 
 		return Response(
 			 data={
@@ -227,7 +227,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 			}
 			raise exc_dns.DNSFieldValidatorFailed(data=data)
 
-		if target_zone == RunningSettings.LDAP_DOMAIN or target_zone == 'RootDNSServers':
+		if target_zone == RuntimeSettings.LDAP_DOMAIN or target_zone == 'RootDNSServers':
 			raise exc_dns.DNSZoneNotDeletable
 
 		# Open LDAP Connection
@@ -383,7 +383,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 					"aaaa": aaaaCreateResult
 				})
 
-			if RunningSettings.LDAP_LOG_CREATE == True:
+			if RuntimeSettings.LDAP_LOG_CREATE == True:
 				# Log this action to DB
 				DBLogMixin.log(
 					user_id=request.user.id,
@@ -421,7 +421,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 			}
 			raise exc_dns.DNSFieldValidatorFailed(data=data)
 
-		if target_zone == RunningSettings.LDAP_DOMAIN or target_zone == 'RootDNSServers':
+		if target_zone == RuntimeSettings.LDAP_DOMAIN or target_zone == 'RootDNSServers':
 			raise exc_dns.DNSZoneNotDeletable
 
 		# Open LDAP Connection
@@ -465,7 +465,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 
 			ldapConnection.unbind()
 
-			if RunningSettings.LDAP_LOG_DELETE == True:
+			if RuntimeSettings.LDAP_LOG_DELETE == True:
 				# Log this action to DB
 				DBLogMixin.log(
 					user_id=request.user.id,

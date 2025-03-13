@@ -7,77 +7,54 @@
 # Description:	Contains default LDAP Setting definitions
 #
 #---------------------------------- IMPORTS -----------------------------------#
-from .base import BaseModel
+from core.models.setting.base import BaseSetting, add_fields_from_dict
 from django.db import models
-from django.core.exceptions import ValidationError
-from .types.settings import (
-	TYPE_STRING,
+from core.models.types.settings import (
+	make_field_db_name,
+	MAP_FIELD_VALUE_MODEL,
+	DEFAULT_FIELD_ARGS,
+	INTERLOCK_SETTING_FIELDS,
 	TYPE_BYTES,
-	TYPE_BOOL,
-	TYPE_INTEGER,
-	TYPE_FLOAT
+	TYPE_BOOL
 )
 from django.utils.translation import gettext_lazy as _
 ################################################################################
 
-class SETTING_TYPE_CHOICES(models.TextChoices):
-	STRING = TYPE_STRING, "String"
-	BYTES = TYPE_BYTES, "AES Encrypted"
-	BOOL = TYPE_BOOL, "Boolean"
-	INTEGER = TYPE_INTEGER, "Integer"
-	FLOAT = TYPE_FLOAT, "Float"
-
-SETTING_TYPE_MAP = {
-	TYPE_STRING: "s_data_str",
-	TYPE_BYTES: "s_data_bytes",
-	TYPE_INTEGER: "s_data_int",
-	TYPE_FLOAT: "s_data_float",
-	TYPE_BOOL: "s_data_bool",
+INTERLOCK_SETTING_TABLE = "core_interlock_setting"
+INTERLOCK_SETTING_AES_KEY = "ILCK_AES_KEY"
+INTERLOCK_SETTING_ENABLE_LDAP = "ILCK_ENABLE_LDAP"
+INTERLOCK_SETTING_MAP = {
+	INTERLOCK_SETTING_AES_KEY: TYPE_BYTES,
+	INTERLOCK_SETTING_ENABLE_LDAP: TYPE_BOOL
 }
-
-SETTING_KEY_AES = "AES_ENCRYPT_KEY"
-SETTING_KEY_FERNET = "FERNET_KEY"
-SETTING_KEY_LDAP_ENABLED = "LDAP_ENABLED"
-SETTING_KEYS: tuple[str] = (
-	SETTING_KEY_AES,
-	SETTING_KEY_FERNET,
-	SETTING_KEY_LDAP_ENABLED,
+INTERLOCK_SETTING_PUBLIC = (
+	INTERLOCK_SETTING_ENABLE_LDAP,
 )
-SETTING_KEY_TYPE_MAP = {
-	SETTING_KEY_AES: TYPE_BYTES,
-	SETTING_KEY_FERNET: TYPE_BYTES,
-	SETTING_KEY_LDAP_ENABLED: TYPE_BOOL
-}
+INTERLOCK_SETTING_NAME_CHOICES = tuple(
+	[(k, k.upper()) for k in INTERLOCK_SETTING_MAP.keys()])
+INTERLOCK_SETTING_TYPE_CHOICES = tuple(
+	[(k, k.upper()) for k in INTERLOCK_SETTING_FIELDS.keys()])
 
-class InterlockSetting(BaseModel):
+@add_fields_from_dict(INTERLOCK_SETTING_FIELDS)
+class InterlockSetting(BaseSetting):
+	setting_fields = INTERLOCK_SETTING_FIELDS
 	id = models.BigAutoField(verbose_name=_("id"), primary_key=True)
-	s_name = models.CharField(
-		verbose_name=_("name"),
-		choices=[(k, f"ilck_{k.lower()}") for k in SETTING_KEYS],
-		unique=True,
-		null=False,
-		blank=False,
-		max_length=128
-	)
-	s_type = models.CharField(
+	name = models.CharField(
 		verbose_name=_("type"),
-		choices=SETTING_TYPE_CHOICES.choices,
+		choices=INTERLOCK_SETTING_NAME_CHOICES,
 		null=False,
 		blank=False
 	)
-	s_data_str = models.CharField(null=True, blank=True)
-	s_data_bytes = models.BinaryField(null=True, blank=True)
-	s_data_int = models.IntegerField(null=True, blank=True)
-	s_data_float = models.FloatField(null=True, blank=True)
-	s_data_bool = models.BooleanField(null=True, blank=True)
-
-	def clean(self):
-		for choice_type in SETTING_TYPE_CHOICES.choices:
-			if self.s_type == choice_type:
-				if getattr(self, SETTING_TYPE_MAP[choice_type]) is None:
-					raise ValidationError(f"{SETTING_TYPE_MAP[choice_type]} cannot be null when type is {self.s_type}.")
-		return super().clean()
+	type = models.CharField(
+		verbose_name=_("type"),
+		choices=INTERLOCK_SETTING_TYPE_CHOICES,
+		null=False,
+		blank=False
+	)
 
 	def save(self, *args, **kwargs):
 		self.clean()
 		super().save(*args, **kwargs)
+	
+	class Meta:
+		db_table = INTERLOCK_SETTING_TABLE

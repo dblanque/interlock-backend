@@ -27,3 +27,6 @@ class ApplicationSecurityGroup(BaseModel):
     enabled = models.BooleanField(default=True)
     users = models.ManyToManyField(User, blank=True)
     ldap_objects = ArrayField(models.CharField(max_length=255), blank=True, null=True)
+
+    class Meta:
+        db_table = "core_application_security_group"

@@ -26,7 +26,7 @@ from core.models.validators import ldap_dns_record as dnsValidators
 from core.views.mixins.utils import convert_string_to_bytes
 
 ### Interlock
-from core.models.ldap_settings_runtime import RunningSettings
+from core.models.ldap_settings_runtime import RuntimeSettings
 from core.views.mixins.ldap.domain import DomainViewMixin
 import logging
 
@@ -191,7 +191,7 @@ class DNSRecordMixin(DomainViewMixin):
 		result = dnsRecord.structure.getData()
 		dr = dnstool.DNS_RECORD(result)
 
-		if RunningSettings.LDAP_LOG_CREATE == True:
+		if RuntimeSettings.LDAP_LOG_CREATE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=self.request.user.id,
@@ -247,7 +247,7 @@ class DNSRecordMixin(DomainViewMixin):
 		result = dnsRecord.structure.getData()
 		dr = dnstool.DNS_RECORD(result)
 
-		if RunningSettings.LDAP_LOG_UPDATE == True:
+		if RuntimeSettings.LDAP_LOG_UPDATE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=self.request.user.id,
@@ -280,7 +280,7 @@ class DNSRecordMixin(DomainViewMixin):
 			self.ldap_connection.unbind()
 			raise e
 
-		if RunningSettings.LDAP_LOG_DELETE == True:
+		if RuntimeSettings.LDAP_LOG_DELETE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=user.id,

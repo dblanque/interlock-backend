@@ -19,7 +19,7 @@ from .base import BaseViewSet
 from rest_framework.response import Response
 
 ### Interlock
-from core.models.ldap_settings_runtime import RunningSettings
+from core.models.ldap_settings_runtime import RuntimeSettings
 from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS, BAD_LOGIN_COOKIE_NAME
 
 ### Others
@@ -76,7 +76,7 @@ class AuthViewSet(BaseViewSet):
 		code = 0
 		code_msg = 'ok'
 
-		if RunningSettings.LDAP_LOG_LOGOUT == True:
+		if RuntimeSettings.LDAP_LOG_LOGOUT == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=request.user.id,

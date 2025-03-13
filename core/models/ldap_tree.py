@@ -17,7 +17,7 @@ from interlock_backend.ldap.adsi import (
     LDAP_BUILTIN_OBJECTS
 )
 from interlock_backend.ldap.securityIdentifier import SID
-from core.models.ldap_settings_runtime import RunningSettings
+from core.models.ldap_settings_runtime import RuntimeSettings
 
 ### Others
 from typing import TypedDict, Union
@@ -66,10 +66,10 @@ class LDAPTree():
             raise Exception("LDAPTree object requires an LDAP Connection to Initialize")
 
         # Set LDAPTree Default Values
-        self.name = RunningSettings.LDAP_AUTH_SEARCH_BASE
-        self.searchBase = RunningSettings.LDAP_AUTH_SEARCH_BASE
+        self.name = RuntimeSettings.LDAP_AUTH_SEARCH_BASE
+        self.searchBase = RuntimeSettings.LDAP_AUTH_SEARCH_BASE
         self.connection = kwargs.pop('connection')
-        self.usernameIdentifier = RunningSettings.LDAP_AUTH_USER_FIELDS["username"]
+        self.usernameIdentifier = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
         self.subobjectId = 0
         self.excludedLdapAttributes = [
             'objectGUID',
@@ -87,10 +87,10 @@ class LDAPTree():
         self.recursive = False
         self.testFetch = False        
         self.ldapFilter = search_filter_from_dict({
-            **RunningSettings.LDAP_DIRTREE_CN_FILTER,
-            **RunningSettings.LDAP_DIRTREE_OU_FILTER
+            **RuntimeSettings.LDAP_DIRTREE_CN_FILTER,
+            **RuntimeSettings.LDAP_DIRTREE_OU_FILTER
         })
-        self.ldapAttributes = RunningSettings.LDAP_DIRTREE_ATTRIBUTES
+        self.ldapAttributes = RuntimeSettings.LDAP_DIRTREE_ATTRIBUTES
         self.childrenObjectType = 'array'
 
         # Set passed kwargs from Object Call

@@ -13,25 +13,24 @@ from core.exceptions import (
 	base as exc_base,
 	ldap_settings as exc_set,
 )
-from django.core.exceptions import FieldDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist
 
 ### Models
 from core.views.mixins.logs import LogMixin
+from core.models.types.settings import TYPE_AES_ENCRYPT
+from core.models.interlock_settings import InterlockSetting, INTERLOCK_SETTING_PUBLIC
 from core.models.ldap_settings import (
-	CMAPS,
+	LDAP_SETTING_MAP,
 	LDAPSetting,
 	LDAPPreset,
-	LDAP_SETTING_TYPES_LIST,
 	LDAP_SETTINGS_CHOICES_MAP,
-	LDAP_SETTING_PREFIX,
-	LDAP_TYPE_PASSWORD,
 )
 
 ### Mixins
 from core.views.mixins.ldap_settings import SettingsViewMixin
 
 ### Viewsets
-from .base import BaseViewSet
+from core.views.base import BaseViewSet
 
 ### Serializers
 from core.serializers.ldap_settings import LDAPSettingSerializer, LDAPPresetSerializer
@@ -44,10 +43,9 @@ from rest_framework.decorators import action
 from interlock_backend.ldap import defaults
 from interlock_backend.encrypt import aes_encrypt
 from core.decorators.login import auth_required
-from core.models.ldap_settings_runtime import RunningSettings
-from interlock_backend.ldap.ldap_settings import getSettingsList
+from core.models.ldap_settings_runtime import RuntimeSettings
+from interlock_backend.ldap.ldap_settings import get_setting_list
 from django.db import transaction
-from typing import Iterable
 import logging, ssl
 ################################################################################
 
@@ -71,7 +69,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 				"active": p.active or False
 			})
 
-		if RunningSettings.LDAP_LOG_READ == True:
+		if RuntimeSettings.LDAP_LOG_READ == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=request.user.id,
@@ -93,14 +91,14 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@action(detail=True, methods=['get'])
 	def fetch(self, request, pk):
 		preset_id = int(pk)
-		data = {}
 		code = 0
 
-		# Gets front-end parsed settings
-		data = getSettingsList(preset_id)
-		data['DEFAULT_ADMIN_ENABLED'] = self.get_admin_status()
+		# Gets Front-End Parsed LDAP Settings
+		ldap_settings = {}
+		ldap_settings = get_setting_list(preset_id)
+		ldap_settings['DEFAULT_ADMIN_ENABLED'] = self.get_admin_status()
 
-		if RunningSettings.LDAP_LOG_READ == True:
+		if RuntimeSettings.LDAP_LOG_READ == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=request.user.id,
@@ -109,11 +107,21 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 				affectedObject="ALL"
 			)
 
+		interlock_settings = {}
+		for setting_key in INTERLOCK_SETTING_PUBLIC:
+			setting_instance = InterlockSetting.objects.get(name=setting_key)
+			interlock_settings[setting_key] = {
+				"value": setting_instance.value,
+				"type": setting_instance.type
+			}
 		return Response(
 			 data={
 				'code': code,
 				'code_msg': 'ok',
-				'settings': data
+				'settings': {
+					"local": interlock_settings,
+					"ldap": ldap_settings,
+				}
 			 }
 		)
 
@@ -240,8 +248,8 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		else:
 			raise exc_base.MissingDataKey(data={"key":"data.preset.id"})
 
-		active_preset = self.get_active_settings_preset()
-		current_settings = getSettingsList(active_preset)
+		# active_preset = self.get_active_settings_preset()
+		# current_settings = get_setting_list(active_preset)
 		if 'LDAP_LOG_MAX' in data_settings:
 			if int(data_settings['LDAP_LOG_MAX']['value']) > 10000:
 				raise exc_set.SettingLogMaxLimit
@@ -254,76 +262,55 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			for param_name, param_value in data_settings.items():
 				param_name: str
 				param_value: dict
-				if not param_name in CMAPS:
+				if not param_name in LDAP_SETTING_MAP:
 					raise exc_set.SettingTypeDoesNotMatch
 				param_to_update = None
-				param_type = CMAPS[param_name].lower()
+				param_type = LDAP_SETTING_MAP[param_name]
 				param_value = param_value.pop("value")
+
 				is_default = False
 				if param_name == "LDAP_AUTH_TLS_VERSION":
 					is_default = (getattr(ssl, param_value) == getattr(defaults, param_name, None))
 				else:
 					is_default = (param_value == getattr(defaults, param_name, None))
+
 				if is_default:
 					try:
 						if LDAPSetting.objects.filter(name=param_name, preset_id=settings_preset).exists():
 							LDAPSetting.objects.get(name=param_name, preset_id=settings_preset).delete_permanently()
-					except :
+					except:
 						pass
 				else:
 					kwdata = {
 						"name": param_name,
-						"type": param_type.upper(),
+						"type": param_type.lower(),
 						"preset": settings_preset,
 					}
 
-					for setting_type in LDAP_SETTING_TYPES_LIST:
-						setting_key: str | Iterable = LDAPSetting.value_field(setting_type)
-						if isinstance(setting_key, str):
-							try:
-								LDAPSetting._meta.get_field(setting_key)
-								kwdata[setting_key] = None
-							except FieldDoesNotExist:
-								pass
-						else:
-							for sub_key in setting_key:
-								try:
-									LDAPSetting._meta.get_field(sub_key)
-									kwdata[sub_key] = None
-								except FieldDoesNotExist:
-									pass
-
-					if param_type == LDAP_TYPE_PASSWORD.lower():
-						encrypted_data = aes_encrypt(param_value)
-						kwdata = kwdata | {
-							f"{LDAP_SETTING_PREFIX}_password_aes": encrypted_data[0],
-							f"{LDAP_SETTING_PREFIX}_password_ct": encrypted_data[1],
-							f"{LDAP_SETTING_PREFIX}_password_nonce": encrypted_data[2],
-							f"{LDAP_SETTING_PREFIX}_password_tag": encrypted_data[3],
-						}
+					if param_type == TYPE_AES_ENCRYPT.lower():
+						kwdata["value"] = aes_encrypt(param_value)
 					else:
-						kwdata[f"{LDAP_SETTING_PREFIX}_{param_type}"] = param_value
+						kwdata["value"] = param_value
 
 					serializer = LDAPSettingSerializer(data=kwdata)
 					if not serializer.is_valid():
 						raise exc_set.SettingSerializerError(data={
-							'key': setting_key,
+							'key': param_name,
 							'errors': serializer.errors
 						})
 
-					if param_type.upper() in LDAP_SETTINGS_CHOICES_MAP:
-						if param_value not in LDAP_SETTINGS_CHOICES_MAP[param_type.upper()]:
-							raise exc_set.SettingTypeDoesNotMatch
-
-					if LDAPSetting.objects.filter(name=param_name, preset_id=settings_preset).exists():
-						param_to_update = LDAPSetting.objects.get(name=param_name, preset_id=settings_preset)
-						for kw, kw_v in kwdata.items():
-							setattr(param_to_update, kw, kw_v)
-						param_to_update.save()
-					else:
+					try:
+						setting_instance = LDAPSetting.objects.get(
+							name=param_name,
+							preset_id=settings_preset
+						)
+						for attr in kwdata:
+							setattr(setting_instance, attr, kwdata[attr])
+						setting_instance.save()
+					except ObjectDoesNotExist:
 						LDAPSetting.objects.create(**kwdata)
 
-		if RunningSettings.LDAP_LOG_UPDATE == True:
+		if RuntimeSettings.LDAP_LOG_UPDATE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=request.user.id,
@@ -397,7 +384,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		code = 0
 
 		for param_name, param_data in data.items():
-			param_type = CMAPS[param_name].lower()
+			param_type = LDAP_SETTING_MAP[param_name].lower()
 			if param_type.upper() in LDAP_SETTINGS_CHOICES_MAP:
 				if param_data["value"] not in LDAP_SETTINGS_CHOICES_MAP[param_type.upper()]:
 					raise exc_set.SettingTypeDoesNotMatch({"field": param_type})

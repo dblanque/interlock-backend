@@ -15,7 +15,7 @@ from core.models.user import User
 from core.models.application import Application
 
 ### Mixins
-from .mixins.application import ApplicationViewMixin, RESPONSE_TYPE_CODES
+from core.views.mixins.application import ApplicationViewMixin
 
 ### REST Framework
 from rest_framework.response import Response
@@ -87,7 +87,7 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 				"code": code,
 				"code_msg": code_msg,
 				"data": data,
-				"response_types": RESPONSE_TYPE_CODES
+				"response_types": self.get_response_type_codes()
 			 }
 		)
 

@@ -11,7 +11,7 @@
 ###############################################################################
 
 #---------------------------------- IMPORTS -----------------------------------#
-from core.models.ldap_settings_runtime import RunningSettings
+from core.models.ldap_settings_runtime import RuntimeSettings
 from typing import Union, Literal
 import logging
 
@@ -286,7 +286,7 @@ def list_user_perms(user, perm_search: str = None, user_is_object: bool = True) 
 
     user_permissions: list = parse_permissions_int(
         raw_user_permissions=raw_user_permissions,
-        user_name=str(user[RunningSettings.LDAP_AUTH_USER_FIELDS["username"]])
+        user_name=str(user[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]])
     )
     if isinstance(perm_search, str):
         return perm_search in user_permissions

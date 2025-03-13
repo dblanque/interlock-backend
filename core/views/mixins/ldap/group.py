@@ -15,7 +15,7 @@ from interlock_backend.ldap.adsi import search_filter_add
 from interlock_backend.ldap.groupTypes import LDAP_GROUP_TYPES
 from interlock_backend.ldap.securityIdentifier import SID
 from interlock_backend.ldap.connector import LDAPConnector
-from core.models.ldap_settings_runtime import RunningSettings
+from core.models.ldap_settings_runtime import RuntimeSettings
 
 ### Models
 from core.views.mixins.logs import LogMixin
@@ -70,7 +70,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		searchFilter = search_filter_add("", "objectClass=group")
 
 		ldapConnection.search(
-			RunningSettings.LDAP_AUTH_SEARCH_BASE,
+			RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
 			search_filter=searchFilter,
 			search_scope=ldap3.SUBTREE,
 			attributes=attributes,
@@ -146,7 +146,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 	def list_groups(self):
 		data = []
 		self.ldap_connection.search(
-			RunningSettings.LDAP_AUTH_SEARCH_BASE, 
+			RuntimeSettings.LDAP_AUTH_SEARCH_BASE, 
 			self.ldap_filter_object,
 			attributes=self.ldap_filter_attr
 		)
@@ -193,7 +193,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		valid_attributes.append('hasMembers')
 
-		if RunningSettings.LDAP_LOG_READ == True:
+		if RuntimeSettings.LDAP_LOG_READ == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=self.request.user.id,
@@ -205,7 +205,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 	def fetch_group(self):
 		self.ldap_connection.search(
-			RunningSettings.LDAP_AUTH_SEARCH_BASE, 
+			RuntimeSettings.LDAP_AUTH_SEARCH_BASE, 
 			self.ldap_filter_object,
 			attributes=self.ldap_filter_attr
 		)
@@ -240,7 +240,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 					memberAttributes = [
 						'cn',
 						'distinguishedName',
-						RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
+						RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
 						'givenName',
 						'sn',
 						'objectCategory',
@@ -273,7 +273,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			# Add entry DN to response dictionary
 			group_dict['distinguishedName'] = str(group[0].entry_dn)
 
-		if RunningSettings.LDAP_LOG_READ == True:
+		if RuntimeSettings.LDAP_LOG_READ == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=self.request.user.id,
@@ -287,9 +287,9 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		if group_data['path'] is not None and group_data['path'] != "":
 			distinguishedName = "cn=" + group_data['cn'] + "," + group_data['path']
 		else:
-			distinguishedName = 'CN='+group_data['cn']+',OU=Users,'+RunningSettings.LDAP_AUTH_SEARCH_BASE
+			distinguishedName = 'CN='+group_data['cn']+',OU=Users,'+RuntimeSettings.LDAP_AUTH_SEARCH_BASE
 
-		group_data[RunningSettings.LDAP_GROUP_FIELD] = str(group_data['cn']).lower()
+		group_data[RuntimeSettings.LDAP_GROUP_FIELD] = str(group_data['cn']).lower()
 
 		args = {
 			"connection": self.ldap_connection,
@@ -321,8 +321,8 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			}
 			raise exc_groups.GroupScopeOrTypeMissing(data=group_data)
 
-		sum = RunningSettings.LDAP_GROUP_TYPE_MAPPING[int(group_data['groupType'])]
-		sum += RunningSettings.LDAP_GROUP_SCOPE_MAPPING[int(group_data['groupScope'])]
+		sum = RuntimeSettings.LDAP_GROUP_TYPE_MAPPING[int(group_data['groupType'])]
+		sum += RuntimeSettings.LDAP_GROUP_SCOPE_MAPPING[int(group_data['groupScope'])]
 		group_data['groupType'] = sum
 		group_data.pop('groupScope')
 
@@ -368,7 +368,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				}
 				raise exc_groups.GroupMembersAdd
 
-		if RunningSettings.LDAP_LOG_CREATE == True:
+		if RuntimeSettings.LDAP_LOG_CREATE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=self.request.user.id,
@@ -411,7 +411,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		if group_cn.startswith("CN="):
 			group_cn = group_cn.split("CN=")[-1]
 
-		group_data[RunningSettings.LDAP_GROUP_FIELD] = str(group_cn).lower()
+		group_data[RuntimeSettings.LDAP_GROUP_FIELD] = str(group_cn).lower()
 		# Send LDAP Query for user being created to see if it exists
 		args = {
 			"connection": self.ldap_connection,
@@ -447,8 +447,8 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		castGroupType = int(group_data['groupType'])
 		castGroupScope = int(group_data['groupScope'])
-		sum = RunningSettings.LDAP_GROUP_TYPE_MAPPING[castGroupType]
-		sum += RunningSettings.LDAP_GROUP_SCOPE_MAPPING[castGroupScope]
+		sum = RuntimeSettings.LDAP_GROUP_TYPE_MAPPING[castGroupType]
+		sum += RuntimeSettings.LDAP_GROUP_SCOPE_MAPPING[castGroupScope]
 		group_data['groupType'] = sum
 		group_data.pop('groupScope')
 
@@ -505,8 +505,8 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 							# We need to make it universal first, otherwise the LDAP server denies the update request
 							# Sucks but we have to do this :/
 							if ('GROUP_GLOBAL' in previousGroupTypes and castGroupScope == 1) or ('GROUP_DOMAIN_LOCAL' in previousGroupTypes and castGroupScope == 0):
-								passthroughSum = RunningSettings.LDAP_GROUP_TYPE_MAPPING[castGroupType]
-								passthroughSum += RunningSettings.LDAP_GROUP_SCOPE_MAPPING[2]
+								passthroughSum = RuntimeSettings.LDAP_GROUP_TYPE_MAPPING[castGroupType]
+								passthroughSum += RuntimeSettings.LDAP_GROUP_SCOPE_MAPPING[2]
 								logger.debug(passthroughSum)
 								logger.debug(group_dict[key])
 								# Change to Universal Scope
@@ -567,7 +567,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 					print(e)
 					raise exc_groups.GroupMembersRemove
 
-		if RunningSettings.LDAP_LOG_UPDATE == True:
+		if RuntimeSettings.LDAP_LOG_UPDATE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=self.request.user.id,
@@ -613,7 +613,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 					asg.ldap_objects.remove(distinguishedName)
 					asg.save()
 
-		if RunningSettings.LDAP_LOG_DELETE == True:
+		if RuntimeSettings.LDAP_LOG_DELETE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=self.request.user.id,

@@ -31,7 +31,7 @@ from core.views.mixins.logs import LogMixin
 # Others
 from django.db import transaction
 from core.decorators.login import auth_required
-from core.models.ldap_settings_runtime import RunningSettings
+from core.models.ldap_settings_runtime import RuntimeSettings
 from core.constants.user import PUBLIC_FIELDS, PUBLIC_FIELDS_SHORT
 import logging
 ################################################################################
@@ -51,7 +51,7 @@ class UserViewSet(BaseViewSet):
 			"dn",
 		)
 		user_queryset = User.objects.all()
-		if RunningSettings.LDAP_LOG_READ == True:
+		if RuntimeSettings.LDAP_LOG_READ == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=request.user.id,
@@ -97,7 +97,7 @@ class UserViewSet(BaseViewSet):
 				user_instance.set_password(password)
 				user_instance.save()
 
-		if RunningSettings.LDAP_LOG_CREATE == True:
+		if RuntimeSettings.LDAP_LOG_CREATE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=request.user.id,
@@ -121,7 +121,7 @@ class UserViewSet(BaseViewSet):
 		pk = int(pk)
 		user_instance = User.objects.get(id=pk)
 		data = {}
-		if RunningSettings.LDAP_LOG_READ == True:
+		if RuntimeSettings.LDAP_LOG_READ == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=request.user.id,
@@ -168,7 +168,7 @@ class UserViewSet(BaseViewSet):
 		for key in data:
 			setattr(user_instance, key, data[key])
 		user_instance.save()
-		if RunningSettings.LDAP_LOG_UPDATE == True:
+		if RuntimeSettings.LDAP_LOG_UPDATE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=request.user.id,
@@ -195,7 +195,7 @@ class UserViewSet(BaseViewSet):
 			if req_user.id == pk:
 				raise exc_user.UserAntiLockout
 			user_instance.delete_permanently()
-		if RunningSettings.LDAP_LOG_DELETE == True:
+		if RuntimeSettings.LDAP_LOG_DELETE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=request.user.id,
@@ -225,7 +225,7 @@ class UserViewSet(BaseViewSet):
 		user_instance.is_enabled = data.pop("enabled")
 		user_instance.save()
 
-		if RunningSettings.LDAP_LOG_UPDATE == True:
+		if RuntimeSettings.LDAP_LOG_UPDATE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=request.user.id,
@@ -260,7 +260,7 @@ class UserViewSet(BaseViewSet):
 		user_instance.set_password(data["password"])
 		user_instance.save()
 
-		if RunningSettings.LDAP_LOG_UPDATE == True:
+		if RuntimeSettings.LDAP_LOG_UPDATE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=user.id,
@@ -295,7 +295,7 @@ class UserViewSet(BaseViewSet):
 		user.set_password(data["password"])
 		user.save()
 
-		if RunningSettings.LDAP_LOG_UPDATE == True:
+		if RuntimeSettings.LDAP_LOG_UPDATE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=user.id,
@@ -339,7 +339,7 @@ class UserViewSet(BaseViewSet):
 			setattr(user, key, data[key])
 		user.save()
 
-		if RunningSettings.LDAP_LOG_UPDATE == True:
+		if RuntimeSettings.LDAP_LOG_UPDATE == True:
 			# Log this action to DB
 			DBLogMixin.log(
 				user_id=user.id,

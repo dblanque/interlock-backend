@@ -12,10 +12,12 @@ from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP, AES
 from core.models.interlock_settings import (
 	InterlockSetting,
-	TYPE_BYTES,
-	SETTING_KEY_AES
+	INTERLOCK_SETTING_AES_KEY,
+	INTERLOCK_SETTING_MAP,
+	INTERLOCK_SETTING_TABLE
 )
 from django.db import transaction
+from core.utils.db import db_table_exists
 from Crypto.Random import get_random_bytes
 from cryptography.fernet import Fernet
 from time import perf_counter
@@ -60,20 +62,23 @@ def fernet_decrypt(data, bytes_encoding="utf-8") -> str:
 def create_rsa_key() -> RSA.RsaKey:
 	key = RSA.generate(RSA_KEY_BITS)
 	key_db_obj = InterlockSetting.objects.create(
-		s_name=SETTING_KEY_AES,
-		s_type=TYPE_BYTES,
-		s_data_bytes=key.export_key(passphrase=SECRET_KEY)
+		name=INTERLOCK_SETTING_AES_KEY,
+		type=INTERLOCK_SETTING_MAP[INTERLOCK_SETTING_AES_KEY],
+		value=key.export_key(passphrase=SECRET_KEY)
 	)
 	key_db_obj.save()
 	return key
 
 def import_rsa_key() -> RSA.RsaKey | None:
 	try:
-		key = InterlockSetting.objects.get(s_name=SETTING_KEY_AES, s_type=TYPE_BYTES)
+		key = InterlockSetting.objects.get(
+			name=INTERLOCK_SETTING_AES_KEY,
+			type=INTERLOCK_SETTING_MAP[INTERLOCK_SETTING_AES_KEY],
+		)
 	except InterlockSetting.DoesNotExist:
 		key = None
 	if key:
-		return RSA.import_key(key.s_data_bytes, passphrase=SECRET_KEY)
+		return RSA.import_key(key.value, passphrase=SECRET_KEY)
 	return key
 
 def import_or_create_rsa_key() -> RSA.RsaKey:
@@ -90,9 +95,12 @@ class InterlockRsaKey():
 	def resync(self):
 		import_or_create_rsa_key()
 
-# We gotta use class to keep the key in memory and avoid encrypt/decrypt
-# operations on the key itself all the time.
-interlock_rsa = InterlockRsaKey()
+if db_table_exists(INTERLOCK_SETTING_TABLE):
+	# We gotta use class to keep the key in memory and avoid encrypt/decrypt
+	# operations on the key itself all the time.
+	interlock_rsa = InterlockRsaKey()
+else:
+	logger.error("Interlock Settings table does not exist, skipping rsa key generation.")
 
 def aes_encrypt(data: str, fernet_pass=False) -> tuple[bytes]:
 	"""

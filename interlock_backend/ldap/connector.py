@@ -33,7 +33,7 @@ from interlock_backend.settings import (
 	DEFAULT_SUPERUSER_USERNAME,
 	DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS
 )
-from core.models.ldap_settings_runtime import RunningSettings
+from core.models.ldap_settings_runtime import RuntimeSettings
 from uuid import (
 	uuid1,
 	getnode as uuid_getnode
@@ -52,7 +52,7 @@ def recursive_member_search(user_dn: str, connection, group_dn):
 	ldap_filter_object = search_filter_add(ldap_filter_object, f"objectClass=group")
 	try:
 		connection.search(
-			RunningSettings.LDAP_AUTH_SEARCH_BASE, 
+			RuntimeSettings.LDAP_AUTH_SEARCH_BASE, 
 			ldap_filter_object, 
 			attributes=['member', 'objectClass', 'distinguishedName']
 		)
@@ -78,11 +78,11 @@ def sync_user_relations(
 		dn=None
 	):
 	user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
-	if 'Administrator' in ldap_attributes[RunningSettings.LDAP_AUTH_USER_FIELDS["username"]]:
+	if 'Administrator' in ldap_attributes[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]]:
 		user.is_staff = True
 		user.is_superuser = True
 		user.save()
-	elif recursive_member_search(user_dn=user.dn, connection=connection, group_dn=RunningSettings.ADMIN_GROUP_TO_SEARCH):
+	elif recursive_member_search(user_dn=user.dn, connection=connection, group_dn=RuntimeSettings.ADMIN_GROUP_TO_SEARCH):
 		user.is_staff = True
 		user.is_superuser = True
 		if user.email is not None and 'mail' in ldap_attributes:
@@ -107,7 +107,7 @@ def authenticate(*args, **kwargs):
 	if username == 'admin':
 		return None
 	password = kwargs.pop("password", None)
-	auth_user_lookup_fields = RunningSettings.LDAP_AUTH_USER_LOOKUP_FIELDS
+	auth_user_lookup_fields = RuntimeSettings.LDAP_AUTH_USER_LOOKUP_FIELDS
 	ldap_kwargs = {
 		key: value for (key, value) in kwargs.items()
 		if key in auth_user_lookup_fields
@@ -162,7 +162,7 @@ class LDAPConnector(object):
 	def __enter__(self):
 		logger.info(f"Connection {self.uuid} opened.")
 		# LOG Open Connection Events
-		if RunningSettings.LDAP_LOG_OPEN_CONNECTION == True and self.is_authenticating == False:
+		if RuntimeSettings.LDAP_LOG_OPEN_CONNECTION == True and self.is_authenticating == False:
 			DBLogMixin.log(
 				user_id=self.user.id,
 				actionType="OPEN",
@@ -174,7 +174,7 @@ class LDAPConnector(object):
 	def __exit__(self, exc_type, exc_value, traceback) -> None:
 		self.connection.unbind()
 		# LOG Open Connection Events
-		if RunningSettings.LDAP_LOG_CLOSE_CONNECTION == True and self.is_authenticating == False:
+		if RuntimeSettings.LDAP_LOG_CLOSE_CONNECTION == True and self.is_authenticating == False:
 			DBLogMixin.log(
 				user_id=self.user.id,
 				actionType="CLOSE",
@@ -196,33 +196,32 @@ class LDAPConnector(object):
 			is_authenticating=False,
 			**kwargs
 		):
-		if user:
-			user_dn = getattr(user, "dn", None)
-			user_password = aes_decrypt(*user.encryptedPassword)
-			is_local_superadmin = (
-				hasattr(user, "username") and
-				user.username == DEFAULT_SUPERUSER_USERNAME and
-				user.user_type is USER_TYPE_LDAP
-			)
-		self.default_user_dn = RunningSettings.LDAP_AUTH_CONNECTION_USER_DN
-		self.default_user_pwd = RunningSettings.LDAP_AUTH_CONNECTION_PASSWORD
+		is_local_superuser = (
+			hasattr(user, "username") and
+			((user.username == DEFAULT_SUPERUSER_USERNAME and
+				not user.user_type is USER_TYPE_LDAP) or
+				user.is_superuser)
+		)
+		self.default_user_dn = RuntimeSettings.LDAP_AUTH_CONNECTION_USER_DN
+		self.default_user_pwd = RuntimeSettings.LDAP_AUTH_CONNECTION_PASSWORD
 		self.__newUuid__()
 		self.is_authenticating = is_authenticating
-		super_bind_password = self.default_user_pwd
-
-		if not isinstance(RunningSettings.LDAP_AUTH_TLS_VERSION, Enum):
-			ldapAuthTLSVersion = getattr(ssl, RunningSettings.LDAP_AUTH_TLS_VERSION)
-		else:
-			ldapAuthTLSVersion = RunningSettings.LDAP_AUTH_TLS_VERSION
 
 		# If it's an Initial Authentication we need to use the bind user first
-		if force_admin or user is not None:
-			# If initial auth or user is local interlock superadmin
-			if force_admin or is_local_superadmin:
-				user_dn = self.default_user_dn
-				password = super_bind_password
-			else:
-				password = user_password
+		if force_admin or is_local_superuser:
+			user_dn = self.default_user_dn
+			password = self.default_user_pwd
+		# If initial auth or user is local interlock superadmin
+		elif user is not None and user.user_type is USER_TYPE_LDAP:
+			user_dn = getattr(user, "dn", None)
+			password = aes_decrypt(*user.encryptedPassword)
+		else:
+			raise Exception("No valid user in LDAP Connector.")
+
+		if not isinstance(RuntimeSettings.LDAP_AUTH_TLS_VERSION, Enum):
+			ldapAuthTLSVersion = getattr(ssl, RuntimeSettings.LDAP_AUTH_TLS_VERSION)
+		else:
+			ldapAuthTLSVersion = RuntimeSettings.LDAP_AUTH_TLS_VERSION
 
 		if not user_dn and not force_admin:
 			print(traceback.format_exc())
@@ -231,29 +230,29 @@ class LDAPConnector(object):
 		logger.debug("Connection Parameters: ")
 		logger.debug(f'User: {user}')
 		logger.debug(f'User DN: {user_dn}')
-		logger.debug(f'LDAP URL: {RunningSettings.LDAP_AUTH_URL}')
-		logger.debug(f'LDAP Connect Timeout: {RunningSettings.LDAP_AUTH_CONNECT_TIMEOUT}')
-		logger.debug(f'LDAP Receive Timeout: {RunningSettings.LDAP_AUTH_RECEIVE_TIMEOUT}')
-		logger.debug(f'LDAP Use SSL: {RunningSettings.LDAP_AUTH_USE_SSL}')
-		logger.debug(f'LDAP Use TLS: {RunningSettings.LDAP_AUTH_USE_TLS}')
+		logger.debug(f'LDAP URL: {RuntimeSettings.LDAP_AUTH_URL}')
+		logger.debug(f'LDAP Connect Timeout: {RuntimeSettings.LDAP_AUTH_CONNECT_TIMEOUT}')
+		logger.debug(f'LDAP Receive Timeout: {RuntimeSettings.LDAP_AUTH_RECEIVE_TIMEOUT}')
+		logger.debug(f'LDAP Use SSL: {RuntimeSettings.LDAP_AUTH_USE_SSL}')
+		logger.debug(f'LDAP Use TLS: {RuntimeSettings.LDAP_AUTH_USE_TLS}')
 		logger.debug(f'LDAP TLS Version: {ldapAuthTLSVersion}')
 
 		# Initialize Server Args Dictionary
 		server_args = {
 			'get_info': get_ldap_info,
-			'connect_timeout': RunningSettings.LDAP_AUTH_CONNECT_TIMEOUT
+			'connect_timeout': RuntimeSettings.LDAP_AUTH_CONNECT_TIMEOUT
 		}
 
 		# Build server pool
 		self.server_pool = ldap3.ServerPool(None, ldap3.RANDOM, active=True, exhaust=5)
-		self.auth_url = RunningSettings.LDAP_AUTH_URL
+		self.auth_url = RuntimeSettings.LDAP_AUTH_URL
 		if not isinstance(self.auth_url, list):
 			self.auth_url = [self.auth_url]
 
 		# Include SSL, if requested.
-		server_args['use_ssl'] = RunningSettings.LDAP_AUTH_USE_SSL
+		server_args['use_ssl'] = RuntimeSettings.LDAP_AUTH_USE_SSL
 		# Include TLS, if requested.
-		if RunningSettings.LDAP_AUTH_USE_TLS:
+		if RuntimeSettings.LDAP_AUTH_USE_TLS:
 			self.tlsSettings = ldap3.Tls(
 				ciphers='ALL',
 				version=ldapAuthTLSVersion,
@@ -281,7 +280,7 @@ class LDAPConnector(object):
 				"password": password,
 				"auto_bind": True,
 				"raise_exceptions": True,
-				"receive_timeout": RunningSettings.LDAP_AUTH_RECEIVE_TIMEOUT,
+				"receive_timeout": RuntimeSettings.LDAP_AUTH_RECEIVE_TIMEOUT,
 				"check_names": True,
 			}
 			if DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS is True:
@@ -308,8 +307,8 @@ class LDAPConnector(object):
 		del password
 		# Configure.
 		try:
-			if RunningSettings.LDAP_AUTH_USE_TLS:
-				logger.debug(f"Starting TLS (LDAP Use TLS: {RunningSettings.LDAP_AUTH_USE_TLS})")
+			if RuntimeSettings.LDAP_AUTH_USE_TLS:
+				logger.debug(f"Starting TLS (LDAP Use TLS: {RuntimeSettings.LDAP_AUTH_USE_TLS})")
 				c.start_tls()
 			c.bind(read_server_info=True)
 			# Return the connection.
@@ -349,15 +348,15 @@ class LDAPConnector(object):
 		in settings.LDAP_AUTH_USER_LOOKUP_FIELDS.
 		"""
 		searchFilter = ""
-		for i in RunningSettings.LDAP_AUTH_USER_LOOKUP_FIELDS:
+		for i in RuntimeSettings.LDAP_AUTH_USER_LOOKUP_FIELDS:
 			searchFilter = search_filter_add(
 				searchFilter,
-				f"{RunningSettings.LDAP_AUTH_USER_FIELDS[i]}={kwargs['username']}",
+				f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS[i]}={kwargs['username']}",
 				LDAP_FILTER_OR
 			)
 		# Search the LDAP database.
 		if self.connection.search(
-			search_base=RunningSettings.LDAP_AUTH_SEARCH_BASE,
+			search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
 			search_filter=searchFilter,
 			search_scope=ldap3.SUBTREE,
 			attributes=ldap3.ALL_ATTRIBUTES,
@@ -390,10 +389,10 @@ class LDAPConnector(object):
 				attributes[attribute_name]
 			)
 			for field_name, attribute_name
-			in RunningSettings.LDAP_AUTH_USER_FIELDS.items()
+			in RuntimeSettings.LDAP_AUTH_USER_FIELDS.items()
 			if attribute_name in attributes
 		}
-		user_fields = import_func(RunningSettings.LDAP_AUTH_CLEAN_USER_DATA)(user_fields)
+		user_fields = import_func(RuntimeSettings.LDAP_AUTH_CLEAN_USER_DATA)(user_fields)
 		# ! Removed this because it broke user updating
 		# Create the user lookup.
 		# user_lookup = {
@@ -489,7 +488,7 @@ def test_ldap_connection(
 		ldapAuthUseTLS,
 		ldapAuthTLSVersion
 	):
-	format_username = import_func(RunningSettings.LDAP_AUTH_FORMAT_USERNAME)
+	format_username = import_func(RuntimeSettings.LDAP_AUTH_FORMAT_USERNAME)
 
 	if password != ldapAuthConnectionPassword and username != 'admin':
 		password = password

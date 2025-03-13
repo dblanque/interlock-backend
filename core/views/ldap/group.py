@@ -31,7 +31,7 @@ from interlock_backend.ldap.adsi import (
 	search_filter_add,
 	LDAP_FILTER_OR
 )
-from core.models.ldap_settings_runtime import RunningSettings
+from core.models.ldap_settings_runtime import RuntimeSettings
 import logging
 ################################################################################
 
@@ -52,7 +52,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 			self.ldap_connection = ldc.connection
 
 			self.ldap_filter_object = search_filter_add("", "objectclass=" + 'group')
-			self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_list_filter()
+			self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings).get_list_filter()
 
 			data, valid_attributes = self.list_groups()
 
@@ -76,7 +76,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		########################################################################
 		group_search = request.data['group']
 		group_object_class = 'group'
-		self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_fetch_filter()
+		self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings).get_fetch_filter()
 		self.ldap_filter_object = ""
 		self.ldap_filter_object = search_filter_add(
 			self.ldap_filter_object,
@@ -119,12 +119,12 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 			self.ldap_filter_object = search_filter_add("", "cn="+group_data['cn'])
 			self.ldap_filter_object = search_filter_add(
 				self.ldap_filter_object,
-				f"{RunningSettings.LDAP_AUTH_USER_FIELDS['username']}={group_data['cn']}",
+				f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS['username']}={group_data['cn']}",
 				LDAP_FILTER_OR
 			)
 
 			# Send LDAP Query for user being created to see if it exists
-			self.ldap_filter_attr = self.filter_attr_builder(RunningSettings).get_insert_filter()
+			self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings).get_insert_filter()
 			self.create_group(group_data=group_data)
 
 		return Response(
