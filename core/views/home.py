@@ -1,26 +1,24 @@
 ################################## IMPORTS #####################################
-### Exceptions
-from core.exceptions.test import TestError
-
 ### ViewSets
 from core.views.base import BaseViewSet
 
 ### REST Framework
 from rest_framework.response import Response
-from rest_framework.decorators import action
+
+### Models
+from core.models.user import User, USER_TYPE_LDAP, USER_TYPE_LOCAL
+from interlock_backend.ldap.connector import LDAPInfo
+from ldap3 import Server, ServerPool
+from core.models.interlock_settings import InterlockSetting, INTERLOCK_SETTING_ENABLE_LDAP
+from core.models.ldap_settings_runtime import RuntimeSettings
+
+### Auth
+from core.decorators.login import auth_required, admin_required
 
 ### Others
-from core.decorators.login import auth_required, admin_required
+from oidc_provider.views import ProviderInfoView
 import logging
-################################################################################
-
-################################# Test Imports #################################
-from core.exceptions.ldap import CouldNotOpenConnection
-from interlock_backend.ldap.connector import LDAPConnector, LDAPInfo
-from core.models.types.ldap_dns_record import *
-from core.models import ldap_settings_runtime
-from core.models.user import User
-from interlock_backend.settings import LOG_FILE_FOLDER
+from django.core.exceptions import ObjectDoesNotExist
 ################################################################################
 
 logger = logging.getLogger(__name__)
@@ -29,36 +27,50 @@ class HomeViewSet(BaseViewSet):
 
 	@auth_required
 	@admin_required
-	def list(self, request, pk=None):
-		user: User = request.user
-		data = {}
+	def list(self, request):
 		code = 0
+		local_user_count = User.objects.filter(user_type=USER_TYPE_LOCAL).count()
+		ldap_user_count = User.objects.filter(user_type=USER_TYPE_LDAP).count()
+		oidc_well_known_info = ProviderInfoView()._build_response_dict(request=request)
 
-		# Open LDAP Connection
+		# Check if LDAP Enabled
+		ldap_enabled = False
 		try:
-			connector = LDAPConnector(force_admin=True)
-			self.ldap_connection = connector.connection
-		except Exception as e:
-			print(e)
-			raise CouldNotOpenConnection
+			ldap_enabled = InterlockSetting.objects.get(name=INTERLOCK_SETTING_ENABLE_LDAP)
+			ldap_enabled = ldap_enabled.value
+		except ObjectDoesNotExist:
+			pass
 
-		ldap_server = self.ldap_connection.server_pool.get_current_server(self.ldap_connection)
-
-		with LDAPInfo(force_admin=True) as ldap_info:
-			CONNECTION_OPEN = True if ldap_info.connection.bound else False
-			with open(f"{LOG_FILE_FOLDER}/test.log", "w") as f:
-				print(ldap_info)
-				if hasattr(ldap_info, "schema") and ldap_info.schema:
-					f.write(ldap_info.schema.to_json())
-				f.close()
-		CONNECTION_CLOSED = True if not ldap_info.connection.bound else False
+		# Check LDAP Backend status
+		ldap_ok = False
+		ldap_server = None
+		if ldap_enabled:
+			try:
+				with LDAPInfo(force_admin=True) as ldap_info:
+					CONNECTION_OPEN = True if ldap_info.connection.bound else False
+					ldap_server_pool: ServerPool = ldap_info.connection.server_pool
+					ldap_server: Server = ldap_server_pool.get_current_server(
+						ldap_info.connection
+					)
+					ldap_server = ldap_server.host
+				CONNECTION_CLOSED = True if not ldap_info.connection.bound else False
+				if CONNECTION_OPEN and CONNECTION_CLOSED:
+					ldap_ok = True
+			except:
+				pass
 		return Response(
 			 data={
 				'code': code,
 				'code_msg': 'ok',
-				'data' : self.ldap_connection.result,
-				'active_server': ldap_server.host,
-				'connection_open_success': CONNECTION_OPEN,
-				'connection_close_success': CONNECTION_CLOSED,
+				'data' : {
+					'local_user_count': local_user_count,
+					'oidc_well_known': oidc_well_known_info,
+					'ldap_user_count': ldap_user_count,
+					'ldap_enabled': ldap_enabled,
+					'ldap_tls': RuntimeSettings.LDAP_AUTH_USE_TLS,
+					'ldap_ssl': RuntimeSettings.LDAP_AUTH_USE_SSL,
+					'ldap_ok': ldap_ok,
+					'active_server': ldap_server,
+				}
 			 }
 		)

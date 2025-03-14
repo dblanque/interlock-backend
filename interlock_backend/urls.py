@@ -23,6 +23,7 @@ from rest_framework import routers
 from core.views.ldap.domain import LDAPDomainViewSet
 
 # CORE VIEWS
+from core.views.home import HomeViewSet
 from core.views.token import TokenObtainPairView
 from core.views.totp import TOTPViewSet
 from core.views.auth import AuthViewSet
@@ -46,6 +47,7 @@ from django.urls import re_path
 # Initalizes Router
 router = routers.DefaultRouter()
 named_view_sets = {
+	r"home": HomeViewSet,
 	r"users": UserViewSet,
 	r"ldap/users": LDAPUserViewSet,
 	r"ldap/groups": LDAPGroupsViewSet,
