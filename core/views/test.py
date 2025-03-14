@@ -42,14 +42,14 @@ class TestViewSet(BaseViewSet):
 					print(f"{i} ({type(value)}): {value}")
 
 		# Open LDAP Connection
+		ldap_result = None
 		try:
-			connector = LDAPConnector(force_admin=True)
-			self.ldap_connection = connector.connection
+			with LDAPConnector(force_admin=True) as ldc:
+				ldap_server = ldc.connection.server_pool.get_current_server(ldc.connection)
+				ldap_result = ldc.connection.result
 		except Exception as e:
 			print(e)
 			raise CouldNotOpenConnection
-
-		ldap_server = self.ldap_connection.server_pool.get_current_server(self.ldap_connection)
 
 		with LDAPInfo(force_admin=True) as ldap_info:
 			CONNECTION_OPEN = True if ldap_info.connection.bound else False
@@ -63,7 +63,7 @@ class TestViewSet(BaseViewSet):
 			 data={
 				'code': code,
 				'code_msg': 'ok',
-				'data' : self.ldap_connection.result,
+				'data' : ldap_result,
 				'active_server': ldap_server.host,
 				'connection_open_success': CONNECTION_OPEN,
 				'connection_close_success': CONNECTION_CLOSED,
