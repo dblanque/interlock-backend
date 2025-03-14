@@ -189,7 +189,8 @@ class LDAPConnector(object):
 	def __newUuid__(self):
 		self.uuid = uuid1(node=uuid_getnode(), clock_seq=getrandbits(14))
 
-	def __init__(self,
+	def __init__(
+			self,
 			user: User=None,
 			force_admin=False,
 			get_ldap_info=ldap3.NONE,
@@ -442,16 +443,13 @@ class LDAPConnector(object):
 
 class LDAPInfo(LDAPConnector):
 	def __init__(
-		self, 
-		user_dn=None, 
-		password=None, 
-		user=None, 
+		self,
+		user: User=None,
 		force_admin=False,
-		get_ldap_info=ldap3.ALL
+		get_ldap_info=ldap3.ALL,
+		**kwargs
 		):
 		super().__init__(
-			user_dn=user_dn,
-			password=password,
 			user=user,
 			force_admin=force_admin,
 			get_ldap_info=get_ldap_info
@@ -459,7 +457,8 @@ class LDAPInfo(LDAPConnector):
 		self.refresh_server_info()
 
 	def refresh_server_info(self):
-		current_server = self.connection.server_pool.get_current_server(self.connection)
+		server_pool: ldap3.ServerPool = self.connection.server_pool
+		current_server: ldap3.Server = server_pool.get_current_server(self.connection)
 		current_server.get_info_from_server(self.connection)
 		self.schema = current_server.schema
 		self.info = current_server.info
