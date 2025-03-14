@@ -7,7 +7,7 @@ from rest_framework.response import Response
 
 ### Models
 from core.models.user import User, USER_TYPE_LDAP, USER_TYPE_LOCAL
-from interlock_backend.ldap.connector import LDAPInfo
+from interlock_backend.ldap.connector import LDAPConnector
 from ldap3 import Server, ServerPool
 from core.models.interlock_settings import InterlockSetting, INTERLOCK_SETTING_ENABLE_LDAP
 from core.models.ldap_settings_runtime import RuntimeSettings
@@ -28,6 +28,7 @@ class HomeViewSet(BaseViewSet):
 	@auth_required
 	@admin_required
 	def list(self, request):
+		user: User = request.user
 		code = 0
 		local_user_count = User.objects.filter(user_type=USER_TYPE_LOCAL).count()
 		ldap_user_count = User.objects.filter(user_type=USER_TYPE_LDAP).count()
@@ -46,14 +47,14 @@ class HomeViewSet(BaseViewSet):
 		ldap_server = None
 		if ldap_enabled:
 			try:
-				with LDAPInfo(force_admin=True) as ldap_info:
-					CONNECTION_OPEN = True if ldap_info.connection.bound else False
-					ldap_server_pool: ServerPool = ldap_info.connection.server_pool
+				with LDAPConnector(user=user) as ldc:
+					CONNECTION_OPEN = True if ldc.connection.bound else False
+					ldap_server_pool: ServerPool = ldc.connection.server_pool
 					ldap_server: Server = ldap_server_pool.get_current_server(
-						ldap_info.connection
+						ldc.connection
 					)
 					ldap_server = ldap_server.host
-				CONNECTION_CLOSED = True if not ldap_info.connection.bound else False
+				CONNECTION_CLOSED = True if not ldc.connection.bound else False
 				if CONNECTION_OPEN and CONNECTION_CLOSED:
 					ldap_ok = True
 			except:
