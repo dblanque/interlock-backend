@@ -46,12 +46,12 @@ from django.urls import re_path
 # Initalizes Router
 router = routers.DefaultRouter()
 named_view_sets = {
-	r"users/local": UserViewSet,
-	r"users": LDAPUserViewSet,
-	r"groups": LDAPGroupsViewSet,
-	r"domain": LDAPDomainViewSet,
-	r"record": LDAPRecordViewSet,
-	r"ou": LDAPOrganizationalUnitViewSet,
+	r"users": UserViewSet,
+	r"ldap/users": LDAPUserViewSet,
+	r"ldap/groups": LDAPGroupsViewSet,
+	r"ldap/domain": LDAPDomainViewSet,
+	r"ldap/record": LDAPRecordViewSet,
+	r"ldap/ou": LDAPOrganizationalUnitViewSet,
 	r"settings": SettingsViewSet,
 	r"logs": LogsViewSet,
 	r"liveness": LivenessViewSet,
