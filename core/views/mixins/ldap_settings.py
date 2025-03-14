@@ -142,7 +142,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 				}
 				exception.set_detail(exception, data)
 				raise exception
-			logger.info("Test successful")
+			logger.info("Port test successful")
 
 		username = "admin"
 		user_dn = ldapAuthConnectionUser
@@ -175,6 +175,10 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 				ldapAuthTLSVersion = ldapAuthTLSVersion,
 				)
 		except Exception as e:
+			try:
+				c.unbind()
+			except:
+				pass
 			print(e)
 			raise exc_ldap.CouldNotOpenConnection
 
