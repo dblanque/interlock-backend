@@ -71,7 +71,7 @@ class HomeViewSet(BaseViewSet):
 					'ldap_tls': RuntimeSettings.LDAP_AUTH_USE_TLS,
 					'ldap_ssl': RuntimeSettings.LDAP_AUTH_USE_SSL,
 					'ldap_ok': ldap_ok,
-					'active_server': ldap_server,
+					'ldap_active_server': ldap_server,
 				}
 			 }
 		)

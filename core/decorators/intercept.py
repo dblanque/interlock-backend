@@ -23,8 +23,10 @@ def request_intercept(func=None):
 			user: User = request.user
 			logger.info(request)
 			logger.info(user)
-			logger.info(request.query_params)
-			logger.info(request.data)
+			if hasattr(request, "query_params"):
+				logger.info(request.query_params)
+			if hasattr(request, "data"):
+				logger.info(request.data)
 			return view_func(self, request, *args, **kwargs)
 		return _wrapped
 	if func is None:

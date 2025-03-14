@@ -57,6 +57,7 @@ from django.utils import timezone
 from datetime import datetime
 
 # Others
+from core.decorators.intercept import request_intercept
 import logging
 from interlock_backend.settings import (
 	OIDC_INTERLOCK_LOGIN_COOKIE,
@@ -75,6 +76,7 @@ class CustomOidcViewSet(BaseViewSet):
 
 	@action(detail=False, methods=['post'])
 	@auth_required
+	@request_intercept
 	def consent(self, request, pk=None):
 		user: User = request.user
 		data: dict = request.data
@@ -119,6 +121,7 @@ class CustomOidcViewSet(BaseViewSet):
 
 
 class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
+	@request_intercept
 	def get(self, request: HttpRequest, *args, **kwargs):
 		cookie_auth = CookieJWTAuthentication()
 		self.authorize = self.authorize_endpoint_class(request)
