@@ -9,12 +9,6 @@
 # Work in Progress
 # src: https://github.com/samba-team/samba/blob/master/python/samba/netcmd/gpo.py
 #---------------------------------- IMPORTS -----------------------------------#
-### Exceptions
-from core.exceptions.base import PermissionDenied, BadRequest
-from core.exceptions import (
-	ldap as exc_ldap
-)
-
 ### REST Framework
 from rest_framework.response import Response
 
@@ -26,8 +20,7 @@ from interlock_backend.ldap.connector import LDAPConnector
 from core.models.ldap_settings_runtime import RuntimeSettings
 
 ### Others
-import struct
-from ldap3 import ALL_OPERATIONAL_ATTRIBUTES, ALL_ATTRIBUTES
+from ldap3 import ALL_ATTRIBUTES
 from core.decorators.login import auth_required, admin_required
 from interlock_backend.ldap.guid import GUID
 from interlock_backend.ldap.securityIdentifier import SID
