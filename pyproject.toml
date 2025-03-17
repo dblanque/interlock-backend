@@ -110,7 +110,7 @@ pytest-mock = "^3.14.0"
 pytest-cov = "^6.0.0"
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "interlock_backend.settings"
+DJANGO_SETTINGS_MODULE = "interlock_backend.test_settings"
 
 [tool.ruff]
 line-length = 100
