@@ -4,6 +4,7 @@
 import os
 import sys
 
+
 def main():
 	os.environ.setdefault("DJANGO_SETTINGS_MODULE", "interlock_backend.settings")
 	try:
@@ -15,6 +16,7 @@ def main():
 			"forget to activate a virtual environment?"
 		) from exc
 	execute_from_command_line(sys.argv)
+
 
 if __name__ == "__main__":
 	main()
