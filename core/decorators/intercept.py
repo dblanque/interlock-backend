@@ -25,8 +25,12 @@ def request_intercept(func=None):
 			logger.info(user)
 			if hasattr(request, "query_params"):
 				logger.info(request.query_params)
+			else:
+				logger.info("No query params.")
 			if hasattr(request, "data"):
 				logger.info(request.data)
+			else:
+				logger.info("No data.")
 			return view_func(self, request, *args, **kwargs)
 		return _wrapped
 	if func is None:
