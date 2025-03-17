@@ -6,9 +6,8 @@ from core.models.interlock_settings import (
 )
 from core.utils.db import db_table_exists
 
-DEFAULT_FIXTURE = {
-	INTERLOCK_SETTING_ENABLE_LDAP: False
-}
+DEFAULT_FIXTURE = {INTERLOCK_SETTING_ENABLE_LDAP: False}
+
 
 def create_default_interlock_settings():
 	if not db_table_exists(INTERLOCK_SETTING_TABLE):
