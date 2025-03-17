@@ -6,7 +6,7 @@
 # Module: core.views.settings
 # Contains the ViewSet for System Setting related operations
 #
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 ### Exceptions
 from core.exceptions.ldap import ConnectionTestFailed
 from core.exceptions import (
@@ -21,7 +21,7 @@ from core.models.types.settings import TYPE_AES_ENCRYPT
 from core.models.interlock_settings import (
 	InterlockSetting,
 	INTERLOCK_SETTING_PUBLIC,
-	INTERLOCK_SETTING_MAP
+	INTERLOCK_SETTING_MAP,
 )
 from core.models.ldap_settings import (
 	LDAP_SETTING_MAP,
@@ -45,17 +45,18 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
-from interlock_backend.ldap import defaults
+from core.ldap import defaults
 from interlock_backend.encrypt import aes_encrypt
 from core.decorators.login import auth_required, admin_required
 from core.config.runtime import RuntimeSettings
-from interlock_backend.ldap.ldap_settings import get_setting_list
+from core.ldap.ldap_settings import get_setting_list
 from django.db import transaction
 import logging, ssl
 ################################################################################
 
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
+
 
 class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	ldap_setting_class = LDAPSetting
@@ -68,33 +69,27 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 		presets = []
 		for p in LDAPPreset.objects.all():
-			presets.append({
-				"name": p.name,
-				"id": p.id,
-				"label": p.label,
-				"active": p.active or False
-			})
+			presets.append(
+				{"name": p.name, "id": p.id, "label": p.label, "active": p.active or False}
+			)
 
 		if RuntimeSettings.LDAP_LOG_READ == True:
 			# Log this action to DB
 			DBLogMixin.log(
-				user_id=request.user.id,
-				actionType="READ",
-				objectClass="SET",
-				affectedObject="ALL"
+				user_id=request.user.id, actionType="READ", objectClass="SET", affectedObject="ALL"
 			)
 
 		return Response(
-			 data={
-				'code': code,
-				'code_msg': 'ok',
-				'presets': presets,
-				'active_preset': active_preset.id
-			 }
+			data={
+				"code": code,
+				"code_msg": "ok",
+				"presets": presets,
+				"active_preset": active_preset.id,
+			}
 		)
 
 	@auth_required()
-	@action(detail=True, methods=['get'])
+	@action(detail=True, methods=["get"])
 	def fetch(self, request, pk):
 		preset_id = int(pk)
 		code = 0
@@ -102,15 +97,12 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		# Gets Front-End Parsed LDAP Settings
 		ldap_settings = {}
 		ldap_settings = get_setting_list(preset_id)
-		ldap_settings['DEFAULT_ADMIN_ENABLED'] = self.get_admin_status()
+		ldap_settings["DEFAULT_ADMIN_ENABLED"] = self.get_admin_status()
 
 		if RuntimeSettings.LDAP_LOG_READ == True:
 			# Log this action to DB
 			DBLogMixin.log(
-				user_id=request.user.id,
-				actionType="READ",
-				objectClass="SET",
-				affectedObject="ALL"
+				user_id=request.user.id, actionType="READ", objectClass="SET", affectedObject="ALL"
 			)
 
 		interlock_settings = {}
@@ -118,56 +110,46 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			setting_instance = InterlockSetting.objects.get(name=setting_key)
 			interlock_settings[setting_key] = {
 				"value": setting_instance.value,
-				"type": setting_instance.type
+				"type": setting_instance.type,
 			}
 		return Response(
-			 data={
-				'code': code,
-				'code_msg': 'ok',
-				'settings': {
+			data={
+				"code": code,
+				"code_msg": "ok",
+				"settings": {
 					"local": interlock_settings,
 					"ldap": ldap_settings,
-				}
-			 }
+				},
+			}
 		)
 
-	@action(detail=False, methods=['post'])
+	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	def preset_create(self, request, pk=None):
 		code = 0
 		if not "label" in request.data:
-			raise exc_base.MissingDataKey(data={"detail":"label"})
+			raise exc_base.MissingDataKey(data={"detail": "label"})
 		preset_label = str(request.data["label"])
 		preset_name = self.normalize_preset_name(preset_label)
 		if LDAPPreset.objects.filter(name=preset_name).exists():
 			raise exc_set.SettingPresetExists
-		preset = {
-			"name": preset_name,
-			"label": preset_label
-		}
+		preset = {"name": preset_name, "label": preset_label}
 		serializer = LDAPPresetSerializer(data=preset)
 		if not serializer.is_valid():
-			raise exc_set.SettingPresetSerializerError(data={
-				"errors": serializer.errors
-			})
+			raise exc_set.SettingPresetSerializerError(data={"errors": serializer.errors})
 		LDAPPreset.objects.create(**preset)
 
-		return Response(
-			data={
-				'code': code,
-				'code_msg': 'ok'
-			}
-		)
+		return Response(data={"code": code, "code_msg": "ok"})
 
-	@action(detail=False, methods=['post'])
+	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	def preset_delete(self, request, pk=None):
 		data: dict = request.data
 		code = 0
 		if not "id" in data:
-			raise exc_base.MissingDataKey(data={"key":"id"})
+			raise exc_base.MissingDataKey(data={"key": "id"})
 		preset_id = data["id"]
 		if not LDAPPreset.objects.filter(id=preset_id).exists():
 			raise exc_set.SettingPresetNotExists
@@ -175,47 +157,37 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		if active_preset.id == preset_id:
 			raise exc_set.SettingPresetMustBeDisabled
 		LDAPPreset.objects.get(id=preset_id).delete_permanently()
-		return Response(
-			data={
-				'code': code,
-				'code_msg': 'ok'
-			}
-		)
+		return Response(data={"code": code, "code_msg": "ok"})
 
-	@action(detail=False, methods=['post'])
+	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	def preset_enable(self, request, pk=None):
 		data: dict = request.data
 		code = 0
 		if not "id" in data:
-			raise exc_base.MissingDataKey(data={"key":"id"})
+			raise exc_base.MissingDataKey(data={"key": "id"})
 		preset_id = data["id"]
 		if not LDAPPreset.objects.filter(id=preset_id).exists():
 			raise exc_set.SettingPresetNotExists
 		with transaction.atomic():
 			active_preset = self.get_active_settings_preset()
-			active_preset.active = None # Don't set this to False, DB Constraints
+			active_preset.active = None  # Don't set this to False, DB Constraints
 			active_preset.save()
 			inactive_preset = LDAPPreset.objects.get(id=preset_id)
 			inactive_preset.active = True
 			inactive_preset.save()
 
 		self.resync_settings()
-		return Response(
-			data={
-				'code': code,
-				'code_msg': 'ok'
-			}
-		)
+		return Response(data={"code": code, "code_msg": "ok"})
 
-	@action(detail=False, methods=['post'])
+	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	def preset_rename(self, request, pk=None):
 		data: dict = request.data
 		code = 0
-		for k in ["id","label"]:
+		for k in ["id", "label"]:
 			if not k in data:
 				raise exc_base.MissingDataKey(data={"key": k})
 		preset_id = data["id"]
@@ -224,26 +196,21 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			raise exc_set.SettingPresetNotExists
 		preset = LDAPPreset.objects.get(id=preset_id)
 
-		serializer = LDAPPresetSerializer(data={
-			"label": preset_label,
-			"name": self.normalize_preset_name(preset_label),
-		})
+		serializer = LDAPPresetSerializer(
+			data={
+				"label": preset_label,
+				"name": self.normalize_preset_name(preset_label),
+			}
+		)
 		if not serializer.is_valid():
-			raise exc_set.SettingPresetSerializerError(data={
-				"errors": serializer.errors
-			})
+			raise exc_set.SettingPresetSerializerError(data={"errors": serializer.errors})
 		preset.label = serializer.data["label"]
 		preset.name = serializer.data["name"]
 		preset.save()
 
-		return Response(
-			data={
-				'code': code,
-				'code_msg': 'ok'
-			}
-		)
+		return Response(data={"code": code, "code_msg": "ok"})
 
-	@action(detail=False, methods=['post'])
+	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	def save(self, request, pk=None):
@@ -254,21 +221,23 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		active_preset = None
 
 		if "id" in data_preset:
-			try: settings_preset = LDAPPreset.objects.get(id=data_preset["id"])
-			except: raise exc_set.SettingPresetNotExists
+			try:
+				settings_preset = LDAPPreset.objects.get(id=data_preset["id"])
+			except:
+				raise exc_set.SettingPresetNotExists
 		else:
-			raise exc_base.MissingDataKey(data={"key":"data.preset.id"})
+			raise exc_base.MissingDataKey(data={"key": "data.preset.id"})
 
 		# active_preset = self.get_active_settings_preset()
 		# current_settings = get_setting_list(active_preset)
-		if 'LDAP_LOG_MAX' in data_settings:
-			if int(data_settings['LDAP_LOG_MAX']['value']) > 10000:
+		if "LDAP_LOG_MAX" in data_settings:
+			if int(data_settings["LDAP_LOG_MAX"]["value"]) > 10000:
 				raise exc_set.SettingLogMaxLimit
 
-		adminEnabled = data_settings.pop('DEFAULT_ADMIN_ENABLED')
-		adminPassword = data_settings.pop('DEFAULT_ADMIN_PWD')
-		local_settings: dict = data_settings.pop('local')
-		ldap_settings: dict = data_settings.pop('ldap')
+		adminEnabled = data_settings.pop("DEFAULT_ADMIN_ENABLED")
+		adminPassword = data_settings.pop("DEFAULT_ADMIN_PWD")
+		local_settings: dict = data_settings.pop("local")
+		ldap_settings: dict = data_settings.pop("ldap")
 		self.set_admin_status(status=adminEnabled, password=adminPassword)
 
 		with transaction.atomic():
@@ -276,24 +245,16 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			param_value: dict
 			for param_name, param_value in local_settings.items():
 				if not param_name in INTERLOCK_SETTING_MAP:
-					raise exc_set.SettingTypeDoesNotMatch(
-						data={
-							"field": param_name
-						})
+					raise exc_set.SettingTypeDoesNotMatch(data={"field": param_name})
 				param_type = INTERLOCK_SETTING_MAP[param_name]
 				param_value = param_value.pop("value")
-				kwdata = {
-					"name": param_name,
-					"type": param_type.lower(),
-					"value": param_value
-				}
+				kwdata = {"name": param_name, "type": param_type.lower(), "value": param_value}
 
 				serializer = InterlockSettingSerializer(data=kwdata)
 				if not serializer.is_valid():
-					raise exc_set.SettingSerializerError(data={
-						'key': param_name,
-						'errors': serializer.errors
-					})
+					raise exc_set.SettingSerializerError(
+						data={"key": param_name, "errors": serializer.errors}
+					)
 
 				try:
 					setting_instance = InterlockSetting.objects.get(name=param_name)
@@ -305,23 +266,24 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 			for param_name, param_value in ldap_settings.items():
 				if not param_name in LDAP_SETTING_MAP:
-					raise exc_set.SettingTypeDoesNotMatch(
-						data={
-							"field": param_name
-						})
+					raise exc_set.SettingTypeDoesNotMatch(data={"field": param_name})
 				param_type = LDAP_SETTING_MAP[param_name]
 				param_value = param_value.pop("value")
 
 				is_default = False
 				if param_name == "LDAP_AUTH_TLS_VERSION":
-					is_default = (getattr(ssl, param_value) == getattr(defaults, param_name, None))
+					is_default = getattr(ssl, param_value) == getattr(defaults, param_name, None)
 				else:
-					is_default = (param_value == getattr(defaults, param_name, None))
+					is_default = param_value == getattr(defaults, param_name, None)
 
 				if is_default:
 					try:
-						if LDAPSetting.objects.filter(name=param_name, preset_id=settings_preset).exists():
-							LDAPSetting.objects.get(name=param_name, preset_id=settings_preset).delete_permanently()
+						if LDAPSetting.objects.filter(
+							name=param_name, preset_id=settings_preset
+						).exists():
+							LDAPSetting.objects.get(
+								name=param_name, preset_id=settings_preset
+							).delete_permanently()
 					except:
 						pass
 				else:
@@ -338,15 +300,13 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 					serializer = LDAPSettingSerializer(data=kwdata)
 					if not serializer.is_valid():
-						raise exc_set.SettingSerializerError(data={
-							'key': param_name,
-							'errors': serializer.errors
-						})
+						raise exc_set.SettingSerializerError(
+							data={"key": param_name, "errors": serializer.errors}
+						)
 
 					try:
 						setting_instance = LDAPSetting.objects.get(
-							name=param_name,
-							preset_id=settings_preset
+							name=param_name, preset_id=settings_preset
 						)
 						for attr in kwdata:
 							setattr(setting_instance, attr, kwdata[attr])
@@ -364,13 +324,13 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 		self.resync_settings()
 		return Response(
-			 data={
-				'code': code,
-				'code_msg': 'ok',
-			 }
+			data={
+				"code": code,
+				"code_msg": "ok",
+			}
 		)
 
-	@action(detail=False, methods=['get'])
+	@action(detail=False, methods=["get"])
 	@auth_required
 	@admin_required
 	def reset(self, request, pk=None):
@@ -381,13 +341,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		LDAPSetting.objects.filter(preset_id=active_preset.id).delete()
 
 		self.resync_settings()
-		return Response(
-			 data={
-				'code': code,
-				'code_msg': 'ok',
-				'data': data
-			 }
-		)
+		return Response(data={"code": code, "code_msg": "ok", "data": data})
 
 	# TODO
 	# @action(detail=False, methods=['post'])
@@ -420,7 +374,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	# 		 }
 	# 	)
 
-	@action(detail=False, methods=['post'])
+	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	def test(self, request, pk=None):
@@ -437,10 +391,4 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		if not data:
 			raise ConnectionTestFailed
 
-		return Response(
-			 data={
-				'code': code,
-				'code_msg': 'ok',
-				'data': data
-			 }
-		)
+		return Response(data={"code": code, "code_msg": "ok", "data": data})

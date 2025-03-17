@@ -8,20 +8,14 @@
 # - Bind User connector for Administrative Privilege Operations
 # - Recursive directory listing functions
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 from enum import Enum
 import traceback, ldap3, ssl, logging, sys
 from django_python3_ldap.utils import import_func
 from inspect import getfullargspec
 from django.contrib.auth import get_user_model
-from interlock_backend.encrypt import (
-	aes_encrypt,
-	aes_decrypt
-)
-from interlock_backend.ldap.adsi import (
-	search_filter_add,
-	LDAP_FILTER_OR
-)
+from interlock_backend.encrypt import aes_encrypt, aes_decrypt
+from core.ldap.adsi import search_filter_add, LDAP_FILTER_OR
 from django.contrib.auth.models import update_last_login
 from ldap3.core.exceptions import LDAPException
 from core.exceptions import ldap as exc_ldap
@@ -31,19 +25,17 @@ from typing import TypedDict
 from typing_extensions import NotRequired
 from interlock_backend.settings import (
 	DEFAULT_SUPERUSER_USERNAME,
-	DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS
+	DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS,
 )
 from core.config.runtime import RuntimeSettings
-from uuid import (
-	uuid1,
-	getnode as uuid_getnode
-)
+from uuid import uuid1, getnode as uuid_getnode
 from random import getrandbits
 ###############################################################################
 
 this_module = sys.modules[__name__]
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
+
 
 def recursive_member_search(user_dn: str, connection, group_dn):
 	# Add filter for username
@@ -52,48 +44,44 @@ def recursive_member_search(user_dn: str, connection, group_dn):
 	ldap_filter_object = search_filter_add(ldap_filter_object, f"objectClass=group")
 	try:
 		connection.search(
-			RuntimeSettings.LDAP_AUTH_SEARCH_BASE, 
-			ldap_filter_object, 
-			attributes=['member', 'objectClass', 'distinguishedName']
+			RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
+			ldap_filter_object,
+			attributes=["member", "objectClass", "distinguishedName"],
 		)
 	except:
 		raise
 	for e in connection.entries:
-		if 'group' in e.objectClass:
-			if user_dn in e.member: return True
+		if "group" in e.objectClass:
+			if user_dn in e.member:
+				return True
 			for dn in e.member:
-				r = recursive_member_search(
-					group_dn=dn,
-					user_dn=user_dn,
-					connection=connection
-				)
-				if r == True: return r
+				r = recursive_member_search(group_dn=dn, user_dn=user_dn, connection=connection)
+				if r == True:
+					return r
 	return False
 
-def sync_user_relations(
-		user: User,
-		ldap_attributes,
-		*,
-		connection=None,
-		dn=None
-	):
-	user.dn = str(ldap_attributes['distinguishedName']).lstrip("['").rstrip("']")
-	if 'Administrator' in ldap_attributes[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]]:
+
+def sync_user_relations(user: User, ldap_attributes, *, connection=None, dn=None):
+	user.dn = str(ldap_attributes["distinguishedName"]).lstrip("['").rstrip("']")
+	if "Administrator" in ldap_attributes[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]]:
 		user.is_staff = True
 		user.is_superuser = True
 		user.save()
-	elif recursive_member_search(user_dn=user.dn, connection=connection, group_dn=RuntimeSettings.ADMIN_GROUP_TO_SEARCH):
+	elif recursive_member_search(
+		user_dn=user.dn, connection=connection, group_dn=RuntimeSettings.ADMIN_GROUP_TO_SEARCH
+	):
 		user.is_staff = True
 		user.is_superuser = True
-		if user.email is not None and 'mail' in ldap_attributes:
-			user.email = str(ldap_attributes['mail']).lstrip("['").rstrip("']") or ""
+		if user.email is not None and "mail" in ldap_attributes:
+			user.email = str(ldap_attributes["mail"]).lstrip("['").rstrip("']") or ""
 		user.save()
 	else:
 		user.is_staff = False
 		user.is_superuser = False
-		if user.email is not None and 'mail' in ldap_attributes:
-			user.email = str(ldap_attributes['mail']).lstrip("['").rstrip("']") or ""
+		if user.email is not None and "mail" in ldap_attributes:
+			user.email = str(ldap_attributes["mail"]).lstrip("['").rstrip("']") or ""
 		user.save()
+
 
 def authenticate(*args, **kwargs):
 	"""
@@ -104,17 +92,14 @@ def authenticate(*args, **kwargs):
 	in settings.LDAP_AUTH_USER_LOOKUP_FIELDS, plus a `password` argument.
 	"""
 	username = kwargs["username"]
-	if username == 'admin':
+	if username == "admin":
 		return None
 	password = kwargs.pop("password", None)
 	auth_user_lookup_fields = RuntimeSettings.LDAP_AUTH_USER_LOOKUP_FIELDS
-	ldap_kwargs = {
-		key: value for (key, value) in kwargs.items()
-		if key in auth_user_lookup_fields
-	}
+	ldap_kwargs = {key: value for (key, value) in kwargs.items() if key in auth_user_lookup_fields}
 
 	# Check that this is valid login data.
-	if not password or 'username' not in frozenset(ldap_kwargs.keys()):
+	if not password or "username" not in frozenset(ldap_kwargs.keys()):
 		return None
 
 	# Connect to LDAP and fetch user DN, create or update user if necessary
@@ -128,10 +113,10 @@ def authenticate(*args, **kwargs):
 
 		# ! I went insane with this garbage ! #
 		# Test user credentials against server, keep in mind LDAP Passwords have history
-		# lifetime in the NTLM. 
-		# Letting you know so you don't spend 50 hours debugging something that's 
+		# lifetime in the NTLM.
+		# Letting you know so you don't spend 50 hours debugging something that's
 		# actually working properly =_= -Dylan
-		# sources: 
+		# sources:
 		# https://learn.microsoft.com/en-US/troubleshoot/windows-server/windows-security/new-setting-modifies-ntlm-network-authentication
 		# https://unix.stackexchange.com/questions/737113/samba-4-change-password-old-enable
 		if not ldc.rebind(user_dn=user.dn, password=password):
@@ -147,6 +132,7 @@ def authenticate(*args, **kwargs):
 	user.save()
 	return user
 
+
 class LDAPConnectionOptions(TypedDict):
 	user_dn: NotRequired[str]
 	password: NotRequired[str]
@@ -155,6 +141,7 @@ class LDAPConnectionOptions(TypedDict):
 	plain_text_password: NotRequired[bool]
 	get_ldap_info: NotRequired[str]
 	is_authenticating: NotRequired[bool]
+
 
 class LDAPConnector(object):
 	connection: ldap3.Connection
@@ -167,7 +154,7 @@ class LDAPConnector(object):
 				user_id=self.user.id,
 				actionType="OPEN",
 				objectClass="CONN",
-				affectedObject=f"{self.uuid}"
+				affectedObject=f"{self.uuid}",
 			)
 		return self
 
@@ -179,7 +166,7 @@ class LDAPConnector(object):
 				user_id=self.user.id,
 				actionType="CLOSE",
 				objectClass="CONN",
-				affectedObject=f"{self.uuid}"
+				affectedObject=f"{self.uuid}",
 			)
 		logger.info(f"Connection {self.uuid} closed.")
 		if exc_value:
@@ -190,18 +177,16 @@ class LDAPConnector(object):
 		self.uuid = uuid1(node=uuid_getnode(), clock_seq=getrandbits(14))
 
 	def __init__(
-			self,
-			user: User=None,
-			force_admin=False,
-			get_ldap_info=ldap3.NONE,
-			is_authenticating=False,
-			**kwargs
-		):
-		is_local_superuser = (
-			hasattr(user, "username") and
-			((user.username == DEFAULT_SUPERUSER_USERNAME and
-				not user.user_type is USER_TYPE_LDAP) or
-				user.is_superuser)
+		self,
+		user: User = None,
+		force_admin=False,
+		get_ldap_info=ldap3.NONE,
+		is_authenticating=False,
+		**kwargs,
+	):
+		is_local_superuser = hasattr(user, "username") and (
+			(user.username == DEFAULT_SUPERUSER_USERNAME and not user.user_type is USER_TYPE_LDAP)
+			or user.is_superuser
 		)
 		self.default_user_dn = RuntimeSettings.LDAP_AUTH_CONNECTION_USER_DN
 		self.default_user_pwd = RuntimeSettings.LDAP_AUTH_CONNECTION_PASSWORD
@@ -239,19 +224,19 @@ class LDAPConnector(object):
 			raise ValueError(f"No user_dn was provided for LDAP Connector ({user_dn})")
 
 		logger.debug("Connection Parameters: ")
-		logger.debug(f'User: {user}')
-		logger.debug(f'User DN: {user_dn}')
-		logger.debug(f'LDAP URL: {RuntimeSettings.LDAP_AUTH_URL}')
-		logger.debug(f'LDAP Connect Timeout: {RuntimeSettings.LDAP_AUTH_CONNECT_TIMEOUT}')
-		logger.debug(f'LDAP Receive Timeout: {RuntimeSettings.LDAP_AUTH_RECEIVE_TIMEOUT}')
-		logger.debug(f'LDAP Use SSL: {RuntimeSettings.LDAP_AUTH_USE_SSL}')
-		logger.debug(f'LDAP Use TLS: {RuntimeSettings.LDAP_AUTH_USE_TLS}')
-		logger.debug(f'LDAP TLS Version: {ldapAuthTLSVersion}')
+		logger.debug(f"User: {user}")
+		logger.debug(f"User DN: {user_dn}")
+		logger.debug(f"LDAP URL: {RuntimeSettings.LDAP_AUTH_URL}")
+		logger.debug(f"LDAP Connect Timeout: {RuntimeSettings.LDAP_AUTH_CONNECT_TIMEOUT}")
+		logger.debug(f"LDAP Receive Timeout: {RuntimeSettings.LDAP_AUTH_RECEIVE_TIMEOUT}")
+		logger.debug(f"LDAP Use SSL: {RuntimeSettings.LDAP_AUTH_USE_SSL}")
+		logger.debug(f"LDAP Use TLS: {RuntimeSettings.LDAP_AUTH_USE_TLS}")
+		logger.debug(f"LDAP TLS Version: {ldapAuthTLSVersion}")
 
 		# Initialize Server Args Dictionary
 		server_args = {
-			'get_info': get_ldap_info,
-			'connect_timeout': RuntimeSettings.LDAP_AUTH_CONNECT_TIMEOUT
+			"get_info": get_ldap_info,
+			"connect_timeout": RuntimeSettings.LDAP_AUTH_CONNECT_TIMEOUT,
 		}
 
 		# Build server pool
@@ -261,23 +246,19 @@ class LDAPConnector(object):
 			self.auth_url = [self.auth_url]
 
 		# Include SSL, if requested.
-		server_args['use_ssl'] = RuntimeSettings.LDAP_AUTH_USE_SSL
+		server_args["use_ssl"] = RuntimeSettings.LDAP_AUTH_USE_SSL
 		# Include TLS, if requested.
 		if RuntimeSettings.LDAP_AUTH_USE_TLS:
 			self.tlsSettings = ldap3.Tls(
-				ciphers='ALL',
+				ciphers="ALL",
 				version=ldapAuthTLSVersion,
 			)
-			server_args['tls'] = self.tlsSettings
+			server_args["tls"] = self.tlsSettings
 		else:
 			self.tlsSettings = None
 
 		for u in self.auth_url:
-			server = ldap3.Server(
-							u,
-							allowed_referral_hosts=[("*", True)],
-							**server_args
-						)
+			server = ldap3.Server(u, allowed_referral_hosts=[("*", True)], **server_args)
 			self.server_pool.add(server)
 
 		self.user = user
@@ -298,19 +279,13 @@ class LDAPConnector(object):
 				logger.info(connection_args)
 
 			# ! LDAP / LDAPS
-			c = ldap3.Connection(
-				self.server_pool,
-				**connection_args
-			)
+			c = ldap3.Connection(self.server_pool, **connection_args)
 		except LDAPException as ex:
 			str_ex = "LDAP connect failed: {ex}".format(ex=ex)
 			logger.error(str_ex)
 			# logger.error([v for k,v in vars(RunningSettings).items() if not k.startswith("__")])
 			exception = exc_ldap.CouldNotOpenConnection
-			data = {
-				"code": exception.default_code,
-				"message": str_ex
-			}
+			data = {"code": exception.default_code, "message": str_ex}
 			exception.set_detail(exception, data)
 			raise exception
 
@@ -330,23 +305,16 @@ class LDAPConnector(object):
 			logger.error(str_ex)
 			logger.exception(ex)
 			exception = exc_ldap.CouldNotOpenConnection
-			data = {
-				"code": exception.default_code,
-				"message": str_ex
-			}
+			data = {"code": exception.default_code, "message": str_ex}
 			exception.set_detail(exception, data)
 			raise exception
 
 	def rebind(self, user_dn, password):
-		if len(password) < 1: 
+		if len(password) < 1:
 			self.connection.unbind()
 			raise ValueError("Password length smaller than one, unbinding connection.")
 		try:
-			self.connection.rebind(
-				user=user_dn,
-				password=password,
-				read_server_info=True
-			)
+			self.connection.rebind(user=user_dn, password=password, read_server_info=True)
 		except:
 			return None
 		return self.connection.result
@@ -363,7 +331,7 @@ class LDAPConnector(object):
 			searchFilter = search_filter_add(
 				searchFilter,
 				f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS[i]}={kwargs['username']}",
-				LDAP_FILTER_OR
+				LDAP_FILTER_OR,
 			)
 		# Search the LDAP database.
 		if self.connection.search(
@@ -396,11 +364,10 @@ class LDAPConnector(object):
 		user_fields = {
 			field_name: (
 				attributes[attribute_name][0]
-				if isinstance(attributes[attribute_name], (list, tuple)) else
-				attributes[attribute_name]
+				if isinstance(attributes[attribute_name], (list, tuple))
+				else attributes[attribute_name]
 			)
-			for field_name, attribute_name
-			in RuntimeSettings.LDAP_AUTH_USER_FIELDS.items()
+			for field_name, attribute_name in RuntimeSettings.LDAP_AUTH_USER_FIELDS.items()
 			if attribute_name in attributes
 		}
 		user_fields = import_func(RuntimeSettings.LDAP_AUTH_CLEAN_USER_DATA)(user_fields)
@@ -411,14 +378,9 @@ class LDAPConnector(object):
 		#     for field_name
 		#     in LDAP_AUTH_USER_LOOKUP_FIELDS
 		# }
-		user_lookup = {
-			'username': user_fields['username']
-		}
+		user_lookup = {"username": user_fields["username"]}
 		# Update or create the user.
-		user, created = User.objects.update_or_create(
-			defaults=user_fields,
-			**user_lookup
-		)
+		user, created = User.objects.update_or_create(defaults=user_fields, **user_lookup)
 		# If the user was created, set them an unusable password.
 		if created:
 			user.set_unusable_password()
@@ -434,26 +396,19 @@ class LDAPConnector(object):
 			elif argname == "dn":
 				args["dn"] = user_data.get("dn")
 			else:
-				raise TypeError(f"Unknown kw argument {argname} in signature for LDAP_AUTH_SYNC_USER_RELATIONS")
+				raise TypeError(
+					f"Unknown kw argument {argname} in signature for LDAP_AUTH_SYNC_USER_RELATIONS"
+				)
 		# call sync_user_relations_func() with original args plus supported named extras
 		sync_user_relations_func(user, attributes, **args)
 		# All done!
 		logger.info("LDAP user lookup succeeded")
 		return user
 
+
 class LDAPInfo(LDAPConnector):
-	def __init__(
-		self,
-		user: User=None,
-		force_admin=False,
-		get_ldap_info=ldap3.ALL,
-		**kwargs
-		):
-		super().__init__(
-			user=user,
-			force_admin=force_admin,
-			get_ldap_info=get_ldap_info
-		)
+	def __init__(self, user: User = None, force_admin=False, get_ldap_info=ldap3.ALL, **kwargs):
+		super().__init__(user=user, force_admin=force_admin, get_ldap_info=get_ldap_info)
 		self.refresh_server_info()
 
 	def refresh_server_info(self):
@@ -465,57 +420,56 @@ class LDAPInfo(LDAPConnector):
 
 	def get_domain_root(self):
 		try:
-			domainRoot = self.info.other['defaultNamingContext'][0]
+			domainRoot = self.info.other["defaultNamingContext"][0]
 		except Exception as e:
 			print(e)
 		return domainRoot
 
 	def get_schema_naming_context(self):
 		try:
-			schemaNamingContext = self.info.other['schemaNamingContext'][0]
+			schemaNamingContext = self.info.other["schemaNamingContext"][0]
 		except Exception as e:
 			print(e)
 		return schemaNamingContext
 
 	def get_forest_root(self):
 		try:
-			forestRoot = self.info.other['rootDomainNamingContext'][0]
+			forestRoot = self.info.other["rootDomainNamingContext"][0]
 		except Exception as e:
 			print(e)
 		return forestRoot
 
+
 def test_ldap_connection(
-		username,
-		user_dn, # Actually this is user_dn
-		password,
-		ldapAuthConnectionUser,
-		ldapAuthConnectionPassword,
-		ldapAuthURL,
-		ldapAuthConnectTimeout,
-		ldapAuthReceiveTimeout,
-		ldapAuthUseSSL,
-		ldapAuthUseTLS,
-		ldapAuthTLSVersion
-	):
+	username,
+	user_dn,  # Actually this is user_dn
+	password,
+	ldapAuthConnectionUser,
+	ldapAuthConnectionPassword,
+	ldapAuthURL,
+	ldapAuthConnectTimeout,
+	ldapAuthReceiveTimeout,
+	ldapAuthUseSSL,
+	ldapAuthUseTLS,
+	ldapAuthTLSVersion,
+):
 	format_username = import_func(RuntimeSettings.LDAP_AUTH_FORMAT_USERNAME)
 
-	if password != ldapAuthConnectionPassword and username != 'admin':
+	if password != ldapAuthConnectionPassword and username != "admin":
 		password = password
-	elif username == 'admin':
+	elif username == "admin":
 		user_dn = ldapAuthConnectionUser
 		password = ldapAuthConnectionPassword
 
 	if not isinstance(ldapAuthConnectTimeout, int):
-		logger.info('ldapAuthConnectTimeout is not an int, using default')
+		logger.info("ldapAuthConnectTimeout is not an int, using default")
 		ldapAuthConnectTimeout = 5
 	if not isinstance(ldapAuthReceiveTimeout, int):
-		logger.info('ldapAuthReceiveTimeout is not an int, using default')
+		logger.info("ldapAuthReceiveTimeout is not an int, using default")
 		ldapAuthReceiveTimeout = 5
 
 	# Initialize Server Args Dictionary
-	server_args = {
-		'connect_timeout': ldapAuthConnectTimeout
-	}
+	server_args = {"connect_timeout": ldapAuthConnectTimeout}
 
 	# Build server pool
 	server_pool = ldap3.ServerPool(None, ldap3.RANDOM, active=True, exhaust=5)
@@ -527,20 +481,17 @@ def test_ldap_connection(
 		ldapAuthTLSVersion = getattr(ssl, ldapAuthTLSVersion)
 
 	# Include SSL, if requested.
-	server_args['use_ssl'] = ldapAuthUseSSL
+	server_args["use_ssl"] = ldapAuthUseSSL
 	# Include SSL / TLS, if requested.
 	if ldapAuthUseTLS == True:
-		server_args['tls'] = ldap3.Tls(
-			ciphers='ALL',
+		server_args["tls"] = ldap3.Tls(
+			ciphers="ALL",
 			version=ldapAuthTLSVersion,
 		)
 	for u in auth_url:
 		server_pool.add(
 			ldap3.Server(
-				u,
-				allowed_referral_hosts=[("*", True)],
-				get_info=ldap3.NONE,
-				**server_args
+				u, allowed_referral_hosts=[("*", True)], get_info=ldap3.NONE, **server_args
 			)
 		)
 	# Connect.
@@ -553,20 +504,14 @@ def test_ldap_connection(
 			"raise_exceptions": True,
 			"receive_timeout": ldapAuthReceiveTimeout,
 		}
-		
+
 		# ! LDAP / LDAPS
-		c = ldap3.Connection(
-			server_pool,
-			**connection_args
-		)
+		c = ldap3.Connection(server_pool, **connection_args)
 	except LDAPException as ex:
 		str_ex = "LDAP connect failed: {ex}".format(ex=ex)
 		logger.warning(str_ex)
 		exception = exc_ldap.CouldNotOpenConnection
-		data = {
-			"code": exception.default_code,
-			"message": str_ex
-		}
+		data = {"code": exception.default_code, "message": str_ex}
 		exception.set_detail(exception, data)
 		raise exception
 
@@ -586,9 +531,6 @@ def test_ldap_connection(
 		str_ex = "LDAP bind failed: {ex}".format(ex=ex)
 		logger.warning(str_ex)
 		exception = exc_ldap.CouldNotOpenConnection
-		data = {
-			"code": exception.default_code,
-			"message": str_ex
-		}
+		data = {"code": exception.default_code, "message": str_ex}
 		exception.set_detail(exception, data)
 		raise exception

@@ -6,13 +6,9 @@
 # Module: core.views.mixins.record
 # Contains the Mixin for DNS Record related operations
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 ### Exceptions
-from core.exceptions import (
-	base as exc_base,
-	ldap as exc_ldap,
-	dns as exc_dns
-)
+from core.exceptions import base as exc_base, ldap as exc_ldap, dns as exc_dns
 
 ### Models
 from core.views.mixins.logs import LogMixin
@@ -33,16 +29,12 @@ import logging
 ### Others
 from core.utils import dnstool
 import traceback
-from ldap3 import (
-	MODIFY_ADD,
-	MODIFY_DELETE,
-	MODIFY_INCREMENT,
-	MODIFY_REPLACE
-)
+from ldap3 import MODIFY_ADD, MODIFY_DELETE, MODIFY_INCREMENT, MODIFY_REPLACE
 ################################################################################
 
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
+
 
 class DNSRecordMixin(DomainViewMixin):
 	ldap_connection = None
@@ -50,32 +42,32 @@ class DNSRecordMixin(DomainViewMixin):
 	def validate_record_data(self, record_data, required_values=None):
 		if required_values is None:
 			required_values = []
-		if 'type' not in record_data:
+		if "type" not in record_data:
 			raise exc_dns.DNSRecordTypeMissing
 
-		if record_data['zone'] == 'Root DNS Servers':
+		if record_data["zone"] == "Root DNS Servers":
 			raise exc_dns.DNSRootServersOnlyCLI
 
-		if record_data['type'] == DNS_RECORD_TYPE_SOA and record_data['name'] != "@":
+		if record_data["type"] == DNS_RECORD_TYPE_SOA and record_data["name"] != "@":
 			raise exc_dns.SOARecordRootOnly
 
-		if 'stringData' in record_data:
-			if len(record_data['stringData']) > 255:
+		if "stringData" in record_data:
+			if len(record_data["stringData"]) > 255:
 				raise exc_dns.DNSStringDataLimit
 
-		if 'nameNode' in record_data:
-			label = str(record_data['nameNode'])
-			split_labels = label.split('.')
+		if "nameNode" in record_data:
+			label = str(record_data["nameNode"])
+			split_labels = label.split(".")
 			if len(split_labels[-1]) > 1:
 				raise exc_dns.DNSRecordTypeConflict
 			# Validate Zone in Record
 			if not dnsValidators.canonicalHostname_validator(label):
-				logger.error("Canonical Zone not in Request or invalid: "+label)
+				logger.error("Canonical Zone not in Request or invalid: " + label)
 				raise exc_dns.DNSZoneNotInRequest
 
 		if len(required_values) > 1:
 			# Add the necessary fields for this Record Type to Required Fields
-			required_values.extend(RECORD_MAPPINGS[record_data['type']]['fields'])
+			required_values.extend(RECORD_MAPPINGS[record_data["type"]]["fields"])
 
 			for a in required_values:
 				if a not in record_data:
@@ -106,7 +98,7 @@ class DNSRecordMixin(DomainViewMixin):
 									validator=v_func,
 									field_name=f_key,
 									field_value=f_value,
-									except_on_fail=False
+									except_on_fail=False,
 								)
 							except Exception as e:
 								logger.error(f"Validator: '{v_type}' ({type(v_type)})")
@@ -118,9 +110,7 @@ class DNSRecordMixin(DomainViewMixin):
 						validator = validator + "_validator"
 						try:
 							valid = self.validate_field(
-								validator=validator,
-								field_name=f_key,
-								field_value=f_value
+								validator=validator, field_name=f_key, field_value=f_value
 							)
 						except Exception as e:
 							logger.error(f"Validator: '{validator}' ({type(validator)})")
@@ -130,21 +120,18 @@ class DNSRecordMixin(DomainViewMixin):
 							raise exc_dns.DNSFieldValidatorException
 
 					if not valid:
-						data = {
-							'field': f_key,
-							'value': f_value
-						}
+						data = {"field": f_key, "value": f_value}
 						raise exc_dns.DNSFieldValidatorFailed(data)
 		return True
 
 	def validate_field(
-			self, 
-			validator: str, 
-			field_name: str, 
-			field_value,
-			except_on_fail=True,
-		):
-		""" DNS Validator Function
+		self,
+		validator: str,
+		field_name: str,
+		field_value,
+		except_on_fail=True,
+	):
+		"""DNS Validator Function
 		* self
 		* validator: Validator Type for Value
 		* field_name: DNS Record Field Name (e.g.: address, ttl, etc.)
@@ -153,28 +140,22 @@ class DNSRecordMixin(DomainViewMixin):
 		"""
 		valid = getattr(dnsValidators, validator)(field_value)
 		if not valid and except_on_fail:
-			data = {
-				'field': field_name,
-				'value': field_value
-			}
+			data = {"field": field_name, "value": field_value}
 			raise exc_dns.DNSFieldValidatorFailed(data=data)
 		elif not valid:
 			return False
 		return True
 
 	def create_record(self, record_data):
-		record_name = record_data.pop('name').lower()
-		record_type = record_data.pop('type')
-		record_zone = record_data.pop('zone').lower()
+		record_name = record_data.pop("name").lower()
+		record_type = record_data.pop("type")
+		record_zone = record_data.pop("zone").lower()
 
-		if 'serial' in record_data and isinstance(record_data['serial'], str):
-			record_data.pop('serial')
+		if "serial" in record_data and isinstance(record_data["serial"], str):
+			record_data.pop("serial")
 
 		dnsRecord = LDAPRecord(
-			connection=self.ldap_connection,
-			rName=record_name,
-			rZone=record_zone,
-			rType=record_type
+			connection=self.ldap_connection, rName=record_name, rZone=record_zone, rType=record_type
 		)
 
 		dnsRecord.create(values=record_data)
@@ -197,42 +178,43 @@ class DNSRecordMixin(DomainViewMixin):
 				user_id=self.request.user.id,
 				actionType="CREATE",
 				objectClass="DNSR",
-				affectedObject=dnsRecord.__fullname__()
+				affectedObject=dnsRecord.__fullname__(),
 			)
 		return dr
 
 	def update_record(self, record_data, old_record_data):
-		old_record_name = old_record_data['name'].lower()
-		record_name = record_data.pop('name').lower()
-		record_type = record_data.pop('type')
-		record_zone = record_data.pop('zone').lower()
-		record_index = record_data.pop('index')
-		record_bytes = record_data.pop('record_bytes')
+		old_record_name = old_record_data["name"].lower()
+		record_name = record_data.pop("name").lower()
+		record_type = record_data.pop("type")
+		record_zone = record_data.pop("zone").lower()
+		record_index = record_data.pop("index")
+		record_bytes = record_data.pop("record_bytes")
 		record_bytes = convert_string_to_bytes(record_bytes)
 
-		if (isinstance(record_data['serial'], str) or record_data['serial'] == old_record_data['serial']):
-			record_data.pop('serial')
+		if (
+			isinstance(record_data["serial"], str)
+			or record_data["serial"] == old_record_data["serial"]
+		):
+			record_data.pop("serial")
 
 		dnsRecord = LDAPRecord(
-			connection=self.ldap_connection,
-			rName=record_name,
-			rZone=record_zone,
-			rType=record_type
+			connection=self.ldap_connection, rName=record_name, rZone=record_zone, rType=record_type
 		)
 		# ! If Record Name is being changed create the new one and delete the old.
 		if old_record_name != record_name:
 			# Create new Record
 			result = dnsRecord.create(values=record_data)
-			if result['result'] == 0:
+			if result["result"] == 0:
 				# Delete old DNSR after new one is created
-				dnsRecord.connection.modify(old_record_data['distinguishedName'], {'dnsRecord': [( MODIFY_DELETE, record_bytes )]})
+				dnsRecord.connection.modify(
+					old_record_data["distinguishedName"],
+					{"dnsRecord": [(MODIFY_DELETE, record_bytes)]},
+				)
 			else:
 				raise exc_base.CoreException
 		else:
 			result = dnsRecord.update(
-				values=record_data,
-				old_record_values=old_record_data,
-				old_record_bytes=record_bytes
+				values=record_data, old_record_values=old_record_data, old_record_bytes=record_bytes
 			)
 
 		#########################################
@@ -253,25 +235,23 @@ class DNSRecordMixin(DomainViewMixin):
 				user_id=self.request.user.id,
 				actionType="UPDATE",
 				objectClass="DNSR",
-				affectedObject=dnsRecord.__fullname__()
+				affectedObject=dnsRecord.__fullname__(),
 			)
 		return dr
 
 	def delete_record(self, record_data, user):
-		if not self.ldap_connection: raise exc_ldap.LDAPConnectionNotOpen
+		if not self.ldap_connection:
+			raise exc_ldap.LDAPConnectionNotOpen
 
-		record_name = record_data.pop('name')
-		record_type = record_data.pop('type')
-		record_zone = record_data.pop('zone')
-		record_index = record_data.pop('index')
-		record_bytes = record_data.pop('record_bytes')
+		record_name = record_data.pop("name")
+		record_type = record_data.pop("type")
+		record_zone = record_data.pop("zone")
+		record_index = record_data.pop("index")
+		record_bytes = record_data.pop("record_bytes")
 		record_bytes = convert_string_to_bytes(record_bytes)
 
 		dnsRecord = LDAPRecord(
-			connection=self.ldap_connection,
-			rName=record_name,
-			rZone=record_zone,
-			rType=record_type
+			connection=self.ldap_connection, rName=record_name, rZone=record_zone, rType=record_type
 		)
 
 		try:
@@ -286,7 +266,7 @@ class DNSRecordMixin(DomainViewMixin):
 				user_id=user.id,
 				actionType="DELETE",
 				objectClass="DNSR",
-				affectedObject=dnsRecord.__fullname__()
+				affectedObject=dnsRecord.__fullname__(),
 			)
 
 		return result

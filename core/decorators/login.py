@@ -11,6 +11,7 @@ from core.exceptions.base import PermissionDenied
 from core.views.mixins.auth import RemoveTokenResponse
 from functools import wraps
 
+
 def auth_required(func=None):
 	def decorator(view_func):
 		@wraps(view_func)
@@ -22,10 +23,11 @@ def auth_required(func=None):
 				return RemoveTokenResponse(request=request)
 
 			# Check account status
-			if getattr(user, 'deleted', False):
+			if getattr(user, "deleted", False):
 				raise PermissionDenied()
 
 			return view_func(self, request, *args, **kwargs)
+
 		return _wrapped
 
 	# Handle decorator with/without arguments
@@ -33,15 +35,18 @@ def auth_required(func=None):
 		return decorator
 	return decorator(func)
 
+
 def admin_required(func=None):
 	def decorator(view_func):
 		@wraps(view_func)
 		def _wrapped(self, request: Request, *args, **kwargs):
 			user: User = request.user
-			if not getattr(user, 'is_superuser', False):
+			if not getattr(user, "is_superuser", False):
 				raise PermissionDenied()
 			return view_func(self, request, *args, **kwargs)
+
 		return _wrapped
+
 	# Handle decorator with/without arguments
 	if func is None:
 		return decorator

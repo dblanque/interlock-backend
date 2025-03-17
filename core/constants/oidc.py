@@ -1,4 +1,3 @@
-
 QK_ERROR = "error"
 QK_ERROR_DETAIL = "error_detail"
 QK_NEXT = "next"

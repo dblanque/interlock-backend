@@ -16,7 +16,7 @@ import logging
 
 ################################# Test Imports #################################
 from core.exceptions.ldap import CouldNotOpenConnection
-from interlock_backend.ldap.connector import LDAPConnector, LDAPInfo
+from core.ldap.connector import LDAPConnector, LDAPInfo
 from core.models.types.ldap_dns_record import *
 from core.models import ldap_settings_runtime
 from core.models.user import User
@@ -25,8 +25,8 @@ from interlock_backend.settings import LOG_FILE_FOLDER
 
 logger = logging.getLogger(__name__)
 
-class TestViewSet(BaseViewSet):
 
+class TestViewSet(BaseViewSet):
 	@auth_required
 	@admin_required
 	def list(self, request, pk=None):
@@ -60,12 +60,12 @@ class TestViewSet(BaseViewSet):
 				f.close()
 		CONNECTION_CLOSED = True if not ldap_info.connection.bound else False
 		return Response(
-			 data={
-				'code': code,
-				'code_msg': 'ok',
-				'data' : ldap_result,
-				'active_server': ldap_server.host,
-				'connection_open_success': CONNECTION_OPEN,
-				'connection_close_success': CONNECTION_CLOSED,
-			 }
+			data={
+				"code": code,
+				"code_msg": "ok",
+				"data": ldap_result,
+				"active_server": ldap_server.host,
+				"connection_open_success": CONNECTION_OPEN,
+				"connection_close_success": CONNECTION_CLOSED,
+			}
 		)

@@ -31,6 +31,7 @@ LDAP_AUTH_USE_TLS = False
 
 # Specify which TLS version to use (Python 3.10 requires TLSv1 or higher)
 import ssl
+
 LDAP_AUTH_TLS_VERSION = ssl.PROTOCOL_TLSv1_2
 
 # The LDAP search base for looking up users.
@@ -50,20 +51,20 @@ LDAP_DNS_LEGACY = False
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
 # Group Type Value Mapping
 LDAP_GROUP_TYPE_MAPPING = {
-    # Distribution Group
-    0:0,
-    # Security Group
-    1:-2147483648
+	# Distribution Group
+	0: 0,
+	# Security Group
+	1: -2147483648,
 }
 
 # Group Scope Value Mapping
 LDAP_GROUP_SCOPE_MAPPING = {
-    # Global Scope
-    0:2,
-    # Domain Local Scope
-    1:4,
-    # Universal Scope
-    2:8
+	# Global Scope
+	0: 2,
+	# Domain Local Scope
+	1: 4,
+	# Universal Scope
+	2: 8,
 }
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
 
@@ -75,30 +76,27 @@ EXCLUDE_COMPUTER_ACCOUNTS = True
 DISABLE_SETTING_OVERRIDES = False
 
 # Change in OpenLDAP
-LDAP_OU_FIELD = 'sAMAccountName'
-LDAP_GROUP_FIELD = 'sAMAccountName'
+LDAP_OU_FIELD = "sAMAccountName"
+LDAP_GROUP_FIELD = "sAMAccountName"
 
 # User model fields mapped to the LDAP
 # attributes that represent them.
 LDAP_AUTH_USER_FIELDS = {
-    "username": "sAMAccountName",
-    "first_name": "givenName",
-    "last_name": "sn",
-    "email": "mail",
-    "dn": "distinguishedName"
+	"username": "sAMAccountName",
+	"first_name": "givenName",
+	"last_name": "sn",
+	"email": "mail",
+	"dn": "distinguishedName",
 }
 
 # Normalize to the standard LDAP string if it's sAMAccountName just in case
-if str(LDAP_AUTH_USER_FIELDS["username"]).lower() == 'samaccountname':
-    LDAP_AUTH_USERNAME_IDENTIFIER = "sAMAccountName"
+if str(LDAP_AUTH_USER_FIELDS["username"]).lower() == "samaccountname":
+	LDAP_AUTH_USERNAME_IDENTIFIER = "sAMAccountName"
 else:
-    LDAP_AUTH_USERNAME_IDENTIFIER = LDAP_AUTH_USER_FIELDS["username"]
+	LDAP_AUTH_USERNAME_IDENTIFIER = LDAP_AUTH_USER_FIELDS["username"]
 
 # A tuple of django model fields used to uniquely identify a user.
-LDAP_AUTH_USER_LOOKUP_FIELDS = (
-    "username",
-    "email"
-)
+LDAP_AUTH_USER_LOOKUP_FIELDS = ("username", "email")
 
 # Path to a callable that takes a dict of {model_field_name: value},
 # returning a dict of clean model data.
@@ -131,7 +129,7 @@ LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN = "EXAMPLE"
 # This is used when the local Interlock Admin is logged in.
 LDAP_AUTH_CONNECTION_USER_DN = "CN=Administrator,CN=Users,DC=example,DC=com"
 
-LDAP_AUTH_CONNECTION_USERNAME = LDAP_AUTH_CONNECTION_USER_DN.split(',')[0].split('CN=')[1]
+LDAP_AUTH_CONNECTION_USERNAME = LDAP_AUTH_CONNECTION_USER_DN.split(",")[0].split("CN=")[1]
 LDAP_AUTH_CONNECTION_PASSWORD = None
 
 # Set connection/receive timeouts (in seconds) on the underlying `ldap3` library.
@@ -140,70 +138,69 @@ LDAP_AUTH_RECEIVE_TIMEOUT = 10
 
 ADMIN_GROUP_TO_SEARCH = "CN=Administrators,CN=Builtin,DC=example,DC=com"
 LDAP_DIRTREE_OU_FILTER = {
-    "organizationalUnit" : "objectCategory",
-    "top" : "objectCategory",
-    "container" : "objectCategory",
-    "builtinDomain" : "objectClass"
+	"organizationalUnit": "objectCategory",
+	"top": "objectCategory",
+	"container": "objectCategory",
+	"builtinDomain": "objectClass",
 }
 
 LDAP_DIRTREE_CN_FILTER = {
-    "user" : "objectClass",
-    "person" : "objectClass",
-    "group" : "objectClass",
-    "organizationalPerson" : "objectClass",
-    "computer" : "objectClass"
+	"user": "objectClass",
+	"person": "objectClass",
+	"group": "objectClass",
+	"organizationalPerson": "objectClass",
+	"computer": "objectClass",
 }
 
 LDAP_DIRTREE_ATTRIBUTES = [
-    # User Attrs
-    'givenName', 
-    'sn', 
-    'displayName',
-    'mail',
-    'telephoneNumber',
-    'streetAddress',
-    'postalCode',
-    'l', # Local / City
-    'st', # State/Province
-    'countryCode', # INT
-    'co', # 2 Letter Code for Country
-    'c', # Full Country Name
-    'wWWHomePage',
-    'distinguishedName',
-    'userPrincipalName',
-    'userAccountControl', # Permission ACLs
-    'whenCreated',
-    'whenChanged',
-    'lastLogon',
-    'badPwdCount',
-    'pwdLastSet',
-    'primaryGroupID',
-    'objectClass',
-    'objectCategory',
-    'sAMAccountType',
-
-    # Group Attrs
-    'cn',
-    'member',
-    'distinguishedName',
-    'groupType',
-    'objectSid'
+	# User Attrs
+	"givenName",
+	"sn",
+	"displayName",
+	"mail",
+	"telephoneNumber",
+	"streetAddress",
+	"postalCode",
+	"l",  # Local / City
+	"st",  # State/Province
+	"countryCode",  # INT
+	"co",  # 2 Letter Code for Country
+	"c",  # Full Country Name
+	"wWWHomePage",
+	"distinguishedName",
+	"userPrincipalName",
+	"userAccountControl",  # Permission ACLs
+	"whenCreated",
+	"whenChanged",
+	"lastLogon",
+	"badPwdCount",
+	"pwdLastSet",
+	"primaryGroupID",
+	"objectClass",
+	"objectCategory",
+	"sAMAccountType",
+	# Group Attrs
+	"cn",
+	"member",
+	"distinguishedName",
+	"groupType",
+	"objectSid",
 ]
 
 # See https://en.wikipedia.org/wiki/LDAP_Data_Interchange_Format
-LDAP_LDIF_IDENTIFIERS = ["dn","dc","ou","cn"]
+LDAP_LDIF_IDENTIFIERS = ["dn", "dc", "ou", "cn"]
 
 LDAP_OPERATIONS = [
-    'BIND',
-    'UNBIND',
-    'ADD',
-    'DELETE',
-    'MODIFY',
-    'MODIFY-DN',
-    'SEARCH',
-    'COMPARE',
-    'ABANDON',
-    'EXTENDED'
+	"BIND",
+	"UNBIND",
+	"ADD",
+	"DELETE",
+	"MODIFY",
+	"MODIFY-DN",
+	"SEARCH",
+	"COMPARE",
+	"ABANDON",
+	"EXTENDED",
 ]
 
 ################################## Logging #####################################

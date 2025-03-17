@@ -6,20 +6,17 @@
 # Module: core.views.mixins.application
 # Contains the mixin for SSO Application related operations
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 ### Models
 from core.models.application import Application
-from oidc_provider.models import (
-	Client,
-	ResponseType
-)
+from oidc_provider.models import Client, ResponseType
 
 ### Exceptions
 from core.exceptions.application import (
 	ApplicationExists,
 	ApplicationDoesNotExist,
 	ApplicationFieldDoesNotExist,
-	ApplicationOidcClientDoesNotExist
+	ApplicationOidcClientDoesNotExist,
 )
 from core.exceptions.base import BadRequest
 
@@ -36,14 +33,18 @@ from django.db import transaction
 from core.utils.db import db_table_exists
 from typing import Iterable
 import logging
+
 ################################################################################
 logger = logging.getLogger()
+
 
 class ApplicationViewMixin(viewsets.ViewSetMixin):
 	application_serializer = ApplicationSerializer
 	client_serializer = ClientSerializer
 
-	def get_application_data(self, application_id: int) -> tuple[Application, Client, QuerySet[ResponseType]]:
+	def get_application_data(
+		self, application_id: int
+	) -> tuple[Application, Client, QuerySet[ResponseType]]:
 		"""
 		:returns: (application, client, response_types)
 		:rtype: Application, Client, ResponseType | None
@@ -62,10 +63,7 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 		return application, client
 
 	def get_response_type_id_map(self):
-		return {
-			rt.value: rt.id
-			for rt in ResponseType.objects.all()
-		}
+		return {rt.value: rt.id for rt in ResponseType.objects.all()}
 
 	def get_response_type_codes(self):
 		return ResponseType.objects.all().values_list("value", flat=True)
@@ -88,23 +86,20 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 			"redirect_uris",
 			"enabled",
 		]
-		HEADERS_EXCLUDE = [
-			"id"
-		]
+		HEADERS_EXCLUDE = ["id"]
 
-		application_query =  Application.objects.all()
+		application_query = Application.objects.all()
 		application_data = []
 		for app in application_query:
 			_build_data = {}
 			for field in FIELDS_TO_SEND:
 				if not hasattr(app, field):
-					raise Exception(f"Missing field ({field}) in queryset, is there a database issue?")
+					raise Exception(
+						f"Missing field ({field}) in queryset, is there a database issue?"
+					)
 				_build_data[field] = getattr(app, field)
 			application_data.append(_build_data)
-		data = {
-			"applications": application_data,
-			"headers": FIELDS_TO_SEND
-		}
+		data = {"applications": application_data, "headers": FIELDS_TO_SEND}
 		data_headers: list = data["headers"]
 
 		for field in HEADERS_EXCLUDE:
@@ -135,7 +130,7 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 			if hasattr(application, field):
 				data[field] = getattr(application, field)
 			else:
-				raise ApplicationFieldDoesNotExist(data={"field":field})
+				raise ApplicationFieldDoesNotExist(data={"field": field})
 
 		if isinstance(data["scopes"], str):
 			data["scopes"] = data["scopes"].split()
@@ -144,7 +139,7 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 			if hasattr(client, field):
 				data[field] = getattr(client, field)
 			else:
-				raise ApplicationFieldDoesNotExist(data={"field":field})
+				raise ApplicationFieldDoesNotExist(data={"field": field})
 
 		data["response_types"] = {}
 		for r_type in self.get_response_type_codes():
@@ -160,11 +155,7 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 			"client_secret",
 			"enabled",
 		)
-		FIELDS_EXTRA = (
-			"require_consent",
-			"reuse_consent",
-			"response_types"
-		)
+		FIELDS_EXTRA = ("require_consent", "reuse_consent", "response_types")
 		for field in FIELDS_EXCLUDE:
 			if field in data:
 				del data[field]
@@ -179,16 +170,12 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 
 		serializer = self.application_serializer(data=data)
 		if not serializer.is_valid():
-			raise BadRequest(data={
-				"errors": serializer.errors
-			})
+			raise BadRequest(data={"errors": serializer.errors})
 		return serializer, extra_fields
 
 	def insert_application(
-			self,
-			serializer: ApplicationSerializer,
-			extra_fields: dict
-		) -> Application:
+		self, serializer: ApplicationSerializer, extra_fields: dict
+	) -> Application:
 		if Application.objects.filter(name=serializer.data["name"]).exists():
 			raise ApplicationExists
 
@@ -205,9 +192,9 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 				name=application.name,
 				client_id=application.client_id,
 				client_secret=application.client_secret,
-				redirect_uris=application.redirect_uris.split(','),
+				redirect_uris=application.redirect_uris.split(","),
 				scope=application.scopes.split(),
-				**extra_fields
+				**extra_fields,
 				# Other OIDC client settings (e.g., token expiration)
 			)
 			if new_response_types:
@@ -251,17 +238,15 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 				new_application[field] = data.pop(field)
 
 		if (
-			"scopes" in new_application and
-			not isinstance(new_application["scopes"], str) and
-	  		isinstance(new_application["scopes"], Iterable)
+			"scopes" in new_application
+			and not isinstance(new_application["scopes"], str)
+			and isinstance(new_application["scopes"], Iterable)
 		):
 			new_application["scopes"] = " ".join(new_application["scopes"])
 
 		serializer = self.application_serializer(data=new_application, partial=True)
 		if not serializer.is_valid():
-			raise BadRequest(data={
-				"errors": serializer.errors
-			})
+			raise BadRequest(data={"errors": serializer.errors})
 
 		### CLIENT
 		for field in CLIENT_FIELDS:
@@ -272,9 +257,7 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 			new_client["redirect_uris"] = new_application["redirect_uris"].split(",")
 		c_serializer = self.client_serializer(data=new_client, partial=True)
 		if not c_serializer.is_valid():
-			raise BadRequest(data={
-				"errors": c_serializer.errors
-			})
+			raise BadRequest(data={"errors": c_serializer.errors})
 
 		with transaction.atomic():
 			# APPLICATION

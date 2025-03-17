@@ -6,7 +6,7 @@
 # Module: core.views.logs
 # Contains the ViewSet for Log related operations
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 ### Exceptions
 from core.exceptions.logs import LogTruncateMinmaxNotFound
 
@@ -32,8 +32,8 @@ import logging
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
-class LogsViewSet(BaseViewSet, LogMixin):
 
+class LogsViewSet(BaseViewSet, LogMixin):
 	@auth_required
 	@admin_required
 	def list(self, request, pk=None):
@@ -41,43 +41,35 @@ class LogsViewSet(BaseViewSet, LogMixin):
 		data = {}
 		code = 0
 		headers = [
-			'id',
-			'date',
-			'user',
-			'actionType',
-			'objectClass',
-			'affectedObject',
-			'extraMessage'
+			"id",
+			"date",
+			"user",
+			"actionType",
+			"objectClass",
+			"affectedObject",
+			"extraMessage",
 		]
 		response_list = []
-		date_format = {
-			'iso': '%Y-%m-%dT%H:%M:%S.%f%z',
-			'readable': "%Y-%m-%d %H:%M:%S"
-		}
+		date_format = {"iso": "%Y-%m-%dT%H:%M:%S.%f%z", "readable": "%Y-%m-%d %H:%M:%S"}
 		querySet = Log.objects.all()
 		for log in querySet:
 			logDict = {}
 			for h in headers:
-				if h == 'user':
+				if h == "user":
 					logDict[h] = getattr(log, h).username
-				elif h == 'date':
-					logDict[h] = getattr(log, 'logged_at').strftime(date_format['iso'])
-				elif h == 'affectedObject':
+				elif h == "date":
+					logDict[h] = getattr(log, "logged_at").strftime(date_format["iso"])
+				elif h == "affectedObject":
 					logDict[h] = getattr(log, h)
 				else:
 					logDict[h] = getattr(log, h)
 			response_list.append(logDict)
 
 		return Response(
-			 data={
-				'code': code,
-				'code_msg': 'ok',
-				'logs': response_list,
-				'headers': headers
-			 }
+			data={"code": code, "code_msg": "ok", "logs": response_list, "headers": headers}
 		)
 
-	@action(detail=False, methods=['get'])
+	@action(detail=False, methods=["get"])
 	@auth_required
 	@admin_required
 	def reset(self, request, pk=None):
@@ -87,15 +79,9 @@ class LogsViewSet(BaseViewSet, LogMixin):
 
 		Log.objects.all().delete()
 
-		return Response(
-			 data={
-				'code': code,
-				'code_msg': 'ok',
-				'data': data
-			 }
-		)
+		return Response(data={"code": code, "code_msg": "ok", "data": data})
 
-	@action(detail=False, methods=['post'])
+	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	def truncate(self, request, pk=None):
@@ -103,18 +89,12 @@ class LogsViewSet(BaseViewSet, LogMixin):
 		data = request.data
 		code = 0
 
-		thresholdMin = data['min']
-		thresholdMax = data['max']
+		thresholdMin = data["min"]
+		thresholdMax = data["max"]
 
 		if thresholdMin is None or thresholdMax is None:
 			raise LogTruncateMinmaxNotFound
 
-		Log.objects.filter(id__gte=thresholdMin,id__lte=thresholdMax).delete()
+		Log.objects.filter(id__gte=thresholdMin, id__lte=thresholdMax).delete()
 
-		return Response(
-			 data={
-				'code': code,
-				'code_msg': 'ok',
-				'data': data
-			 }
-		)
+		return Response(data={"code": code, "code_msg": "ok", "data": data})

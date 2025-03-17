@@ -6,7 +6,7 @@
 # Module: core.views.mixins.application
 # Contains the mixin for SSO Application related operations
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 ### Models
 from core.models.user import User, USER_TYPE_LOCAL
 from core.models.application import Application, ApplicationSecurityGroup
@@ -25,8 +25,10 @@ from django.db.models.query import QuerySet
 from django.db import transaction
 from typing import Iterable
 import logging
+
 ################################################################################
 logger = logging.getLogger()
+
 
 class ApplicationSecurityGroupViewMixin(viewsets.ViewSetMixin):
 	serializer_class = ApplicationSecurityGroupSerializer
@@ -35,26 +37,17 @@ class ApplicationSecurityGroupViewMixin(viewsets.ViewSetMixin):
 	queryset = ApplicationSecurityGroup.objects.all()
 
 	def list_application_groups(self):
-		FIELDS = (
-			"id",
-			"enabled",
-			"application"
-		)
+		FIELDS = ("id", "enabled", "application")
 		data = []
 		for asg in list(self.queryset.all()):
-			data.append({
-				"id": asg.id,
-				"enabled": asg.enabled,
-				"application": asg.application.name
-			})
+			data.append({"id": asg.id, "enabled": asg.enabled, "application": asg.application.name})
 		return {
 			"application_groups": data,
 			"headers": [
 				"application",
 				"enabled",
-			]
+			],
 		}
-
 
 	def fetch_application(self, id: int) -> dict:
 		pass

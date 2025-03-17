@@ -1,6 +1,8 @@
 from rest_framework import viewsets
 from core.config.runtime import RuntimeSettings
 from core.models.log import Log
+
+
 class LogMixin(viewsets.ViewSetMixin):
 	def log(self, **kwargs):
 		# This function rotates logs based on a Maximum Limit Setting

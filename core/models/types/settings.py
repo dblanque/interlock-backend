@@ -17,10 +17,7 @@ TYPE_AES_ENCRYPT_FIELDS = (
 )
 TYPE_AES_ENCRYPT = "crypt"
 
-DEFAULT_FIELD_ARGS = {
-	"null": True,
-	"blank": True
-}
+DEFAULT_FIELD_ARGS = {"null": True, "blank": True}
 MAP_FIELD_VALUE_MODEL = {
 	TYPE_FLOAT: models.FloatField,
 	TYPE_STRING: models.CharField,
@@ -34,11 +31,13 @@ MAP_FIELD_VALUE_MODEL = {
 for key in TYPE_AES_ENCRYPT_FIELDS:
 	MAP_FIELD_VALUE_MODEL[key] = models.BinaryField
 
+
 def make_field_db_name(v: str) -> str | tuple:
 	if isinstance(v, str):
-		return "_"+v
+		return "_" + v
 	elif isinstance(v, tuple):
-		return "_"+v[0]
+		return "_" + v[0]
+
 
 BASE_SETTING_FIELDS = {
 	TYPE_AES_ENCRYPT: TYPE_AES_ENCRYPT_FIELDS,

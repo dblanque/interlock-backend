@@ -5,17 +5,15 @@
 ################################################################################
 # Module: interlock_backend.ldap.settings
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 # Core Imports
 from core.models.user import User
-from core.models.ldap_settings import (
-	LDAP_SETTING_MAP,
-	LDAPSetting
-)
+from core.models.ldap_settings import LDAP_SETTING_MAP, LDAPSetting
 from enum import Enum
+
 # Interlock Imports
 from django.core.exceptions import ObjectDoesNotExist
-from interlock_backend.ldap import defaults
+from core.ldap import defaults
 from interlock_backend.encrypt import aes_decrypt
 
 # Full imports
@@ -24,52 +22,53 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def get_setting_list(preset_id: int=1):
+
+def get_setting_list(preset_id: int = 1):
 	"""Returns a Dictionary with the current setting values in the system
 
-		Arguments:
+	Arguments:
 
-		settingList (STRING) - Default is CMAPS
+	settingList (STRING) - Default is CMAPS
 
-		listFormat (STRING) - frontend or backend
+	listFormat (STRING) - frontend or backend
 
-		BACKEND - Returns Object
-		FRONTEND - Returns Dict with values and types
+	BACKEND - Returns Object
+	FRONTEND - Returns Dict with values and types
 	"""
 
 	data = {}
-	userQuerySet = User.objects.filter(username = 'admin')
+	userQuerySet = User.objects.filter(username="admin")
 	if userQuerySet.count() > 0:
-		defaultAdmin = userQuerySet.get(username = 'admin')
-		data['DEFAULT_ADMIN'] = not defaultAdmin.deleted
+		defaultAdmin = userQuerySet.get(username="admin")
+		data["DEFAULT_ADMIN"] = not defaultAdmin.deleted
 	else:
-		data['DEFAULT_ADMIN'] = False
+		data["DEFAULT_ADMIN"] = False
 
 	# Loop for each constant in the ldap_constants.py file
 	relevant_parameters = LDAPSetting.objects.filter(preset_id=preset_id)
 	for setting_key, setting_type in LDAP_SETTING_MAP.items():
 		setting_instance = None
 		data[setting_key] = {}
-		data[setting_key]['type'] = setting_type.lower()
+		data[setting_key]["type"] = setting_type.lower()
 		try:
 			setting_instance = LDAPSetting.objects.get(preset_id=preset_id, name=setting_key)
 		except ObjectDoesNotExist:
-			data[setting_key]['value'] = getattr(defaults, setting_key)
-			if (setting_key == "LDAP_AUTH_TLS_VERSION" and 
-				isinstance(data[setting_key]['value'], Enum)):
-				data[setting_key]['value'] = data[setting_key]['value'].name
+			data[setting_key]["value"] = getattr(defaults, setting_key)
+			if setting_key == "LDAP_AUTH_TLS_VERSION" and isinstance(
+				data[setting_key]["value"], Enum
+			):
+				data[setting_key]["value"] = data[setting_key]["value"].name
 			continue
 
 		if setting_key == "LDAP_AUTH_CONNECTION_PASSWORD":
 			try:
-				data[setting_key]['value'] = aes_decrypt(*setting_instance.value)
+				data[setting_key]["value"] = aes_decrypt(*setting_instance.value)
 			except:
-				data[setting_key]['value'] = ""
+				data[setting_key]["value"] = ""
 				print("Could not decrypt password")
 				pass
 		else:
-			data[setting_key]['value'] = setting_instance.value
-			if (setting_key == "LDAP_AUTH_TLS_VERSION" and 
-				isinstance(setting_instance.value, Enum)):
-				data[setting_key]['value'] = setting_instance.value.name
+			data[setting_key]["value"] = setting_instance.value
+			if setting_key == "LDAP_AUTH_TLS_VERSION" and isinstance(setting_instance.value, Enum):
+				data[setting_key]["value"] = setting_instance.value.name
 	return data

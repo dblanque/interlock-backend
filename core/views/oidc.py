@@ -63,18 +63,19 @@ from interlock_backend.settings import (
 	OIDC_INTERLOCK_LOGIN_COOKIE,
 	OIDC_SKIP_CONSENT_EXPIRE,
 )
+
 ################################################################################
 logger = logging.getLogger(__name__)
 
+
 def login_redirect_bad_request(error_detail: str | int = 400) -> HttpResponse:
-	response = redirect(
-		f"{LOGIN_URL}/?{QK_ERROR}=true&{QK_ERROR_DETAIL}={error_detail}")
+	response = redirect(f"{LOGIN_URL}/?{QK_ERROR}=true&{QK_ERROR_DETAIL}={error_detail}")
 	response.delete_cookie(OIDC_INTERLOCK_LOGIN_COOKIE)
 	return response
 
-class CustomOidcViewSet(BaseViewSet):
 
-	@action(detail=False, methods=['post'])
+class CustomOidcViewSet(BaseViewSet):
+	@action(detail=False, methods=["post"])
 	@auth_required
 	@request_intercept
 	def consent(self, request, pk=None):
@@ -89,8 +90,7 @@ class CustomOidcViewSet(BaseViewSet):
 		except:
 			return login_redirect_bad_request("oidc_no_client")
 		try:
-			user_consent = UserConsent.objects.get(
-				client_id=client.id, user_id=user.id)
+			user_consent = UserConsent.objects.get(client_id=client.id, user_id=user.id)
 		except ObjectDoesNotExist:
 			pass
 		except Exception as e:
@@ -104,20 +104,16 @@ class CustomOidcViewSet(BaseViewSet):
 					date_given=timezone.make_aware(datetime.now()),
 					expires_at=timezone.make_aware(datetime.now()) + OIDC_SKIP_CONSENT_EXPIRE,
 					client_id=client.id,
-					scope=client.scope # why the f do they save it like this?
+					scope=client.scope,  # why the f do they save it like this?
 				)
 				user_consent.save()
 			else:
-				user_consent.expires_at = timezone.make_aware(datetime.now()) + OIDC_SKIP_CONSENT_EXPIRE
+				user_consent.expires_at = (
+					timezone.make_aware(datetime.now()) + OIDC_SKIP_CONSENT_EXPIRE
+				)
 				user_consent.date_given = timezone.make_aware(datetime.now())
 				user_consent.save()
-		return Response(
-			data={
-				"code": 0,
-				"code_msg": "ok",
-				"data": {"redirect_uri": data["next"]}
-			}
-		)
+		return Response(data={"code": 0, "code_msg": "ok", "data": {"redirect_uri": data["next"]}})
 
 
 class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
@@ -143,25 +139,23 @@ class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
 			login_redirect_bad_request()
 
 		OIDC_COOKIE = request.COOKIES.get(
-			OIDC_INTERLOCK_LOGIN_COOKIE, OIDC_COOKIE_VUE_REDIRECT).lower()
+			OIDC_INTERLOCK_LOGIN_COOKIE, OIDC_COOKIE_VUE_REDIRECT
+		).lower()
 		if OIDC_COOKIE not in OIDC_COOKIE_CHOICES:
 			login_redirect_bad_request()
 
 		# FETCH DATA
 		self.get_relevant_objects(request=request)
-		require_consent = (
-			prompt == OIDC_PROMPT_CONSENT or
-			self.user_requires_consent(user=user)
-		)
+		require_consent = prompt == OIDC_PROMPT_CONSENT or self.user_requires_consent(user=user)
 
 		# TODO - Check if user is in application's groups (LDAP, Local, etc.)
 		# Redirect to login
 		if (
-			user.is_anonymous or
-			not user.is_authenticated or
-			not user.is_enabled or
-			prompt == OIDC_PROMPT_LOGIN or
-			require_consent
+			user.is_anonymous
+			or not user.is_authenticated
+			or not user.is_enabled
+			or prompt == OIDC_PROMPT_LOGIN
+			or require_consent
 		):
 			if OIDC_COOKIE == OIDC_COOKIE_VUE_ABORT:
 				redirect_response = redirect(f"{LOGIN_URL}/?{QK_ERROR}=true")
@@ -190,6 +184,7 @@ class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
 					login_url = f"{LOGIN_URL}/?{QK_ERROR}=true&{QK_ERROR_DETAIL}={_error}"
 					return self.abort_redirect(redirect(login_url))
 			return redirect_response
+
 
 # class CustomTokenView(TokenView):
 # 	def post(self, request, *args, **kwargs):

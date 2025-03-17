@@ -6,7 +6,7 @@
 # Module: core.views.mixins.token
 # Contains the Mixin for Token related operations
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 ### Models
 from core.config.runtime import RuntimeSettings
 from core.models.user import User
@@ -27,35 +27,42 @@ logger = logging.getLogger(__name__)
 from django_otp import devices_for_user
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
+
 def get_user_totp_device(user: User, confirmed=None) -> TOTPDevice:
 	devices = devices_for_user(user, confirmed=confirmed)
 	for device in devices:
 		if isinstance(device, TOTPDevice):
 			return device
 
+
 def parse_config_url(url: str) -> str:
 	# Example URL
 	# otpauth://totp/dblanque?secret=AKDOIJ2509FGJ934GJ3SRG30JRG3G00G&algorithm=SHA1&digits=6&period=30
 	# totp/dblanque? totp is cap group 1 | dblanque is cap group 2 | everything else cap group 3
-	if re.match(r'^.*totp/.*:.*$', url):
+	if re.match(r"^.*totp/.*:.*$", url):
 		return url
 	if INTERLOCK_DEBUG:
 		label = f"Interlock DEVELOPMENT {RuntimeSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN}"
 	else:
 		label = f"Interlock {RuntimeSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN}"
-	regex = r'^(.*totp/)(?!.*:)(.*)(\?.*)$'
-	return re.sub(regex, rf"\1{label}:\2@{RuntimeSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN}\3", url)
+	regex = r"^(.*totp/)(?!.*:)(.*)(\?.*)$"
+	return re.sub(
+		regex, rf"\1{label}:\2@{RuntimeSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN}\3", url
+	)
+
 
 def get_random_string(length: int) -> str:
-    # With combination of lower and upper case
-    result_str = ''.join(random.choice(mod_string.ascii_letters) for i in range(length))
-    return result_str
+	# With combination of lower and upper case
+	result_str = "".join(random.choice(mod_string.ascii_letters) for i in range(length))
+	return result_str
+
 
 def generate_recovery_codes(amount: int) -> list[str]:
 	codes = []
 	for i in range(amount):
 		codes.append(f"{get_random_string(4)}-{get_random_string(4)}-{get_random_string(4)}")
 	return codes
+
 
 def create_device_totp_for_user(user: User) -> str:
 	device = get_user_totp_device(user)
@@ -65,11 +72,13 @@ def create_device_totp_for_user(user: User) -> str:
 		user.save()
 	return parse_config_url(device.config_url)
 
+
 def fetch_device_totp_for_user(user: User) -> str:
 	device = get_user_totp_device(user)
 	if not device:
 		return None
 	return parse_config_url(device.config_url)
+
 
 def delete_device_totp_for_user(user: User) -> tuple[int, dict[str, int]]:
 	device = get_user_totp_device(user)
@@ -80,6 +89,7 @@ def delete_device_totp_for_user(user: User) -> tuple[int, dict[str, int]]:
 	user.save()
 	return totp_device.delete()
 
+
 def validate_user_otp(user: User, data: dict, raise_exc=True) -> bool | Exception:
 	"""
 	Returns an Exception on validation failure unless specified.
@@ -88,7 +98,7 @@ def validate_user_otp(user: User, data: dict, raise_exc=True) -> bool | Exceptio
 
 	if device is None and raise_exc is True:
 		raise exc_otp.OTPNoDeviceRegistered
-	elif device.verify_token(data['totp_code']):
+	elif device.verify_token(data["totp_code"]):
 		if not device.confirmed:
 			device.confirmed = True
 			device.save()

@@ -39,6 +39,7 @@ import logging
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
+
 class UserViewSet(BaseViewSet):
 	serializer_class = UserSerializer
 
@@ -54,21 +55,17 @@ class UserViewSet(BaseViewSet):
 		user_queryset = User.objects.all()
 		if RuntimeSettings.LDAP_LOG_READ == True:
 			# Log this action to DB
-			DBLogMixin.log(
-				user_id=request.user.id,
-				actionType="READ",
-				objectClass="USER"
-			)
+			DBLogMixin.log(user_id=request.user.id, actionType="READ", objectClass="USER")
 		return Response(
 			data={
 				"code": code,
 				"code_msg": code_msg,
 				"users": user_queryset.values(*PUBLIC_FIELDS_SHORT),
-				"headers": [field for field in PUBLIC_FIELDS_SHORT if not field in VALUE_ONLY]
+				"headers": [field for field in PUBLIC_FIELDS_SHORT if not field in VALUE_ONLY],
 			}
 		)
 
-	@action(detail=False, methods=['post'])
+	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	def insert(self, request, pk=None):
@@ -77,17 +74,13 @@ class UserViewSet(BaseViewSet):
 		data: dict = request.data
 		serializer = self.serializer_class(data=data)
 		password = None
-		FIELDS_EXCLUDE = (
-			"permission_list",
-		)
+		FIELDS_EXCLUDE = ("permission_list",)
 		for field in FIELDS_EXCLUDE:
 			if field in data:
 				del data[field]
 
 		if not serializer.is_valid():
-			raise BadRequest(data={
-				"errors": serializer.errors
-			})
+			raise BadRequest(data={"errors": serializer.errors})
 		elif not serializer.validate_password_confirm():
 			raise exc_user.UserPasswordsDontMatch
 		else:
@@ -105,7 +98,7 @@ class UserViewSet(BaseViewSet):
 				user_id=request.user.id,
 				actionType="CREATE",
 				objectClass="USER",
-				affectedObject=user_instance.username
+				affectedObject=user_instance.username,
 			)
 
 		return Response(
@@ -115,7 +108,7 @@ class UserViewSet(BaseViewSet):
 			}
 		)
 
-	@action(detail=True, methods=['get'])
+	@action(detail=True, methods=["get"])
 	@auth_required
 	@admin_required
 	def fetch(self, request, pk):
@@ -130,17 +123,11 @@ class UserViewSet(BaseViewSet):
 				user_id=request.user.id,
 				actionType="READ",
 				objectClass="USER",
-				affectedObject=user_instance.username
+				affectedObject=user_instance.username,
 			)
 		for field in PUBLIC_FIELDS:
 			data[field] = getattr(user_instance, field)
-		return Response(
-			data={
-				"code": code,
-				"code_msg": code_msg,
-				"data": data
-			}
-		)
+		return Response(data={"code": code, "code_msg": code_msg, "data": data})
 
 	@auth_required
 	@admin_required
@@ -164,9 +151,7 @@ class UserViewSet(BaseViewSet):
 		serializer = self.serializer_class(data=data, partial=True)
 
 		if not serializer.is_valid():
-			raise BadRequest(data={
-				"errors": serializer.errors
-			})
+			raise BadRequest(data={"errors": serializer.errors})
 
 		user_instance = User.objects.get(id=pk)
 		for key in data:
@@ -178,7 +163,7 @@ class UserViewSet(BaseViewSet):
 				user_id=request.user.id,
 				actionType="UPDATE",
 				objectClass="USER",
-				affectedObject=user_instance.username
+				affectedObject=user_instance.username,
 			)
 		return Response(
 			data={
@@ -187,7 +172,7 @@ class UserViewSet(BaseViewSet):
 			}
 		)
 
-	@action(detail=True,methods=['delete', 'post'])
+	@action(detail=True, methods=["delete", "post"])
 	@auth_required
 	@admin_required
 	def delete(self, request, pk):
@@ -206,7 +191,7 @@ class UserViewSet(BaseViewSet):
 				user_id=request.user.id,
 				actionType="DELETE",
 				objectClass="USER",
-				affectedObject=user_instance.username
+				affectedObject=user_instance.username,
 			)
 		return Response(
 			data={
@@ -215,7 +200,7 @@ class UserViewSet(BaseViewSet):
 			}
 		)
 
-	@action(detail=True,methods=['post'])
+	@action(detail=True, methods=["post"])
 	@auth_required
 	@admin_required
 	def change_status(self, request, pk):
@@ -224,9 +209,7 @@ class UserViewSet(BaseViewSet):
 		data: dict = request.data
 		pk = int(pk)
 		if not "enabled" in data or not isinstance(data["enabled"], bool):
-			raise BadRequest(data={
-				"errors": "Must contain field enabled (bool)"
-			})
+			raise BadRequest(data={"errors": "Must contain field enabled (bool)"})
 		user_instance = User.objects.get(id=pk)
 		user_instance.is_enabled = data.pop("enabled")
 		user_instance.save()
@@ -238,7 +221,7 @@ class UserViewSet(BaseViewSet):
 				actionType="UPDATE",
 				objectClass="USER",
 				affectedObject=user_instance.username,
-				extraMessage="ENABLE" if user_instance.is_enabled is True else "DISABLE"
+				extraMessage="ENABLE" if user_instance.is_enabled is True else "DISABLE",
 			)
 		return Response(
 			data={
@@ -247,7 +230,7 @@ class UserViewSet(BaseViewSet):
 			}
 		)
 
-	@action(detail=True,methods=['post'])
+	@action(detail=True, methods=["post"])
 	@auth_required
 	@admin_required
 	def change_password(self, request, pk):
@@ -258,9 +241,7 @@ class UserViewSet(BaseViewSet):
 		pk = int(pk)
 		for field in ("password", "passwordConfirm"):
 			if not field in data:
-				raise BadRequest(data={
-					"errors": f"Must contain field {field}."
-				})
+				raise BadRequest(data={"errors": f"Must contain field {field}."})
 		if not self.serializer_class().validate_password_confirm(data):
 			raise exc_user.UserPasswordsDontMatch
 		user_instance = User.objects.get(id=pk)
@@ -274,18 +255,14 @@ class UserViewSet(BaseViewSet):
 				actionType="UPDATE",
 				objectClass="USER",
 				affectedObject=user_instance.username,
-				extraMessage="CHANGED_PASSWORD"
+				extraMessage="CHANGED_PASSWORD",
 			)
 
 		return Response(
-			data={
-				"code": code,
-				"code_msg": code_msg,
-				"data": { "username": user_instance.username }
-			}
+			data={"code": code, "code_msg": code_msg, "data": {"username": user_instance.username}}
 		)
 
-	@action(detail=False,methods=['post', 'put'])
+	@action(detail=False, methods=["post", "put"])
 	@auth_required
 	def self_change_password(self, request):
 		user: User = request.user
@@ -294,9 +271,7 @@ class UserViewSet(BaseViewSet):
 		data: dict = request.data
 		for field in ("password", "passwordConfirm"):
 			if not field in data:
-				raise BadRequest(data={
-					"errors": f"Must contain field {field}."
-				})
+				raise BadRequest(data={"errors": f"Must contain field {field}."})
 		if not self.serializer_class().validate_password_confirm(data):
 			raise exc_user.UserPasswordsDontMatch
 		user.set_password(data["password"])
@@ -309,18 +284,14 @@ class UserViewSet(BaseViewSet):
 				actionType="UPDATE",
 				objectClass="USER",
 				affectedObject=user.username,
-				extraMessage="CHANGED_PASSWORD"
+				extraMessage="CHANGED_PASSWORD",
 			)
 
 		return Response(
-			data={
-				"code": code,
-				"code_msg": code_msg,
-				"data": { "username": user.username }
-			}
+			data={"code": code, "code_msg": code_msg, "data": {"username": user.username}}
 		)
 
-	@action(detail=False,methods=['post', 'put'])
+	@action(detail=False, methods=["post", "put"])
 	@auth_required
 	def self_update(self, request, pk=None):
 		user: User = request.user
@@ -338,9 +309,7 @@ class UserViewSet(BaseViewSet):
 		serializer = self.serializer_class(data=data, partial=True)
 
 		if not serializer.is_valid():
-			raise BadRequest(data={
-				"errors": serializer.errors
-			})
+			raise BadRequest(data={"errors": serializer.errors})
 
 		for key in data:
 			setattr(user, key, data[key])
@@ -353,7 +322,7 @@ class UserViewSet(BaseViewSet):
 				actionType="UPDATE",
 				objectClass="USER",
 				affectedObject=user.username,
-				extraMessage="END_USER_UPDATED"
+				extraMessage="END_USER_UPDATED",
 			)
 
 		return Response(

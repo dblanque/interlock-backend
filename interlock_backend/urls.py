@@ -1,4 +1,4 @@
-""" MEP MIDDLE-WARE API URL Configuration
+"""MEP MIDDLE-WARE API URL Configuration
 
 The `urlpatterns` list routes URLs to views. For more information please see:
 	https://docs.djangoproject.com/en/3.0/topics/http/urls/
@@ -14,7 +14,7 @@ Including another URLconf
 	2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
-#  Django 
+#  Django
 from django.contrib import admin
 from django.urls import path, include
 
@@ -63,42 +63,31 @@ named_view_sets = {
 }
 
 if DEBUG == True:
-	named_view_sets.update({
-		r"gpo": GPOViewSet,
-		r"test": TestViewSet,
-		r"debug": DebugViewSet
-	})
+	named_view_sets.update({r"gpo": GPOViewSet, r"test": TestViewSet, r"debug": DebugViewSet})
 
-[router.register(f"api/{name}", view_set, basename=name) for name, view_set in named_view_sets.items()]
+[
+	router.register(f"api/{name}", view_set, basename=name)
+	for name, view_set in named_view_sets.items()
+]
 
 # URL PATTERNS SET HERE
 urlpatterns = [
 	# {BASE_URL} /
 	path("", include(router.urls)),
-	path("api/settings/fetch/<int:pk>/",
-		SettingsViewSet.as_view({
-		"get":"fetch"
-		}),
-		name="settings-fetch"
+	path(
+		"api/settings/fetch/<int:pk>/",
+		SettingsViewSet.as_view({"get": "fetch"}),
+		name="settings-fetch",
 	),
-
 	# {BASE_URL} /admin
 	path("admin/", admin.site.urls),
-
 	# {BASE_URL} api/token/*
-	path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-	path('api/token/refresh/', AuthViewSet.as_view({'post':'refresh'}), name='token_refresh'),
-	path('api/token/revoke/', AuthViewSet.as_view({'post':'logout'}), name='token_revoke'),
-
-    # Default OIDC endpoint overrides
-    re_path(r"openid/authorize/?$", OidcAuthorizeView.as_view(), name="authorize"),
-	re_path(r"openid/consent/?$",
-		CustomOidcViewSet.as_view({
-		"post":"consent"
-		}),
-		name="consent"
-	),
-
+	path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+	path("api/token/refresh/", AuthViewSet.as_view({"post": "refresh"}), name="token_refresh"),
+	path("api/token/revoke/", AuthViewSet.as_view({"post": "logout"}), name="token_revoke"),
+	# Default OIDC endpoint overrides
+	re_path(r"openid/authorize/?$", OidcAuthorizeView.as_view(), name="authorize"),
+	re_path(r"openid/consent/?$", CustomOidcViewSet.as_view({"post": "consent"}), name="consent"),
 	# {BASE_URL} / openid
-	path('openid/', include('oidc_provider.urls', namespace='oidc_provider')),
+	path("openid/", include("oidc_provider.urls", namespace="oidc_provider")),
 ]

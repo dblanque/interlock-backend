@@ -7,7 +7,7 @@
 # Contributors: Martín Vilche
 # Contains the ViewSet for Token Authentication related operations
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 ### Django
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import AnonymousUser
@@ -35,22 +35,23 @@ EMPTY_TOKEN = ""
 DATE_FMT_COOKIE = "%a, %d %b %Y %H:%M:%S GMT"
 BAD_LOGIN_LIMIT = 5
 
+
 def RemoveTokenResponse(request, remove_refresh=False, bad_login_count=False) -> Response:
 	response = Response(status=status.HTTP_401_UNAUTHORIZED)
 	response.set_cookie(
-		key=JWT_SETTINGS['AUTH_COOKIE_NAME'],
-		value='expired',
+		key=JWT_SETTINGS["AUTH_COOKIE_NAME"],
+		value="expired",
 		httponly=True,
-		samesite=JWT_SETTINGS['AUTH_COOKIE_SAME_SITE'],
-		domain=JWT_SETTINGS['AUTH_COOKIE_DOMAIN']
+		samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
+		domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
 	)
 	if remove_refresh:
 		response.set_cookie(
-			key=JWT_SETTINGS['REFRESH_COOKIE_NAME'],
-			value='expired',
+			key=JWT_SETTINGS["REFRESH_COOKIE_NAME"],
+			value="expired",
 			httponly=True,
-			samesite=JWT_SETTINGS['AUTH_COOKIE_SAME_SITE'],
-			domain=JWT_SETTINGS['AUTH_COOKIE_DOMAIN']
+			samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
+			domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
 		)
 
 	if bad_login_count:
@@ -59,29 +60,30 @@ def RemoveTokenResponse(request, remove_refresh=False, bad_login_count=False) ->
 		except:
 			bad_login_count = 0
 			pass
-		if bad_login_count < BAD_LOGIN_LIMIT: bad_login_count = int(bad_login_count)+1
-		else: bad_login_count = 0
+		if bad_login_count < BAD_LOGIN_LIMIT:
+			bad_login_count = int(bad_login_count) + 1
+		else:
+			bad_login_count = 0
 		try:
 			response.set_cookie(
 				key=BAD_LOGIN_COOKIE_NAME,
 				value=bad_login_count,
 				httponly=False,
-				samesite=JWT_SETTINGS['AUTH_COOKIE_SAME_SITE'],
-				domain=JWT_SETTINGS['AUTH_COOKIE_DOMAIN']
+				samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
+				domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
 			)
 		except:
 			pass
-	response.data = { "remaining_login_count": BAD_LOGIN_LIMIT-bad_login_count }
+	response.data = {"remaining_login_count": BAD_LOGIN_LIMIT - bad_login_count}
 	return response
 
-class CookieJWTAuthentication(JWTAuthentication):  
+
+class CookieJWTAuthentication(JWTAuthentication):
 	def authenticate(self, request):
 		try:
-			AUTH_TOKEN = request.COOKIES.get(JWT_SETTINGS['AUTH_COOKIE_NAME'])
-			if (not AUTH_TOKEN
-				or AUTH_TOKEN == 'expired'
-				or len(AUTH_TOKEN) == 0
-			): return AnonymousUser(), EMPTY_TOKEN
+			AUTH_TOKEN = request.COOKIES.get(JWT_SETTINGS["AUTH_COOKIE_NAME"])
+			if not AUTH_TOKEN or AUTH_TOKEN == "expired" or len(AUTH_TOKEN) == 0:
+				return AnonymousUser(), EMPTY_TOKEN
 			validated_token = AccessToken(AUTH_TOKEN)
 		except TokenError as e:
 			raise AccessTokenInvalid()
@@ -91,11 +93,9 @@ class CookieJWTAuthentication(JWTAuthentication):
 		return self.get_user(validated_token), validated_token
 
 	def refresh(self, request):
-		REFRESH_TOKEN = request.COOKIES.get(JWT_SETTINGS['REFRESH_COOKIE_NAME'])
-		if (not REFRESH_TOKEN
-			or REFRESH_TOKEN == 'expired'
-			or len(REFRESH_TOKEN) == 0
-		): raise RefreshTokenExpired()
+		REFRESH_TOKEN = request.COOKIES.get(JWT_SETTINGS["REFRESH_COOKIE_NAME"])
+		if not REFRESH_TOKEN or REFRESH_TOKEN == "expired" or len(REFRESH_TOKEN) == 0:
+			raise RefreshTokenExpired()
 
 		try:
 			refreshed_tokens = RefreshToken(REFRESH_TOKEN)

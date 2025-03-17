@@ -6,7 +6,7 @@
 # Module: core.views.mixins.settings_mixin
 # Contains the Mixin for Setting related operations
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 ### Django
 from django.db import transaction
 
@@ -20,20 +20,13 @@ from core.models.user import User
 from core.models.ldap_settings import LDAPPreset
 
 #### Exceptions
-from core.exceptions import (
-	ldap as exc_ldap,
-	users as exc_user
-)
+from core.exceptions import ldap as exc_ldap, users as exc_user
 
 #### Mixins
 from core.views.mixins.utils import net_port_test
 
 ### Others
-from interlock_backend.ldap.connector import (
-	test_ldap_connection,
-	LDAPConnector,
-	LDAPConnectionOptions
-)
+from core.ldap.connector import test_ldap_connection, LDAPConnector, LDAPConnectionOptions
 from interlock_backend.settings import BASE_DIR
 from core.config.runtime import RuntimeSettings
 from django.core.exceptions import ObjectDoesNotExist
@@ -42,14 +35,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class SettingsViewMixin(viewsets.ViewSetMixin):
 
+class SettingsViewMixin(viewsets.ViewSetMixin):
 	def create_default_preset(self):
-		LDAPPreset.objects.create(name='default_preset', label="Default Preset", active=True)
+		LDAPPreset.objects.create(name="default_preset", label="Default Preset", active=True)
 
 	def remove_default_preset(self):
 		try:
-			LDAPPreset.objects.filter(name='default').delete_permanently()
+			LDAPPreset.objects.filter(name="default").delete_permanently()
 		except:
 			pass
 
@@ -58,18 +51,18 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 		if ldap_enabled.value is False:
 			return
 		ldc_opts = LDAPConnectionOptions()
-		ldc_opts['force_admin'] = True
+		ldc_opts["force_admin"] = True
 		# Open LDAP Connection
 		with LDAPConnector(**ldc_opts) as ldc:
 			for local_user in User.objects.all():
 				try:
-					user: User = ldc.get_user(**{
-						"username": local_user.username
-					})
+					user: User = ldc.get_user(**{"username": local_user.username})
 					if user:
 						user.save()
 				except Exception as e:
-					logger.warning(f"Could not re-sync user {local_user.username} on settings change.")
+					logger.warning(
+						f"Could not re-sync user {local_user.username} on settings change."
+					)
 					logger.exception(e)
 					pass
 		return None
@@ -89,27 +82,27 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 		self.resync_users()
 
 	def reload_django(self):
-		reloader = BASE_DIR+'/interlock_backend/reload.py'
+		reloader = BASE_DIR + "/interlock_backend/reload.py"
 		# Write the file
-		with open(reloader, 'w') as file:
+		with open(reloader, "w") as file:
 			file.write("STUB_RELOAD = False")
 
 	def get_admin_status(self):
-		userQuerySet = User.objects.filter(username = 'admin')
+		userQuerySet = User.objects.filter(username="admin")
 		if userQuerySet.count() > 0:
-			status = userQuerySet.get(username = 'admin').deleted
+			status = userQuerySet.get(username="admin").deleted
 			return not status
 		else:
 			return False
 
 	@transaction.atomic
 	def set_admin_status(self, status, password=None):
-		userQuerySet = User.objects.get_full_queryset().filter(username = 'admin')
+		userQuerySet = User.objects.get_full_queryset().filter(username="admin")
 		if status == True and userQuerySet.count() == 0:
 			defaultAdmin: User = User.objects.create_default_superuser()
 
 		if userQuerySet.count() > 0:
-			defaultAdmin = userQuerySet.get(username = 'admin')
+			defaultAdmin = userQuerySet.get(username="admin")
 			defaultAdmin.deleted = not status
 			defaultAdmin.save()
 
@@ -118,14 +111,14 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 			defaultAdmin.save()
 
 	def test_ldap_settings(self, data):
-		ldapAuthConnectionUser = data['LDAP_AUTH_CONNECTION_USER_DN']['value']
-		ldapAuthConnectionPassword = data['LDAP_AUTH_CONNECTION_PASSWORD']['value']
-		ldapAuthURL = data['LDAP_AUTH_URL']['value']
-		ldapAuthConnectTimeout = int(data['LDAP_AUTH_CONNECT_TIMEOUT']['value'])
-		ldapAuthReceiveTimeout = int(data['LDAP_AUTH_RECEIVE_TIMEOUT']['value'])
-		ldapAuthUseSSL = data['LDAP_AUTH_USE_SSL']['value']
-		ldapAuthUseTLS = data['LDAP_AUTH_USE_TLS']['value']
-		ldapAuthTLSVersion = data['LDAP_AUTH_TLS_VERSION']['value']
+		ldapAuthConnectionUser = data["LDAP_AUTH_CONNECTION_USER_DN"]["value"]
+		ldapAuthConnectionPassword = data["LDAP_AUTH_CONNECTION_PASSWORD"]["value"]
+		ldapAuthURL = data["LDAP_AUTH_URL"]["value"]
+		ldapAuthConnectTimeout = int(data["LDAP_AUTH_CONNECT_TIMEOUT"]["value"])
+		ldapAuthReceiveTimeout = int(data["LDAP_AUTH_RECEIVE_TIMEOUT"]["value"])
+		ldapAuthUseSSL = data["LDAP_AUTH_USE_SSL"]["value"]
+		ldapAuthUseTLS = data["LDAP_AUTH_USE_TLS"]["value"]
+		ldapAuthTLSVersion = data["LDAP_AUTH_TLS_VERSION"]["value"]
 
 		logger.info("LDAP Socket Testing")
 		for server in ldapAuthURL:
@@ -148,32 +141,32 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 		user_dn = ldapAuthConnectionUser
 
 		logger.info("Test Connection Endpoint Parameters: ")
-		logger.info(f'User: {username}')
-		logger.info(f'User DN: {user_dn}')
-		logger.info(f'LDAP Connection User: {ldapAuthConnectionUser}')
+		logger.info(f"User: {username}")
+		logger.info(f"User DN: {user_dn}")
+		logger.info(f"LDAP Connection User: {ldapAuthConnectionUser}")
 		# logger.info(ldapAuthConnectionPassword)
-		logger.info(f'LDAP URL: {ldapAuthURL}')
-		logger.info(f'LDAP Connect Timeout: {ldapAuthConnectTimeout}')
-		logger.info(f'LDAP Receive Timeout: {ldapAuthReceiveTimeout}')
-		logger.info(f'Force SSL: {ldapAuthUseSSL}')
-		logger.info(f'Use TLS: {ldapAuthUseTLS}')
-		logger.info(f'TLS Version: {ldapAuthTLSVersion}')
+		logger.info(f"LDAP URL: {ldapAuthURL}")
+		logger.info(f"LDAP Connect Timeout: {ldapAuthConnectTimeout}")
+		logger.info(f"LDAP Receive Timeout: {ldapAuthReceiveTimeout}")
+		logger.info(f"Force SSL: {ldapAuthUseSSL}")
+		logger.info(f"Use TLS: {ldapAuthUseTLS}")
+		logger.info(f"TLS Version: {ldapAuthTLSVersion}")
 
 		# Open LDAP Connection
 		try:
 			c = test_ldap_connection(
-				username = username,
-				user_dn = user_dn,
-				password = ldapAuthConnectionPassword,
-				ldapAuthConnectionUser = ldapAuthConnectionUser,
-				ldapAuthConnectionPassword = ldapAuthConnectionPassword,
-				ldapAuthURL = ldapAuthURL,
-				ldapAuthConnectTimeout = ldapAuthConnectTimeout,
-				ldapAuthReceiveTimeout = ldapAuthReceiveTimeout,
-				ldapAuthUseSSL = ldapAuthUseSSL,
-				ldapAuthUseTLS = ldapAuthUseTLS,
-				ldapAuthTLSVersion = ldapAuthTLSVersion,
-				)
+				username=username,
+				user_dn=user_dn,
+				password=ldapAuthConnectionPassword,
+				ldapAuthConnectionUser=ldapAuthConnectionUser,
+				ldapAuthConnectionPassword=ldapAuthConnectionPassword,
+				ldapAuthURL=ldapAuthURL,
+				ldapAuthConnectTimeout=ldapAuthConnectTimeout,
+				ldapAuthReceiveTimeout=ldapAuthReceiveTimeout,
+				ldapAuthUseSSL=ldapAuthUseSSL,
+				ldapAuthUseTLS=ldapAuthUseTLS,
+				ldapAuthTLSVersion=ldapAuthTLSVersion,
+			)
 		except Exception as e:
 			try:
 				c.unbind()
@@ -185,12 +178,12 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 		result = c.result
 		c.unbind()
 
-		result['user_used'] = username
-		result['user_dn_used'] = user_dn
-		result['server_pool'] = ldapAuthURL
-		result['ssl'] = ldapAuthUseSSL
-		result['tls'] = ldapAuthUseTLS
-		result['tls_version'] = ldapAuthTLSVersion
+		result["user_used"] = username
+		result["user_dn_used"] = user_dn
+		result["server_pool"] = ldapAuthURL
+		result["ssl"] = ldapAuthUseSSL
+		result["tls"] = ldapAuthUseTLS
+		result["tls_version"] = ldapAuthTLSVersion
 		logger.info("Test Connection Endpoint Result: ")
 		logger.info(result)
 		return result

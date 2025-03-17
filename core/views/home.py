@@ -7,7 +7,7 @@ from rest_framework.response import Response
 
 ### Models
 from core.models.user import User, USER_TYPE_LDAP, USER_TYPE_LOCAL
-from interlock_backend.ldap.connector import LDAPConnector
+from core.ldap.connector import LDAPConnector
 from ldap3 import Server, ServerPool
 from core.models.interlock_settings import InterlockSetting, INTERLOCK_SETTING_ENABLE_LDAP
 from core.config.runtime import RuntimeSettings
@@ -23,8 +23,8 @@ from django.core.exceptions import ObjectDoesNotExist
 
 logger = logging.getLogger(__name__)
 
-class HomeViewSet(BaseViewSet):
 
+class HomeViewSet(BaseViewSet):
 	@auth_required
 	@admin_required
 	def list(self, request):
@@ -50,9 +50,7 @@ class HomeViewSet(BaseViewSet):
 				with LDAPConnector(user=user) as ldc:
 					CONNECTION_OPEN = True if ldc.connection.bound else False
 					ldap_server_pool: ServerPool = ldc.connection.server_pool
-					ldap_server: Server = ldap_server_pool.get_current_server(
-						ldc.connection
-					)
+					ldap_server: Server = ldap_server_pool.get_current_server(ldc.connection)
 					ldap_server = ldap_server.host
 				CONNECTION_CLOSED = True if not ldc.connection.bound else False
 				if CONNECTION_OPEN and CONNECTION_CLOSED:
@@ -60,18 +58,18 @@ class HomeViewSet(BaseViewSet):
 			except:
 				pass
 		return Response(
-			 data={
-				'code': code,
-				'code_msg': 'ok',
-				'data' : {
-					'local_user_count': local_user_count,
-					'oidc_well_known': oidc_well_known_info,
-					'ldap_user_count': ldap_user_count,
-					'ldap_enabled': ldap_enabled,
-					'ldap_tls': RuntimeSettings.LDAP_AUTH_USE_TLS,
-					'ldap_ssl': RuntimeSettings.LDAP_AUTH_USE_SSL,
-					'ldap_ok': ldap_ok,
-					'ldap_active_server': ldap_server,
-				}
-			 }
+			data={
+				"code": code,
+				"code_msg": "ok",
+				"data": {
+					"local_user_count": local_user_count,
+					"oidc_well_known": oidc_well_known_info,
+					"ldap_user_count": ldap_user_count,
+					"ldap_enabled": ldap_enabled,
+					"ldap_tls": RuntimeSettings.LDAP_AUTH_USE_TLS,
+					"ldap_ssl": RuntimeSettings.LDAP_AUTH_USE_SSL,
+					"ldap_ok": ldap_ok,
+					"ldap_active_server": ldap_server,
+				},
+			}
 		)

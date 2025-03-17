@@ -7,7 +7,7 @@
 # Contributors: Martín Vilche
 # Contains the ViewSet for Token Authentication related operations
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 ### Interlock
 from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS, BAD_LOGIN_COOKIE_NAME
 
@@ -29,13 +29,16 @@ import logging, jwt
 ################################################################################
 
 logger = logging.getLogger(__name__)
+
+
 class TokenObtainPairView(jwt_views.TokenViewBase):
 	"""
 	Takes a set of user credentials and returns an access and refresh JSON web
 	token pair to prove the authentication of those credentials.
 	"""
+
 	serializer_class = TokenObtainPairSerializer
-	token_exc = [ TokenError, AuthenticationFailed ]
+	token_exc = [TokenError, AuthenticationFailed]
 
 	def post(self, request: Request, *args, **kwargs):
 		try:
@@ -48,20 +51,20 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 
 		validated_data = serializer.validated_data
 		tokens = {}
-		for k in ['access', 'refresh']:
+		for k in ["access", "refresh"]:
 			tokens[k] = validated_data.pop(k)
 
 		# Send expiry date to backend on data as well.
 		decoded_access = jwt.decode(
-			tokens['access'],
+			tokens["access"],
 			key=JWT_SETTINGS["SIGNING_KEY"],
-			algorithms=JWT_SETTINGS['ALGORITHM'],
+			algorithms=JWT_SETTINGS["ALGORITHM"],
 			leeway=JWT_SETTINGS["LEEWAY"],
 		)
 		decoded_refresh = jwt.decode(
-			tokens['refresh'],
+			tokens["refresh"],
 			key=JWT_SETTINGS["SIGNING_KEY"],
-			algorithms=JWT_SETTINGS['ALGORITHM'],
+			algorithms=JWT_SETTINGS["ALGORITHM"],
 			leeway=JWT_SETTINGS["LEEWAY"],
 		)
 		access_expire_epoch_seconds = decoded_access["exp"]
@@ -71,29 +74,29 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 
 		response = Response(serializer.validated_data, status=status.HTTP_200_OK)
 		response.set_cookie(
-			key=JWT_SETTINGS['AUTH_COOKIE_NAME'],
-			value=tokens['access'],
+			key=JWT_SETTINGS["AUTH_COOKIE_NAME"],
+			value=tokens["access"],
 			httponly=True,
-			samesite=JWT_SETTINGS['AUTH_COOKIE_SAME_SITE'],
-			secure=JWT_SETTINGS['AUTH_COOKIE_SECURE'],
+			samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
+			secure=JWT_SETTINGS["AUTH_COOKIE_SECURE"],
 			expires=datetime.fromtimestamp(access_expire_epoch_seconds).strftime(DATE_FMT_COOKIE),
-			domain=JWT_SETTINGS['AUTH_COOKIE_DOMAIN']
+			domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
 		)
 		response.set_cookie(
-			key=JWT_SETTINGS['REFRESH_COOKIE_NAME'],
-			value=tokens['refresh'],
+			key=JWT_SETTINGS["REFRESH_COOKIE_NAME"],
+			value=tokens["refresh"],
 			httponly=True,
-			samesite=JWT_SETTINGS['AUTH_COOKIE_SAME_SITE'],
-			secure=JWT_SETTINGS['AUTH_COOKIE_SECURE'],
+			samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
+			secure=JWT_SETTINGS["AUTH_COOKIE_SECURE"],
 			expires=datetime.fromtimestamp(refresh_expire_epoch_seconds).strftime(DATE_FMT_COOKIE),
-			domain=JWT_SETTINGS['AUTH_COOKIE_DOMAIN']
+			domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
 		)
 		response.set_cookie(
 			key=BAD_LOGIN_COOKIE_NAME,
 			value=0,
 			httponly=True,
-			samesite=JWT_SETTINGS['AUTH_COOKIE_SAME_SITE'],
-			secure=JWT_SETTINGS['AUTH_COOKIE_SECURE'],
-			domain=JWT_SETTINGS['AUTH_COOKIE_DOMAIN']
+			samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
+			secure=JWT_SETTINGS["AUTH_COOKIE_SECURE"],
+			domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
 		)
 		return response

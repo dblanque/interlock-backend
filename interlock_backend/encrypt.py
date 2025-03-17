@@ -5,7 +5,7 @@
 ################################################################################
 # Module: interlock_backend.ldap.accountTypes
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 import os
 import logging
 from Crypto.PublicKey import RSA
@@ -13,7 +13,7 @@ from Crypto.Cipher import PKCS1_OAEP, AES
 from core.models.interlock_settings import (
 	InterlockSetting,
 	INTERLOCK_SETTING_AES_KEY,
-	INTERLOCK_SETTING_MAP
+	INTERLOCK_SETTING_MAP,
 )
 from django.db import transaction
 from Crypto.Random import get_random_bytes
@@ -24,7 +24,7 @@ from interlock_backend.settings import (
 	BASE_DIR,
 	SECRET_KEY,
 	AES_RSA_PERF_LOGGING,
-	PERF_LOGGING_ROUND
+	PERF_LOGGING_ROUND,
 )
 ################################################################################
 
@@ -36,6 +36,7 @@ KEY_FILE_EXPORT = os.path.join(KEY_PATH, f"rsa_{RSA_KEY_BITS}.pem")
 # KNOWLEDGE SOURCE: geeksforgeeks.org | Thank you guys!
 key = FERNET_KEY
 
+
 def fernet_encrypt(data: str, return_bytes=False, bytes_encoding="utf-8") -> str | bytes:
 	"""
 	:rtype: str | bytes
@@ -45,8 +46,9 @@ def fernet_encrypt(data: str, return_bytes=False, bytes_encoding="utf-8") -> str
 	encMessage = fernet.encrypt(data.encode(encoding=bytes_encoding))
 	if return_bytes:
 		return encMessage
-	encMessage = str(encMessage).replace("b'","", 1).rstrip("'\"")
+	encMessage = str(encMessage).replace("b'", "", 1).rstrip("'\"")
 	return encMessage
+
 
 def fernet_decrypt(data, bytes_encoding="utf-8") -> str:
 	if isinstance(data, str):
@@ -56,16 +58,18 @@ def fernet_decrypt(data, bytes_encoding="utf-8") -> str:
 	decMessage = fernet.decrypt(data).decode()
 	return decMessage
 
+
 @transaction.atomic
 def create_rsa_key() -> RSA.RsaKey:
 	key = RSA.generate(RSA_KEY_BITS)
 	key_db_obj = InterlockSetting.objects.create(
 		name=INTERLOCK_SETTING_AES_KEY,
 		type=INTERLOCK_SETTING_MAP[INTERLOCK_SETTING_AES_KEY],
-		value=key.export_key(passphrase=SECRET_KEY)
+		value=key.export_key(passphrase=SECRET_KEY),
 	)
 	key_db_obj.save()
 	return key
+
 
 def import_rsa_key() -> RSA.RsaKey | None:
 	try:
@@ -79,6 +83,7 @@ def import_rsa_key() -> RSA.RsaKey | None:
 		return RSA.import_key(key.value, passphrase=SECRET_KEY)
 	return key
 
+
 def import_or_create_rsa_key() -> RSA.RsaKey:
 	rsa_key = import_rsa_key()
 	if not rsa_key:
@@ -86,7 +91,8 @@ def import_or_create_rsa_key() -> RSA.RsaKey:
 		rsa_key = create_rsa_key()
 	return rsa_key
 
-class InterlockRsaKey():
+
+class InterlockRsaKey:
 	_instance = None
 
 	# Singleton def
@@ -101,9 +107,10 @@ class InterlockRsaKey():
 	def resync(self):
 		import_or_create_rsa_key()
 
+
 def aes_encrypt(data: str, fernet_pass=False) -> tuple[bytes]:
 	"""
-	:param fernet_pass: Whether to do an additional Fernet-based Encryption, 
+	:param fernet_pass: Whether to do an additional Fernet-based Encryption,
 	defaults to False
 	:rtype: tuple[bytes]
 	:return: encrypted_aes_key, ciphertext, nonce, tag
@@ -113,7 +120,7 @@ def aes_encrypt(data: str, fernet_pass=False) -> tuple[bytes]:
 
 	# Generate a new AES key and nonce for THIS encryption
 	aes_key = get_random_bytes(32)  # AES-256
-	nonce = get_random_bytes(16)    # Unique per encryption
+	nonce = get_random_bytes(16)  # Unique per encryption
 
 	# Encrypt the data with AES-GCM
 	cipher_aes = AES.new(aes_key, AES.MODE_GCM, nonce=nonce)
@@ -133,15 +140,12 @@ def aes_encrypt(data: str, fernet_pass=False) -> tuple[bytes]:
 	# Return ALL components needed for decryption
 	return encrypted_aes_key, ciphertext, nonce, tag
 
+
 def aes_decrypt(
-		encrypted_aes_key: bytes,
-		ciphertext: bytes,
-		nonce: bytes,
-		tag: bytes,
-		fernet_pass=False
-	) -> str:
+	encrypted_aes_key: bytes, ciphertext: bytes, nonce: bytes, tag: bytes, fernet_pass=False
+) -> str:
 	"""
-	:param fernet_pass: Whether to do an additional Fernet-based Encryption, 
+	:param fernet_pass: Whether to do an additional Fernet-based Encryption,
 	defaults to False
 	:rtype: str
 	:return: Decrypted data

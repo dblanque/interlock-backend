@@ -5,24 +5,26 @@ from core.models.types.settings import (
 	BASE_SETTING_FIELDS,
 	MAP_FIELD_VALUE_MODEL,
 	make_field_db_name,
-	DEFAULT_FIELD_ARGS
+	DEFAULT_FIELD_ARGS,
 )
 from typing import Iterable
 from copy import deepcopy
 from django.core.exceptions import ValidationError
 
+
 def add_fields_from_dict(
-		fields_dict,
-		validators_dict=None,
-		args_pass=None,
-		kwargs_pass=None,
-	):
+	fields_dict,
+	validators_dict=None,
+	args_pass=None,
+	kwargs_pass=None,
+):
 	if not validators_dict or not isinstance(kwargs_pass, dict):
 		validators_dict = {}
 	if not kwargs_pass or not isinstance(kwargs_pass, dict):
 		kwargs_pass = {}
 	if not args_pass or not isinstance(args_pass, dict):
 		args_pass = {}
+
 	def decorator(cls):
 		field_args = []
 		for setting_key, setting_fields in fields_dict.items():
@@ -55,45 +57,36 @@ def add_fields_from_dict(
 
 					cls.add_to_class(field_name, field_class(*field_args, **field_kwargs))
 		return cls
+
 	return decorator
+
 
 class BaseSettingsPreset(BaseModel):
 	id = models.BigAutoField(verbose_name=_("id"), primary_key=True)
 	name = models.CharField(
-		verbose_name=_("name"),
-		unique=True,
-		null=False,
-		blank=False,
-		max_length=128
+		verbose_name=_("name"), unique=True, null=False, blank=False, max_length=128
 	)
-	label = models.CharField(
-		verbose_name=_("label"),
-		blank=False,
-		null=False,
-		max_length=64
-	)
+	label = models.CharField(verbose_name=_("label"), blank=False, null=False, max_length=64)
 	active = models.BooleanField(verbose_name=_("active"), unique=True, null=True)
 
 	class Meta:
 		abstract = True
 
+
 BASE_SETTING_TYPE_CHOICES = [(k, k.upper()) for k in BASE_SETTING_FIELDS.keys()]
+
+
 class BaseSetting(BaseModel):
 	setting_fields = BASE_SETTING_FIELDS
 	id = models.BigAutoField(verbose_name=_("id"), primary_key=True)
 	type = models.CharField(
-		verbose_name=_("type"),
-		choices=BASE_SETTING_TYPE_CHOICES,
-		null=False,
-		blank=False
+		verbose_name=_("type"), choices=BASE_SETTING_TYPE_CHOICES, null=False, blank=False
 	)
 
 	def _validate_value(self, choice_type, choice_field):
 		_v = getattr(self, make_field_db_name(choice_field))
 		if _v is None:
-			raise ValidationError(
-				f"{choice_type} cannot be null when type is {self.type}."
-			)
+			raise ValidationError(f"{choice_type} cannot be null when type is {self.type}.")
 
 	def clean(self):
 		for choice_type, choice_fields in self.setting_fields.items():

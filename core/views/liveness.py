@@ -6,7 +6,7 @@
 # Module: core.views.liveness
 # Description: Contains the ViewSet for Liveness related operations
 #
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 from core.views.base import BaseViewSet
 
 ### Models
@@ -23,15 +23,10 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class LivenessViewSet(BaseViewSet):
 
-	@action(detail=False, methods=['get'])
+class LivenessViewSet(BaseViewSet):
+	@action(detail=False, methods=["get"])
 	@auth_required
 	def check(self, request, pk=None):
 		code = 0
-		return Response(
-			 data={
-				'code': code,
-				'code_msg': 'ok'
-			 }
-		)
+		return Response(data={"code": code, "code_msg": "ok"})

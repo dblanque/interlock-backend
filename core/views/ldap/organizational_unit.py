@@ -7,13 +7,13 @@
 # Contains the ViewSet for Directory Tree and Organizational Unit
 # related operations
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 ### Exceptions
 from core.exceptions import (
 	base as exc_base,
 	ldap as exc_ldap,
 	dirtree as exc_dirtree,
-	organizational_unit as exc_ou
+	organizational_unit as exc_ou,
 )
 
 ### ViewSets
@@ -33,8 +33,8 @@ from rest_framework.decorators import action
 
 ### Others
 from time import perf_counter
-from interlock_backend.ldap.connector import LDAPConnector
-from interlock_backend.ldap.adsi import search_filter_from_dict
+from core.ldap.connector import LDAPConnector
+from core.ldap.adsi import search_filter_from_dict
 from core.decorators.login import auth_required, admin_required
 from core.config.runtime import RuntimeSettings
 from interlock_backend.settings import PERF_LOGGING_ROUND, DIRTREE_PERF_LOGGING
@@ -44,15 +44,15 @@ import logging
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
-class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 
+class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 	@auth_required
 	@admin_required
 	def list(self, request):
 		user: User = request.user
 		data = request.data
 		code = 0
-		code_msg = 'ok'
+		code_msg = "ok"
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
@@ -60,16 +60,15 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 
 			attributesToSearch = [
 				# User Attrs
-				'objectClass',
-				'objectCategory',
+				"objectClass",
+				"objectCategory",
 				RuntimeSettings.LDAP_OU_FIELD,
-
 				# Group Attrs
-				'cn',
-				'member',
-				'distinguishedName',
-				'groupType',
-				'objectSid'
+				"cn",
+				"member",
+				"distinguishedName",
+				"groupType",
+				"objectSid",
 			]
 
 			# Read-only end-point, build filters from default dictionary
@@ -88,7 +87,10 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				dirList = LDAPTree(**ldap_tree_options)
 				if DIRTREE_PERF_LOGGING:
 					debugTimerEnd = perf_counter()
-					logger.info("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, PERF_LOGGING_ROUND)))
+					logger.info(
+						"Dirtree Fetch Time Elapsed: "
+						+ str(round(debugTimerEnd - debugTimerStart, PERF_LOGGING_ROUND))
+					)
 			except Exception as e:
 				print(e)
 				raise exc_ldap.CouldNotFetchDirtree
@@ -99,25 +101,25 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 					user_id=request.user.id,
 					actionType="READ",
 					objectClass="OU",
-					affectedObject="ALL - List Query"
+					affectedObject="ALL - List Query",
 				)
 
 		return Response(
-				data={
-				'code': code,
-				'code_msg': code_msg,
-				'ldapObjectList': dirList.children,
-				}
+			data={
+				"code": code,
+				"code_msg": code_msg,
+				"ldapObjectList": dirList.children,
+			}
 		)
 
-	@action(detail=False,methods=['post'])
+	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	def dirtree(self, request):
 		user: User = request.user
 		data = request.data
 		code = 0
-		code_msg = 'ok'
+		code_msg = "ok"
 
 		try:
 			ldap_filter_object = self.processFilter(data)
@@ -131,16 +133,15 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 
 			ldap_filter_attr = [
 				# User Attrs
-				'objectClass',
-				'objectCategory',
+				"objectClass",
+				"objectCategory",
 				RuntimeSettings.LDAP_OU_FIELD,
-
 				# Group Attrs
-				'cn',
-				'member',
-				'distinguishedName',
-				'groupType',
-				'objectSid'
+				"cn",
+				"member",
+				"distinguishedName",
+				"groupType",
+				"objectSid",
 			]
 			ldap_tree_options: LDAPTreeOptions = {
 				"connection": self.ldap_connection,
@@ -158,7 +159,10 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				dirList = LDAPTree(**ldap_tree_options)
 				if DIRTREE_PERF_LOGGING:
 					debugTimerEnd = perf_counter()
-					logger.info("Dirtree Fetch Time Elapsed: " + str(round(debugTimerEnd - debugTimerStart, PERF_LOGGING_ROUND)))
+					logger.info(
+						"Dirtree Fetch Time Elapsed: "
+						+ str(round(debugTimerEnd - debugTimerStart, PERF_LOGGING_ROUND))
+					)
 			except Exception as e:
 				print(e)
 				raise exc_ldap.CouldNotFetchDirtree
@@ -169,29 +173,29 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 					user_id=request.user.id,
 					actionType="READ",
 					objectClass="LDAP",
-					affectedObject="ALL - Full Dirtree Query"
+					affectedObject="ALL - Full Dirtree Query",
 				)
 
 		return Response(
-				data={
-				'code': code,
-				'code_msg': code_msg,
-				'ldapObjectList': dirList.children,
-				}
+			data={
+				"code": code,
+				"code_msg": code_msg,
+				"ldapObjectList": dirList.children,
+			}
 		)
 
-	@action(detail=False,methods=['post'])
+	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	def move(self, request):
 		user: User = request.user
 		data = request.data
 		code = 0
-		code_msg = 'ok'
+		code_msg = "ok"
 
-		ldap_object = data['ldapObject']
-		ldap_path = ldap_object['destination']
-		distinguished_name = ldap_object['distinguishedName']
+		ldap_object = data["ldapObject"]
+		ldap_path = ldap_object["destination"]
+		distinguished_name = ldap_object["distinguishedName"]
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
@@ -199,25 +203,25 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			self.move_or_rename_object(distinguished_name=distinguished_name, ldap_path=ldap_path)
 
 		return Response(
-				data={
-				'code': code,
-				'code_msg': code_msg,
+			data={
+				"code": code,
+				"code_msg": code_msg,
 				# 'user': username,
-				}
+			}
 		)
 
-	@action(detail=False,methods=['post'])
+	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	def rename(self, request):
 		user: User = request.user
 		data = request.data
 		code = 0
-		code_msg = 'ok'
+		code_msg = "ok"
 
-		ldap_object = data['ldapObject']
-		distinguished_name = ldap_object['distinguishedName']
-		new_rdn = ldap_object['newRDN']
+		ldap_object = data["ldapObject"]
+		distinguished_name = ldap_object["distinguishedName"]
+		new_rdn = ldap_object["newRDN"]
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
@@ -225,46 +229,40 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			self.move_or_rename_object(distinguished_name=distinguished_name, relative_dn=new_rdn)
 
 		return Response(
-				data={
-				'code': code,
-				'code_msg': code_msg,
+			data={
+				"code": code,
+				"code_msg": code_msg,
 				# 'user': username,
-				}
+			}
 		)
 
-	@action(detail=False,methods=['post'])
+	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	def insert(self, request):
 		user: User = request.user
 		data = request.data
 		code = 0
-		code_msg = 'ok'
+		code_msg = "ok"
 
-		ldap_object = data['ldapObject']
+		ldap_object = data["ldapObject"]
 
-		fields = [
-			'name',
-			'path',
-			'type'
-		]
+		fields = ["name", "path", "type"]
 		for f in fields:
 			if f not in ldap_object:
 				print(f + "not in LDAP Object")
 				print(data)
 				raise exc_ou.MissingField
 
-		object_name: str = ldap_object['name']
-		object_path: str = ldap_object['path']
-		object_type: str = ldap_object['type']
+		object_name: str = ldap_object["name"]
+		object_path: str = ldap_object["path"]
+		object_type: str = ldap_object["type"]
 
-		attributes = {
-			"name": object_name
-		}
+		attributes = {"name": object_name}
 
-		if not object_type or object_type.lower() == 'ou':
+		if not object_type or object_type.lower() == "ou":
 			object_dn = "OU=" + object_name + "," + object_path
-			object_main = ldap_object['ou']
+			object_main = ldap_object["ou"]
 			object_type = "organizationalUnit"
 			attributes["ou"] = object_main
 		else:
@@ -277,7 +275,7 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			try:
 				self.ldap_connection.add(object_dn, object_type, attributes=attributes)
 			except Exception as e:
-				print(f'Could not Add LDAP Object: {object_dn}')
+				print(f"Could not Add LDAP Object: {object_dn}")
 				print(ldap_object)
 				print(e)
 				data = {
@@ -295,31 +293,31 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 					user_id=request.user.id,
 					actionType="CREATE",
 					objectClass="OU",
-					affectedObject=object_name
+					affectedObject=object_name,
 				)
 
 		return Response(
-				data={
-				'code': code,
-				'code_msg': code_msg,
+			data={
+				"code": code,
+				"code_msg": code_msg,
 				# 'user': username,
-				}
+			}
 		)
 
-	@action(detail=False, methods=['post'])
+	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	def delete(self, request, pk=None):
 		user: User = request.user
 		code = 0
-		code_msg = 'ok'
+		code_msg = "ok"
 		data = request.data
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
-			object_dn = data['distinguishedName']
+			object_dn = data["distinguishedName"]
 
 			if not object_dn or object_dn == "":
 				self.ldap_connection.unbind()
@@ -329,10 +327,8 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			except Exception as e:
 				self.ldap_connection.unbind()
 				print(e)
-				print(f'Could not delete LDAP Object: {object_dn}')
-				data = {
-					"ldap_response": self.ldap_connection.result
-				}
+				print(f"Could not delete LDAP Object: {object_dn}")
+				data = {"ldap_response": self.ldap_connection.result}
 				raise exc_base.CoreException(data=data)
 
 			if RuntimeSettings.LDAP_LOG_DELETE == True:
@@ -341,13 +337,7 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 					user_id=request.user.id,
 					actionType="DELETE",
 					objectClass="LDAP",
-					affectedObject=data['name']
+					affectedObject=data["name"],
 				)
 
-		return Response(
-			 data={
-				'code': code,
-				'code_msg': code_msg,
-				'data': data
-			 }
-		)
+		return Response(data={"code": code, "code_msg": code_msg, "data": data})

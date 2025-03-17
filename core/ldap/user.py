@@ -3,13 +3,18 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: interlock_backend.ldap.groupTypes
+# Module: interlock_backend.ldap.user
 
-LDAP_GROUP_TYPES = {
-    "GROUP_DISTRIBUTION": 0,
-    "GROUP_SYSTEM": 1,
-    "GROUP_GLOBAL": 2,
-    "GROUP_DOMAIN_LOCAL": 4,
-    "GROUP_UNIVERSAL": 8,
-    "GROUP_SECURITY": 2147483648
-}
+USERNAME = "username"
+PASSWORD = "password"
+EMAIL = "mail"
+FIRST_NAME = "givenName"
+LAST_NAME = "sn"
+INITIALS = "initials"
+PHONE_NUMBER = "telephoneNumber"
+WEBPAGE = "wWWHomePage"
+STREET_ADDRESS = "streetAddress"
+POSTAL_CODE = "postalCode"
+TOWN = "l"
+STATE_PROVINCE = "st"
+COUNTRY = "co"

@@ -14,7 +14,9 @@ from core.exceptions.base import LDAPBackendDisabled
 from rest_framework import status
 from functools import wraps
 from logging import getLogger
+
 logger = getLogger()
+
 
 def request_intercept(func=None):
 	def decorator(view_func):
@@ -32,19 +34,20 @@ def request_intercept(func=None):
 			else:
 				logger.info("No data.")
 			return view_func(self, request, *args, **kwargs)
+
 		return _wrapped
+
 	if func is None:
 		return decorator
 	return decorator(func)
 
+
 def ldap_backend_intercept(func=None):
 	def decorator(view_func):
 		@wraps(view_func)
-		def _wrapped(self, request: Request, *args, **kwargs):            
+		def _wrapped(self, request: Request, *args, **kwargs):
 			try:
-				ldap_setting = InterlockSetting.objects.get(
-					name=INTERLOCK_SETTING_ENABLE_LDAP
-				)
+				ldap_setting = InterlockSetting.objects.get(name=INTERLOCK_SETTING_ENABLE_LDAP)
 				ldap_enabled = ldap_setting.value
 			except ObjectDoesNotExist:
 				# Handle missing setting (now properly initialized)
@@ -53,11 +56,14 @@ def ldap_backend_intercept(func=None):
 			if not ldap_enabled:
 				raise LDAPBackendDisabled()
 			return view_func(self, request, *args, **kwargs)
+
 		return _wrapped
+
 	# Handle both @decorator and @decorator() usage
 	if func is None:
 		return decorator
 	return decorator(func)
+
 
 def intercept():
 	def decorator(func):
@@ -66,5 +72,7 @@ def intercept():
 			logger.info(args)
 			logger.info(kwargs)
 			return func(*args, **kwargs)
+
 		return _wrapped
+
 	return decorator

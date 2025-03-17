@@ -25,7 +25,7 @@ from core.models.base import BaseModel
 from interlock_backend.settings import (
 	SECRET_KEY_FALLBACKS,
 	DEFAULT_SUPERUSER_USERNAME,
-	DEFAULT_SUPERUSER_PASSWORD
+	DEFAULT_SUPERUSER_PASSWORD,
 )
 # ---------------------------------------------------------------------------- #
 
@@ -76,7 +76,9 @@ class BaseUserManager(DjangoBaseUserManager):
 		if extra_fields.get("is_superuser") is not True:
 			raise ValueError("Superuser must have is_superuser=True.")
 
-		return self._create_user(DEFAULT_SUPERUSER_USERNAME, DEFAULT_SUPERUSER_PASSWORD, **extra_fields)
+		return self._create_user(
+			DEFAULT_SUPERUSER_USERNAME, DEFAULT_SUPERUSER_PASSWORD, **extra_fields
+		)
 
 
 class BaseUser(BaseModel, PermissionsMixin):
@@ -88,14 +90,11 @@ class BaseUser(BaseModel, PermissionsMixin):
 	username = models.CharField(_("username"), max_length=128, unique=True)
 	password = models.CharField(_("password"), max_length=128)
 	last_login = models.DateTimeField(_("last login"), blank=True, null=True)
-	email = models.EmailField(
-		_("email address"), unique=True, db_index=True, null=True)
+	email = models.EmailField(_("email address"), unique=True, db_index=True, null=True)
 	is_staff = models.BooleanField(
 		_("staff status"),
 		default=False,
-		help_text=_(
-			"Designates whether the user is staff."
-		),
+		help_text=_("Designates whether the user is staff."),
 	)
 	is_superuser = models.BooleanField(
 		_("admin status"),
@@ -175,9 +174,7 @@ class BaseUser(BaseModel, PermissionsMixin):
 		"""
 		Return an HMAC of the password field.
 		"""
-		key_salt = (
-			"django.contrib.auth.models.AbstractBaseUser.get_session_auth_hash"
-		)
+		key_salt = "django.contrib.auth.models.AbstractBaseUser.get_session_auth_hash"
 		return salted_hmac(key_salt, self.password).hexdigest()
 
 	def get_session_auth_fallback_hash(self):
@@ -212,27 +209,18 @@ USER_TYPE_CHOICES = (
 
 class User(BaseUser):
 	class Meta:
-		verbose_name = _('User')
-		verbose_name_plural = _('Users')
-	first_name = models.CharField(
-		_("First name"), max_length=255, null=True, blank=True)
-	last_name = models.CharField(
-		_("Last name"), max_length=255, null=True, blank=True)
+		verbose_name = _("User")
+		verbose_name_plural = _("Users")
+
+	first_name = models.CharField(_("First name"), max_length=255, null=True, blank=True)
+	last_name = models.CharField(_("Last name"), max_length=255, null=True, blank=True)
 	email = models.EmailField(_("Email"), null=True, blank=True)
-	dn = models.CharField(_("distinguishedName"),
-						  max_length=128, null=True, blank=True)
+	dn = models.CharField(_("distinguishedName"), max_length=128, null=True, blank=True)
 	user_type = models.CharField(
-		_("User Type"),
-		choices=USER_TYPE_CHOICES,
-		null=False,
-		blank=False,
-		default=USER_TYPE_LOCAL
+		_("User Type"), choices=USER_TYPE_CHOICES, null=False, blank=False, default=USER_TYPE_LOCAL
 	)
 	recovery_codes = ArrayField(
-		models.CharField(max_length=32),
-		verbose_name="Recovery Codes",
-		null=True,
-		blank=True
+		models.CharField(max_length=32), verbose_name="Recovery Codes", null=True, blank=True
 	)
 	is_enabled = models.BooleanField(null=False, default=True)
 
@@ -240,8 +228,7 @@ class User(BaseUser):
 	ldap_password_aes = models.BinaryField(null=True, blank=True, default=None)
 	# Cipher Text
 	ldap_password_ct = models.BinaryField(null=True, blank=True, default=None)
-	ldap_password_nonce = models.BinaryField(
-		null=True, blank=True, default=None)
+	ldap_password_nonce = models.BinaryField(null=True, blank=True, default=None)
 	ldap_password_tag = models.BinaryField(null=True, blank=True, default=None)
 
 	@property
@@ -255,15 +242,15 @@ class User(BaseUser):
 					ldap_password_aes=None,
 					ldap_password_ct=None,
 					ldap_password_nonce=None,
-					ldap_password_tag=None
-				) |
-				models.Q(
+					ldap_password_tag=None,
+				)
+				| models.Q(
 					ldap_password_aes__isnull=False,
 					ldap_password_ct__isnull=False,
 					ldap_password_nonce__isnull=False,
-					ldap_password_tag__isnull=False
+					ldap_password_tag__isnull=False,
 				),
-				name='user_password_crypt_data_all_or_none'
+				name="user_password_crypt_data_all_or_none",
 			)
 		]
 

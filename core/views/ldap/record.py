@@ -6,7 +6,7 @@
 # Module: core.views.record
 # Contains the ViewSet for DNS Record related operations
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 ### Models
 from core.models.types.ldap_dns_record import *
 from core.models.user import User
@@ -31,39 +31,33 @@ from rest_framework.decorators import action
 ### Others
 from core.utils.dnstool import record_to_dict
 from core.decorators.login import auth_required, admin_required
-from interlock_backend.ldap.connector import LDAPConnector
+from core.ldap.connector import LDAPConnector
 import logging
 ################################################################################
 
 logger = logging.getLogger(__name__)
 
+
 class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 	record_serializer = DNSRecordSerializer
-	@action(detail=False,methods=['post'])
+
+	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	def insert(self, request):
 		user: User = request.user
 		data = {}
 		code = 0
-		required_values = [
-			'name',
-			'type',
-			'zone',
-			'ttl'
-		]
+		required_values = ["name", "type", "zone", "ttl"]
 
-		if 'record' not in request.data:
+		if "record" not in request.data:
 			raise exc_dns.DNSRecordNotInRequest
 
-		record_data = request.data['record']
+		record_data = request.data["record"]
 		self.record_serializer(data=record_data).is_valid(raise_exception=True)
 
 		# ! Test record validation with the Mix-in
-		self.validate_record_data(
-			record_data=record_data,
-			required_values=required_values
-		)
+		self.validate_record_data(record_data=record_data, required_values=required_values)
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
@@ -71,11 +65,11 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 			record_result_data = self.create_record(record_data=record_data)
 
 		return Response(
-			 data={
-				'code': code,
-				'code_msg': 'ok',
-				'data' : record_to_dict(record_result_data, ts=False)
-			 }
+			data={
+				"code": code,
+				"code_msg": "ok",
+				"data": record_to_dict(record_result_data, ts=False),
+			}
 		)
 
 	@auth_required
@@ -84,88 +78,67 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 		user: User = request.user
 		data = {}
 		code = 0
-		required_values = [
-			'name',
-			'serial',
-			'type',
-			'zone',
-			'ttl',
-			'index',
-			'record_bytes'
-		]
+		required_values = ["name", "serial", "type", "zone", "ttl", "index", "record_bytes"]
 
-		if 'record' not in request.data or 'oldRecord' not in request.data:
+		if "record" not in request.data or "oldRecord" not in request.data:
 			raise exc_dns.DNSRecordNotInRequest
 
-		old_record_data = request.data['oldRecord']
-		record_data = request.data['record']
+		old_record_data = request.data["oldRecord"]
+		record_data = request.data["record"]
 
 		# Basic Serializer Validation
 		self.record_serializer(data=old_record_data).is_valid(raise_exception=True)
 		self.record_serializer(data=record_data).is_valid(raise_exception=True)
 
 		# Regex Validate Old Record Data
-		self.validate_record_data(
-			record_data=old_record_data, 
-			required_values=required_values
-		)
+		self.validate_record_data(record_data=old_record_data, required_values=required_values)
 		# Regex Validate New Record Data
-		self.validate_record_data(
-			record_data=record_data, 
-			required_values=required_values
-		)
+		self.validate_record_data(record_data=record_data, required_values=required_values)
 
 		# TODO - Maybe implement crosschecking with server-side Old Record Bytes Data?
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			record_result_data = self.update_record(record_data=record_data, old_record_data=old_record_data)
+			record_result_data = self.update_record(
+				record_data=record_data, old_record_data=old_record_data
+			)
 
 		return Response(
-			 data={
-				'code': code,
-				'code_msg': 'ok',
-				'data' : record_to_dict(record_result_data, ts=False)
-			 }
+			data={
+				"code": code,
+				"code_msg": "ok",
+				"data": record_to_dict(record_result_data, ts=False),
+			}
 		)
 
-	@action(detail=False, methods=['post'])
+	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	def delete(self, request):
 		user: User = request.user
 		data = {}
 		code = 0
-		required_values = [
-			'name',
-			'type',
-			'zone',
-			'ttl',
-			'index',
-			'record_bytes'
-		]
+		required_values = ["name", "type", "zone", "ttl", "index", "record_bytes"]
 
-		key = 'record'
-		if 'records' in request.data:
+		key = "record"
+		if "records" in request.data:
 			key = f"{key}s"
-		elif 'record' not in request.data:
+		elif "record" not in request.data:
 			raise exc_dns.DNSRecordNotInRequest
 
 		record_data = request.data[key]
-		if key == 'record':
+		if key == "record":
 			if not isinstance(request.data[key], dict):
-				data = {
-					'data': request.data[key]
-				}
+				data = {"data": request.data[key]}
 				raise exc_dns.DNSRecordDataMalformed(data=data)
 			self.record_serializer(data=record_data).is_valid(raise_exception=True)
-			self.validate_record_data(record_data=record_data, required_values=required_values.copy())
-		elif key == 'records':
+			self.validate_record_data(
+				record_data=record_data, required_values=required_values.copy()
+			)
+		elif key == "records":
 			if not isinstance(request.data[key], list):
-				data = {
-					'data': request.data[key]
-				}
+				data = {"data": request.data[key]}
 				raise exc_dns.DNSRecordDataMalformed
 			for r in record_data:
 				self.record_serializer(data=r).is_valid(raise_exception=True)
@@ -183,10 +156,4 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 					logger.debug(r)
 					result.append(self.delete_record(r, user))
 
-		return Response(
-			 data={
-				'code': code,
-				'code_msg': 'ok',
-				'data' : result
-			 }
-		)
+		return Response(data={"code": code, "code_msg": "ok", "data": result})

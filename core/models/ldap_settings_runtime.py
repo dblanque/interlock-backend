@@ -5,40 +5,38 @@
 ################################################################################
 # Module: core.models.ldap_settings_db
 # Description:	Contains required functions to import LDAP Connection constants
-#				from file defaults and database entries.
+# from file defaults and database entries.
 #
 # Contributors:
 # - Dylan Blanque
 # - Brian Blanque
-#---------------------------------- IMPORTS -----------------------------------#
-from interlock_backend.ldap import defaults
+# ---------------------------------- IMPORTS -----------------------------------#
+from core.ldap import defaults
 from .ldap_settings import (
 	LDAP_SETTING_MAP,
 	LDAPSetting,
 	LDAPPreset,
 	TYPE_AES_ENCRYPT,
 	LDAP_SETTING_TABLE,
-	LDAP_PRESET_TABLE
+	LDAP_PRESET_TABLE,
 )
 from interlock_backend.encrypt import aes_decrypt
 from core.utils.db import db_table_exists
 import sys
 import logging
-from uuid import (
-	uuid1,
-	getnode as uuid_getnode
-)
+from uuid import uuid1, getnode as uuid_getnode
 from random import getrandbits
 ################################################################################
 
 logger = logging.getLogger(__name__)
 this_module = sys.modules[__name__]
 
+
 # ! You also have to add the settings to the following files:
 # core.models.ldap_settings
 # core.models.ldap_settings_db		<------------ You're Here
 # interlock_backend.ldap.defaults
-class RunningSettingsClass():
+class RunningSettingsClass:
 	_instance = None
 
 	# Singleton def
@@ -99,7 +97,7 @@ class RunningSettingsClass():
 		self.LDAP_LOG_MAX = None
 
 		# Set defaults / constants
-		for k,v in defaults.__dict__.items():
+		for k, v in defaults.__dict__.items():
 			setattr(self, k, v)
 		self.resync()
 
@@ -112,8 +110,10 @@ class RunningSettingsClass():
 			_current_settings: dict = get_settings(self.uuid)
 			for k, v in _current_settings.items():
 				setattr(self, k, v)
-		except: return False
+		except:
+			return False
 		return True
+
 
 def get_settings(uuid) -> dict:
 	logger.info(f"Re-synchronizing settings for {this_module} (Configuration Instance {uuid})")
@@ -128,10 +128,7 @@ def get_settings(uuid) -> dict:
 		setting_instance = None
 		if db_table_exists(LDAP_SETTING_TABLE):
 			# Setting
-			setting_instance = LDAPSetting.objects.filter(
-				name=setting_key,
-				preset_id=active_preset
-			)
+			setting_instance = LDAPSetting.objects.filter(name=setting_key, preset_id=active_preset)
 			if setting_instance.exists():
 				setting_instance = setting_instance[0]
 		# Default

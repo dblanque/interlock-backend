@@ -96,6 +96,7 @@ dependencies = [
     "urllib3 (==2.0.4)",
     "werkzeug (==2.3.6)",
     "gunicorn (>=23.0.0,<24.0.0)",
+    "ruff (>=0.11.0,<0.12.0)",
 ]
 
 
@@ -110,3 +111,18 @@ pytest-cov = "^6.0.0"
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "interlock_backend.settings"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "tab"
+docstring-code-format = true
+
+[tool.coverage.run]
+omit = [
+    "manage.py",
+    "interlock_backend/asgi.py",
+    "interlock_backend/wsgi.py",
+]
