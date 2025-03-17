@@ -139,7 +139,6 @@ INSTALLED_APPS = [
     "django_otp.plugins.otp_hotp",
     "django_otp.plugins.otp_static",
     "rest_framework",
-    "drf_yasg",
     "corsheaders",
     "core",
     "oidc_provider",
@@ -383,9 +382,6 @@ try: TIME_ZONE = '/'.join(os.readlink('/etc/timezone').split('/')[-2:])
 except: TIME_ZONE = 'UTC'
 
 USE_I18N = True
-
-USE_L10N = True
-
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)

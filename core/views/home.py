@@ -10,7 +10,7 @@ from core.models.user import User, USER_TYPE_LDAP, USER_TYPE_LOCAL
 from interlock_backend.ldap.connector import LDAPConnector
 from ldap3 import Server, ServerPool
 from core.models.interlock_settings import InterlockSetting, INTERLOCK_SETTING_ENABLE_LDAP
-from core.models.ldap_settings_runtime import RuntimeSettings
+from core.config.runtime import RuntimeSettings
 
 ### Auth
 from core.decorators.login import auth_required, admin_required

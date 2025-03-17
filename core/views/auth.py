@@ -19,7 +19,7 @@ from .base import BaseViewSet
 from rest_framework.response import Response
 
 ### Interlock
-from core.models.ldap_settings_runtime import RuntimeSettings
+from core.config.runtime import RuntimeSettings
 from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS, BAD_LOGIN_COOKIE_NAME
 
 ### Others

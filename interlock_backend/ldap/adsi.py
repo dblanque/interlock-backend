@@ -11,7 +11,7 @@
 ###############################################################################
 
 #---------------------------------- IMPORTS -----------------------------------#
-from core.models.ldap_settings_runtime import RuntimeSettings
+from core.config.runtime import RuntimeSettings
 from typing import Union, Literal
 import logging
 
@@ -135,7 +135,9 @@ LDAP_PERMS = {
 LDAP_PERM_BIN_BASE = "0"*32
 LDAP_FILTER_OR = "|"
 LDAP_FILTER_AND = "&"
-LDAP_FILTER_OPERATORS = Literal["|","&"]
+
+LDAP_FILTER_OPERATORS_TYPE = list[Literal["|","&"]]
+LDAP_FILTER_OPERATORS: LDAP_FILTER_OPERATORS_TYPE = ["|","&"]
 LDAP_BUILTIN_OBJECTS = [
     "Domain Controllers",
     "Computers",
@@ -150,7 +152,7 @@ LDAP_BUILTIN_OBJECTS = [
 def search_filter_add(
         filter_string: str,
         filter_to_add: str,
-        operator: LDAP_FILTER_OPERATORS=LDAP_FILTER_AND,
+        operator: LDAP_FILTER_OPERATORS_TYPE=LDAP_FILTER_AND,
         negate=False
     ):
     """ Adds search filter to LDAP Filter string
@@ -159,18 +161,20 @@ def search_filter_add(
     originalFilter: The filter you wish to modify, if empty the function will create a filter
     filterToAdd: The filter string to add
     operator (default is &): The operator (and|or), supports string or literal operator value
+    Example: (&(objectClass=person)(sAMAccountName=testuser))
 
     Returns a string.
     """
+    if filter_to_add == "":
+        raise ValueError("filter_to_add is required.")
+
     if operator == 'or':
         operator = LDAP_FILTER_OR
     if operator == 'and':
         operator = LDAP_FILTER_AND
 
-    # if operator == LDAP_FILTER_OR and filter_string.startswith('(!('):
-    #     logger.warning(filter_to_add)
-    #     logger.warning(f'Changed operator to {LDAP_FILTER_AND} since you are comparing to a negation with an or')
-    #     operator = LDAP_FILTER_AND
+    if not operator in LDAP_FILTER_OPERATORS:
+        raise ValueError(f"Invalid Filter Operator {operator}")
 
     if negate == True:
         prefix = "(!("
@@ -179,17 +183,20 @@ def search_filter_add(
         prefix = "("
         suffix = ")"
 
-    if operator != LDAP_FILTER_AND and operator != LDAP_FILTER_OR and filter_string != "":
-        raise Exception(f"Invalid Filter Operator {operator}")
     if not filter_string or filter_string == "":
-        newFilter = prefix + filter_to_add + suffix
-        return newFilter
-    newFilter = "(" + operator + filter_string + prefix + filter_to_add + suffix + ")"
-    return newFilter
+        new_filter = f"{prefix}{filter_to_add}{suffix}"
+        return new_filter
+
+    filter_string_encapsulated = filter_string.startswith("(") and filter_string.endswith(")")
+    if not filter_string_encapsulated:
+        filter_string = f"({filter_string})"
+
+    new_filter = f"({operator}{filter_string}{prefix}{filter_to_add}{suffix})"
+    return new_filter
 
 def search_filter_from_dict(
         filter_dict: dict,
-        operator: LDAP_FILTER_OPERATORS=LDAP_FILTER_OR,
+        operator: LDAP_FILTER_OPERATORS_TYPE=LDAP_FILTER_OR,
         reverse_key=False
     ):
     """

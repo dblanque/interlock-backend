@@ -33,7 +33,7 @@ from interlock_backend.settings import (
 	DEFAULT_SUPERUSER_USERNAME,
 	DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS
 )
-from core.models.ldap_settings_runtime import RuntimeSettings
+from core.config.runtime import RuntimeSettings
 from uuid import (
 	uuid1,
 	getnode as uuid_getnode

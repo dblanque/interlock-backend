@@ -17,4 +17,3 @@ class CoreConfig(AppConfig):
         create_default_oidc_rsa_key()
 
         print("Core startup complete.")
-        pass

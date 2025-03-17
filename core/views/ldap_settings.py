@@ -48,7 +48,7 @@ from rest_framework.decorators import action
 from interlock_backend.ldap import defaults
 from interlock_backend.encrypt import aes_encrypt
 from core.decorators.login import auth_required, admin_required
-from core.models.ldap_settings_runtime import RuntimeSettings
+from core.config.runtime import RuntimeSettings
 from interlock_backend.ldap.ldap_settings import get_setting_list
 from django.db import transaction
 import logging, ssl

@@ -7,6 +7,9 @@
 # Description:	Contains required functions to import LDAP Connection constants
 #				from file defaults and database entries.
 #
+# Contributors:
+# - Dylan Blanque
+# - Brian Blanque
 #---------------------------------- IMPORTS -----------------------------------#
 from interlock_backend.ldap import defaults
 from .ldap_settings import (
@@ -36,6 +39,14 @@ this_module = sys.modules[__name__]
 # core.models.ldap_settings_db		<------------ You're Here
 # interlock_backend.ldap.defaults
 class RunningSettingsClass():
+	_instance = None
+
+	# Singleton def
+	def __new__(cls, *args, **kwargs):
+		if cls._instance is None:
+			cls._instance = super().__new__(cls, *args, **kwargs)
+		return cls._instance
+
 	def __newUuid__(self):
 		self.uuid = uuid1(node=uuid_getnode(), clock_seq=getrandbits(14))
 
@@ -133,5 +144,3 @@ def get_settings(uuid) -> dict:
 			setting_value = getattr(setting_instance, "value", value_default)
 		r[setting_key] = setting_value
 	return r
-
-RuntimeSettings = RunningSettingsClass()

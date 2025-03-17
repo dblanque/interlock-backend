@@ -20,7 +20,7 @@ from interlock_backend.ldap.adsi import (
     LDAP_FILTER_AND,
     LDAP_FILTER_OR,
 )
-from core.models.ldap_settings_runtime import RuntimeSettings
+from core.config.runtime import RuntimeSettings
 
 ### Models
 from core.views.mixins.logs import LogMixin

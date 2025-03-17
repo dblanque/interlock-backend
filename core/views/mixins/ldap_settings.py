@@ -35,7 +35,7 @@ from interlock_backend.ldap.connector import (
 	LDAPConnectionOptions
 )
 from interlock_backend.settings import BASE_DIR
-from core.models.ldap_settings_runtime import RuntimeSettings
+from core.config.runtime import RuntimeSettings
 from django.core.exceptions import ObjectDoesNotExist
 import logging
 ################################################################################

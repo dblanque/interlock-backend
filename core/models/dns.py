@@ -34,7 +34,7 @@ from ldap3 import (
 import logging
 import re
 from datetime import datetime
-from core.models.ldap_settings_runtime import RuntimeSettings
+from core.config.runtime import RuntimeSettings
 ################################################################################
 
 DATE_FMT = "%Y%m%d"

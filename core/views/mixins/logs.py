@@ -1,5 +1,5 @@
 from rest_framework import viewsets
-from core.models.ldap_settings_runtime import RuntimeSettings
+from core.config.runtime import RuntimeSettings
 from core.models.log import Log
 class LogMixin(viewsets.ViewSetMixin):
 	def log(self, **kwargs):

@@ -31,7 +31,7 @@ from core.views.mixins.logs import LogMixin
 # Others
 from django.db import transaction
 from core.decorators.login import auth_required, admin_required
-from core.models.ldap_settings_runtime import RuntimeSettings
+from core.config.runtime import RuntimeSettings
 from core.constants.user import PUBLIC_FIELDS, PUBLIC_FIELDS_SHORT
 import logging
 ################################################################################

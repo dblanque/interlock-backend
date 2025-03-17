@@ -45,7 +45,7 @@ from interlock_backend.settings import DEBUG as INTERLOCK_DEBUG
 from core.utils import dnstool
 from core.utils.dnstool import record_to_dict
 from interlock_backend.ldap.adsi import search_filter_add
-from core.models.ldap_settings_runtime import RuntimeSettings
+from core.config.runtime import RuntimeSettings
 from interlock_backend.ldap import defaults
 from interlock_backend.ldap.connector import LDAPConnector
 import logging

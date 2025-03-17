@@ -49,7 +49,7 @@ import ldap3
 ### Others
 from core.decorators.intercept import ldap_backend_intercept
 from core.constants.user import PUBLIC_FIELDS
-from core.models.ldap_settings_runtime import RuntimeSettings
+from core.config.runtime import RuntimeSettings
 import logging
 ################################################################################
 

@@ -12,7 +12,7 @@ from rest_framework import viewsets
 
 ### Interlock
 from interlock_backend.ldap.adsi import search_filter_add
-from core.models.ldap_settings_runtime import RuntimeSettings
+from core.config.runtime import RuntimeSettings
 from interlock_backend.ldap import adsi as ldap_adsi
 from interlock_backend.ldap.user_flags import LDAP_UF_NORMAL_ACCOUNT
 from interlock_backend.ldap.accountTypes import LDAP_ACCOUNT_TYPES

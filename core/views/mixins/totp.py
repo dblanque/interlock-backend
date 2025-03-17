@@ -8,7 +8,7 @@
 
 #---------------------------------- IMPORTS -----------------------------------#
 ### Models
-from core.models.ldap_settings_runtime import RuntimeSettings
+from core.config.runtime import RuntimeSettings
 from core.models.user import User
 
 ### Exceptions

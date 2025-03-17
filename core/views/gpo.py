@@ -17,7 +17,7 @@ from .base import BaseViewSet
 
 ### Interlock
 from interlock_backend.ldap.connector import LDAPConnector
-from core.models.ldap_settings_runtime import RuntimeSettings
+from core.config.runtime import RuntimeSettings
 
 ### Others
 from ldap3 import ALL_ATTRIBUTES

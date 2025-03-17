@@ -1,9 +1,8 @@
 ## Urgent Issues
-* Check CustomRouter Functionality
-* Merge LDAP and Django user viewsets, separate by mixin?
-* Create admin_required decorator
-* Change VALIDATORS and FIELD_ARGS in BaseSetting to use Field name instead of type.
-* Check refreshing on ApplicationForm / ApplicationDialog
+* Move RuntimeSettings to class instances instead of global import
+* Move interlock_rsa to class instances
+* Create admin_required decorator <d>
+* Fix refreshing on ApplicationForm / ApplicationDialog <d>
 * Change tabs to sidebar <d>
 * Create Applications model <d>
 * Re-factor enable/disable LDAP Users into single endpoint <d>
@@ -41,22 +40,36 @@
 * Add Delete TOTP for Django Users VUE Admin View <d>
 * Add bool for Interlock LDAP Backend Enabled/disabled in settings <d>
 * Add rsa encryption key re-generation in settings (must de-crypt and re-encrypt data)
-* Add home dashboard
-	* local user/group count
-	* openid well-known data
-	* ldap users count (synced only)
-	* ldap backend status
-	* ldap config data
-* Add LDAP User Pruning
-* Add Application Group LDAP Object Pruning
+* Add home dashboard <d>
+	* local user/group count <d>
+	* openid well-known data <d>
+	* ldap users count (synced only) <d>
+	* ldap backend status <d>
+	* ldap config data <d>
 * Add logging to all Application model operations <t>
 * Add logging to all Application Security Group model operations
-* Add logging to all TOTP
+* Add logging to all TOTP operations
+* Add LDAP User Pruning
+* Add Application Group LDAP Object Pruning
 * Add exception chaining
-* Tests
 * Check totp support for non admin users
 * Add Local User Import/Export
 * Add LDAP User Export
+
+## TESTS
+* Users
+	* Local CRUD
+	* LDAP CRUD
+* Application CRUD
+* Application Groups CRUD
+* LDAP Security Group CRUD
+* Organizational Unit CRUD
+* LDAP Directory Tree Operations Tests
+* DNS Record CRUD for each type
+* LDAP Connector Tests
+* Token View Tests
+* OIDC Tests
+* TOTP Tests
 
 ## Other Tasks
 * Remove redundant translations for card titles, use action + class with TC

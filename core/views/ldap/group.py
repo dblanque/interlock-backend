@@ -31,7 +31,7 @@ from interlock_backend.ldap.adsi import (
 	search_filter_add,
 	LDAP_FILTER_OR
 )
-from core.models.ldap_settings_runtime import RuntimeSettings
+from core.config.runtime import RuntimeSettings
 import logging
 ################################################################################
 

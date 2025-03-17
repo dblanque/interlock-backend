@@ -13,11 +13,9 @@ from Crypto.Cipher import PKCS1_OAEP, AES
 from core.models.interlock_settings import (
 	InterlockSetting,
 	INTERLOCK_SETTING_AES_KEY,
-	INTERLOCK_SETTING_MAP,
-	INTERLOCK_SETTING_TABLE
+	INTERLOCK_SETTING_MAP
 )
 from django.db import transaction
-from core.utils.db import db_table_exists
 from Crypto.Random import get_random_bytes
 from cryptography.fernet import Fernet
 from time import perf_counter
@@ -89,18 +87,19 @@ def import_or_create_rsa_key() -> RSA.RsaKey:
 	return rsa_key
 
 class InterlockRsaKey():
+	_instance = None
+
+	# Singleton def
+	def __new__(cls, *args, **kwargs):
+		if cls._instance is None:
+			cls._instance = super().__new__(cls, *args, **kwargs)
+		return cls._instance
+
 	def __init__(self):
 		self.key = import_or_create_rsa_key()
 
 	def resync(self):
 		import_or_create_rsa_key()
-
-if db_table_exists(INTERLOCK_SETTING_TABLE):
-	# We gotta use class to keep the key in memory and avoid encrypt/decrypt
-	# operations on the key itself all the time.
-	interlock_rsa = InterlockRsaKey()
-else:
-	logger.error("Interlock Settings table does not exist, skipping rsa key generation.")
 
 def aes_encrypt(data: str, fernet_pass=False) -> tuple[bytes]:
 	"""
@@ -123,7 +122,7 @@ def aes_encrypt(data: str, fernet_pass=False) -> tuple[bytes]:
 	ciphertext, tag = cipher_aes.encrypt_and_digest(data.encode())
 
 	# Encrypt the AES key with RSA
-	rsa_key = interlock_rsa.key
+	rsa_key = InterlockRsaKey().key
 	cipher_rsa = PKCS1_OAEP.new(rsa_key.public_key())
 	encrypted_aes_key = cipher_rsa.encrypt(aes_key)
 
@@ -151,7 +150,7 @@ def aes_decrypt(
 		start = perf_counter()
 
 	# Decrypt the AES key with RSA
-	rsa_key = interlock_rsa.key
+	rsa_key = InterlockRsaKey().key
 	cipher_rsa = PKCS1_OAEP.new(rsa_key)
 	aes_key = cipher_rsa.decrypt(encrypted_aes_key)
 
