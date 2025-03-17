@@ -14,7 +14,6 @@ from rest_framework import viewsets
 from interlock_backend.ldap.adsi import search_filter_add
 from core.config.runtime import RuntimeSettings
 from interlock_backend.ldap import adsi as ldap_adsi
-from interlock_backend.ldap.user_flags import LDAP_UF_NORMAL_ACCOUNT
 from interlock_backend.ldap.accountTypes import LDAP_ACCOUNT_TYPES
 
 ### Models
@@ -143,7 +142,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 					raise exc_user.UserPermissionError # Return error code to client
 
 		# Add Normal Account permission to list
-		user_perms += ldap_adsi.LDAP_PERMS['LDAP_UF_NORMAL_ACCOUNT']['value']
+		user_perms += ldap_adsi.LDAP_PERMS[ldap_adsi.LDAP_UF_NORMAL_ACCOUNT]['value']
 		logger.debug("Final User Permissions Value: " + str(user_perms))
 		return user_perms
 
@@ -337,7 +336,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			logger.debug("New Permission Integer (cast to String):" + str(new_permissions_int))
 			user_data['userAccountControl'] = new_permissions_int
 		else:
-			user_data['userAccountControl'] = LDAP_UF_NORMAL_ACCOUNT['value']
+			user_data['userAccountControl'] = ldap_adsi.LDAP_PERMS[ldap_adsi.LDAP_UF_NORMAL_ACCOUNT]['value']
 
 		if 'co' in user_data and user_data['co'] != "" and user_data['co'] != 0:
 			try:
