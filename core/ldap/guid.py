@@ -9,7 +9,6 @@
 # ! convert and reverse the byte groups.
 # ---------------------------------- IMPORTS -----------------------------------#
 import struct, uuid, logging
-from impacket.structure import Structure
 from typing import Union
 ################################################################################
 
