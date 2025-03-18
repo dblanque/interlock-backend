@@ -186,7 +186,10 @@ def test_merge_val_bin_invalid_length(perm_a, perm_b):
 
 
 @pytest.mark.parametrize(
-	"perm_a, perm_b", ((LDAP_PERMS[LDAP_UF_NORMAL_ACCOUNT]["val_bin"], "000123".zfill(32)),)
+	"perm_a, perm_b", (
+		("000123".zfill(32), LDAP_PERMS[LDAP_UF_NORMAL_ACCOUNT]["val_bin"]),
+		(LDAP_PERMS[LDAP_UF_NORMAL_ACCOUNT]["val_bin"], "000123".zfill(32)),
+	),
 )
 def test_merge_val_bin_invalid_value(perm_a, perm_b):
 	with pytest.raises(ValueError):
