@@ -13,10 +13,10 @@ def test_create_default_oidc_rsa_key_creates_new(mocker):
 	m_key = mocker.MagicMock()
 	m_key.exportKey.return_value = m_export_key
 
-	m_patch = mocker.patch("Cryptodome.PublicKey.RSA.generate", return_value=m_key)
+	m_generate = mocker.patch("Cryptodome.PublicKey.RSA.generate", return_value=m_key)
 	assert RSAKey.objects.count() == 0
 	create_default_oidc_rsa_key()
 	assert RSAKey.objects.count() == 1
 	assert RSAKey.objects.first().key == key_value
-	m_patch.assert_called()
+	m_generate.assert_called()
 	m_key.exportKey.assert_called()
