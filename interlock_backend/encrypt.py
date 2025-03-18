@@ -33,16 +33,13 @@ KEY_PATH = os.path.join(BASE_DIR, "private")
 RSA_KEY_BITS = 4096
 KEY_FILE_EXPORT = os.path.join(KEY_PATH, f"rsa_{RSA_KEY_BITS}.pem")
 
-# KNOWLEDGE SOURCE: geeksforgeeks.org | Thank you guys!
-key = FERNET_KEY
-
 
 def fernet_encrypt(data: str, return_bytes=False, bytes_encoding="utf-8") -> str | bytes:
 	"""
 	:rtype: str | bytes
 	:return: bytes cast to string by default
 	"""
-	fernet = Fernet(key)
+	fernet = Fernet(FERNET_KEY)
 	encMessage = fernet.encrypt(data.encode(encoding=bytes_encoding))
 	if return_bytes:
 		return encMessage
@@ -53,7 +50,7 @@ def fernet_encrypt(data: str, return_bytes=False, bytes_encoding="utf-8") -> str
 def fernet_decrypt(data, bytes_encoding="utf-8") -> str:
 	if isinstance(data, str):
 		data = bytes(data, encoding=bytes_encoding)
-	fernet = Fernet(key)
+	fernet = Fernet(FERNET_KEY)
 
 	decMessage = fernet.decrypt(data).decode()
 	return decMessage
