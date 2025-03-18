@@ -1,10 +1,11 @@
 import pytest
-from core.ldap.defaults import LDAP_DIRTREE_OU_FILTER
+from core.ldap.defaults import LDAP_DIRTREE_OU_FILTER, LDAP_AUTH_USER_FIELDS
 from core.ldap.adsi import (
 	search_filter_add,
 	search_filter_from_dict,
 	LDAP_FILTER_AND,
 	LDAP_FILTER_OR,
+	LDAP_UF_ACCOUNT_DISABLE,
 	LDAP_UF_DONT_EXPIRE_PASSWD,
 	LDAP_UF_NORMAL_ACCOUNT,
 	LDAP_PERMS,
@@ -13,6 +14,7 @@ from core.ldap.adsi import (
 	calc_permissions,
 	merge_val_bin,
 	parse_permissions_int,
+	list_user_perms,
 	LengthError,
 )
 
@@ -186,7 +188,8 @@ def test_merge_val_bin_invalid_length(perm_a, perm_b):
 
 
 @pytest.mark.parametrize(
-	"perm_a, perm_b", (
+	"perm_a, perm_b",
+	(
 		("000123".zfill(32), LDAP_PERMS[LDAP_UF_NORMAL_ACCOUNT]["val_bin"]),
 		(LDAP_PERMS[LDAP_UF_NORMAL_ACCOUNT]["val_bin"], "000123".zfill(32)),
 	),
@@ -217,3 +220,175 @@ def test_merge_val_bin_invalid_value(perm_a, perm_b):
 )
 def test_parse_permissions_int(raw_user_permissions, expected):
 	assert parse_permissions_int(raw_user_permissions) == expected
+
+
+def test_parse_permissions_int_value_error():
+	with pytest.raises(ValueError):
+		parse_permissions_int("abcd1234")
+
+
+def sum_permissions(perm_list: list[str]) -> int:
+	"""Sums LDAP_PERMS integer values"""
+	return sum(LDAP_PERMS[k]["value"] for k in perm_list)
+
+@pytest.mark.parametrize(
+	"permission_list, perm_add, perm_remove, expected",
+	(
+		# Add single permission to multiple
+		(
+			[LDAP_UF_DONT_EXPIRE_PASSWD, LDAP_UF_NORMAL_ACCOUNT],
+			LDAP_UF_ACCOUNT_DISABLE,
+			None,
+			[
+				LDAP_UF_ACCOUNT_DISABLE,
+				LDAP_UF_DONT_EXPIRE_PASSWD,
+				LDAP_UF_NORMAL_ACCOUNT,
+			]
+		),
+		# Add single permission to list with single permission
+		(
+			[LDAP_UF_NORMAL_ACCOUNT],
+			LDAP_UF_ACCOUNT_DISABLE,
+			None,
+			[LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_NORMAL_ACCOUNT],
+		),
+		# Add multiple permissions to list with single permission
+		(
+			[LDAP_UF_NORMAL_ACCOUNT],
+			[LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_DONT_EXPIRE_PASSWD],
+			None,
+			[
+				LDAP_UF_ACCOUNT_DISABLE,
+				LDAP_UF_NORMAL_ACCOUNT,
+				LDAP_UF_DONT_EXPIRE_PASSWD,
+			],
+		),
+		# Add multiple with redundant permissions
+		(
+			[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
+			[LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_DONT_EXPIRE_PASSWD],
+			None,
+			[
+				LDAP_UF_ACCOUNT_DISABLE,
+				LDAP_UF_NORMAL_ACCOUNT,
+				LDAP_UF_DONT_EXPIRE_PASSWD,
+			],
+		),
+		# Remove single permission
+		(
+			[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_ACCOUNT_DISABLE],
+			None,
+			LDAP_UF_ACCOUNT_DISABLE,
+			[LDAP_UF_NORMAL_ACCOUNT],
+		),
+		# Remove multiple permissions
+		(
+			[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_DONT_EXPIRE_PASSWD],
+			None,
+			[LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_DONT_EXPIRE_PASSWD],
+			[LDAP_UF_NORMAL_ACCOUNT],
+		),
+		# Remove multiple permissions with an unexisting permission
+		(
+			[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
+			None,
+			[LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_DONT_EXPIRE_PASSWD],
+			[LDAP_UF_NORMAL_ACCOUNT],
+		),
+	),
+)
+def test_calc_permissions(permission_list, perm_add, perm_remove, expected):
+	assert (
+		calc_permissions(permission_list, perm_add, perm_remove) 
+		== sum_permissions(expected)
+	)
+
+
+def test_calc_permission_type_error():
+	with pytest.raises(TypeError):
+		calc_permissions(LDAP_UF_ACCOUNT_DISABLE)
+
+
+@pytest.mark.parametrize(
+	"userAccountControl, perm_search, expected",
+	(
+		(
+			[
+				LDAP_UF_ACCOUNT_DISABLE,
+				LDAP_UF_NORMAL_ACCOUNT,
+				LDAP_UF_DONT_EXPIRE_PASSWD,
+			],
+			None,
+			[LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD].sort(),
+		),
+		(
+			[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
+			None,
+			[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD].sort(),
+		),
+		(
+			[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
+			LDAP_UF_NORMAL_ACCOUNT,
+			True,
+		),
+	),
+)
+def test_list_user_perms_user_object(userAccountControl, perm_search, expected, mocker):
+	user = mocker.MagicMock()
+	user.userAccountControl = sum_permissions(userAccountControl)
+	if isinstance(expected, bool):
+		assert list_user_perms(user, perm_search) == expected
+	else:
+		assert list_user_perms(user, perm_search).sort() == expected
+
+
+def test_list_user_perms_user_object_should_return_none(mocker):
+	user = mocker.MagicMock()
+	user.userAccountControl = "[]"
+	assert list_user_perms(user, None) is None
+
+
+def test_list_user_perms_user_object_uac_is_none(mocker):
+	user = mocker.MagicMock()
+	user.userAccountControl = None
+	with pytest.raises(ValueError):
+		list_user_perms(user, None)
+
+
+def test_list_user_perms_user_object_has_no_uac(mocker):
+	with pytest.raises(ValueError):
+		list_user_perms(object(), None)
+
+
+def test_list_user_perms_user_dict_has_no_uac(mocker):
+	with pytest.raises(ValueError):
+		list_user_perms({}, None, False)
+
+
+@pytest.mark.parametrize(
+	"userAccountControl, perm_search, expected",
+	(
+		(
+			sum(
+				LDAP_PERMS[k]["value"]
+				for k in [
+					LDAP_UF_ACCOUNT_DISABLE,
+					LDAP_UF_NORMAL_ACCOUNT,
+					LDAP_UF_DONT_EXPIRE_PASSWD,
+				]
+			),
+			None,
+			[LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD].sort(),
+		),
+		(
+			sum(
+				LDAP_PERMS[k]["value"] for k in [LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD]
+			),
+			None,
+			[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD].sort(),
+		),
+	),
+)
+def test_list_user_perms_user_dict(userAccountControl, perm_search, expected):
+	user = {LDAP_AUTH_USER_FIELDS["username"]: "testuser", "userAccountControl": userAccountControl}
+	assert list_user_perms(user, perm_search, False).sort() == expected
