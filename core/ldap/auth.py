@@ -8,7 +8,6 @@
 # ---------------------------------- IMPORTS -----------------------------------#
 from django.contrib.auth.backends import ModelBackend
 import core.ldap.connector as ldap
-
 ################################################################################
 """
 Django authentication backend.
