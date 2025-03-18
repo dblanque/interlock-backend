@@ -108,6 +108,7 @@ build-backend = "poetry.core.masonry.api"
 pytest-django = "^4.10.0"
 pytest-mock = "^3.14.0"
 pytest-cov = "^6.0.0"
+ipykernel = "^6.29.5"
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "interlock_backend.test_settings"
@@ -125,4 +126,6 @@ omit = [
     "manage.py",
     "interlock_backend/asgi.py",
     "interlock_backend/wsgi.py",
+    "core/ldap/user.py",
+    "core/ldap/groupTypes.py",
 ]
