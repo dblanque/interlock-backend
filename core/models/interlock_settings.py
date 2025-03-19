@@ -10,9 +10,6 @@
 from core.models.setting.base import BaseSetting, add_fields_from_dict
 from django.db import models
 from core.models.types.settings import (
-	make_field_db_name,
-	MAP_FIELD_VALUE_MODEL,
-	DEFAULT_FIELD_ARGS,
 	INTERLOCK_SETTING_FIELDS,
 	TYPE_BYTES,
 	TYPE_BOOL,
