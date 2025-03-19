@@ -74,19 +74,34 @@ def test_sync_user_relations_admin_user(user_attributes: dict, in_ldap_admin_gro
 	m_user_mock.save.assert_called_once()
 
 
-def test_sync_user_relations_normal_user(mocker, m_runtime_settings, m_connection):
+@pytest.mark.parametrize(
+	"user_attributes",
+	(
+		# Test cases
+		# Was in ADMIN_GROUP_TO_SEARCH, attributes not synced
+		{
+			"username": "testuser",
+			"dn": f"cn=testuser,{LDAP_AUTH_SEARCH_BASE}",
+			"email": f"testuser@{LDAP_DOMAIN}",
+			"is_staff": True,
+			"is_superuser": True,
+		},
+		# Always was normal user
+		{
+			"username": "testuser",
+			"dn": f"cn=testuser,{LDAP_AUTH_SEARCH_BASE}",
+			"email": f"testuser@{LDAP_DOMAIN}",
+			"is_staff": False,
+			"is_superuser": False,
+		}
+	),
+)
+def test_sync_user_relations_normal_user(user_attributes: dict, mocker, m_runtime_settings, m_connection):
 	mocker.patch("core.config.runtime.RuntimeSettings", return_value=m_runtime_settings)
 
 	m_user_mock: MagicMock = mocker.MagicMock()
 	mocker.patch("core.ldap.connector.recursive_member_search", return_value=False)
 
-	user_attributes = {
-		"username": "testuser",
-		"dn": f"cn=testuser,{LDAP_AUTH_SEARCH_BASE}",
-		"email": f"testuser@{LDAP_DOMAIN}",
-		"is_staff": False,
-		"is_superuser": False,
-	}
 	for key, value in user_attributes.items():
 		setattr(m_user_mock, key, value)
 	sync_user_relations(
