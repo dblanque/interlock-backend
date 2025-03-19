@@ -17,20 +17,13 @@ from enum import Enum
 # LDAP
 import ldap3
 from django_python3_ldap.utils import import_func
-from core.ldap.adsi import (
-	search_filter_add,
-	LDAP_FILTER_OR
-)
+from core.ldap.adsi import search_filter_add, LDAP_FILTER_OR
 from core.exceptions import ldap as exc_ldap
 from ldap3.core.exceptions import LDAPException
 
 # Models
 from core.views.mixins.logs import LogMixin
-from core.models.user import (
-	User,
-	USER_PASSWORD_FIELDS,
-	USER_TYPE_LDAP
-)
+from core.models.user import User, USER_PASSWORD_FIELDS, USER_TYPE_LDAP
 
 # Settings
 from interlock_backend.settings import (
@@ -42,10 +35,7 @@ from core.config.runtime import RuntimeSettings
 # Auth
 from django.contrib.auth.models import update_last_login
 from django.contrib.auth import get_user_model
-from interlock_backend.encrypt import (
-	aes_encrypt,
-	aes_decrypt
-)
+from interlock_backend.encrypt import aes_encrypt, aes_decrypt
 
 # Libs
 from inspect import getfullargspec
@@ -54,10 +44,7 @@ import traceback
 import ssl
 import logging
 import sys
-from uuid import (
-	uuid1,
-	getnode as uuid_getnode
-)
+from uuid import uuid1, getnode as uuid_getnode
 ###############################################################################
 
 this_module = sys.modules[__name__]
