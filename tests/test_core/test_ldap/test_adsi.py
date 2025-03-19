@@ -269,11 +269,7 @@ def sum_permissions(perm_list: list[str]) -> int:
 			[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
 			[LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_DONT_EXPIRE_PASSWD],
 			None,
-			[
-				LDAP_UF_ACCOUNT_DISABLE,
-				LDAP_UF_NORMAL_ACCOUNT,
-				LDAP_UF_DONT_EXPIRE_PASSWD,
-			],
+			[LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
 		),
 		# Remove single permission
 		(
@@ -311,11 +307,7 @@ def test_calc_permission_type_error():
 	"userAccountControl, perm_search, expected",
 	(
 		(
-			[
-				LDAP_UF_ACCOUNT_DISABLE,
-				LDAP_UF_NORMAL_ACCOUNT,
-				LDAP_UF_DONT_EXPIRE_PASSWD,
-			],
+			[LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
 			None,
 			[LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD].sort(),
 		),
