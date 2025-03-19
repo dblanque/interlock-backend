@@ -94,6 +94,7 @@ def recursive_member_search(user_dn: str, connection: ldap3.Connection, group_dn
 			# Check if member in nested groups
 			for dn in e.member:
 				# Avoid infinite self recursion
+				# (should not be possible to be a member of itself, but regardless)
 				if group_dn == dn:
 					continue
 				# Recursive search
