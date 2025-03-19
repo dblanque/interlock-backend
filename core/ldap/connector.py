@@ -122,7 +122,7 @@ def authenticate(*args, **kwargs):
 	in settings.LDAP_AUTH_USER_LOOKUP_FIELDS, plus a `password` argument.
 	"""
 	username = kwargs["username"]
-	if username == "admin":
+	if username == DEFAULT_SUPERUSER_USERNAME:
 		return None
 	password = kwargs.pop("password", None)
 	auth_user_lookup_fields = RuntimeSettings.LDAP_AUTH_USER_LOOKUP_FIELDS
