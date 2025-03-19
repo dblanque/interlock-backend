@@ -104,7 +104,7 @@ def recursive_member_search(user_dn: str, connection: ldap3.Connection, group_dn
 	return False
 
 
-def sync_user_relations(user: User, ldap_attributes, *, connection=None, dn=None):
+def sync_user_relations(user: User, ldap_attributes, *, connection=None):
 	user.dn = str(ldap_attributes["distinguishedName"]).lstrip("['").rstrip("']")
 	if "Administrator" in ldap_attributes[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]]:
 		user.is_staff = True
@@ -419,7 +419,7 @@ class LDAPConnector(object):
 		# user_lookup = {
 		#     field_name: user_fields.pop(field_name, "")
 		#     for field_name
-		#     in LDAP_AUTH_USER_LOOKUP_FIELDS
+		#     in RuntimeSettings.LDAP_AUTH_USER_LOOKUP_FIELDS
 		# }
 		user_lookup = {"username": user_fields["username"]}
 		# Update or create the user.
@@ -436,8 +436,6 @@ class LDAPConnector(object):
 		for argname in sync_user_relations_arginfo.kwonlyargs:
 			if argname == "connection":
 				args["connection"] = self.connection
-			elif argname == "dn":
-				args["dn"] = user_data.get("dn")
 			else:
 				raise TypeError(
 					f"Unknown kw argument {argname} in signature for LDAP_AUTH_SYNC_USER_RELATIONS"
