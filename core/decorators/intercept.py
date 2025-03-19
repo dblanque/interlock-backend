@@ -11,7 +11,6 @@ from core.models.interlock_settings import InterlockSetting, INTERLOCK_SETTING_E
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.request import Request
 from core.exceptions.base import LDAPBackendDisabled
-from rest_framework import status
 from functools import wraps
 from logging import getLogger
 
