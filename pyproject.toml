@@ -126,6 +126,7 @@ omit = [
     "manage.py",
     "interlock_backend/asgi.py",
     "interlock_backend/wsgi.py",
+    "core/constants/*",
     "core/ldap/user.py",
     "core/ldap/groupTypes.py",
 ]
