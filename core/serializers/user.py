@@ -18,7 +18,7 @@ FIELD_VALIDATORS = {
 	"co": None,  # country
 }
 
-ldap_user_pattern = '.*[\]\["\:\;\|\=\+\*\?\<\>\/\\\,]'
+ldap_user_pattern = r'.*[\]\["\:\;\|\=\+\*\?\<\>\/\\\,]'
 
 
 def ldap_user_validator(value):

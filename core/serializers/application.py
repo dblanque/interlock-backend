@@ -4,7 +4,7 @@ from core.models.application import Application
 
 
 class ApplicationSerializer(serializers.ModelSerializer):
-	name = serializers.CharField(validators=[RegexValidator("^[\sA-Za-z0-9_-]*$")])
+	name = serializers.CharField(validators=[RegexValidator(r"^[\sA-Za-z0-9_-]*$")])
 
 	class Meta:
 		model = Application
