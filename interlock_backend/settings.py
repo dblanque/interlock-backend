@@ -192,7 +192,7 @@ WSGI_APPLICATION = "interlock_backend.wsgi.application"
 AUTHENTICATION_BACKENDS = (
 	"django.contrib.auth.backends.ModelBackend",  # Comment if you wish to use LDAP Auth Only
 	"interlock_backend.ldap.auth.LDAPBackend",
-	# "django_python3_ldap.auth.LDAPBackend",
+	# "django_python3_ldap.auth.LDAPBackend", # default ldap3 ldap backend
 )
 
 AUTH_USER_MODEL = "core.User"
