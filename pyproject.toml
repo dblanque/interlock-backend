@@ -126,7 +126,20 @@ omit = [
     "manage.py",
     "interlock_backend/asgi.py",
     "interlock_backend/wsgi.py",
-    "core/constants/*",
-    "core/ldap/user.py",
-    "core/ldap/groupTypes.py",
+
+    # Exception Sub-classes
+    # They have no behavior changes and coverage is irrelevant
+    "core/exceptions/application_group.py",
+    "core/exceptions/application.py",
+    "core/exceptions/dirtree.py",
+    "core/exceptions/dns.py",
+    "core/exceptions/gpo.py",
+    "core/exceptions/groups.py",
+    "core/exceptions/ldap_settings.py",
+    "core/exceptions/ldap.py",
+    "core/exceptions/logs.py",
+    "core/exceptions/organizational_unit.py",
+    "core/exceptions/otp.py",
+    "core/exceptions/test.py",
+    "core/exceptions/users.py",
 ]
