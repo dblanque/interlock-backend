@@ -4,6 +4,7 @@ from core.decorators.intercept import request_intercept
 from rest_framework.request import Request as django_request
 from django.contrib.auth.models import User
 
+
 @pytest.fixture
 def mock_request(mocker):
 	request = mocker.Mock(spec=django_request)
@@ -12,12 +13,13 @@ def mock_request(mocker):
 	request.data = {"key": "value"}
 	return request
 
+
 @pytest.mark.parametrize(
 	"is_factory",
 	(
 		(True,),
 		(False,),
-	)
+	),
 )
 def test_request_intercept(is_factory, mock_request, logger_path, mocker):
 	m_logger = mocker.patch(logger_path)
@@ -39,6 +41,7 @@ def test_request_intercept(is_factory, mock_request, logger_path, mocker):
 
 	# Verify result is correct
 	assert result == "response"
+
 
 def test_request_intercept_no_query_params_or_data(mock_request, logger_path, mocker):
 	del mock_request.query_params

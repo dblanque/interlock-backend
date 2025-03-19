@@ -231,6 +231,7 @@ def sum_permissions(perm_list: list[str]) -> int:
 	"""Sums LDAP_PERMS integer values"""
 	return sum(LDAP_PERMS[k]["value"] for k in perm_list)
 
+
 @pytest.mark.parametrize(
 	"permission_list, perm_add, perm_remove, expected",
 	(
@@ -243,7 +244,7 @@ def sum_permissions(perm_list: list[str]) -> int:
 				LDAP_UF_ACCOUNT_DISABLE,
 				LDAP_UF_DONT_EXPIRE_PASSWD,
 				LDAP_UF_NORMAL_ACCOUNT,
-			]
+			],
 		),
 		# Add single permission to list with single permission
 		(
@@ -298,10 +299,7 @@ def sum_permissions(perm_list: list[str]) -> int:
 	),
 )
 def test_calc_permissions(permission_list, perm_add, perm_remove, expected):
-	assert (
-		calc_permissions(permission_list, perm_add, perm_remove) 
-		== sum_permissions(expected)
-	)
+	assert calc_permissions(permission_list, perm_add, perm_remove) == sum_permissions(expected)
 
 
 def test_calc_permission_type_error():

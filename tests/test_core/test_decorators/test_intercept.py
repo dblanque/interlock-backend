@@ -1,6 +1,7 @@
 from core.decorators.intercept import intercept
 from unittest.mock import Mock
 
+
 def test_intercept(logger_path, mocker):
 	m_logger = mocker.patch(logger_path)
 	m_func: Mock = mocker.Mock(return_value="response")
