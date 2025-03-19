@@ -75,27 +75,32 @@ Now we must install the requirements in a virtual environment with pip.
 ```bash
 # Create the Virtual Environment
 cd /opt/interlock-backend/
-python3 -m venv . --upgrade
+python3 -m venv venv --upgrade
 
 # Activate it and Install the Requirements
-source bin/activate
-pip3 install -r requirements.txt
+source venv/bin/activate
+pip3 install poetry
+poetry install
 
 # Make migrations and apply them to DB
 python3 ./manage.py makemigrations
 python3 ./manage.py migrate
 python3 ./manage.py creatersakey
 
-# Create Default Superuser
+# OPTIONAL
+## Create Default Superuser
+## (It will auto-create on first login if not done like this)
+### With django script
 python3 ./manage.py shell < install/create_default_superuser.py
-# Optionally: Create Superuser Manually
+### Manually
 python3 ./manage.py createsuperuser
 
-# Create RSA Encryption Key Pair for LDAP Connections 
-# (It will auto-create on first login if not done like this)
+## Create RSA Encryption Key Pair for LDAP Connections 
+## (It will auto-create on first login if not done like this)
 python3 ./manage.py shell < install/create_rsa_key.py
 
-# Create RSA Encryption Key Pair for OIDC
+## Create RSA Encryption Key Pair for OIDC
+## (It will auto-create on first login if not done like this)
 python manage.py creatersakey
 ```
 # PROJECT LICENSE
