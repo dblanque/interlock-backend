@@ -57,12 +57,9 @@ def m_user_as_ldap_attributes(m_user: dict):
 		),
 	),
 )
-def test_sync_user_relations_admin_user(user_attributes: dict, in_ldap_admin_group, mocker):
-	m_runtime_settings: MagicMock = mocker.MagicMock()
-	m_runtime_settings.LDAP_AUTH_USER_FIELDS = LDAP_AUTH_USER_FIELDS
+def test_sync_user_relations_admin_user(user_attributes: dict, in_ldap_admin_group, mocker, m_runtime_settings, m_connection):
 	mocker.patch("core.config.runtime.RuntimeSettings", return_value=m_runtime_settings)
 
-	m_connection: MagicMock = mocker.MagicMock()
 	m_user_mock: MagicMock = mocker.MagicMock()
 	mocker.patch("core.ldap.connector.recursive_member_search", return_value=in_ldap_admin_group)
 
@@ -77,12 +74,9 @@ def test_sync_user_relations_admin_user(user_attributes: dict, in_ldap_admin_gro
 	m_user_mock.save.assert_called_once()
 
 
-def test_sync_user_relations_normal_user(mocker):
-	m_runtime_settings: MagicMock = mocker.MagicMock()
-	m_runtime_settings.LDAP_AUTH_USER_FIELDS = LDAP_AUTH_USER_FIELDS
+def test_sync_user_relations_normal_user(mocker, m_runtime_settings, m_connection):
 	mocker.patch("core.config.runtime.RuntimeSettings", return_value=m_runtime_settings)
 
-	m_connection: MagicMock = mocker.MagicMock()
 	m_user_mock: MagicMock = mocker.MagicMock()
 	mocker.patch("core.ldap.connector.recursive_member_search", return_value=False)
 
