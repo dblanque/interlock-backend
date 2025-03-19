@@ -9,27 +9,55 @@
 # - Recursive directory listing functions
 
 # ---------------------------------- IMPORTS -----------------------------------#
-from enum import Enum
-import traceback, ldap3, ssl, logging, sys
-from django_python3_ldap.utils import import_func
-from inspect import getfullargspec
-from django.contrib.auth import get_user_model
-from interlock_backend.encrypt import aes_encrypt, aes_decrypt
-from core.ldap.adsi import search_filter_add, LDAP_FILTER_OR
-from django.contrib.auth.models import update_last_login
-from ldap3.core.exceptions import LDAPException
-from core.exceptions import ldap as exc_ldap
-from core.views.mixins.logs import LogMixin
-from core.models.user import User, USER_PASSWORD_FIELDS, USER_TYPE_LDAP
+# Typing
 from typing import TypedDict
 from typing_extensions import NotRequired
+from enum import Enum
+
+# LDAP
+import ldap3
+from django_python3_ldap.utils import import_func
+from core.ldap.adsi import (
+	search_filter_add,
+	LDAP_FILTER_OR
+)
+from core.exceptions import ldap as exc_ldap
+from ldap3.core.exceptions import LDAPException
+
+# Models
+from core.views.mixins.logs import LogMixin
+from core.models.user import (
+	User,
+	USER_PASSWORD_FIELDS,
+	USER_TYPE_LDAP
+)
+
+# Settings
 from interlock_backend.settings import (
 	DEFAULT_SUPERUSER_USERNAME,
 	DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS,
 )
 from core.config.runtime import RuntimeSettings
-from uuid import uuid1, getnode as uuid_getnode
+
+# Auth
+from django.contrib.auth.models import update_last_login
+from django.contrib.auth import get_user_model
+from interlock_backend.encrypt import (
+	aes_encrypt,
+	aes_decrypt
+)
+
+# Libs
+from inspect import getfullargspec
 from random import getrandbits
+import traceback
+import ssl
+import logging
+import sys
+from uuid import (
+	uuid1,
+	getnode as uuid_getnode
+)
 ###############################################################################
 
 this_module = sys.modules[__name__]
@@ -37,25 +65,39 @@ DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
 
-def recursive_member_search(user_dn: str, connection, group_dn):
+def recursive_member_search(user_dn: str, connection: ldap3.Connection, group_dn: str):
+	# Type checks
+	if not isinstance(user_dn, str):
+		raise TypeError("user_dn must be str.")
+	if not isinstance(group_dn, str):
+		raise TypeError("group_dn must be str.")
+	# Length Checks
+	if len(user_dn) <= 0:
+		raise ValueError("user_dn cannot be empty.")
+	if len(group_dn) <= 0:
+		raise ValueError("user_dn cannot be empty.")
+
 	# Add filter for username
 	ldap_filter_object = ""
 	ldap_filter_object = search_filter_add(ldap_filter_object, f"distinguishedName={group_dn}")
 	ldap_filter_object = search_filter_add(ldap_filter_object, f"objectClass=group")
-	try:
-		connection.search(
-			RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
-			ldap_filter_object,
-			attributes=["member", "objectClass", "distinguishedName"],
-		)
-	except:
-		raise
+	connection.search(
+		RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
+		ldap_filter_object,
+		attributes=["member", "objectClass", "distinguishedName"],
+	)
 	for e in connection.entries:
 		if "group" in e.objectClass:
+			# Check if member in group directly
 			if user_dn in e.member:
 				return True
+			# Check if member in nested groups
 			for dn in e.member:
-				r = recursive_member_search(group_dn=dn, user_dn=user_dn, connection=connection)
+				# Avoid infinite self recursion
+				if group_dn == dn:
+					continue
+				# Recursive search
+				r = recursive_member_search(user_dn=user_dn, connection=connection, group_dn=dn)
 				if r == True:
 					return r
 	return False
