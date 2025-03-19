@@ -191,7 +191,7 @@ WSGI_APPLICATION = "interlock_backend.wsgi.application"
 
 AUTHENTICATION_BACKENDS = (
 	"django.contrib.auth.backends.ModelBackend",  # Comment if you wish to use LDAP Auth Only
-	"interlock_backend.ldap.auth.LDAPBackend",
+	"core.ldap.auth.LDAPBackend",
 	# "django_python3_ldap.auth.LDAPBackend", # default ldap3 ldap backend
 )
 
@@ -267,7 +267,7 @@ LOGGING = {
 		"django_python3_ldap": {
 			"level": LDAP3_MODULE_LOG_LEVEL,
 		},
-		"interlock_backend.ldap.connector": {
+		"core.ldap.connector": {
 			"level": LDAP_CONNECTOR_LOG_LEVEL,
 		},
 		"core.models.dns": {
