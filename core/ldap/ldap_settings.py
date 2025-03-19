@@ -45,7 +45,6 @@ def get_setting_list(preset_id: int = 1):
 		data["DEFAULT_ADMIN"] = False
 
 	# Loop for each constant in the ldap_constants.py file
-	relevant_parameters = LDAPSetting.objects.filter(preset_id=preset_id)
 	for setting_key, setting_type in LDAP_SETTING_MAP.items():
 		setting_instance = None
 		data[setting_key] = {}
