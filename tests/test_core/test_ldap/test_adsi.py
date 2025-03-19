@@ -359,26 +359,20 @@ def test_list_user_perms_user_dict_has_no_uac(mocker):
 	"userAccountControl, perm_search, expected",
 	(
 		(
-			sum(
-				LDAP_PERMS[k]["value"]
-				for k in [
-					LDAP_UF_ACCOUNT_DISABLE,
-					LDAP_UF_NORMAL_ACCOUNT,
-					LDAP_UF_DONT_EXPIRE_PASSWD,
-				]
-			),
+			[LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
 			None,
 			[LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD].sort(),
 		),
 		(
-			sum(
-				LDAP_PERMS[k]["value"] for k in [LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD]
-			),
+			[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
 			None,
 			[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD].sort(),
 		),
 	),
 )
 def test_list_user_perms_user_dict(userAccountControl, perm_search, expected):
-	user = {LDAP_AUTH_USER_FIELDS["username"]: "testuser", "userAccountControl": userAccountControl}
+	user = {
+		LDAP_AUTH_USER_FIELDS["username"]: "testuser",
+		"userAccountControl": sum_permissions(userAccountControl),
+	}
 	assert list_user_perms(user, perm_search, False).sort() == expected
