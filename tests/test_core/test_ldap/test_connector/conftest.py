@@ -3,9 +3,11 @@ from unittest.mock import MagicMock, Mock
 from core.models.ldap_settings import LDAP_SETTING_MAP
 from core.ldap import defaults as ldap_defaults
 
+
 @pytest.fixture
 def m_connection(mocker) -> MagicMock:
 	return mocker.MagicMock()
+
 
 @pytest.fixture
 def m_runtime_settings(mocker) -> MagicMock:
@@ -14,3 +16,8 @@ def m_runtime_settings(mocker) -> MagicMock:
 		setting_value = getattr(ldap_defaults, setting_key)
 		setattr(mock, setting_key, setting_value)
 	return mock
+
+
+@pytest.fixture
+def m_user_dn():
+	return f"cn=user,{ldap_defaults.LDAP_AUTH_SEARCH_BASE}"

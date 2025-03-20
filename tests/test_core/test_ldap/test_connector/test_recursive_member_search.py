@@ -4,11 +4,6 @@ from core.ldap.connector import recursive_member_search
 
 
 @pytest.fixture
-def m_user_dn():
-	return f"cn=user,{LDAP_AUTH_SEARCH_BASE}"
-
-
-@pytest.fixture
 def m_group_dn():
 	return f"cn=group,{LDAP_AUTH_SEARCH_BASE}"
 

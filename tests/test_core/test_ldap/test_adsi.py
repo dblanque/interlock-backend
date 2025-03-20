@@ -1,4 +1,5 @@
 import pytest
+from pytest_mock import MockType
 from core.ldap.defaults import LDAP_DIRTREE_OU_FILTER, LDAP_AUTH_USER_FIELDS
 from core.ldap.adsi import (
 	search_filter_add,
@@ -324,7 +325,7 @@ def test_calc_permission_type_error():
 	),
 )
 def test_list_user_perms_user_object(userAccountControl, perm_search, expected, mocker):
-	user = mocker.MagicMock()
+	user: MockType = mocker.MagicMock()
 	user.userAccountControl = sum_permissions(userAccountControl)
 	if isinstance(expected, bool):
 		assert list_user_perms(user, perm_search) == expected
@@ -333,13 +334,13 @@ def test_list_user_perms_user_object(userAccountControl, perm_search, expected, 
 
 
 def test_list_user_perms_user_object_should_return_none(mocker):
-	user = mocker.MagicMock()
+	user: MockType = mocker.MagicMock()
 	user.userAccountControl = "[]"
 	assert list_user_perms(user, None) is None
 
 
 def test_list_user_perms_user_object_uac_is_none(mocker):
-	user = mocker.MagicMock()
+	user: MockType = mocker.MagicMock()
 	user.userAccountControl = None
 	with pytest.raises(ValueError):
 		list_user_perms(user, None)

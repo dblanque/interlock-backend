@@ -234,16 +234,6 @@ class LDAPConnector(object):
 		else:
 			raise Exception("No valid user in LDAP Connector.")
 
-		# ! DEPRECATED
-		# # If it's an Initial Authentication we need to use the bind user first
-		# if force_admin or user is not None:
-		# 	# If initial auth or user is local interlock superadmin
-		# 	if force_admin or is_local_superadmin:
-		# 		user_dn = self.default_user_dn
-		# 		password = self.default_user_pwd
-		# 	else:
-		# 		password = user_password
-
 		if not isinstance(RuntimeSettings.LDAP_AUTH_TLS_VERSION, Enum):
 			ldapAuthTLSVersion = getattr(ssl, RuntimeSettings.LDAP_AUTH_TLS_VERSION)
 		else:

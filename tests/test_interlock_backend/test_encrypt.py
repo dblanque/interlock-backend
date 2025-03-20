@@ -1,6 +1,6 @@
 import pytest
 from Cryptodome.PublicKey import RSA
-from unittest.mock import Mock, MagicMock
+from pytest_mock import MockType
 from core.models.interlock_settings import (
 	InterlockSetting,
 	INTERLOCK_SETTING_AES_KEY,
@@ -28,8 +28,10 @@ def test_create_rsa_key(mocker):
 	# Mock save method
 	m_db_obj.save = mocker.MagicMock()
 
-	m_generate: Mock = mocker.patch("interlock_backend.encrypt.RSA.generate", return_value=m_key)
-	m_create: Mock = mocker.patch(
+	m_generate: MockType = mocker.patch(
+		"interlock_backend.encrypt.RSA.generate", return_value=m_key
+	)
+	m_create: MockType = mocker.patch(
 		"core.models.interlock_settings.InterlockSetting.objects.create", return_value=m_db_obj
 	)
 	result = create_rsa_key()
@@ -58,17 +60,17 @@ def test_import_rsa_key_when_exists(mocker):
 	Test the `import_rsa_key` function when the key exists in the database.
 	"""
 	# Mock InterlockSetting
-	m_db_obj: MagicMock = mocker.MagicMock()
+	m_db_obj: MockType = mocker.MagicMock()
 	m_db_obj.value = b"mocked_key_value"
 
 	# Mock the RSA.generate method to return a mock RSA key
 	m_key = mocker.MagicMock(spec=RSA.RsaKey)
 
 	# Mocked internal functions
-	m_get: Mock = mocker.patch(
+	m_get: MockType = mocker.patch(
 		"core.models.interlock_settings.InterlockSetting.objects.get", return_value=m_db_obj
 	)
-	m_import_key: Mock = mocker.patch(
+	m_import_key: MockType = mocker.patch(
 		"interlock_backend.encrypt.RSA.import_key", return_value=m_key
 	)
 	result = import_rsa_key()
@@ -82,7 +84,7 @@ def test_import_rsa_key_when_exists(mocker):
 
 
 def test_import_or_create_rsa_key_when_not_exists(mocker):
-	m_get: Mock = mocker.patch(
+	m_get: MockType = mocker.patch(
 		"core.models.interlock_settings.InterlockSetting.objects.get",
 		return_value=None,
 		side_effect=InterlockSetting.DoesNotExist,
@@ -94,11 +96,11 @@ def test_import_or_create_rsa_key_when_not_exists(mocker):
 def test_import_or_create_rsa_key_when_imported(mocker):
 	# Mock the RSA.generate method to return a mock RSA key
 	m_key = mocker.MagicMock(spec=RSA.RsaKey)
-	m_import_rsa_key: Mock = mocker.patch(
+	m_import_rsa_key: MockType = mocker.patch(
 		"interlock_backend.encrypt.import_rsa_key",
 		return_value=m_key,
 	)
-	m_create_rsa_key: Mock = mocker.patch(
+	m_create_rsa_key: MockType = mocker.patch(
 		"interlock_backend.encrypt.create_rsa_key",
 		return_value=None,
 	)
@@ -111,11 +113,11 @@ def test_import_or_create_rsa_key_when_imported(mocker):
 def test_import_or_create_rsa_key_when_created(mocker):
 	# Mock the RSA.generate method to return a mock RSA key
 	m_key = mocker.MagicMock(spec=RSA.RsaKey)
-	m_import_rsa_key: Mock = mocker.patch(
+	m_import_rsa_key: MockType = mocker.patch(
 		"interlock_backend.encrypt.import_rsa_key",
 		return_value=None,
 	)
-	m_create_rsa_key: Mock = mocker.patch(
+	m_create_rsa_key: MockType = mocker.patch(
 		"interlock_backend.encrypt.create_rsa_key",
 		return_value=m_key,
 	)
