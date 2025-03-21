@@ -10,10 +10,10 @@ from core.models.choices.log import (
 
 def f_enter_exit_logging_cases():
 	return (
-		(True, False, True), # LOG, NOT AUTHENTICATING
-		(True, True, False), # LOG, AUTHENTICATING
-		(False, True, False), # NO LOG, AUTHENTICATING
-		(False, False, False), # NO LOG, NOT AUTHENTICATING
+		(True, False, True,), # LOG, NOT AUTHENTICATING
+		(True, True, False,), # LOG, AUTHENTICATING
+		(False, True, False,), # NO LOG, AUTHENTICATING
+		(False, False, False,), # NO LOG, NOT AUTHENTICATING
 	)
 
 
