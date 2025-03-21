@@ -1,25 +1,28 @@
 import pytest
 from pytest_mock import MockType
 from core.ldap.connector import LDAPConnector
-from ldap3 import Tls as ldap3_Tls
+from ldap3.core.exceptions import LDAPException
+from core.exceptions.ldap import CouldNotOpenConnection
+from tests.utils import get_ids_for_cases
 from core.models.choices.log import (
 	LOG_ACTION_OPEN,
 	LOG_ACTION_CLOSE,
 	LOG_CLASS_CONN
 )
 
-def f_enter_exit_logging_cases():
-	return (
-		(True, False, True,), # LOG, NOT AUTHENTICATING
-		(True, True, False,), # LOG, AUTHENTICATING
-		(False, True, False,), # NO LOG, AUTHENTICATING
-		(False, False, False,), # NO LOG, NOT AUTHENTICATING
-	)
+F_ENTER_EXIT_LOGGING_CASES = (
+	(True, False, True,), # LOG, NOT AUTHENTICATING
+	(True, True, False,), # LOG, AUTHENTICATING
+	(False, True, False,), # NO LOG, AUTHENTICATING
+	(False, False, False,), # NO LOG, NOT AUTHENTICATING
+)
 
+ENTER_EXIT_ARGS = ("logging", "authenticating", "expects_logging",)
 
 @pytest.mark.parametrize(
-	"logging, authenticating, expects_logging",
-	f_enter_exit_logging_cases()
+	argnames=ENTER_EXIT_ARGS,
+	argvalues=F_ENTER_EXIT_LOGGING_CASES,
+	ids=get_ids_for_cases(ENTER_EXIT_ARGS, F_ENTER_EXIT_LOGGING_CASES)
 )
 def test_enter_context_manager(logging, authenticating, expects_logging, mocker, f_user, f_runtime_settings):
 	# Mock RuntimeSettings
@@ -50,8 +53,9 @@ def test_enter_context_manager(logging, authenticating, expects_logging, mocker,
 			m_log.assert_not_called()
 
 @pytest.mark.parametrize(
-	"logging, authenticating, expects_logging",
-	f_enter_exit_logging_cases()
+	argnames=ENTER_EXIT_ARGS,
+	argvalues=F_ENTER_EXIT_LOGGING_CASES,
+	ids=get_ids_for_cases(ENTER_EXIT_ARGS, F_ENTER_EXIT_LOGGING_CASES)
 )
 def test_exit_context_manager(logging, authenticating, expects_logging, mocker, f_user, f_runtime_settings, f_ldap_connection):
 	# Mock RuntimeSettings
@@ -65,6 +69,8 @@ def test_exit_context_manager(logging, authenticating, expects_logging, mocker, 
 	# Create LDAPConnector instance
 	connector = LDAPConnector(user=f_user, is_authenticating=authenticating)
 	connector.connection = f_ldap_connection
+
+	# Mock context entered
 	connector._entered = True
 
 	# Exit context manager
@@ -95,8 +101,9 @@ def test_validate_entered_exception(mocker, f_user, f_ldap_connection):
 		True,
 		False,
 	),
+	ids=lambda x: f"force_admin: {x}"
 )
-def test_init_with_valid_user(force_admin, mocker, f_admin_dn, f_user, f_ldap_connection, f_server_pool, f_runtime_settings):
+def test_init_with_valid_user(force_admin, mocker, f_admin_dn, f_user, f_ldap_connection, f_server_pool, f_runtime_settings, f_tls):
 	connector_kwargs = {
 		"force_admin": force_admin
 	}
@@ -113,7 +120,7 @@ def test_init_with_valid_user(force_admin, mocker, f_admin_dn, f_user, f_ldap_co
 	# Mock ldap3.Connection
 	mocker.patch("core.ldap.connector.ldap3.Connection", return_value=f_ldap_connection)
 	mocker.patch("core.ldap.connector.ldap3.ServerPool", return_value=f_server_pool)
-	mocker.patch("core.ldap.connector.ldap3.Tls", return_value=mocker.Mock(spec=ldap3_Tls))
+	mocker.patch("core.ldap.connector.ldap3.Tls", return_value=f_tls)
 	mocker.patch("core.ldap.connector.aes_decrypt", return_value="somepassword")
 
 	# Create LDAPConnector instance
@@ -130,3 +137,80 @@ def test_init_with_invalid_user(mocker, f_runtime_settings):
 	# Test with no user
 	with pytest.raises(Exception, match="No valid user in LDAP Connector."):
 		LDAPConnector(user=None)
+
+@pytest.mark.parametrize(
+	"use_tls",
+	(
+		True,
+		False,
+	),
+)
+def test_bind_success(use_tls, mocker, f_user, f_runtime_settings, f_ldap_connection, f_server_pool, f_tls):
+	# Mock RuntimeSettings
+	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
+	f_runtime_settings.LDAP_AUTH_USE_TLS = use_tls
+
+	# Mock ldap3.Connection
+	mocker.patch("core.ldap.connector.ldap3.Connection", return_value=f_ldap_connection)
+	mocker.patch("core.ldap.connector.ldap3.ServerPool", return_value=f_server_pool)
+	mocker.patch("core.ldap.connector.ldap3.Tls", return_value=f_tls)
+	mocker.patch("core.ldap.connector.aes_decrypt", return_value="somepassword")
+
+	# Create LDAPConnector instance
+	connector = LDAPConnector(user=f_user)
+
+	# Emulate context entered
+	connector._entered = True
+	connector._temp_password = "password"
+
+	# Call bind
+	connector.bind()
+
+	# Verify connection is established
+	assert connector.connection == f_ldap_connection
+	if use_tls:
+		f_ldap_connection.start_tls.assert_called_once()
+	f_ldap_connection.bind.assert_called_once()
+
+def test_bind_connection_raises_ldap_exception(mocker, f_user, f_runtime_settings, f_server_pool, f_tls):
+	# Mock RuntimeSettings
+	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
+
+	# Patch connector classes
+	mocker.patch("core.ldap.connector.ldap3.Connection", side_effect=LDAPException)
+	mocker.patch("core.ldap.connector.ldap3.ServerPool", return_value=f_server_pool)
+	mocker.patch("core.ldap.connector.ldap3.Tls", return_value=f_tls)
+	mocker.patch("core.ldap.connector.aes_decrypt", return_value="somepassword")
+
+	# Create LDAPConnector instance
+	connector = LDAPConnector(user=f_user)
+
+	# Emulate context entered
+	connector._entered = True
+	connector._temp_password = "password"
+
+	# Call bind
+	with pytest.raises(CouldNotOpenConnection):
+		connector.bind()
+
+def test_bind_raises_ldap_exception(mocker, f_user, f_runtime_settings, f_ldap_connection, f_server_pool, f_tls):
+	# Mock RuntimeSettings
+	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
+
+	# Patch connector classes
+	f_ldap_connection.bind.side_effect = LDAPException
+	mocker.patch("core.ldap.connector.ldap3.Connection", return_value=f_ldap_connection)
+	mocker.patch("core.ldap.connector.ldap3.ServerPool", return_value=f_server_pool)
+	mocker.patch("core.ldap.connector.ldap3.Tls", return_value=f_tls)
+	mocker.patch("core.ldap.connector.aes_decrypt", return_value="somepassword")
+
+	# Create LDAPConnector instance
+	connector = LDAPConnector(user=f_user)
+
+	# Emulate context entered
+	connector._entered = True
+	connector._temp_password = "password"
+
+	# Call bind
+	with pytest.raises(CouldNotOpenConnection):
+		connector.bind()
