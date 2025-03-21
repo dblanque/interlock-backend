@@ -271,6 +271,7 @@ class LDAPConnector(object):
 		return self
 
 	def __exit__(self, exc_type, exc_value, traceback) -> None:
+		self.__validate_entered__()
 		if self.connection:
 			self.connection.unbind()
 		# LOG Open Connection Events
