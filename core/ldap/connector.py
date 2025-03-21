@@ -39,7 +39,6 @@ from interlock_backend.encrypt import aes_encrypt, aes_decrypt
 
 # Libs
 from inspect import getfullargspec
-from random import getrandbits
 import traceback
 import ssl
 import logging
@@ -248,8 +247,8 @@ class LDAPConnector(object):
 		else:
 			self.tlsSettings = None
 
-		for u in self.auth_url:
-			server = ldap3.Server(u, allowed_referral_hosts=[("*", True)], **server_args)
+		for url in self.auth_url:
+			server = ldap3.Server(url, allowed_referral_hosts=[("*", True)], **server_args)
 			self.server_pool.add(server)
 
 		self.user = user
@@ -319,33 +318,29 @@ class LDAPConnector(object):
 			# ! LDAP / LDAPS
 			c = ldap3.Connection(self.server_pool, **connection_args)
 		except LDAPException as ex:
-			str_ex = "LDAP connect failed: {ex}".format(ex=ex)
-			logger.error(str_ex)
-			# logger.error([v for k,v in vars(RunningSettings).items() if not k.startswith("__")])
-			exception = exc_ldap.CouldNotOpenConnection
-			data = {"code": exception.default_code, "message": str_ex}
-			exception.set_detail(exception, data)
-			raise exception
+			logger.exception(ex)
+			str_ex = "LDAP Connection creation failed: {ex}".format(ex=str(ex))
+			raise exc_ldap.CouldNotOpenConnection(
+				data={"message": str_ex}
+			)
 
 		# ! Unset Password ! #
 		del self._temp_password
 		# Configure.
 		try:
 			if RuntimeSettings.LDAP_AUTH_USE_TLS:
-				logger.debug(f"Starting TLS (LDAP Use TLS: {RuntimeSettings.LDAP_AUTH_USE_TLS})")
+				logger.debug(f"Starting TLS (LDAP Use TLS: {str(RuntimeSettings.LDAP_AUTH_USE_TLS)})")
 				c.start_tls()
 			c.bind(read_server_info=True)
 			# Return the connection.
 			logger.debug(f"LDAP connect for user {self.user_dn} succeeded")
 			self.connection = c
 		except LDAPException as ex:
-			str_ex = "LDAP bind failed: {ex}".format(ex=ex)
-			logger.error(str_ex)
 			logger.exception(ex)
-			exception = exc_ldap.CouldNotOpenConnection
-			data = {"code": exception.default_code, "message": str_ex}
-			exception.set_detail(exception, data)
-			raise exception
+			str_ex = "LDAP bind failed: {ex}".format(ex=str(ex))
+			raise exc_ldap.CouldNotOpenConnection(
+				data={"message": str_ex}
+			)
 
 	def rebind(self, user_dn, password):
 		self.__validate_entered__()
