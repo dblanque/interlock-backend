@@ -23,18 +23,18 @@ def f_ldap_connector(mocker) -> MockType:
 
 
 @pytest.fixture
-def f_ldc(mocker, f_connection) -> MockType:
+def f_ldc(mocker, f_ldap_connection) -> MockType:
 	"""Fixture to mock the LDAPConnector context manager (ldc)."""
 	m_ldc = mocker.Mock()
-	m_ldc.connection = f_connection
+	m_ldc.connection = f_ldap_connection
 	return m_ldc
 
 
 @pytest.fixture
-def f_connection(mocker, f_connection) -> MockType:
+def f_connection(mocker, f_ldap_connection) -> MockType:
 	"""Fixture to mock the LDAP connection."""
-	f_connection.unbind = mocker.Mock(name="m_connection_unbind")
-	f_connection.rebind = mocker.Mock(name="m_connection_rebind")
+	f_ldap_connection.unbind = mocker.Mock(name="m_connection_unbind")
+	f_ldap_connection.rebind = mocker.Mock(name="m_connection_rebind")
 	return f_connection
 
 
