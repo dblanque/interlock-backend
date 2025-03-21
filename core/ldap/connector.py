@@ -187,8 +187,8 @@ class LDAPConnector(object):
 		**kwargs,
 	):
 		is_local_superuser = hasattr(user, "username") and (
-			(user.username == DEFAULT_SUPERUSER_USERNAME and not user.user_type is USER_TYPE_LDAP)
-			or user.is_superuser
+			(user.username == DEFAULT_SUPERUSER_USERNAME or user.is_superuser)
+			and not user.user_type is USER_TYPE_LDAP
 		)
 		self.default_user_dn = RuntimeSettings.LDAP_AUTH_CONNECTION_USER_DN
 		self.default_user_pwd = RuntimeSettings.LDAP_AUTH_CONNECTION_PASSWORD
@@ -261,7 +261,9 @@ class LDAPConnector(object):
 		self.bind()
 		logger.info(f"Connection {self.uuid} opened.")
 		# LOG Open Connection Events
-		if RuntimeSettings.LDAP_LOG_OPEN_CONNECTION and not self.is_authenticating:
+		if (RuntimeSettings.LDAP_LOG_OPEN_CONNECTION
+	  		and not self.is_authenticating
+	  		and self.user):
 			DBLogMixin.log(
 				user_id=self.user.id,
 				actionType="OPEN",
@@ -275,7 +277,9 @@ class LDAPConnector(object):
 		if self.connection:
 			self.connection.unbind()
 		# LOG Open Connection Events
-		if RuntimeSettings.LDAP_LOG_CLOSE_CONNECTION and not self.is_authenticating:
+		if (RuntimeSettings.LDAP_LOG_CLOSE_CONNECTION
+	  		and not self.is_authenticating
+	  		and self.user):
 			DBLogMixin.log(
 				user_id=self.user.id,
 				actionType="CLOSE",
@@ -287,7 +291,7 @@ class LDAPConnector(object):
 			logger.exception(exc_value)
 			raise exc_value
 
-	def __validate_entered__(self):
+	def __validate_entered__(self) -> None:
 		"""Ensure the LDAPConnector is used within a context manager."""
 		if not self._entered:
 			raise Exception("LDAPConnector can only be used as a context manager or forcing _entered to True.")
