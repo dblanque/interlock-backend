@@ -136,7 +136,9 @@ def test_import_or_create_rsa_key_when_created(mocker):
 )
 def test_fernet_encrypt(data, return_bytes, bytes_encoding, expected, mocker):
 	# We don't need to test the fernet encryption, its a library.
-	encrypt_patch = mocker.patch("cryptography.fernet.Fernet.encrypt", return_value=b"abcd1234")
+	m_fernet = mocker.Mock()
+	mocker.patch("interlock_backend.encrypt.Fernet", return_value=m_fernet)
+	m_fernet.encrypt.return_value = b"abcd1234"
 	assert fernet_encrypt(data, return_bytes, bytes_encoding) == expected
 
 
@@ -146,7 +148,7 @@ def test_fernet_encrypt(data, return_bytes, bytes_encoding, expected, mocker):
 )
 def test_fernet_decrypt(data, bytes_encoding, expected, mocker):
 	# We don't need to test the fernet decryption, its a library.
-	decrypt_patch = mocker.patch(
-		"cryptography.fernet.Fernet.decrypt", return_value=bytes(expected, bytes_encoding)
-	)
+	m_fernet = mocker.Mock()
+	mocker.patch("interlock_backend.encrypt.Fernet", return_value=m_fernet)
+	m_fernet.decrypt.return_value = bytes(expected, bytes_encoding)
 	assert fernet_decrypt(data, bytes_encoding) == expected
