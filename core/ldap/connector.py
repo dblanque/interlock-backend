@@ -44,7 +44,7 @@ import traceback
 import ssl
 import logging
 import sys
-from uuid import uuid1, getnode as uuid_getnode
+from uuid import uuid4
 ###############################################################################
 
 this_module = sys.modules[__name__]
@@ -129,7 +129,7 @@ def authenticate(*args, **kwargs):
 	ldap_kwargs = {key: value for (key, value) in kwargs.items() if key in auth_user_lookup_fields}
 
 	# Check that this is valid login data.
-	if not password or "username" not in frozenset(ldap_kwargs.keys()):
+	if not password or "username" not in ldap_kwargs.keys():
 		return None
 
 	# Connect to LDAP and fetch user DN, create or update user if necessary
@@ -175,36 +175,8 @@ class LDAPConnectionOptions(TypedDict):
 
 class LDAPConnector(object):
 	connection: ldap3.Connection
-
-	def __enter__(self):
-		logger.info(f"Connection {self.uuid} opened.")
-		# LOG Open Connection Events
-		if RuntimeSettings.LDAP_LOG_OPEN_CONNECTION == True and self.is_authenticating == False:
-			DBLogMixin.log(
-				user_id=self.user.id,
-				actionType="OPEN",
-				objectClass="CONN",
-				affectedObject=f"{self.uuid}",
-			)
-		return self
-
-	def __exit__(self, exc_type, exc_value, traceback) -> None:
-		self.connection.unbind()
-		# LOG Open Connection Events
-		if RuntimeSettings.LDAP_LOG_CLOSE_CONNECTION == True and self.is_authenticating == False:
-			DBLogMixin.log(
-				user_id=self.user.id,
-				actionType="CLOSE",
-				objectClass="CONN",
-				affectedObject=f"{self.uuid}",
-			)
-		logger.info(f"Connection {self.uuid} closed.")
-		if exc_value:
-			logger.exception(exc_value)
-			raise exc_value
-
-	def __newUuid__(self):
-		self.uuid = uuid1(node=uuid_getnode(), clock_seq=getrandbits(14))
+	log_debug_prefix = "[DEBUG - LDAPConnector] | "
+	_entered = False
 
 	def __init__(
 		self,
@@ -220,17 +192,17 @@ class LDAPConnector(object):
 		)
 		self.default_user_dn = RuntimeSettings.LDAP_AUTH_CONNECTION_USER_DN
 		self.default_user_pwd = RuntimeSettings.LDAP_AUTH_CONNECTION_PASSWORD
-		self.__newUuid__()
+		self.__new_uuid__()
 		self.is_authenticating = is_authenticating
 
 		# If it's an Initial Authentication we need to use the bind user first
 		if force_admin or is_local_superuser:
-			user_dn = self.default_user_dn
-			password = self.default_user_pwd
+			self.user_dn = self.default_user_dn
+			self._temp_password = self.default_user_pwd
 		# If initial auth or user is local interlock superadmin
 		elif user is not None and user.user_type is USER_TYPE_LDAP:
-			user_dn = getattr(user, "dn", None)
-			password = aes_decrypt(*user.encryptedPassword)
+			self.user_dn = getattr(user, "dn", None)
+			self._temp_password = aes_decrypt(*user.encryptedPassword)
 		else:
 			raise Exception("No valid user in LDAP Connector.")
 
@@ -239,19 +211,18 @@ class LDAPConnector(object):
 		else:
 			ldapAuthTLSVersion = RuntimeSettings.LDAP_AUTH_TLS_VERSION
 
-		if not user_dn and not force_admin:
+		if not self.user_dn and not force_admin:
 			print(traceback.format_exc())
-			raise ValueError(f"No user_dn was provided for LDAP Connector ({user_dn})")
+			raise ValueError(f"No user_dn was provided for LDAP Connector ({self.user_dn})")
 
-		logger.debug("Connection Parameters: ")
-		logger.debug(f"User: {user}")
-		logger.debug(f"User DN: {user_dn}")
-		logger.debug(f"LDAP URL: {RuntimeSettings.LDAP_AUTH_URL}")
-		logger.debug(f"LDAP Connect Timeout: {RuntimeSettings.LDAP_AUTH_CONNECT_TIMEOUT}")
-		logger.debug(f"LDAP Receive Timeout: {RuntimeSettings.LDAP_AUTH_RECEIVE_TIMEOUT}")
-		logger.debug(f"LDAP Use SSL: {RuntimeSettings.LDAP_AUTH_USE_SSL}")
-		logger.debug(f"LDAP Use TLS: {RuntimeSettings.LDAP_AUTH_USE_TLS}")
-		logger.debug(f"LDAP TLS Version: {ldapAuthTLSVersion}")
+		logger.debug(f"{self.log_debug_prefix}User: {user}")
+		logger.debug(f"{self.log_debug_prefix}User DN: {self.user_dn}")
+		logger.debug(f"{self.log_debug_prefix}URL: {RuntimeSettings.LDAP_AUTH_URL}")
+		logger.debug(f"{self.log_debug_prefix}Connect Timeout: {RuntimeSettings.LDAP_AUTH_CONNECT_TIMEOUT}")
+		logger.debug(f"{self.log_debug_prefix}Receive Timeout: {RuntimeSettings.LDAP_AUTH_RECEIVE_TIMEOUT}")
+		logger.debug(f"{self.log_debug_prefix}Use SSL: {RuntimeSettings.LDAP_AUTH_USE_SSL}")
+		logger.debug(f"{self.log_debug_prefix}Use TLS: {RuntimeSettings.LDAP_AUTH_USE_TLS}")
+		logger.debug(f"{self.log_debug_prefix}TLS Version: {ldapAuthTLSVersion}")
 
 		# Initialize Server Args Dictionary
 		server_args = {
@@ -282,19 +253,61 @@ class LDAPConnector(object):
 			self.server_pool.add(server)
 
 		self.user = user
-		self.user_dn = user_dn
 		self.auth_url = self.auth_url
 		self.connection = None
+
+	def __enter__(self) -> "LDAPConnector":
+		self._entered = True
+		self.bind()
+		logger.info(f"Connection {self.uuid} opened.")
+		# LOG Open Connection Events
+		if RuntimeSettings.LDAP_LOG_OPEN_CONNECTION and not self.is_authenticating:
+			DBLogMixin.log(
+				user_id=self.user.id,
+				actionType="OPEN",
+				objectClass="CONN",
+				affectedObject=f"{self.uuid}",
+			)
+		return self
+
+	def __exit__(self, exc_type, exc_value, traceback) -> None:
+		if self.connection:
+			self.connection.unbind()
+		# LOG Open Connection Events
+		if RuntimeSettings.LDAP_LOG_CLOSE_CONNECTION and not self.is_authenticating:
+			DBLogMixin.log(
+				user_id=self.user.id,
+				actionType="CLOSE",
+				objectClass="CONN",
+				affectedObject=f"{self.uuid}",
+			)
+		logger.info(f"Connection {self.uuid} closed.")
+		if exc_value:
+			logger.exception(exc_value)
+			raise exc_value
+
+	def __validate_entered__(self):
+		"""Ensure the LDAPConnector is used within a context manager."""
+		if not self._entered:
+			raise Exception("LDAPConnector can only be used as a context manager or forcing _entered to True.")
+
+	def __new_uuid__(self) -> None:
+		self.uuid = uuid4()
+
+	def bind(self) -> None:
+		self.__validate_entered__()
 		# Connect.
 		try:
 			connection_args = {
-				"user": user_dn,
-				"password": password,
+				"user": self.user_dn,
+				"password": self._temp_password,
 				"auto_bind": True,
 				"raise_exceptions": True,
 				"receive_timeout": RuntimeSettings.LDAP_AUTH_RECEIVE_TIMEOUT,
 				"check_names": True,
 			}
+			# Do not use this in production or testing
+			# It can leak sensitive data such as decrypted credentials
 			if DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS is True:
 				logger.info(connection_args)
 
@@ -310,7 +323,7 @@ class LDAPConnector(object):
 			raise exception
 
 		# ! Unset Password ! #
-		del password
+		del self._temp_password
 		# Configure.
 		try:
 			if RuntimeSettings.LDAP_AUTH_USE_TLS:
@@ -318,7 +331,7 @@ class LDAPConnector(object):
 				c.start_tls()
 			c.bind(read_server_info=True)
 			# Return the connection.
-			logger.debug("LDAP connect for user " + user_dn + " succeeded")
+			logger.debug(f"LDAP connect for user {self.user_dn} succeeded")
 			self.connection = c
 		except LDAPException as ex:
 			str_ex = "LDAP bind failed: {ex}".format(ex=ex)
@@ -330,16 +343,19 @@ class LDAPConnector(object):
 			raise exception
 
 	def rebind(self, user_dn, password):
+		self.__validate_entered__()
 		if len(password) < 1:
 			self.connection.unbind()
 			raise ValueError("Password length smaller than one, unbinding connection.")
 		try:
 			self.connection.rebind(user=user_dn, password=password, read_server_info=True)
-		except:
+		except LDAPException as ex:
+			logger.error(f"Rebind failed for user {user_dn}: {ex}")
 			return None
 		return self.connection.result
 
-	def get_user(self, **kwargs):
+	def get_user(self, **kwargs) -> User | None:
+		self.__validate_entered__()
 		"""
 		Returns the user with the given identifier.
 
@@ -366,12 +382,13 @@ class LDAPConnector(object):
 		logger.warning("LDAP user lookup failed")
 		return None
 
-	def _get_or_create_user(self, user_data):
+	def _get_or_create_user(self, user_data) -> User:
 		"""
 		Returns a Django user for the given LDAP user data.
 
 		If the user does not exist, then it will be created.
 		"""
+		self.__validate_entered__()
 
 		attributes = user_data.get("attributes")
 		if attributes is None:
