@@ -59,36 +59,32 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			print(e)
 			raise ValueError("RID To Search must be an Integer")
 
-		# Open LDAP Connection
-		try:
-			ldapConnection = LDAPConnector(force_admin=True).connection
-		except Exception as e:
-			print(e)
-			raise CouldNotOpenConnection
+		with LDAPConnector(force_admin=True) as ldc: 
+			connection = ldc.connection
 
-		searchFilter = search_filter_add("", "objectClass=group")
+			searchFilter = search_filter_add("", "objectClass=group")
 
-		ldapConnection.search(
-			RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
-			search_filter=searchFilter,
-			search_scope=ldap3.SUBTREE,
-			attributes=attributes,
-		)
+			connection.search(
+				RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
+				search_filter=searchFilter,
+				search_scope=ldap3.SUBTREE,
+				attributes=attributes,
+			)
 
-		for g in ldapConnection.entries:
-			sid = SID(g.objectSid)
-			sid = sid.__str__()
-			rid = int(sid.split("-")[-1])
-			value = sid
-			if rid == ridToSearch:
-				args = {
-					"connection": ldapConnection,
-					"dn": g.distinguishedName,
-					"ldapAttributes": attributes,
-				}
-				result = LDAPObject(**args)
-				ldapConnection.unbind()
-				return result.attributes
+			for g in connection.entries:
+				sid = SID(g.objectSid)
+				sid = sid.__str__()
+				rid = int(sid.split("-")[-1])
+				value = sid
+				if rid == ridToSearch:
+					args = {
+						"connection": connection,
+						"dn": g.distinguishedName,
+						"ldapAttributes": attributes,
+					}
+					result = LDAPObject(**args)
+					connection.unbind()
+					return result.attributes
 
 	def getGroupType(self, groupTypeInt=None, debug=False):
 		sum = 0
