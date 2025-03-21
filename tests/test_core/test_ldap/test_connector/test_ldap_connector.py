@@ -53,7 +53,7 @@ def test_enter_context_manager(logging, authenticating, expects_logging, mocker,
 	"logging, authenticating, expects_logging",
 	f_enter_exit_logging_cases()
 )
-def test_exit_context_manager(logging, authenticating, expects_logging, mocker, f_user, f_runtime_settings, f_connection):
+def test_exit_context_manager(logging, authenticating, expects_logging, mocker, f_user, f_runtime_settings, f_ldap_connection):
 	# Mock RuntimeSettings
 	f_runtime_settings.LDAP_LOG_CLOSE_CONNECTION = logging
 	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
@@ -64,14 +64,14 @@ def test_exit_context_manager(logging, authenticating, expects_logging, mocker, 
 
 	# Create LDAPConnector instance
 	connector = LDAPConnector(user=f_user, is_authenticating=authenticating)
-	connector.connection = f_connection
+	connector.connection = f_ldap_connection
 	connector._entered = True
 
 	# Exit context manager
 	connector.__exit__(None, None, None)
 
 	# Verify unbind and logging
-	f_connection.unbind.assert_called_once()
+	f_ldap_connection.unbind.assert_called_once()
 	if expects_logging:
 		m_log.assert_called_once_with(
 			user_id=f_user.id,
@@ -83,7 +83,7 @@ def test_exit_context_manager(logging, authenticating, expects_logging, mocker, 
 		m_log.assert_not_called()
 
 
-def test_validate_entered_exception(mocker, f_user, f_connection):
+def test_validate_entered_exception(mocker, f_user, f_ldap_connection):
 	mocker.patch("core.ldap.connector.aes_decrypt", return_value="somepassword")
 	connector = LDAPConnector(user=f_user)
 	with pytest.raises(Exception):
@@ -96,7 +96,7 @@ def test_validate_entered_exception(mocker, f_user, f_connection):
 		False,
 	),
 )
-def test_init_with_valid_user(force_admin, mocker, f_admin_dn, f_user, f_connection, f_server_pool, f_runtime_settings):
+def test_init_with_valid_user(force_admin, mocker, f_admin_dn, f_user, f_ldap_connection, f_server_pool, f_runtime_settings):
 	connector_kwargs = {
 		"force_admin": force_admin
 	}
@@ -111,7 +111,7 @@ def test_init_with_valid_user(force_admin, mocker, f_admin_dn, f_user, f_connect
 	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
 
 	# Mock ldap3.Connection
-	mocker.patch("core.ldap.connector.ldap3.Connection", return_value=f_connection)
+	mocker.patch("core.ldap.connector.ldap3.Connection", return_value=f_ldap_connection)
 	mocker.patch("core.ldap.connector.ldap3.ServerPool", return_value=f_server_pool)
 	mocker.patch("core.ldap.connector.ldap3.Tls", return_value=mocker.Mock(spec=ldap3_Tls))
 	mocker.patch("core.ldap.connector.aes_decrypt", return_value="somepassword")
@@ -119,7 +119,7 @@ def test_init_with_valid_user(force_admin, mocker, f_admin_dn, f_user, f_connect
 	# Create LDAPConnector instance
 	with LDAPConnector(**connector_kwargs) as connector:
 		# Verify connection is established
-		assert connector.connection == f_connection
+		assert connector.connection == f_ldap_connection
 		assert connector.server_pool == f_server_pool
 		assert connector.user_dn.lower() == expected_dn
 

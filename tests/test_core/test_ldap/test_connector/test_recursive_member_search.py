@@ -20,9 +20,9 @@ def m_nested_group_dn():
 		("user_dn", []),  # Bad type for group_dn
 	),
 )
-def test_recursive_member_search_type_errors(user_dn, group_dn, f_connection):
+def test_recursive_member_search_type_errors(user_dn, group_dn, f_ldap_connection):
 	with pytest.raises(TypeError):
-		recursive_member_search(user_dn, f_connection, group_dn)
+		recursive_member_search(user_dn, f_ldap_connection, group_dn)
 
 
 @pytest.mark.parametrize(
@@ -32,14 +32,14 @@ def test_recursive_member_search_type_errors(user_dn, group_dn, f_connection):
 		("user_dn", ""),  # Zero length group_dn
 	),
 )
-def test_recursive_member_search_len_errors(user_dn, group_dn, f_connection):
+def test_recursive_member_search_len_errors(user_dn, group_dn, f_ldap_connection):
 	with pytest.raises(ValueError):
-		recursive_member_search(user_dn, f_connection, group_dn)
+		recursive_member_search(user_dn, f_ldap_connection, group_dn)
 
 
 def test_recursive_member_search_direct(
 	# Fixtures
-	f_connection,
+	f_ldap_connection,
 	f_user_dn,
 	m_group_dn,
 	mocker,
@@ -47,13 +47,13 @@ def test_recursive_member_search_direct(
 	m_entry = mocker.MagicMock()
 	m_entry.objectClass = "group"
 	m_entry.member = [f_user_dn]
-	f_connection.entries = [m_entry]
-	assert recursive_member_search(f_user_dn, f_connection, m_group_dn) is True
+	f_ldap_connection.entries = [m_entry]
+	assert recursive_member_search(f_user_dn, f_ldap_connection, m_group_dn) is True
 
 
 def test_recursive_member_search_nested(
 	# Fixtures
-	f_connection,
+	f_ldap_connection,
 	f_user_dn,
 	m_group_dn,
 	m_nested_group_dn,
@@ -65,13 +65,13 @@ def test_recursive_member_search_nested(
 	m_entry_nested = mocker.MagicMock()
 	m_entry_nested.objectClass = "group"
 	m_entry_nested.member = [f_user_dn]
-	f_connection.entries = [m_entry, m_entry_nested]
-	assert recursive_member_search(f_user_dn, f_connection, m_group_dn) is True
+	f_ldap_connection.entries = [m_entry, m_entry_nested]
+	assert recursive_member_search(f_user_dn, f_ldap_connection, m_group_dn) is True
 
 
 def test_recursive_member_search_not_in_member(
 	# Fixtures
-	f_connection,
+	f_ldap_connection,
 	f_user_dn,
 	m_group_dn,
 	mocker,
@@ -79,13 +79,13 @@ def test_recursive_member_search_not_in_member(
 	m_entry = mocker.MagicMock()
 	m_entry.objectClass = "group"
 	m_entry.member = []
-	f_connection.entries = [m_entry]
-	assert recursive_member_search(f_user_dn, f_connection, m_group_dn) is False
+	f_ldap_connection.entries = [m_entry]
+	assert recursive_member_search(f_user_dn, f_ldap_connection, m_group_dn) is False
 
 
 def test_recursive_member_search_verify_filter(
 	# Fixtures
-	f_connection,
+	f_ldap_connection,
 	f_user_dn,
 	m_group_dn,
 	mocker,
@@ -93,12 +93,12 @@ def test_recursive_member_search_verify_filter(
 	m_entry = mocker.MagicMock()
 	m_entry.objectClass = "group"
 	m_entry.member = []
-	f_connection.entries = [m_entry]
+	f_ldap_connection.entries = [m_entry]
 
-	recursive_member_search(f_user_dn, f_connection, m_group_dn)
+	recursive_member_search(f_user_dn, f_ldap_connection, m_group_dn)
 
 	expected_filter = f"(&(distinguishedName={m_group_dn})(objectClass=group))"
-	f_connection.search.assert_called_with(
+	f_ldap_connection.search.assert_called_with(
 		LDAP_AUTH_SEARCH_BASE,
 		expected_filter,
 		attributes=["member", "objectClass", "distinguishedName"],

@@ -9,7 +9,7 @@ from typing import Union
 
 
 @pytest.fixture
-def f_connection(mocker) -> MockType:
+def f_ldap_connection(mocker) -> MockType:
 	return mocker.MagicMock(spec=Connection)
 
 @pytest.fixture

@@ -58,7 +58,7 @@ def m_user_as_ldap_attributes(m_user: dict):
 	),
 )
 def test_sync_user_relations_admin_user(
-	user_attributes: dict, in_ldap_admin_group, mocker, f_runtime_settings, f_connection
+	user_attributes: dict, in_ldap_admin_group, mocker, f_runtime_settings, f_ldap_connection
 ):
 	mocker.patch("core.config.runtime.RuntimeSettings", f_runtime_settings)
 
@@ -68,7 +68,7 @@ def test_sync_user_relations_admin_user(
 	for key, value in user_attributes.items():
 		setattr(m_user, key, value)
 	sync_user_relations(
-		m_user, m_user_as_ldap_attributes(m_user), connection=f_connection
+		m_user, m_user_as_ldap_attributes(m_user), connection=f_ldap_connection
 	)
 
 	assert m_user.is_staff is True
@@ -99,7 +99,7 @@ def test_sync_user_relations_admin_user(
 	),
 )
 def test_sync_user_relations_normal_user(
-	user_attributes: dict, mocker, f_runtime_settings, f_connection
+	user_attributes: dict, mocker, f_runtime_settings, f_ldap_connection
 ):
 	mocker.patch("core.config.runtime.RuntimeSettings", f_runtime_settings)
 
@@ -109,7 +109,7 @@ def test_sync_user_relations_normal_user(
 	for key, value in user_attributes.items():
 		setattr(m_user, key, value)
 	sync_user_relations(
-		m_user, m_user_as_ldap_attributes(m_user), connection=f_connection
+		m_user, m_user_as_ldap_attributes(m_user), connection=f_ldap_connection
 	)
 
 	assert m_user.is_staff is False
