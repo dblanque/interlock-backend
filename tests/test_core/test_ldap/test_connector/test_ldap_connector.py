@@ -7,17 +7,29 @@ from core.models.choices.log import (
 	LOG_CLASS_CONN
 )
 
+def f_enter_exit_logging_cases():
+	return (
+		(True, False, True), # LOG, NOT AUTHENTICATING
+		(True, True, False), # LOG, AUTHENTICATING
+		(False, True, False), # NO LOG, AUTHENTICATING
+		(False, False, False), # NO LOG, NOT AUTHENTICATING
+	)
 
-def test_enter_context_manager(mocker, f_user, f_runtime_settings):
+
+@pytest.mark.parametrize(
+	"logging, authenticating, expects_logging",
+	f_enter_exit_logging_cases()
+)
+def test_enter_context_manager(logging, authenticating, expects_logging, mocker, f_user, f_runtime_settings):
 	# Mock RuntimeSettings
-	f_runtime_settings.LDAP_LOG_OPEN_CONNECTION = True
+	f_runtime_settings.LDAP_LOG_OPEN_CONNECTION = logging
 	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
 
 	# Mock DBLogMixin.log
 	m_log: MockType = mocker.patch("core.ldap.connector.DBLogMixin.log")
 
 	# Create LDAPConnector instance
-	connector = LDAPConnector(user=f_user)
+	connector = LDAPConnector(user=f_user, is_authenticating=authenticating)
 	
 	# Mock bind method
 	mocker.patch.object(connector, "bind")
@@ -25,21 +37,19 @@ def test_enter_context_manager(mocker, f_user, f_runtime_settings):
 	# Enter context manager
 	with connector as c:
 		assert c == connector  # Ensure the context manager returns self
-		m_log.assert_called_once_with(
-			user_id=f_user.id,
-			actionType=LOG_ACTION_OPEN,
-			objectClass=LOG_CLASS_CONN,
-			affectedObject=f"{connector.uuid}",
-		)
+		if expects_logging:
+			m_log.assert_called_once_with(
+				user_id=f_user.id,
+				actionType=LOG_ACTION_OPEN,
+				objectClass=LOG_CLASS_CONN,
+				affectedObject=f"{connector.uuid}",
+			)
+		else:
+			m_log.assert_not_called()
 
 @pytest.mark.parametrize(
 	"logging, authenticating, expects_logging",
-	(
-		(True, False, True), # LOG, NOT AUTHENTICATING
-		(True, True, False), # LOG, AUTHENTICATING
-		(False, True, False), # NO LOG, AUTHENTICATING
-		(False, False, False), # NO LOG, NOT AUTHENTICATING
-	)
+	f_enter_exit_logging_cases()
 )
 def test_exit_context_manager(logging, authenticating, expects_logging, mocker, f_user, f_runtime_settings, f_connection):
 	# Mock RuntimeSettings
@@ -52,6 +62,7 @@ def test_exit_context_manager(logging, authenticating, expects_logging, mocker, 
 	# Create LDAPConnector instance
 	connector = LDAPConnector(user=f_user, is_authenticating=authenticating)
 	connector.connection = f_connection
+	connector._entered = True
 
 	# Exit context manager
 	connector.__exit__(None, None, None)
