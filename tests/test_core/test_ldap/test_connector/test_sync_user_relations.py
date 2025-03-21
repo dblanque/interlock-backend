@@ -58,22 +58,22 @@ def m_user_as_ldap_attributes(m_user: dict):
 	),
 )
 def test_sync_user_relations_admin_user(
-	user_attributes: dict, in_ldap_admin_group, mocker, m_runtime_settings, m_connection
+	user_attributes: dict, in_ldap_admin_group, mocker, f_runtime_settings, f_connection
 ):
-	mocker.patch("core.config.runtime.RuntimeSettings", return_value=m_runtime_settings)
+	mocker.patch("core.config.runtime.RuntimeSettings", f_runtime_settings)
 
-	m_user_mock: MockType = mocker.MagicMock()
+	m_user: MockType = mocker.MagicMock()
 	mocker.patch("core.ldap.connector.recursive_member_search", return_value=in_ldap_admin_group)
 
 	for key, value in user_attributes.items():
-		setattr(m_user_mock, key, value)
+		setattr(m_user, key, value)
 	sync_user_relations(
-		m_user_mock, m_user_as_ldap_attributes(m_user_mock), connection=m_connection
+		m_user, m_user_as_ldap_attributes(m_user), connection=f_connection
 	)
 
-	assert m_user_mock.is_staff is True
-	assert m_user_mock.is_superuser is True
-	m_user_mock.save.assert_called_once()
+	assert m_user.is_staff is True
+	assert m_user.is_superuser is True
+	m_user.save.assert_called_once()
 
 
 @pytest.mark.parametrize(
@@ -99,19 +99,19 @@ def test_sync_user_relations_admin_user(
 	),
 )
 def test_sync_user_relations_normal_user(
-	user_attributes: dict, mocker, m_runtime_settings, m_connection
+	user_attributes: dict, mocker, f_runtime_settings, f_connection
 ):
-	mocker.patch("core.config.runtime.RuntimeSettings", return_value=m_runtime_settings)
+	mocker.patch("core.config.runtime.RuntimeSettings", f_runtime_settings)
 
-	m_user_mock: MockType = mocker.MagicMock()
+	m_user: MockType = mocker.MagicMock()
 	mocker.patch("core.ldap.connector.recursive_member_search", return_value=False)
 
 	for key, value in user_attributes.items():
-		setattr(m_user_mock, key, value)
+		setattr(m_user, key, value)
 	sync_user_relations(
-		m_user_mock, m_user_as_ldap_attributes(m_user_mock), connection=m_connection
+		m_user, m_user_as_ldap_attributes(m_user), connection=f_connection
 	)
 
-	assert m_user_mock.is_staff is False
-	assert m_user_mock.is_superuser is False
-	m_user_mock.save.assert_called_once()
+	assert m_user.is_staff is False
+	assert m_user.is_superuser is False
+	m_user.save.assert_called_once()
