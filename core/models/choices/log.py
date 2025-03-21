@@ -1,25 +1,43 @@
 # LOG CLASS CHOICES
 
+LOG_ACTION_CREATE = "CREATE"
+LOG_ACTION_READ = "READ"
+LOG_ACTION_UPDATE = "UPDATE"
+LOG_ACTION_DELETE = "DELETE"
+LOG_ACTION_LOGIN = "LOGIN"
+LOG_ACTION_LOGOUT = "LOGOUT"
+LOG_ACTION_OPEN = "OPEN"
+LOG_ACTION_CLOSE = "CLOSE"
 ACTION_CHOICES = [
-	("CREATE", "Create"),
-	("READ", "Read"),
-	("UPDATE", "Update"),
-	("DELETE", "Delete"),
-	("LOGIN", "Login"),
-	("LOGOUT", "Logout"),
-	("OPEN", "Open"),
-	("CLOSE", "Close"),
+	(LOG_ACTION_CREATE, "Create"),
+	(LOG_ACTION_READ, "Read"),
+	(LOG_ACTION_UPDATE, "Update"),
+	(LOG_ACTION_DELETE, "Delete"),
+	(LOG_ACTION_LOGIN, "Login"),
+	(LOG_ACTION_LOGOUT, "Logout"),
+	(LOG_ACTION_OPEN, "Open"),
+	(LOG_ACTION_CLOSE, "Close"),
 ]
 
+LOG_CLASS_USER = "USER"
+LOG_CLASS_GROUP = "GROUP"
+LOG_CLASS_OU = "OU"
+LOG_CLASS_DOM = "DOM"
+LOG_CLASS_GPO = "GPO"
+LOG_CLASS_LDAP = "LDAP"
+LOG_CLASS_CONN = "CONN"
+LOG_CLASS_SET = "SET"
+LOG_CLASS_DNSZ = "DNSZ"
+LOG_CLASS_DNSR = "DNSR"
 CLASS_CHOICES = [
-	("USER", "User"),
-	("GROUP", "Group"),
-	("OU", "Organizational Unit"),
-	("DOM", "Domain"),
-	("GPO", "Group Policy Object"),
-	("LDAP", "LDAP Object"),
-	("CONN", "Connection"),
-	("SET", "Setting"),
-	("DNSZ", "DNS Zone"),
-	("DNSR", "DNS Record"),
+	(LOG_CLASS_USER, "User"),
+	(LOG_CLASS_GROUP, "Group"),
+	(LOG_CLASS_OU, "Organizational Unit"),
+	(LOG_CLASS_DOM, "Domain"),
+	(LOG_CLASS_GPO, "Group Policy Object"),
+	(LOG_CLASS_LDAP, "LDAP Object"),
+	(LOG_CLASS_CONN, "Connection"),
+	(LOG_CLASS_SET, "Setting"),
+	(LOG_CLASS_DNSZ, "DNS Zone"),
+	(LOG_CLASS_DNSR, "DNS Record"),
 ]
