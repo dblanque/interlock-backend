@@ -3,7 +3,7 @@ from pytest_mock import MockType
 from core.models.ldap_settings import LDAP_SETTING_MAP
 from ldap3 import ServerPool, Connection
 from core.models.ldap_settings_runtime import RunningSettingsClass
-from core.models.user import USER_TYPE_LDAP
+from core.models.user import USER_TYPE_LDAP, User
 from core.ldap import defaults as ldap_defaults
 from typing import Union
 
@@ -29,9 +29,13 @@ def f_runtime_settings(mocker) -> Union[MockType, RunningSettingsClass]:
 def f_user_dn():
 	return f"cn=testuser,{ldap_defaults.LDAP_AUTH_SEARCH_BASE}"
 
+@pytest.fixture
+def f_admin_dn():
+	return f"CN=Administrator,CN=Users,{ldap_defaults.LDAP_AUTH_SEARCH_BASE}".lower()
+
 # Fixtures for common test data
 @pytest.fixture
-def f_user(mocker, f_user_dn) -> MockType:
+def f_user(mocker, f_user_dn) -> Union[MockType, User]:
 	m_user = mocker.MagicMock(name="m_user")
 	m_user.id = 1
 	m_user.save = mocker.Mock(name="m_user_save")
