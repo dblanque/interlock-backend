@@ -238,7 +238,7 @@ class User(BaseUser):
 	class Meta:
 		constraints = [
 			models.CheckConstraint(
-				check=models.Q(
+				condition=models.Q(
 					ldap_password_aes=None,
 					ldap_password_ct=None,
 					ldap_password_nonce=None,
