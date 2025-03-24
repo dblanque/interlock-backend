@@ -11,8 +11,7 @@
 import struct
 import uuid
 import logging
-from typing import Union, Dict, List, ByteString
-from binascii import hexlify, unhexlify
+from typing import Union
 ################################################################################
 
 logger = logging.getLogger(__name__)
@@ -48,7 +47,7 @@ class GUID:
 	For some reason MS GUID Documentation and Online sources differ on Data Structure from the actual
 	output on samba-tool with SAMBA LDAP Server(s). Might be a difference between ADDS and LDAP.
 
-	SAMPLE DATA:
+	SAMPLE DATA FROM TEST LDAP SERVER:
 	- ldbsearch -H /var/lib/samba/private/sam.ldb name realm objectGUID objectSID|grep -A 3 "Administrators"
 	  - name: Administrators
 	  - objectGUID (bytes): b'\xde\xbe]\xb1\xc0\x7f\xbeG\x97;=\x05\x8a\n0`'
@@ -65,19 +64,62 @@ class GUID:
 		if isinstance(guid, str):
 			self.from_str(guid_str=guid)
 		else:
+			if isinstance(guid, bytes):
+				guid = bytearray(guid)
 			self.from_bytes(guid_bytes=guid)
 		return None
 
 	def from_str(self, guid_str: str):
-		# TODO - Finish this if we ever need it, just reverse from_bytes
-		self.uuid_str = guid_str
-		self.data_bytes_hex = self.uuid_str.split("-")
-		# Loop through Byte Group Data definition and create Hex Groups
-		for d_index, (d_reverse, d_slice) in enumerate(DATA_DEF_LDAP):
-			sliced_hex_list = self.data_bytes_hex[d_slice]
-			if d_reverse:
-				sliced_hex_list.reverse()
-			self.data[d_index] = "".join(sliced_hex_list)
+		# Validate the GUID string format
+		try:
+			uuid_obj = uuid.UUID(guid_str)
+		except ValueError as e:
+			logger.error(f"Invalid GUID string: {guid_str}")
+			raise e
+
+		parts = guid_str.split('-')
+		if len(parts) != 5:
+			raise ValueError("Invalid GUID format, must have 5 parts separated by '-'")
+
+		byte_list = [0] * 16
+
+		for group_index, (reverse_flag, byte_slice) in enumerate(DATA_DEF_LDAP):
+			part = parts[group_index]
+
+			# Split part into two-character hex pairs
+			hex_pairs = [part[i:i+2] for i in range(0, len(part), 2)]
+			if len(hex_pairs) * 2 != len(part):
+				raise ValueError(f"Part {group_index} '{part}' has invalid length")
+
+			# Reverse the hex pairs if required
+			if reverse_flag:
+				hex_pairs = list(reversed(hex_pairs))
+
+			# Convert hex pairs to integers (bytes)
+			try:
+				bytes_group = [int(hp, 16) for hp in hex_pairs]
+			except ValueError as e:
+				raise ValueError(f"Invalid hex in part {group_index} '{part}': {e}")
+
+			# Check if the number of bytes matches the slice length
+			start = byte_slice.start
+			stop = byte_slice.stop
+			expected_length = stop - start
+			if len(bytes_group) != expected_length:
+				raise ValueError(f"Part {group_index} has {len(bytes_group)} bytes, expected {expected_length}")
+
+			# Assign bytes to the correct positions in the byte list
+			for i in range(len(bytes_group)):
+				byte_list[start + i] = bytes_group[i]
+
+		# Convert the list to a bytearray and process through from_bytes
+		guid_bytes = bytearray(byte_list)
+		self.from_bytes(guid_bytes)
+
+		# Verify the generated UUID string matches the input
+		if self.uuid_str != guid_str:
+			raise ValueError("Conversion from string to bytes and back to string failed. Generated UUID does not match input.")
+
 		return None
 
 	def from_bytes(self, guid_bytes: Union[bytearray, list]):
@@ -85,35 +127,41 @@ class GUID:
 		# If param is passed within a list of raw entry attributes
 		if isinstance(guid_bytes, list):
 			guid_bytes = bytearray(guid_bytes[0])
-		assert type(guid_bytes) == bytearray
+		assert isinstance(guid_bytes, bytearray), "guid_bytes must be a bytearray"
 		self.data_bytes_raw = guid_bytes
 		# Unpack with Network Byte Ordering
 		self.data_bytes_int = struct.unpack("!16B", guid_bytes)
-		self.data_bytes_hex = ""
+		self.data_bytes_hex = []
 
 		# Convert Integer Byte Array to Hex and split into list/array
 		for b_as_int in self.data_bytes_int:
-			self.data_bytes_hex = self.data_bytes_hex + hex(b_as_int).replace("0x", ",")
-		self.data_bytes_hex = self.data_bytes_hex[1:].split(",")
-
-		# Pad single digit hex numbers with a 0 to the left
-		for i, b_as_int in enumerate(self.data_bytes_hex):
-			self.data_bytes_hex[i] = b_as_int.rjust(2, "0")
+			self.data_bytes_hex.append(format(b_as_int, '02x'))
 
 		# Loop through Byte Group Data definition and create UUID String
+		self.data = {}
 		for d_index, (d_reverse, d_slice) in enumerate(DATA_DEF_LDAP):
 			sliced_hex_list = self.data_bytes_hex[d_slice]
 			if d_reverse:
-				sliced_hex_list.reverse()
+				sliced_hex_list = list(reversed(sliced_hex_list))
 			self.data[d_index] = "".join(sliced_hex_list)
 
-		for ds in self.data.values():
-			self.uuid_str = ds if self.uuid_str == "" else f"{self.uuid_str}-{ds}"
-		uuid.UUID(self.uuid_str.replace("-", ""))
+		# Construct the UUID string from the data dictionary
+		self.uuid_str = '-'.join([self.data[i] for i in range(len(DATA_DEF_LDAP))])
+
+		# Validate the constructed UUID string
+		try:
+			uuid.UUID(self.uuid_str)
+		except ValueError as e:
+			logger.error(f"Generated invalid UUID string: {self.uuid_str}")
+			raise e
+
 		return None
 
 	def __str__(self):
 		return self.uuid_str
+
+	def __repr__(self):
+		return f"GUID('{self.uuid_str}')"
 
 	def __dict__(self):
 		return self.data
