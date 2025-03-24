@@ -63,7 +63,11 @@ named_view_sets = {
 }
 
 if DEBUG == True:
-	named_view_sets.update({r"gpo": GPOViewSet, r"test": TestViewSet, r"debug": DebugViewSet})
+	named_view_sets.update({
+		r"ldap/gpo": GPOViewSet,
+		r"test": TestViewSet,
+		r"debug": DebugViewSet
+	})
 
 [
 	router.register(f"api/{name}", view_set, basename=name)
