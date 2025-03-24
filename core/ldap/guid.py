@@ -8,20 +8,25 @@
 # ! Tried doing this with impacket.structure but it doesn't work, had to manually
 # ! convert and reverse the byte groups.
 # ---------------------------------- IMPORTS -----------------------------------#
-import struct, uuid, logging
-from typing import Union
+import struct
+import uuid
+import logging
+from typing import Union, Dict, List, ByteString
+from binascii import hexlify, unhexlify
 ################################################################################
 
 logger = logging.getLogger(__name__)
 
+# Reverse Bytes slice, byte slice indices
 DATA_DEF_MS = [
 	(True, slice(0, 4)),
 	(True, slice(4, 6)),
 	(True, slice(6, 8)),
 	(True, slice(8, 16)),
 ]
+
+# Reverse Bytes slice, byte slice indices
 DATA_DEF_LDAP = [
-	# Should be reversed?, slice range
 	(True, slice(0, 4)),
 	(True, slice(4, 6)),
 	(True, slice(6, 8)),
@@ -42,6 +47,17 @@ class GUID:
 
 	For some reason MS GUID Documentation and Online sources differ on Data Structure from the actual
 	output on samba-tool with SAMBA LDAP Server(s). Might be a difference between ADDS and LDAP.
+
+	SAMPLE DATA:
+	- ldbsearch -H /var/lib/samba/private/sam.ldb name realm objectGUID objectSID|grep -A 3 "Administrators"
+	  - name: Administrators
+	  - objectGUID (bytes): b'\xde\xbe]\xb1\xc0\x7f\xbeG\x97;=\x05\x8a\n0`'
+	  - objectGUID (str): b15dbede-7fc0-47be-973b-3d058a0a3060
+
+	- ldbsearch -H /var/lib/samba/private/sam.ldb name realm objectGUID objectSID|grep -A 3 "linuxAdmin"
+	  - name: linuxAdmin
+	  - objectGUID (bytes): b'\xb4c\xb7\xf3\xc3\xe2L@\xa5\xea7\x81[\xdd\xea\x08'
+	  - objectGUID (str): f3b763b4-e2c3-404c-a5ea-37815bddea08
 	"""
 
 	def __init__(self, guid: Union[bytearray, list, str]):
