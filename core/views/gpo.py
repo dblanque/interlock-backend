@@ -101,7 +101,6 @@ class GPOViewSet(BaseViewSet):
 				self.ldap_connection.unbind()
 				raise
 
-			print(gpo)
 			print(self.ldap_connection.entries)
 
 		return Response(
