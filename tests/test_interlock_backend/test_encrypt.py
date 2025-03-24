@@ -144,7 +144,10 @@ def test_fernet_encrypt(data, return_bytes, bytes_encoding, expected, mocker):
 
 @pytest.mark.parametrize(
 	"data,bytes_encoding,expected",
-	(("abcd4321", "utf-8", "abcd4321"), (b"abcd1234", "utf-8", "abcd1234")),
+	(
+		("abcd4321", "utf-8", "abcd4321"),
+		(b"abcd1234", "utf-8", "abcd1234")
+	),
 )
 def test_fernet_decrypt(data, bytes_encoding, expected, mocker):
 	# We don't need to test the fernet decryption, its a library.
