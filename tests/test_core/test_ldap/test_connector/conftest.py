@@ -1,7 +1,8 @@
 import pytest
+import inspect
 from pytest_mock import MockType
 from core.models.ldap_settings import LDAP_SETTING_MAP
-from ldap3 import ServerPool, Connection, Tls
+from ldap3 import Server, ServerPool, Connection, Tls
 from core.models.ldap_settings_runtime import RunningSettingsClass
 from core.models.user import USER_TYPE_LDAP, User
 from core.ldap import defaults as ldap_defaults
@@ -12,19 +13,30 @@ from typing import Union
 def f_ldap_connection(mocker) -> MockType:
 	return mocker.MagicMock(spec=Connection)
 
+
 @pytest.fixture
 def f_server_pool(mocker) -> MockType:
 	return mocker.MagicMock(spec=ServerPool)
+
+
+@pytest.fixture
+def f_server(mocker) -> MockType:
+	return mocker.MagicMock(spec=Server)
+
 
 @pytest.fixture
 def f_tls(mocker) -> MockType:
 	return mocker.MagicMock(spec=Tls)
 
+
 @pytest.fixture
 def f_runtime_settings(mocker) -> Union[MockType, RunningSettingsClass]:
 	mock = mocker.MagicMock(spec=RunningSettingsClass)
-	for setting_key, setting_type in LDAP_SETTING_MAP.items():
-		setting_value = getattr(ldap_defaults, setting_key)
+	attributes = inspect.getmembers(RunningSettingsClass, lambda a: not (inspect.isroutine(a)))
+	for setting_key, default_value in attributes:
+		if setting_key.startswith("__") and setting_key.endswith("__"):
+			continue
+		setting_value = getattr(ldap_defaults, setting_key, None)
 		setattr(mock, setting_key, setting_value)
 	return mock
 
@@ -33,9 +45,11 @@ def f_runtime_settings(mocker) -> Union[MockType, RunningSettingsClass]:
 def f_user_dn():
 	return f"cn=testuser,{ldap_defaults.LDAP_AUTH_SEARCH_BASE}"
 
+
 @pytest.fixture
 def f_admin_dn():
 	return f"CN=Administrator,CN=Users,{ldap_defaults.LDAP_AUTH_SEARCH_BASE}".lower()
+
 
 # Fixtures for common test data
 @pytest.fixture
@@ -46,5 +60,10 @@ def f_user(mocker, f_user_dn) -> Union[MockType, User]:
 	m_user.username = "testuser"
 	m_user.user_type = USER_TYPE_LDAP
 	m_user.dn = f_user_dn
-	m_user.encryptedPassword = ("encrypted_aes_key", "ciphertext", "nonce", "tag",)
+	m_user.encryptedPassword = (
+		"encrypted_aes_key",
+		"ciphertext",
+		"nonce",
+		"tag",
+	)
 	return m_user

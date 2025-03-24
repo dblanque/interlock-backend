@@ -3,6 +3,7 @@ from core.decorators.login import auth_required  # Replace `your_module` with th
 from core.models.user import User
 from rest_framework.request import Request
 from core.exceptions.base import PermissionDenied
+from tests.utils import get_ids_for_cases
 
 
 @pytest.fixture
@@ -14,13 +15,19 @@ def m_request(mocker):
 
 @pytest.mark.parametrize(
 	"is_factory, is_authenticated, is_anonymous, is_deleted, expected_result",
-	[
+	(
 		# Test cases for auth_required
 		(True, True, False, False, "response"),  # Authenticated, not anonymous, not deleted
 		(False, True, False, False, "response"),  # Same as above, but using decorator as a factory
 		(True, False, True, False, "forbidden"),  # Not authenticated, anonymous
 		(True, True, False, True, PermissionDenied),  # Authenticated but deleted
-	],
+	),
+	ids=(
+		"Decorator (default), Authenticated, not anonymous, not deleted",
+		"Decorator Factory, Authenticated, not anonymous, not deleted",
+		"Not authenticated, not anonymous, not deleted",
+		"Authenticated, not anonymous, deleted",
+	),
 )
 def test_auth_required(
 	is_factory, is_authenticated, is_anonymous, is_deleted, expected_result, m_request, mocker

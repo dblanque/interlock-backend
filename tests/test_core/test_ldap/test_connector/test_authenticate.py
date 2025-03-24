@@ -48,6 +48,7 @@ def test_authenticate_connection_bad_kwargs(
 	f_request_data.pop("password")
 	assert authenticate(**f_request_data) is None
 
+
 def test_authenticate_connection_is_none(
 	mocker, f_runtime_settings, f_request_data, f_ldap_connector
 ):

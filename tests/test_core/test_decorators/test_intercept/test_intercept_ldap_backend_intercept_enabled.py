@@ -18,9 +18,10 @@ def interlock_setting_get():
 @pytest.mark.parametrize(
 	"is_factory",
 	(
-		(True,),
-		(False,),
+		True,
+		False,
 	),
+	ids=lambda x: "As Decorator Factory" if x else "As Decorator",
 )
 def test_ldap_backend_intercept_enabled(is_factory, mock_request, interlock_setting_get, mocker):
 	# Mock InterlockSetting.objects.get to return an enabled LDAP setting
@@ -29,7 +30,7 @@ def test_ldap_backend_intercept_enabled(is_factory, mock_request, interlock_sett
 	mocker.patch(interlock_setting_get, return_value=mock_ldap_setting)
 
 	m_view_func = mocker.Mock(return_value="response")
-	if is_factory is True:
+	if is_factory:
 		decorated_func = ldap_backend_intercept(m_view_func)
 	else:
 		decorated_func = ldap_backend_intercept()(m_view_func)

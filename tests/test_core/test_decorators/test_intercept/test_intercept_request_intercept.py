@@ -17,9 +17,10 @@ def mock_request(mocker):
 @pytest.mark.parametrize(
 	"is_factory",
 	(
-		(True,),
-		(False,),
+		True,
+		False,
 	),
+	ids=("As Decorator Factory", "As Decorator"),
 )
 def test_request_intercept(is_factory, mock_request, logger_path, mocker):
 	m_logger = mocker.patch(logger_path)
