@@ -1,9 +1,8 @@
 import pytest
 from pytest_mock import MockType
 import struct
-from typing import Union
-from core.ldap.guid import GUID
 from typing import Tuple
+from core.ldap.guid import GUID
 
 # ---------------------------------------------------------------------------- #
 #                                    FIXTURES                                  #
@@ -26,19 +25,27 @@ def fixture_sample_guids() -> Tuple[Tuple[bytes, str], ...]:
 		)
 	)
 
-@pytest.fixture(name="f_invalid_guids")
-def fixture_invalid_guids() -> Tuple[Tuple[Union[bytes, str], str], ...]:
-	return (
-		(b'tooshort', "Invalid byte length"),  # 8 bytes (needs 16)
-		("invalid-guid-format", "Invalid GUID format"),  # Wrong structure
-		("missing-parts", "must have 5 parts"),  # Only 2 parts
-		("a"*8 + "-" + "b"*4 + "-" + "c"*4 + "-" + "d"*4 + "-" + "e"*12, "invalid hex"),  # Invalid hex
-	)
+def test_init_str(mocker):
+	val = "guid_string"
+	m_from_str: MockType = mocker.patch.object(GUID, "from_str", return_value=None)
+	GUID(val)
+	m_from_str.assert_called_once_with(guid_str=val)
 
-# ---------------------------------------------------------------------------- #
-#                                   FROM_BYTES                                 #
-# ---------------------------------------------------------------------------- #
+def test_init_bytes(mocker):
+	val = b"guid_bytes"
+	m_from_bytes: MockType = mocker.patch.object(GUID, "from_bytes", return_value=None)
+	GUID(val)
+	m_from_bytes.assert_called_once_with(guid_bytes=val)
 
+def test_init_bytearray_exception(mocker):
+	mocker.patch("core.ldap.guid.bytearray", side_effect=Exception)
+	val = b"guid_bytes"
+	m_from_bytes: MockType = mocker.patch.object(GUID, "from_bytes", return_value=None)
+	with pytest.raises(ValueError, match="Could not implicitly convert bytes to bytearray."):
+		GUID(val)
+		m_from_bytes.assert_called_once_with(guid_bytes=val)
+
+####################################### FROM BYTES #######################################
 @pytest.mark.parametrize("guid_bytes, expected_str", [
 	pytest.param(
 		b'\xde\xbe]\xb1\xc0\x7f\xbeG\x97;=\x05\x8a\n0`',
@@ -64,11 +71,8 @@ def test_from_bytes_with_list_input(f_sample_guids):
 	guid = GUID([sample_bytes])  # Wrap in list
 	assert str(guid) == expected_str
 
-# ---------------------------------------------------------------------------- #
-#                                   FROM_STR                                   #
-# ---------------------------------------------------------------------------- #
-
-@pytest.mark.parametrize("expected_bytes, guid_str", [
+######################################## FROM STR ########################################
+@pytest.mark.parametrize("expected_bytes, guid_str", (
 	pytest.param(
 		b'\xde\xbe]\xb1\xc0\x7f\xbeG\x97;=\x05\x8a\n0`',
 		"b15dbede-7fc0-47be-973b-3d058a0a3060",
@@ -79,17 +83,15 @@ def test_from_bytes_with_list_input(f_sample_guids):
 		"f3b763b4-e2c3-404c-a5ea-37815bddea08",
 		id="sample2"
 	)
-])
+))
 def test_from_str_valid_conversion(guid_str: str, expected_bytes: bytes):
 	"""Test converting valid GUID strings to byte sequences."""
 	guid = GUID(guid_str)
 	assert guid.data_bytes_raw == bytearray(expected_bytes)
 
-# ---------------------------------------------------------------------------- #
-#                                   INVALID INPUTS                             #
-# ---------------------------------------------------------------------------- #
-
-@pytest.mark.parametrize("invalid_input, expected_error", [
+##################################### INVALID INPUTS #####################################
+@pytest.mark.parametrize(
+	"invalid_input, expected_error", (
     pytest.param(
         b'tooshort',
         "unpack requires a buffer of 16 bytes",
@@ -110,7 +112,7 @@ def test_from_str_valid_conversion(guid_str: str, expected_bytes: bytes):
         "invalid literal for int() with base 16",
         id="str-invalid-hex"
     )
-])
+))
 def test_invalid_inputs_raise_errors(invalid_input, expected_error):
     """Test invalid inputs raise appropriate errors with logging."""
     with pytest.raises((struct.error, ValueError)) as exc_info:
@@ -139,10 +141,7 @@ def test_invalid_byte_length_logs_error(mocker):
 	# Verify error logging
 	m_logger.error.assert_called_once()
 
-# ---------------------------------------------------------------------------- #
-#                               SPECIAL METHODS                                #
-# ---------------------------------------------------------------------------- #
-
+###################################### OTHER METHODS #####################################
 def test_str_and_repr(f_sample_guids):
 	"""Test __str__ and __repr__ methods."""
 	sample_bytes, expected_str = f_sample_guids[0]
