@@ -48,15 +48,13 @@ class GUID:
 	output on samba-tool with SAMBA LDAP Server(s). Might be a difference between ADDS and LDAP.
 
 	SAMPLE DATA FROM TEST LDAP SERVER:
-	- ldbsearch -H /var/lib/samba/private/sam.ldb name realm objectGUID objectSID|grep -A 3 "Administrators"
-	  - name: Administrators
-	  - objectGUID (bytes): b'\xde\xbe]\xb1\xc0\x7f\xbeG\x97;=\x05\x8a\n0`'
-	  - objectGUID (str): b15dbede-7fc0-47be-973b-3d058a0a3060
-
-	- ldbsearch -H /var/lib/samba/private/sam.ldb name realm objectGUID objectSID|grep -A 3 "linuxAdmin"
-	  - name: linuxAdmin
-	  - objectGUID (bytes): b'\xb4c\xb7\xf3\xc3\xe2L@\xa5\xea7\x81[\xdd\xea\x08'
-	  - objectGUID (str): f3b763b4-e2c3-404c-a5ea-37815bddea08
+	- ldbsearch -H /var/lib/samba/private/sam.ldb name realm objectGUID objectSID|grep -A 3 "groupname"
+	  - name: group1
+	    - objectGUID (bytes): b'\xde\xbe]\xb1\xc0\x7f\xbeG\x97;=\x05\x8a\n0`'
+	    - objectGUID (str): b15dbede-7fc0-47be-973b-3d058a0a3060
+	  - name: group2
+	    - objectGUID (bytes): b'\xb4c\xb7\xf3\xc3\xe2L@\xa5\xea7\x81[\xdd\xea\x08'
+	    - objectGUID (str): f3b763b4-e2c3-404c-a5ea-37815bddea08
 	"""
 
 	def __init__(self, guid: Union[bytearray, list, str]):
@@ -65,7 +63,10 @@ class GUID:
 			self.from_str(guid_str=guid)
 		else:
 			if isinstance(guid, bytes):
-				guid = bytearray(guid)
+				try:
+					guid = bytearray(guid)
+				except Exception as e:
+					raise ValueError("Could not implicitly convert bytes to bytearray.") from e
 			self.from_bytes(guid_bytes=guid)
 		return None
 
@@ -126,11 +127,18 @@ class GUID:
 		self.uuid_str = ""
 		# If param is passed within a list of raw entry attributes
 		if isinstance(guid_bytes, list):
-			guid_bytes = bytearray(guid_bytes[0])
+			try:
+				guid_bytes = bytearray(guid_bytes[0])
+			except Exception as e:
+				raise ValueError("Could not implicitly convert list to bytearray.") from e
 		assert isinstance(guid_bytes, bytearray), "guid_bytes must be a bytearray"
 		self.data_bytes_raw = guid_bytes
 		# Unpack with Network Byte Ordering
-		self.data_bytes_int = struct.unpack("!16B", guid_bytes)
+		try:
+			self.data_bytes_int = struct.unpack("!16B", guid_bytes)
+		except:
+			logger.error("Invalid struct length, could not unpack.")
+			raise
 		self.data_bytes_hex = []
 
 		# Convert Integer Byte Array to Hex and split into list/array
