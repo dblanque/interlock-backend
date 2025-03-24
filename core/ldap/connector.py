@@ -192,12 +192,9 @@ class LDAPConnector(object):
 		is_authenticating=False,
 		**kwargs,
 	):
-		is_local_superuser = (
-			hasattr(user, "username") and
-			(
-				user.username == DEFAULT_SUPERUSER_USERNAME or 
-	 			(user.is_superuser and user.user_type is USER_TYPE_LOCAL)
-			)
+		is_local_superuser = hasattr(user, "username") and (
+			user.username == DEFAULT_SUPERUSER_USERNAME
+			or (user.is_superuser and user.user_type is USER_TYPE_LOCAL)
 		)
 		self.default_user_dn = RuntimeSettings.LDAP_AUTH_CONNECTION_USER_DN
 		self.default_user_pwd = RuntimeSettings.LDAP_AUTH_CONNECTION_PASSWORD
@@ -557,9 +554,11 @@ def test_ldap_connection(
 		c = ldap3.Connection(server_pool, **connection_args)
 	except LDAPException as ex:
 		logger.warning("LDAP connection test failed.", exc_info=ex)
-		raise exc_ldap.CouldNotOpenConnection(data={
-			"message": "LDAP connection test failed.",
-		})
+		raise exc_ldap.CouldNotOpenConnection(
+			data={
+				"message": "LDAP connection test failed.",
+			}
+		)
 
 	# Configure.
 	try:
@@ -573,6 +572,8 @@ def test_ldap_connection(
 		return c
 	except LDAPException as ex:
 		logger.warning("LDAP connection bind failed.", exc_info=ex)
-		raise exc_ldap.CouldNotOpenConnection(data={
-			"message": "LDAP connection bind failed.",
-		})
+		raise exc_ldap.CouldNotOpenConnection(
+			data={
+				"message": "LDAP connection bind failed.",
+			}
+		)

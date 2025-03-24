@@ -59,7 +59,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			print(e)
 			raise ValueError("RID To Search must be an Integer")
 
-		with LDAPConnector(force_admin=True) as ldc: 
+		with LDAPConnector(force_admin=True) as ldc:
 			connection = ldc.connection
 
 			searchFilter = search_filter_add("", "objectClass=group")
