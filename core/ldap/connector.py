@@ -321,7 +321,7 @@ class LDAPConnector(object):
 			}
 			# Do not use this in production or testing
 			# It can leak sensitive data such as decrypted credentials
-			if DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS is True:
+			if DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS is True: # pragma: no cover
 				logger.info(connection_args)
 
 			# ! LDAP / LDAPS
@@ -357,7 +357,7 @@ class LDAPConnector(object):
 		try:
 			self.connection.rebind(user=user_dn, password=password, read_server_info=True)
 		except LDAPException as ex:
-			logger.exception(f"Rebind failed for user {user_dn}.", exc_info=ex)
+			logger.error(f"Rebind failed for user {str(user_dn)}.")
 			return None
 		return self.connection.result
 
