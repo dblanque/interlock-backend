@@ -88,10 +88,10 @@ class BaseUser(BaseModel, PermissionsMixin):
 	objects = BaseUserManager()
 
 	id = models.BigAutoField(primary_key=True)
-	username = models.CharField(_("username"), max_length=128, unique=True, null=False, blank=False)
+	username = models.CharField(_("username"), max_length=128, unique=True, null=False, blank=False, db_index=True)
 	password = models.CharField(_("password"), max_length=128)
 	last_login = models.DateTimeField(_("last login"), blank=True, null=True)
-	email = models.EmailField(_("email address"), unique=True, db_index=True, null=True)
+	email = models.EmailField(_("email address"), unique=True, db_index=True, null=True, validators=[validate_email])
 	is_staff = models.BooleanField(
 		_("staff status"),
 		default=False,
@@ -212,10 +212,26 @@ class User(BaseUser):
 	class Meta:
 		verbose_name = _("User")
 		verbose_name_plural = _("Users")
+		constraints = [
+			models.CheckConstraint(
+				check=models.Q(
+					ldap_password_aes=None,
+					ldap_password_ct=None,
+					ldap_password_nonce=None,
+					ldap_password_tag=None,
+				)
+				| models.Q(
+					ldap_password_aes__isnull=False,
+					ldap_password_ct__isnull=False,
+					ldap_password_nonce__isnull=False,
+					ldap_password_tag__isnull=False,
+				),
+				name="user_password_crypt_data_all_or_none",
+			)
+		]
 
 	first_name = models.CharField(_("First name"), max_length=255, null=True, blank=True)
 	last_name = models.CharField(_("Last name"), max_length=255, null=True, blank=True)
-	email = models.EmailField(_("Email"), null=True, blank=True, validators=[validate_email])
 	dn = models.CharField(_("distinguishedName"), max_length=128, null=True, blank=True)
 	user_type = models.CharField(
 		_("User Type"), choices=USER_TYPE_CHOICES, null=False, blank=False, default=USER_TYPE_LOCAL
@@ -235,25 +251,6 @@ class User(BaseUser):
 	@property
 	def encryptedPassword(self):
 		return tuple([getattr(self, f) for f in USER_PASSWORD_FIELDS])
-
-	class Meta:
-		constraints = [
-			models.CheckConstraint(
-				check=models.Q(
-					ldap_password_aes=None,
-					ldap_password_ct=None,
-					ldap_password_nonce=None,
-					ldap_password_tag=None,
-				)
-				| models.Q(
-					ldap_password_aes__isnull=False,
-					ldap_password_ct__isnull=False,
-					ldap_password_nonce__isnull=False,
-					ldap_password_tag__isnull=False,
-				),
-				name="user_password_crypt_data_all_or_none",
-			)
-		]
 
 	def get_distinguishedname(self):
 		if self.user_type != USER_TYPE_LDAP:
