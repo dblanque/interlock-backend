@@ -321,7 +321,7 @@ class LDAPConnector(object):
 			}
 			# Do not use this in production or testing
 			# It can leak sensitive data such as decrypted credentials
-			if DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS is True: # pragma: no cover
+			if DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS is True:  # pragma: no cover
 				logger.info(connection_args)
 
 			# ! LDAP / LDAPS

@@ -78,7 +78,7 @@ class GUID:
 			logger.error(f"Invalid GUID string: {guid_str}")
 			raise e
 
-		parts = guid_str.split('-')
+		parts = guid_str.split("-")
 		if len(parts) != 5:
 			raise ValueError("Invalid GUID format, must have 5 parts separated by '-'")
 
@@ -88,7 +88,7 @@ class GUID:
 			part = parts[group_index]
 
 			# Split part into two-character hex pairs
-			hex_pairs = [part[i:i+2] for i in range(0, len(part), 2)]
+			hex_pairs = [part[i : i + 2] for i in range(0, len(part), 2)]
 			if len(hex_pairs) * 2 != len(part):
 				raise ValueError(f"Part {group_index} '{part}' has invalid length")
 
@@ -107,7 +107,9 @@ class GUID:
 			stop = byte_slice.stop
 			expected_length = stop - start
 			if len(bytes_group) != expected_length:
-				raise ValueError(f"Part {group_index} has {len(bytes_group)} bytes, expected {expected_length}")
+				raise ValueError(
+					f"Part {group_index} has {len(bytes_group)} bytes, expected {expected_length}"
+				)
 
 			# Assign bytes to the correct positions in the byte list
 			for i in range(len(bytes_group)):
@@ -119,7 +121,9 @@ class GUID:
 
 		# Verify the generated UUID string matches the input
 		if self.uuid_str != guid_str:
-			raise ValueError("Conversion from string to bytes and back to string failed. Generated UUID does not match input.")
+			raise ValueError(
+				"Conversion from string to bytes and back to string failed. Generated UUID does not match input."
+			)
 
 		return None
 
@@ -143,7 +147,7 @@ class GUID:
 
 		# Convert Integer Byte Array to Hex and split into list/array
 		for b_as_int in self.data_bytes_int:
-			self.data_bytes_hex.append(format(b_as_int, '02x'))
+			self.data_bytes_hex.append(format(b_as_int, "02x"))
 
 		# Loop through Byte Group Data definition and create UUID String
 		self.data = {}
@@ -154,7 +158,7 @@ class GUID:
 			self.data[d_index] = "".join(sliced_hex_list)
 
 		# Construct the UUID string from the data dictionary
-		self.uuid_str = '-'.join([self.data[i] for i in range(len(DATA_DEF_LDAP))])
+		self.uuid_str = "-".join([self.data[i] for i in range(len(DATA_DEF_LDAP))])
 
 		# Validate the constructed UUID string
 		try:
