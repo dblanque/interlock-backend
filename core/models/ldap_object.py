@@ -13,7 +13,7 @@ from django.utils.translation import gettext_lazy as _
 ### Interlock
 from core.config.runtime import RuntimeSettings
 from core.ldap.adsi import LDAP_BUILTIN_OBJECTS, search_filter_add
-from core.ldap.securityIdentifier import SID
+from core.ldap.security_identifier import SID
 
 ### Others
 from ldap3 import Connection

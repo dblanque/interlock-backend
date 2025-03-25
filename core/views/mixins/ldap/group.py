@@ -13,7 +13,7 @@ from rest_framework import viewsets
 ### Interlock
 from core.ldap.adsi import search_filter_add
 from core.ldap.groupTypes import LDAP_GROUP_TYPES
-from core.ldap.securityIdentifier import SID
+from core.ldap.security_identifier import SID
 from core.ldap.connector import LDAPConnector
 from core.config.runtime import RuntimeSettings
 

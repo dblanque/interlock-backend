@@ -34,12 +34,14 @@ class SID(object):
 	    print(sid) # S-1-0-21-2209570321-9700970-2859064192-1159
 	"""
 
-	def __init__(self, sid_byte_array):
+	def __init__(self, sid_byte_array: list | bytearray | object):
 		if isinstance(sid_byte_array, list):
 			sid_byte_array = bytearray(sid_byte_array[0])
-		elif isinstance(sid_byte_array, object):
+		elif isinstance(sid_byte_array, bytes):
+			sid_byte_array = bytearray(sid_byte_array)
+		elif hasattr(sid_byte_array, "raw_values"):
 			sid_byte_array = sid_byte_array.raw_values[0]
-
+		assert isinstance(sid_byte_array, bytearray), "sid_byte_array must be a byte array."
 		logger.debug("Class SID() in: " + __name__)
 		logger.debug("SID Byte Array")
 		logger.debug(type(sid_byte_array))
@@ -48,7 +50,8 @@ class SID(object):
 		self.sid_byte_array = sid_byte_array
 		self.revision_level = self.sid_byte_array[0]
 		self.subauthority_count = self.sid_byte_array[1]
-		self.identifier_authority = self._unpack_bytes_big_endian(self.sid_byte_array[2:7])
+		# 6 bytes - Identifier Authority
+		self.identifier_authority = self._unpack_bytes_big_endian(self.sid_byte_array[2:8])
 		self.subauthorities = []
 
 		logger.debug("SID Revision Level Byte")

@@ -23,7 +23,7 @@ from core.config.runtime import RuntimeSettings
 from ldap3 import ALL_ATTRIBUTES
 from core.decorators.login import auth_required, admin_required
 from core.ldap.guid import GUID
-from core.ldap.securityIdentifier import SID
+from core.ldap.security_identifier import SID
 from core.ldap import adsi as ldap_adsi
 import logging
 ################################################################################
