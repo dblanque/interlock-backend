@@ -30,7 +30,6 @@ logger = logging.getLogger(__name__)
 
 
 class ApplicationGroupViewSet(BaseViewSet, ApplicationSecurityGroupViewMixin):
-
 	@action(detail=False, methods=["get"])
 	@auth_required
 	@admin_required
