@@ -9,7 +9,7 @@
 # ---------------------------------- IMPORTS -----------------------------------#
 ### Exceptions
 from core.exceptions.base import PermissionDenied, BadRequest
-from core.exceptions import base as exc_base, users as exc_user, ldap as exc_ldap
+from core.exceptions import base as exc_base, users as exc_user
 from django.core.exceptions import ObjectDoesNotExist
 from interlock_backend.encrypt import aes_encrypt
 
@@ -95,6 +95,8 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			user_search = data[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]]
 		elif "username" in data:
 			user_search = data["username"]
+		else:
+			raise exc_base.BadRequest
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
@@ -113,15 +115,15 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		data = request.data
 
 		if "username" not in data:
-			e = exc_base.MissingDataKey()
-			e.set_detail({"key": "username"})
-			raise e
+			raise exc_base.MissingDataKey(data={"key": "username"})
 
 		if data["password"] != data["passwordConfirm"]:
-			exception = exc_user.UserPasswordsDontMatch
-			data = {"code": "user_passwords_dont_match", "user": data["username"]}
-			exception.set_detail(exception, data)
-			raise exception
+			raise exc_user.UserPasswordsDontMatch(
+				data={
+					"code": "user_passwords_dont_match",
+					"user": data["username"]
+				}
+			)
 
 		user_search = data["username"]
 
@@ -393,18 +395,12 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		# Validate Front-end mapping with CSV Headers
 		for k in required_fields:
 			if k not in header_mapping:
-				exception = exc_user.UserBulkInsertMappingError
-				data = {"key": k}
-				exception.set_detail(exception, data)
-				raise exception
+				raise exc_user.UserBulkInsertMappingError(data={"key": k})
 
 		# Validate all usernames before opening connection
 		for row in user_list:
 			if len(row) != len(user_headers):
-				exception = exc_user.UserBulkInsertLengthError
-				data = {"user": row[mapped_user_key]}
-				exception.set_detail(exception, data)
-				raise exception
+				raise exc_user.UserBulkInsertLengthError(data={"user": row[mapped_user_key]})
 
 			for f in row.keys():
 				if f in UserValidators.FIELD_VALIDATORS:
@@ -608,7 +604,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		data = request.data
 
 		if not isinstance(data, list):
-			raise exc_base.CoreException
+			raise exc_base.BadRequest
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
