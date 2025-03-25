@@ -542,7 +542,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required()
 	@ldap_backend_intercept
-	def bulk_status_change(self, request):
+	def bulk_change_status(self, request):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
