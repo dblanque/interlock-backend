@@ -27,6 +27,7 @@ from interlock_backend.settings import (
 	DEFAULT_SUPERUSER_USERNAME,
 	DEFAULT_SUPERUSER_PASSWORD,
 )
+from django.core.validators import validate_email
 # ---------------------------------------------------------------------------- #
 
 
@@ -87,7 +88,7 @@ class BaseUser(BaseModel, PermissionsMixin):
 	objects = BaseUserManager()
 
 	id = models.BigAutoField(primary_key=True)
-	username = models.CharField(_("username"), max_length=128, unique=True)
+	username = models.CharField(_("username"), max_length=128, unique=True, null=False, blank=False)
 	password = models.CharField(_("password"), max_length=128)
 	last_login = models.DateTimeField(_("last login"), blank=True, null=True)
 	email = models.EmailField(_("email address"), unique=True, db_index=True, null=True)
@@ -214,7 +215,7 @@ class User(BaseUser):
 
 	first_name = models.CharField(_("First name"), max_length=255, null=True, blank=True)
 	last_name = models.CharField(_("Last name"), max_length=255, null=True, blank=True)
-	email = models.EmailField(_("Email"), null=True, blank=True)
+	email = models.EmailField(_("Email"), null=True, blank=True, validators=[validate_email])
 	dn = models.CharField(_("distinguishedName"), max_length=128, null=True, blank=True)
 	user_type = models.CharField(
 		_("User Type"), choices=USER_TYPE_CHOICES, null=False, blank=False, default=USER_TYPE_LOCAL
@@ -238,7 +239,7 @@ class User(BaseUser):
 	class Meta:
 		constraints = [
 			models.CheckConstraint(
-				condition=models.Q(
+				check=models.Q(
 					ldap_password_aes=None,
 					ldap_password_ct=None,
 					ldap_password_nonce=None,
