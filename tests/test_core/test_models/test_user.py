@@ -1,7 +1,9 @@
 import pytest
 from django.core.exceptions import ValidationError
+from django.db.transaction import TransactionManagementError
 from django.db.utils import IntegrityError
 from core.models.user import User, USER_TYPE_LOCAL, USER_TYPE_LDAP
+from django.db import transaction
 
 @pytest.mark.django_db
 class TestUserModel:
@@ -194,3 +196,186 @@ class TestUserModel:
 			user_type=USER_TYPE_LOCAL
 		)
 		assert str(user) == f"test_str_representation"
+
+
+	# BaseUserManager tests through User implementation
+	def test_create_user_via_manager(self):
+		"""Test BaseUserManager.create_user through User model"""
+		user = User.objects.create_user(
+			username="manager_create_user",
+			password=self.default_password
+		)
+		assert user.pk is not None
+		assert user.check_password(self.default_password)
+		assert user.is_staff is False
+		assert user.is_superuser is False
+
+	def test_create_superuser_via_manager(self):
+		"""Test BaseUserManager.create_superuser through User model"""
+		user = User.objects.create_superuser(
+			username="manager_create_superuser",
+			password=self.default_password
+		)
+		assert user.is_staff is True
+		assert user.is_superuser is True
+
+	def test_create_superuser_validation(self):
+		"""Test BaseUserManager.create_superuser validation"""
+		with pytest.raises(ValueError, match="Superuser must have is_staff=True"):
+			User.objects.create_superuser(
+				username="invalid_superuser1",
+				password=self.default_password,
+				is_staff=False
+			)
+
+		with pytest.raises(ValueError, match="Superuser must have is_superuser=True"):
+			User.objects.create_superuser(
+				username="invalid_superuser2",
+				password=self.default_password,
+				is_superuser=False
+			)
+
+	def test_get_queryset_excludes_deleted(self):
+		"""Test BaseUserManager.get_queryset excludes deleted users"""
+		active_user = User.objects.create_user(
+			username="active_user",
+			password=self.default_password
+		)
+		deleted_user = User.objects.create_user(
+			username="deleted_user",
+			password=self.default_password,
+			deleted=True
+		)
+		
+		queryset = User.objects.get_queryset()
+		assert active_user in queryset
+		assert deleted_user not in queryset
+
+	def test_get_full_queryset_includes_deleted(self):
+		"""Test BaseUserManager.get_full_queryset includes deleted users"""
+		active_user = User.objects.create_user(
+			username="active_user2",
+			password=self.default_password
+		)
+		deleted_user = User.objects.create_user(
+			username="deleted_user2",
+			password=self.default_password,
+			deleted=True
+		)
+		
+		queryset = User.objects.get_full_queryset()
+		assert active_user in queryset
+		assert deleted_user in queryset
+
+	# BaseUser tests through User implementation
+	def test_user_properties(self):
+		"""Test BaseUser properties through User model"""
+		user = User.objects.create_user(
+			username="test_properties",
+			password=self.default_password,
+			email="props@example.com"
+		)
+
+		assert user.get_username() == "test_properties"
+		assert user.get_email() == "props@example.com"
+		assert user.get_uid() == user.id
+		assert user.date_joined == user.created_at
+		assert user.is_anonymous is False
+		assert user.is_authenticated is True
+		assert user.is_active is True
+
+	def test_password_management(self):
+		"""Test BaseUser password methods through User model"""
+		user = User.objects.create_user(
+			username="test_password_management",
+			password=self.default_password
+		)
+
+		# Test password change
+		user.set_password("new_password123")
+		assert user.check_password("new_password123") is True
+		assert user.check_password(self.default_password) is False
+
+		# Test unusable password
+		user.set_unusable_password()
+		assert user.has_usable_password() is False
+
+	def test_session_auth_hash(self):
+		"""Test BaseUser session auth hash through User model"""
+		user = User.objects.create_user(
+			username="test_session_auth_hash",
+			password=self.default_password
+		)
+
+		original_hash = user.get_session_auth_hash()
+		assert isinstance(original_hash, str)
+
+		# Hash should change when password changes
+		user.set_password("new_password123")
+		new_hash = user.get_session_auth_hash()
+		assert original_hash != new_hash
+
+	def test_username_uniqueness(self):
+		"""Test BaseUser username uniqueness through User model"""
+		User.objects.create_user(
+			username="unique_user",
+			password=self.default_password
+		)
+
+		with pytest.raises(IntegrityError):
+			User.objects.create_user(
+				username="unique_user",  # Duplicate
+				password=self.default_password
+			)
+
+	def test_email_uniqueness(self):
+		"""Test email uniqueness with null=True scenario"""
+		# Test non-null email uniqueness
+		email = "unique@example.com"
+		
+		with transaction.atomic():
+			# Create first user with email
+			User.objects.create_user(
+				username="user1",
+				password=self.default_password,
+				email=email
+			)
+		
+		# Attempt to create second user with same email - should fail
+		with pytest.raises((IntegrityError, TransactionManagementError)):
+			with transaction.atomic():
+				User.objects.create_user(
+					username="user2",
+					password=self.default_password,
+					email=email  # Duplicate non-null email
+				)
+
+		with transaction.atomic():
+			# Test multiple NULL emails are allowed
+			User.objects.create_user(
+				username="user3",
+				password=self.default_password,
+				email=None  # First NULL
+			)
+			User.objects.create_user(
+				username="user4",
+				password=self.default_password,
+				email=None  # Second NULL - should be allowed
+			)
+		
+		# Verify count of NULL emails
+		assert User.objects.filter(email__isnull=True).count() == 2
+
+	def test_required_fields(self):
+		"""Test BaseUser required fields through User model"""
+		# Username is required
+		with pytest.raises(ValueError, match="must have a username"):
+			User.objects.create_user(
+				username=None,
+				password=self.default_password
+			)
+
+		# Password is required (validation error, not integrity error)
+		with pytest.raises(ValidationError):
+			user = User(username="no_password")
+			user.full_clean()
