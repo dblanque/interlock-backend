@@ -114,19 +114,6 @@ class SerialGenerator:
 
 
 class LDAPRecordMixin:
-	def get_soa(self: "LDAPRecord"):
-		try:
-			self.soa_object = LDAPRecord(
-				connection=self.connection, rName="@", rZone=self.zone, rType=DNS_RECORD_TYPE_SOA
-			)
-		except:
-			logger.error(traceback.format_exc())
-			raise exc_dns.DNSCouldNotGetSOA
-		for index, record in enumerate(self.soa_object.data):
-			if record["type"] == DNS_RECORD_TYPE_SOA:
-				self.soa_bytes = self.soa_object.rawEntry["raw_attributes"]["dnsRecord"][index]
-				self.soa = record
-
 	def get_soa_serial(self: "LDAPRecord") -> int:
 		"""
 		Gets the current Start of Authority Serial
@@ -135,34 +122,36 @@ class LDAPRecordMixin:
 		self.get_soa()
 		if self.soa["dwSerialNo"] != self.soa["serial"]:
 			raise exc_dns.DNSRecordDataMalformed
-		if "dwSerialNo" in self.soa:
-			try:
+		try:
+			if "dwSerialNo" in self.soa:
 				serial = int(self.soa["dwSerialNo"])
-			except:
-				return str(serial)
-			# If serial epoch then sum 1 until last 2 digits are 99 #
-			serial_date_obj = SerialGenerator.serial_as_datetime(serial)
-			if isinstance(serial_date_obj, datetime):
-				return SerialGenerator.generate_epoch(
-					serial_str=serial, serial_date_obj=serial_date_obj
-				)
-			#########################################################
-			return serial + 1
-		logger.error(traceback.format_exc())
-		raise exc_dns.DNSCouldNotGetSOA
+				# If serial epoch then sum 1 until last 2 digits are 99 #
+				serial_date_obj = SerialGenerator.serial_as_datetime(serial)
+				if isinstance(serial_date_obj, datetime):
+					return SerialGenerator.generate_epoch(
+						serial=serial, serial_date_obj=serial_date_obj
+					)
+				#########################################################
+				return serial + 1
+		except Exception as e:
+			logger.exception(e)
+			raise exc_dns.DNSCouldNotGetSOA
 
 	def get_serial(self: "LDAPRecord", record_values, old_serial=None):
-		if self.type == DNS_RECORD_TYPE_SOA:
-			return int(record_values["dwSerialNo"])
-		serial = None
-		if "serial" in record_values:
+		try:
+			if self.type == DNS_RECORD_TYPE_SOA:
+				return int(record_values["dwSerialNo"])
+			if not "serial" in record_values:
+				return self.get_soa_serial()
+
 			serial = record_values["serial"]
-		if not serial or serial == old_serial:
-			return self.get_soa_serial()
-		if serial:
-			return serial
-		logger.error(traceback.format_exc())
-		raise exc_dns.DNSCouldNotGetSerial
+			if serial == old_serial:
+				return self.get_soa_serial()
+			else:
+				return serial
+		except Exception as e:
+			logger.exception(e)
+			raise exc_dns.DNSCouldNotGetSerial
 
 	def record_exists_in_entry(self: "LDAPRecord", main_field: str, main_field_val):
 		"""
@@ -175,6 +164,8 @@ class LDAPRecordMixin:
 		Returns:
 			bool
 		"""
+		if not hasattr(self, "data"):
+			return False
 		if self.data is not None:
 			if len(self.data) > 0:
 				for record in self.data:
@@ -416,6 +407,19 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				"name": self.name,
 			}
 			raise exc_dns.DNSRecordTypeUnsupported(data=data)
+
+	def get_soa(self):
+		try:
+			self.soa_object = LDAPRecord(
+				connection=self.connection, rName="@", rZone=self.zone, rType=DNS_RECORD_TYPE_SOA
+			)
+		except:
+			logger.error(traceback.format_exc())
+			raise exc_dns.DNSCouldNotGetSOA
+		for index, record in enumerate(self.soa_object.data):
+			if record["type"] == DNS_RECORD_TYPE_SOA:
+				self.soa_bytes = self.soa_object.rawEntry["raw_attributes"]["dnsRecord"][index]
+				self.soa = record
 
 	def __soa__(self):
 		return self.soa
