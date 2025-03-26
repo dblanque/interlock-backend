@@ -5,9 +5,18 @@ from core.models.dns import (
 	SerialGenerator,
 	DATE_FMT,
 	LDAPRecordMixin,
-	LDAPRecord
+	LDAPRecord,
+	RECORD_MAPPINGS,
 )
-from core.models.types.ldap_dns_record import DNS_RECORD_TYPE_SOA, DNS_RECORD_TYPE_A
+from core.models.types.ldap_dns_record import (
+	DNS_RECORD_TYPE_SOA,
+	DNS_RECORD_TYPE_A,
+	DNS_RECORD_TYPE_AAAA,
+	DNS_RECORD_TYPE_NS,
+	DNS_RECORD_TYPE_TXT,
+	DNS_RECORD_TYPE_MX,
+	DNS_RECORD_TYPE_CNAME,
+)
 from core.exceptions.dns import (
 	DNSRecordDataMalformed,
 	DNSCouldNotGetSOA,
@@ -256,3 +265,175 @@ class TestLDAPRecordMixin:
 			main_field="field",
 			main_field_val="value"
 		) is False
+
+	def test_record_exists_in_entry_len_zero(self):
+		m_mixin = LDAPRecordMixin()
+		m_mixin.data = []
+		assert m_mixin.record_exists_in_entry(
+			main_field="field",
+			main_field_val="value"
+		) is False
+
+	def test_record_exists_in_entry(self):
+		m_mixin = LDAPRecordMixin()
+		m_mixin.name = "subdomain"
+		m_mixin.type = DNS_RECORD_TYPE_A
+		m_mixin.data = [
+			{
+				"name":"subdomain",
+				"type": DNS_RECORD_TYPE_A,
+				"value": "abcd"
+			}
+		]
+		assert m_mixin.record_exists_in_entry(
+			main_field="value",
+			main_field_val="abcd"
+		) is True
+
+	@pytest.mark.parametrize(
+		"record_type, existing_record_type, expected_result",
+		(
+			(DNS_RECORD_TYPE_CNAME, DNS_RECORD_TYPE_CNAME, True),
+			(DNS_RECORD_TYPE_CNAME, DNS_RECORD_TYPE_A, False),
+			(DNS_RECORD_TYPE_A, DNS_RECORD_TYPE_A, False),
+			(DNS_RECORD_TYPE_SOA, DNS_RECORD_TYPE_SOA, True),
+		),
+		ids=[
+			"Matching CNAME records, multi_record forbidden",
+			"Non-matching CNAME-A records",
+			"Matching A records, multi_record allowed",
+			"Matching SOA records, multi_record forbidden",
+		]
+	)
+	def test_record_of_type_exists(self, record_type, existing_record_type, expected_result):
+		m_mixin = LDAPRecordMixin()
+		m_mixin.name = "subdomain"
+		m_mixin.type = record_type
+		m_mixin.data = [
+			{
+				"name":"aa",
+				"type": existing_record_type,
+				"value": "abcd"
+			}
+		]
+		assert m_mixin.record_of_type_exists() == expected_result
+
+	def test_record_soa_exists_data_is_none(self):
+		m_mixin = LDAPRecordMixin()
+		m_mixin.data = None
+		assert m_mixin.record_soa_exists() is False
+
+	def test_record_soa_exists_data_len_zero(self):
+		m_mixin = LDAPRecordMixin()
+		m_mixin.data = []
+		assert m_mixin.record_soa_exists() is False
+
+	def test_record_soa_exists(self):
+		m_mixin = LDAPRecordMixin()
+		m_mixin.name = "subdomain"
+		m_mixin.type = DNS_RECORD_TYPE_A
+		m_mixin.data = [
+			{
+				"name":"@",
+				"type": DNS_RECORD_TYPE_SOA,
+				"value": "abcd"
+			}
+		]
+		assert m_mixin.record_soa_exists() is True
+
+	def test_record_has_collision_data_is_none(self):
+		m_mixin = LDAPRecordMixin()
+		m_mixin.data = None
+		assert m_mixin.record_has_collision() is False
+
+	def test_record_has_collision_data_len_zero(self):
+		m_mixin = LDAPRecordMixin()
+		m_mixin.data = []
+		assert m_mixin.record_has_collision() is False
+
+	@pytest.mark.parametrize(
+		"record_type, collision_type",
+		(
+			pytest.param(DNS_RECORD_TYPE_A, DNS_RECORD_TYPE_CNAME,
+				id="DNS_RECORD_TYPE_A with DNS_RECORD_TYPE_CNAME"),
+			pytest.param(DNS_RECORD_TYPE_CNAME, DNS_RECORD_TYPE_A,
+				id="DNS_RECORD_TYPE_CNAME with DNS_RECORD_TYPE_A"),
+			pytest.param(DNS_RECORD_TYPE_AAAA, DNS_RECORD_TYPE_CNAME,
+				id="DNS_RECORD_TYPE_AAAA with DNS_RECORD_TYPE_CNAME"),
+		),
+	)
+	def test_record_has_collision(self, record_type, collision_type):
+		if not collision_type:
+			collision_type = record_type
+		m_mixin = LDAPRecordMixin()
+		m_mixin.name = "subdomain"
+		m_mixin.type = record_type
+		m_mixin.data = [
+			{
+				"name":"subdomain",
+				"type": collision_type,
+				"value": "abcd"
+			},
+			{
+				"name":"subdomain2",
+				"type": collision_type,
+				"value": "abcd"
+			},
+		]
+		with pytest.raises(Exception, match="conflicting DNS Record"):
+			m_mixin.record_has_collision()
+
+	def test_record_has_collision_no_raise(self):
+		m_mixin = LDAPRecordMixin()
+		m_mixin.name = "subdomain"
+		m_mixin.type = DNS_RECORD_TYPE_A
+		m_mixin.data = [
+			{
+				"name":"subdomain",
+				"type": DNS_RECORD_TYPE_CNAME,
+				"value": "abcd"
+			},
+			{
+				"name":"subdomain2",
+				"type": DNS_RECORD_TYPE_A,
+				"value": "abcd"
+			},
+		]
+		assert m_mixin.record_has_collision(raise_exc=False) is True
+
+	@pytest.mark.parametrize(
+		"record_type, collision_type",
+		(
+			pytest.param(DNS_RECORD_TYPE_A, None,
+				id="DNS_RECORD_TYPE_A with itself"),
+			pytest.param(DNS_RECORD_TYPE_CNAME, None,
+				id="DNS_RECORD_TYPE_CNAME with itself"),
+			pytest.param(DNS_RECORD_TYPE_AAAA, None,
+				id="DNS_RECORD_TYPE_AAAA with itself"),
+			pytest.param(DNS_RECORD_TYPE_NS, None,
+				id="DNS_RECORD_TYPE_NS with itself"),
+			pytest.param(DNS_RECORD_TYPE_TXT, None,
+				id="DNS_RECORD_TYPE_TXT with itself"),
+			pytest.param(DNS_RECORD_TYPE_MX, None,
+				id="DNS_RECORD_TYPE_MX with itself"),
+		),
+	)
+	def test_record_does_not_have_collision(self, record_type, collision_type):
+		if not collision_type:
+			collision_type = record_type
+		m_mixin = LDAPRecordMixin()
+		m_mixin.name = "subdomain"
+		m_mixin.type = record_type
+		m_mixin.data = [
+			{
+				"name":"subdomain",
+				"type": collision_type,
+				"value": "abcd"
+			},
+			{
+				"name":"subdomain2",
+				"type": collision_type,
+				"value": "abcd"
+			},
+		]
+		assert m_mixin.record_has_collision() is False
