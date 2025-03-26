@@ -6,14 +6,20 @@ from django.contrib.postgres.fields import ArrayField
 import secrets
 
 
-def generate_client_id():
-	while True:
+def generate_client_id() -> str:
+	"""Generates a 24 character client id, retries up to 10 times and gives up.
+	The odds of generating an existing id 10 times in a row are very low.
+	"""
+	tries = 0
+	while True and tries <= 10:
 		client_id = get_random_string(24, "abcdefghijklmnopqrstuvwxyz0123456789")
 		if not Application.objects.filter(client_id=client_id).exists():
 			return client_id
+		tries += 1
 
 
-def generate_client_secret():
+def generate_client_secret() -> str:
+	"""Generates a 48 character urlsafe token."""
 	return secrets.token_urlsafe(48)  # Cryptographically secure
 
 
