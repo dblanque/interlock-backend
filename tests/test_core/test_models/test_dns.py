@@ -1,9 +1,36 @@
 import pytest
 from core.ldap.defaults import LDAP_AUTH_SEARCH_BASE, LDAP_DOMAIN
-from core.models.dns import LDAPDNS, SerialGenerator, DATE_FMT
+from core.models.dns import (
+	LDAPDNS,
+	SerialGenerator,
+	DATE_FMT,
+	LDAPRecordMixin,
+	LDAPRecord
+)
+from core.models.types.ldap_dns_record import DNS_RECORD_TYPE_SOA, DNS_RECORD_TYPE_A
+from core.exceptions.dns import (
+	DNSRecordDataMalformed,
+	DNSCouldNotGetSOA,
+	DNSCouldNotGetSerial,
+)
 from datetime import datetime
 from pytest_mock import MockType
 
+
+TODAY_DATETIME = datetime.today()
+TODAY_STR = TODAY_DATETIME.strftime(DATE_FMT)
+def get_mock_serial(serial: int):
+	if len(str(serial)) >= 10:
+		return serial
+	return int(f"{TODAY_STR}{str(serial).rjust(2, '0')}")
+
+@pytest.fixture
+def f_today():
+	return TODAY_DATETIME
+
+@pytest.fixture
+def f_today_str():
+	return TODAY_STR
 
 @pytest.fixture
 def f_runtime_settings(mocker):
@@ -54,10 +81,7 @@ class TestLDAPDNS:
 		ldap_dns = LDAPDNS(m_connection)
 		assert ldap_dns.forestzones == [f"_msdcs.{LDAP_DOMAIN}"]
 
-
 class TestSerialGenerator:
-	DT_TODAY = datetime.today()
-	DT_TODAY_STR = DT_TODAY.strftime(DATE_FMT)
 
 	def test_serial_is_epoch_datetime_raise_type_error(self):
 		with pytest.raises(TypeError, match="must be an int"):
@@ -76,19 +100,19 @@ class TestSerialGenerator:
 		(
 			(  # (int) Different day, restart serial
 				2024010121,
-				int(f"{DT_TODAY_STR}01"),
+				1,
 			),
 			(  # (str) Different day, restart serial
 				"2024010121",
-				int(f"{DT_TODAY_STR}01"),
+				1,
 			),
 			(  # (int) Same day, increase serial
-				int(f"{DT_TODAY_STR}01"),
-				int(f"{DT_TODAY_STR}02"),
+				1,
+				2,
 			),
 			(  # (int) Same day, restart serial
-				int(f"{DT_TODAY_STR}99"),
-				int(f"{DT_TODAY_STR}01"),
+				99,
+				1,
 			),
 		),
 		ids=[
@@ -99,6 +123,8 @@ class TestSerialGenerator:
 		],
 	)
 	def test_generate_epoch(self, old_serial, new_serial):
+		old_serial = get_mock_serial(old_serial)
+		new_serial = get_mock_serial(new_serial)
 		old_serial_obj = datetime.strptime(str(old_serial)[:8], DATE_FMT)
 		generated_serial = SerialGenerator.generate_epoch(old_serial, old_serial_obj)
 		assert generated_serial == new_serial
@@ -114,3 +140,119 @@ class TestSerialGenerator:
 	def test_generate_epoch_raises_type_error(self, serial, serial_date_obj, expected):
 		with pytest.raises(TypeError, match=expected):
 			SerialGenerator.generate_epoch(serial, serial_date_obj)
+
+class TestLDAPRecordMixin:
+	def test_get_soa_serial_raise_malformed(self, mocker):
+		m_get_soa: MockType = mocker.Mock(return_value=None)
+		m_mixin = LDAPRecordMixin()
+		m_mixin.get_soa = m_get_soa
+		m_mixin.soa = {
+			"dwSerialNo": 1,
+			"serial": 2
+		}
+		with pytest.raises(DNSRecordDataMalformed):
+			m_mixin.get_soa_serial()
+			m_get_soa.assert_called_once()
+
+	def test_get_soa_raises_could_not_get(self, mocker):
+		m_get_soa: MockType = mocker.Mock(return_value=None)
+		m_mixin = LDAPRecordMixin()
+		m_mixin.get_soa = m_get_soa
+		m_mixin.soa = {
+			"serial": "a",
+			"dwSerialNo": "a",
+		}
+		with pytest.raises(DNSCouldNotGetSOA):
+			m_mixin.get_soa_serial()
+			m_get_soa.assert_called_once()
+
+	@pytest.mark.parametrize(
+		"serial, expected_serial",
+		(
+			(1, 2),
+			(2024010101, None),
+			(None, None),
+		),
+		ids=[
+			"Non-epoch Serial (1, 2)",
+			f"Epoch Serial, different days (2024010101, {get_mock_serial(1)})",
+			f"Epoch Serial, same day ({get_mock_serial(1)}, {get_mock_serial(2)})",
+		]
+	)
+	def test_get_soa_serial(self, mocker, serial, expected_serial):
+		if not serial:
+			serial = get_mock_serial(1)
+			if not expected_serial:
+				expected_serial = get_mock_serial(2)
+		if not expected_serial:
+			expected_serial = get_mock_serial(1)
+		m_get_soa: MockType = mocker.Mock(return_value=None)
+		m_mixin = LDAPRecordMixin()
+		m_mixin.get_soa = m_get_soa
+		m_mixin.soa = {
+			"dwSerialNo": serial,
+			"serial": serial
+		}
+		result = m_mixin.get_soa_serial()
+		m_get_soa.assert_called_once()
+		assert result == expected_serial
+
+	def test_get_serial_when_soa(self, mocker):
+		m_mixin = LDAPRecordMixin()
+		m_mixin.type = DNS_RECORD_TYPE_SOA
+		assert m_mixin.get_serial(
+			record_values={"dwSerialNo": 1}
+		) == 1
+
+	def test_get_serial_when_soa_raise(self):
+		m_mixin = LDAPRecordMixin()
+		m_mixin.type = DNS_RECORD_TYPE_SOA
+		with pytest.raises(DNSCouldNotGetSerial):
+			m_mixin.get_serial(
+				record_values={"dwSerialNo": "a"}
+			)
+
+	def test_get_serial_raise(self, mocker):
+		mocker.patch.object(LDAPRecordMixin, "get_soa_serial", side_effect=DNSCouldNotGetSOA)
+		m_mixin = LDAPRecordMixin()
+		m_mixin.type = DNS_RECORD_TYPE_A
+		with pytest.raises(DNSCouldNotGetSerial):
+			m_mixin.get_serial({})
+
+	def test_get_serial_key_doesnt_exist(self, mocker):
+		mocker.patch.object(LDAPRecordMixin, "get_soa_serial", return_value=2024010101)
+		m_mixin = LDAPRecordMixin()
+		m_mixin.type = DNS_RECORD_TYPE_A
+		assert m_mixin.get_serial({}) == 2024010101
+
+	def test_get_serial_old_is_same(self, mocker):
+		mocker.patch.object(LDAPRecordMixin, "get_soa_serial", return_value=2024010101)
+		m_mixin = LDAPRecordMixin()
+		m_mixin.type = DNS_RECORD_TYPE_A
+		assert m_mixin.get_serial(
+			record_values={"serial":1},
+			old_serial=1
+		) == 2024010101
+
+	def test_get_serial(self, mocker):
+		mocker.patch.object(LDAPRecordMixin, "get_soa_serial", return_value=3)
+		m_mixin = LDAPRecordMixin()
+		m_mixin.type = DNS_RECORD_TYPE_A
+		assert m_mixin.get_serial(
+			record_values={"serial": 2},
+			old_serial=1
+		) == 2
+
+	def test_record_exists_in_entry_data_doesnt_exist(self):
+		assert LDAPRecordMixin().record_exists_in_entry(
+			main_field="field",
+			main_field_val="value"
+		) is False
+
+	def test_record_exists_in_entry_data_is_none(self):
+		m_mixin = LDAPRecordMixin()
+		m_mixin.data = None
+		assert m_mixin.record_exists_in_entry(
+			main_field="field",
+			main_field_val="value"
+		) is False
