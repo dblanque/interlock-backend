@@ -137,7 +137,7 @@ class LDAPRecordMixin:
 			logger.exception(e)
 			raise exc_dns.DNSCouldNotGetSOA
 
-	def get_serial(self: "LDAPRecord", record_values, old_serial=None):
+	def get_serial(self: "LDAPRecord", record_values, old_serial=None) -> int:
 		try:
 			if self.type == DNS_RECORD_TYPE_SOA:
 				return int(record_values["dwSerialNo"])
@@ -153,7 +153,11 @@ class LDAPRecordMixin:
 			logger.exception(e)
 			raise exc_dns.DNSCouldNotGetSerial
 
-	def record_exists_in_entry(self: "LDAPRecord", main_field: str, main_field_val):
+	def record_exists_in_entry(
+			self: "LDAPRecord",
+			main_field: str,
+			main_field_val
+		) -> bool:
 		"""
 		Checks if the record exists in the current LDAP Entry
 
@@ -166,7 +170,7 @@ class LDAPRecordMixin:
 		"""
 		if not hasattr(self, "data"):
 			return False
-		if self.data is not None:
+		if self.data:
 			if len(self.data) > 0:
 				for record in self.data:
 					if main_field in record:
@@ -178,42 +182,48 @@ class LDAPRecordMixin:
 							return True
 		return False
 
-	def record_of_type_exists(self: "LDAPRecord"):
+	def record_of_type_exists(self: "LDAPRecord") -> bool:
 		"""
 		Checks if a record of this type exists in the LDAP Entry,
 		if multi_record is not allowed for self.type
 
-		Returns Boolean [ True | False ]
+		Returns:
+			bool
 		"""
+		multi_record = False
 		if "multi_record" in RECORD_MAPPINGS[self.type]:
 			multi_record = RECORD_MAPPINGS[self.type]["multi_record"]
-		else:
-			multi_record = False
 
-		if multi_record != True:
-			if self.data is not None:
+		if not multi_record:
+			if self.data:
 				if len(self.data) > 0:
 					for record in self.data:
 						if record["type"] == self.type:
 							return True
 		return False
 
-	def record_soa_exists(self: "LDAPRecord"):
-		if self.data is not None:
+	def record_soa_exists(self: "LDAPRecord") -> bool:
+		if self.data:
 			if len(self.data) > 0:
 				for record in self.data:
 					if record["type"] == DNS_RECORD_TYPE_SOA:
 						return True
 		return False
 
-	def record_has_collision(self: "LDAPRecord"):
+	def record_has_collision(self: "LDAPRecord", raise_exc=True) -> bool | Exception:
 		"""
 		Checks if a record of this type conflicts with another record type
-		in this entry
+		in this entry.
 
-		Returns Boolean [ True | False ]
+		Args:
+			raise_exc (bool): Whether to raise an exception on collision.
+
+		Raises Exception by default.
+
+		Returns:
+			bool | Exception
 		"""
-		if self.data is not None:
+		if self.data:
 			if len(self.data) > 0:
 				exc = False
 				msg = None
@@ -222,16 +232,12 @@ class LDAPRecordMixin:
 						# If Any other type of Entry conflicts with CNAME
 						(
 							self.type == DNS_RECORD_TYPE_CNAME
-							and record["type"] != DNS_RECORD_TYPE_CNAME
+							and record["type"] != self.type
 						)
 						# A -> CNAME
-						or (
-							self.type == DNS_RECORD_TYPE_A
-							and record["type"] == DNS_RECORD_TYPE_CNAME
-						)
 						# AAAA -> CNAME
 						or (
-							self.type == DNS_RECORD_TYPE_AAAA
+							self.type in [DNS_RECORD_TYPE_A, DNS_RECORD_TYPE_AAAA]
 							and record["type"] == DNS_RECORD_TYPE_CNAME
 						)
 					):
@@ -244,8 +250,10 @@ class LDAPRecordMixin:
 								record,
 							)
 						)
-				if exc:
+				if exc and raise_exc:
 					raise Exception(msg)
+				elif exc:
+					return True
 		return False
 
 
