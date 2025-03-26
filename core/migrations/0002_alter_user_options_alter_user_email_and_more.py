@@ -5,32 +5,32 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    dependencies = [
-        ("core", "0001_initial"),
-    ]
+	dependencies = [
+		("core", "0001_initial"),
+	]
 
-    operations = [
-        migrations.AlterModelOptions(
-            name="user",
-            options={"verbose_name": "User", "verbose_name_plural": "Users"},
-        ),
-        migrations.AlterField(
-            model_name="user",
-            name="email",
-            field=models.EmailField(
-                db_index=True,
-                max_length=254,
-                null=True,
-                unique=True,
-                validators=[django.core.validators.EmailValidator()],
-                verbose_name="email address",
-            ),
-        ),
-        migrations.AlterField(
-            model_name="user",
-            name="username",
-            field=models.CharField(
-                db_index=True, max_length=128, unique=True, verbose_name="username"
-            ),
-        ),
-    ]
+	operations = [
+		migrations.AlterModelOptions(
+			name="user",
+			options={"verbose_name": "User", "verbose_name_plural": "Users"},
+		),
+		migrations.AlterField(
+			model_name="user",
+			name="email",
+			field=models.EmailField(
+				db_index=True,
+				max_length=254,
+				null=True,
+				unique=True,
+				validators=[django.core.validators.EmailValidator()],
+				verbose_name="email address",
+			),
+		),
+		migrations.AlterField(
+			model_name="user",
+			name="username",
+			field=models.CharField(
+				db_index=True, max_length=128, unique=True, verbose_name="username"
+			),
+		),
+	]

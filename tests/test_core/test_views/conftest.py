@@ -9,57 +9,66 @@ from rest_framework import status
 
 User = get_user_model()
 
+
 @pytest.fixture
 def api_client():
-    """Unauthenticated API client"""
-    return APIClient()
+	"""Unauthenticated API client"""
+	return APIClient()
+
 
 @pytest.fixture
 def user_factory(db):
-    """Factory to create test users with db access"""
-    def create_user(
-        username="testuser",
-        email=f"test@{LDAP_DOMAIN}",
-        password="somepassword",
-        is_staff=False,
-        is_superuser=False,
-        **kwargs,
-    ):
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=password,
-            is_staff=is_staff,
-            is_superuser=is_superuser,
-            **kwargs,
-        )
-        user.raw_password = password  # Store password for testing
-        return user
-    return create_user
+	"""Factory to create test users with db access"""
+
+	def create_user(
+		username="testuser",
+		email=f"test@{LDAP_DOMAIN}",
+		password="somepassword",
+		is_staff=False,
+		is_superuser=False,
+		**kwargs,
+	):
+		user = User.objects.create_user(
+			username=username,
+			email=email,
+			password=password,
+			is_staff=is_staff,
+			is_superuser=is_superuser,
+			**kwargs,
+		)
+		user.raw_password = password  # Store password for testing
+		return user
+
+	return create_user
+
 
 @pytest.fixture
 def normal_user(user_factory):
-    """Regular user instance without admin privileges"""
-    return user_factory()
+	"""Regular user instance without admin privileges"""
+	return user_factory()
+
 
 @pytest.fixture
 def admin_user(user_factory):
-    """Admin user instance"""
-    return user_factory(is_staff=True, is_superuser=True)
+	"""Admin user instance"""
+	return user_factory(is_staff=True, is_superuser=True)
+
 
 @pytest.fixture
 def normal_user_client(normal_user, api_client: APIClient) -> APIClient:
-    """Authenticated API client for normal user"""
-    refresh = RefreshToken.for_user(normal_user)
-    api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
-    return api_client
+	"""Authenticated API client for normal user"""
+	refresh = RefreshToken.for_user(normal_user)
+	api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+	return api_client
+
 
 @pytest.fixture
 def admin_user_client(admin_user, api_client: APIClient) -> APIClient:
-    """Authenticated API client for admin user"""
-    refresh = RefreshToken.for_user(admin_user)
-    api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
-    return api_client
+	"""Authenticated API client for admin user"""
+	refresh = RefreshToken.for_user(admin_user)
+	api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+	return api_client
+
 
 @pytest.fixture
 def f_endpoints_default_mock_result():

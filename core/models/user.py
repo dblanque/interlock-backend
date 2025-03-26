@@ -88,10 +88,14 @@ class BaseUser(BaseModel, PermissionsMixin):
 	objects = BaseUserManager()
 
 	id = models.BigAutoField(primary_key=True)
-	username = models.CharField(_("username"), max_length=128, unique=True, null=False, blank=False, db_index=True)
+	username = models.CharField(
+		_("username"), max_length=128, unique=True, null=False, blank=False, db_index=True
+	)
 	password = models.CharField(_("password"), max_length=128)
 	last_login = models.DateTimeField(_("last login"), blank=True, null=True)
-	email = models.EmailField(_("email address"), unique=True, db_index=True, null=True, validators=[validate_email])
+	email = models.EmailField(
+		_("email address"), unique=True, db_index=True, null=True, validators=[validate_email]
+	)
 	is_staff = models.BooleanField(
 		_("staff status"),
 		default=False,
@@ -214,7 +218,7 @@ class User(BaseUser):
 		verbose_name_plural = _("Users")
 		constraints = [
 			models.CheckConstraint(
-				check=models.Q(
+				condition=models.Q(
 					ldap_password_aes=None,
 					ldap_password_ct=None,
 					ldap_password_nonce=None,

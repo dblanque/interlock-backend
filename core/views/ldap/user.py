@@ -119,10 +119,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		if data["password"] != data["passwordConfirm"]:
 			raise exc_user.UserPasswordsDontMatch(
-				data={
-					"code": "user_passwords_dont_match",
-					"user": data["username"]
-				}
+				data={"code": "user_passwords_dont_match", "user": data["username"]}
 			)
 
 		user_search = data["username"]
