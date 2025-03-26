@@ -10,51 +10,68 @@
 from struct import unpack, pack
 from core.utils.ipv6 import ipv6_to_integer
 from impacket.structure import Structure
-from ..types.ldap_dns_record import *
+from core.models.types.ldap_dns_record import *
 import socket
 import datetime
 import sys
 import logging
+from typing import TypedDict, Required, NotRequired
 ################################################################################
 
 logger = logging.getLogger(__name__)
 
+RecordMapping = TypedDict(
+	"RecordMapping",
+	{
+		"name": Required[str],
+		"class": Required[str],
+		"main_field": NotRequired[str],
+		"fields": Required[list[str]],
+		"multi_record": NotRequired[bool],
+	},
+)
+
+RECORD_MAPPINGS: dict[RecordMapping]
 RECORD_MAPPINGS = {
-	DNS_RECORD_TYPE_ZERO: {"name": "ZERO", "class": "DNS_RPC_RECORD_TS", "fields": ["tstime"]},
+	DNS_RECORD_TYPE_ZERO: {
+		"name": "ZERO",
+		"class": "DNS_RPC_RECORD_TS",
+		"fields": ["tstime"],
+	},
 	DNS_RECORD_TYPE_A: {
 		"name": "A",
 		"class": "DNS_RPC_RECORD_A",
 		"fields": ["address"],
-		"multiRecord": True,
+		"multi_record": True,
 	},
 	DNS_RECORD_TYPE_AAAA: {
 		"name": "AAAA",
 		"class": "DNS_RPC_RECORD_AAAA",
 		"fields": ["ipv6Address"],
-		"multiRecord": True,
+		"multi_record": True,
 	},
 	DNS_RECORD_TYPE_NS: {
 		"name": "NS",
 		"class": "DNS_RPC_RECORD_NODE_NAME",
 		"fields": ["nameNode"],
-		"multiRecord": True,
+		"multi_record": True,
 	},
 	DNS_RECORD_TYPE_CNAME: {
 		"name": "CNAME",
 		"class": "DNS_RPC_RECORD_NODE_NAME",
 		"fields": ["nameNode"],
-		"multiRecord": False,
+		"multi_record": False,
 	},
 	DNS_RECORD_TYPE_DNAME: {
 		"name": "DNAME",
 		"class": "DNS_RPC_RECORD_NODE_NAME",
 		"fields": ["nameNode"],
-		"multiRecord": False,
+		"multi_record": False,
 	},
 	DNS_RECORD_TYPE_SOA: {
 		"name": "SOA",
 		"class": "DNS_RPC_RECORD_SOA",
-		"mainField": "namePrimaryServer",
+		"main_field": "namePrimaryServer",
 		"fields": [
 			"dwSerialNo",
 			"dwRefresh",
@@ -64,59 +81,59 @@ RECORD_MAPPINGS = {
 			"namePrimaryServer",
 			"zoneAdminEmail",
 		],
-		"multiRecord": False,
+		"multi_record": False,
 	},
 	DNS_RECORD_TYPE_TXT: {
 		"name": "TXT",
 		"class": "DNS_RPC_RECORD_STRING",
 		"fields": ["stringData"],
-		"multiRecord": True,
+		"multi_record": True,
 	},
 	DNS_RECORD_TYPE_X25: {
 		"name": "X25",
 		"class": "DNS_RPC_RECORD_STRING",
 		"fields": ["stringData"],
-		"multiRecord": True,
+		"multi_record": True,
 	},
 	DNS_RECORD_TYPE_ISDN: {
 		"name": "ISDN",
 		"class": "DNS_RPC_RECORD_STRING",
 		"fields": ["stringData"],
-		"multiRecord": True,
+		"multi_record": True,
 	},
 	DNS_RECORD_TYPE_LOC: {
 		"name": "LOC",
 		"class": "DNS_RPC_RECORD_STRING",
 		"fields": ["stringData"],
-		"multiRecord": True,
+		"multi_record": True,
 	},
 	DNS_RECORD_TYPE_HINFO: {
 		"name": "HINFO",
 		"class": "DNS_RPC_RECORD_STRING",
 		"fields": ["stringData"],
-		"multiRecord": True,
+		"multi_record": True,
 	},
 	DNS_RECORD_TYPE_MX: {
 		"name": "MX",
 		"class": "DNS_RPC_RECORD_NAME_PREFERENCE",
-		"mainField": "nameExchange",
+		"main_field": "nameExchange",
 		"fields": ["wPreference", "nameExchange"],
-		"multiRecord": True,
+		"multi_record": True,
 	},
 	DNS_RECORD_TYPE_SIG: {"name": "SIG", "class": None, "fields": []},
 	DNS_RECORD_TYPE_KEY: {"name": "KEY", "class": None, "fields": []},
 	DNS_RECORD_TYPE_SRV: {
 		"name": "SRV",
 		"class": "DNS_RPC_RECORD_SRV",
-		"mainField": "nameTarget",
+		"main_field": "nameTarget",
 		"fields": ["wPriority", "wWeight", "wPort", "nameTarget"],
-		"multiRecord": True,
+		"multi_record": True,
 	},
 	DNS_RECORD_TYPE_PTR: {
 		"name": "PTR",
 		"class": "DNS_RPC_RECORD_NODE_NAME",
 		"fields": ["nameNode"],
-		"multiRecord": False,
+		"multi_record": False,
 	},
 	DNS_RECORD_TYPE_WINS: {"name": "WINS", "class": None, "fields": []},
 	# DEPRECATED BY RFCs
@@ -141,7 +158,7 @@ def record_to_dict(record, ts=False):
 
 	# Check if record is Tombstoned / Inactive
 	if ts and len(ts) > 0:
-		if ts[0] == True or ts[0] == "TRUE":
+		if ts[0] == True or str(ts[0]).lower() == "true":
 			record_dict["ts"] = True
 	else:
 		record_dict["ts"] = False
