@@ -10,6 +10,12 @@ class DNSZoneNotInRequest(CoreException):
 	default_code = "dns_zone_missing"
 
 
+class DNSZoneIsForeign(CoreException):
+	status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+	default_detail = "DNS Zone is a foreign zone, not from this LDAP Server"
+	default_code = "dns_zone_foreign"
+
+
 class DNSZoneInRecord(CoreException):
 	status_code = status.HTTP_400_BAD_REQUEST
 	default_detail = "Target Record should not include the zone"
