@@ -680,3 +680,48 @@ class TestLDAPRecord:
 				rType=RecordTypes.DNS_RECORD_TYPE_A.value,
 				rZone=f_runtime_settings.LDAP_DOMAIN
 			)
+
+	def test_dunder_attributes(self, mocker):
+		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
+		m_record = LDAPRecord()
+		m_record.rawEntry = "raw_entry"
+		m_record.connection = "connection"
+		m_record.ldap_info = "ldap_info"
+		assert len(m_record.__attributes__()) == 0
+
+	def test_dunder_print_attributes(self, mocker):
+		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
+		m_print: MockType = mocker.patch("core.models.dns.print")
+		m_record = LDAPRecord()
+		m_record.rawEntry = "raw_entry"
+		m_record.data = "data"
+		# Should not print raw entry
+		m_record.__printAttributes__()
+		m_print.assert_called_once()
+		# Should print raw entry and other attributes
+		m_record.__printAttributes__(print_raw_data=True)
+		assert m_print.call_count == 3
+
+	def test_dunder_connection(self, mocker):
+		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
+		m_record = LDAPRecord()
+		m_record.connection = "connection"
+		assert m_record.__connection__() == "connection"
+
+	def test_dunder_fullname_root_record(self, mocker):
+		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
+		m_record = LDAPRecord()
+		m_record.name = "@"
+		m_record.zone = LDAP_DOMAIN
+		m_record.type = RecordTypes.DNS_RECORD_TYPE_A.value
+		m_record.mapping = RECORD_MAPPINGS[m_record.type]
+		assert m_record.__fullname__() == f"{LDAP_DOMAIN} (A)"
+
+	def test_dunder_fullname_normal_record(self, mocker):
+		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
+		m_record = LDAPRecord()
+		m_record.name = "subdomain"
+		m_record.zone = LDAP_DOMAIN
+		m_record.type = RecordTypes.DNS_RECORD_TYPE_A.value
+		m_record.mapping = RECORD_MAPPINGS[m_record.type]
+		assert m_record.__fullname__() == f"subdomain.{LDAP_DOMAIN} (A)"
