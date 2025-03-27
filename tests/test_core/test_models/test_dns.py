@@ -33,22 +33,27 @@ from pytest_mock import MockType
 TODAY_DATETIME = datetime.today()
 TODAY_STR = TODAY_DATETIME.strftime(DATE_FMT)
 
+
 @pytest.fixture
 def f_connection(mocker):
 	return mocker.MagicMock()
+
 
 def get_mock_serial(serial: int):
 	if len(str(serial)) >= 10:
 		return serial
 	return int(f"{TODAY_STR}{str(serial).rjust(2, '0')}")
 
+
 @pytest.fixture
 def f_today():
 	return TODAY_DATETIME
 
+
 @pytest.fixture
 def f_today_str():
 	return TODAY_STR
+
 
 @pytest.fixture
 def f_runtime_settings(mocker):
@@ -57,9 +62,11 @@ def f_runtime_settings(mocker):
 	m_runtime_settings.LDAP_AUTH_SEARCH_BASE = LDAP_AUTH_SEARCH_BASE
 	return mocker.patch("core.models.dns.RuntimeSettings", m_runtime_settings)
 
+
 @pytest.fixture
 def f_dns_root():
 	return f"CN=MicrosoftDNS,CN=System,{LDAP_AUTH_SEARCH_BASE}"
+
 
 @pytest.mark.django_db
 class TestLDAPDNS:
@@ -103,8 +110,8 @@ class TestLDAPDNS:
 		ldap_dns = LDAPDNS(m_connection)
 		assert ldap_dns.forestzones == [f"_msdcs.{LDAP_DOMAIN}"]
 
-class TestSerialGenerator:
 
+class TestSerialGenerator:
 	def test_serial_is_epoch_datetime_raise_type_error(self):
 		with pytest.raises(TypeError, match="must be an int"):
 			SerialGenerator.serial_as_datetime("a")
@@ -163,15 +170,13 @@ class TestSerialGenerator:
 		with pytest.raises(TypeError, match=expected):
 			SerialGenerator.generate_epoch(serial, serial_date_obj)
 
+
 class TestLDAPRecordMixin:
 	def test_get_soa_serial_raise_malformed(self, mocker):
 		m_get_soa: MockType = mocker.Mock(return_value=None)
 		m_mixin = LDAPRecordMixin()
 		m_mixin.get_soa = m_get_soa
-		m_mixin.soa = {
-			"dwSerialNo": 1,
-			"serial": 2
-		}
+		m_mixin.soa = {"dwSerialNo": 1, "serial": 2}
 		with pytest.raises(DNSRecordDataMalformed):
 			m_mixin.get_soa_serial()
 			m_get_soa.assert_called_once()
@@ -199,7 +204,7 @@ class TestLDAPRecordMixin:
 			"Non-epoch Serial (1, 2)",
 			f"Epoch Serial, different days (2024010101, {get_mock_serial(1)})",
 			f"Epoch Serial, same day ({get_mock_serial(1)}, {get_mock_serial(2)})",
-		]
+		],
 	)
 	def test_get_soa_serial(self, mocker, serial, expected_serial):
 		if not serial:
@@ -211,10 +216,7 @@ class TestLDAPRecordMixin:
 		m_get_soa: MockType = mocker.Mock(return_value=None)
 		m_mixin = LDAPRecordMixin()
 		m_mixin.get_soa = m_get_soa
-		m_mixin.soa = {
-			"dwSerialNo": serial,
-			"serial": serial
-		}
+		m_mixin.soa = {"dwSerialNo": serial, "serial": serial}
 		result = m_mixin.get_soa_serial()
 		m_get_soa.assert_called_once()
 		assert result == expected_serial
@@ -223,18 +225,14 @@ class TestLDAPRecordMixin:
 		m_mixin = LDAPRecordMixin()
 		m_mixin.type = RecordTypes.DNS_RECORD_TYPE_SOA.value
 		m_mixin.mapping = RECORD_MAPPINGS[m_mixin.type]
-		assert m_mixin.get_serial(
-			record_values={"dwSerialNo": 1}
-		) == 1
+		assert m_mixin.get_serial(record_values={"dwSerialNo": 1}) == 1
 
 	def test_get_serial_when_soa_raise(self):
 		m_mixin = LDAPRecordMixin()
 		m_mixin.type = RecordTypes.DNS_RECORD_TYPE_SOA.value
 		m_mixin.mapping = RECORD_MAPPINGS[m_mixin.type]
 		with pytest.raises(DNSCouldNotGetSerial):
-			m_mixin.get_serial(
-				record_values={"dwSerialNo": "a"}
-			)
+			m_mixin.get_serial(record_values={"dwSerialNo": "a"})
 
 	def test_get_serial_raise(self, mocker):
 		mocker.patch.object(LDAPRecordMixin, "get_soa_serial", side_effect=DNSCouldNotGetSOA)
@@ -256,42 +254,30 @@ class TestLDAPRecordMixin:
 		m_mixin = LDAPRecordMixin()
 		m_mixin.type = RecordTypes.DNS_RECORD_TYPE_A.value
 		m_mixin.mapping = RECORD_MAPPINGS[m_mixin.type]
-		assert m_mixin.get_serial(
-			record_values={"serial":1},
-			old_serial=1
-		) == 2024010101
+		assert m_mixin.get_serial(record_values={"serial": 1}, old_serial=1) == 2024010101
 
 	def test_get_serial(self, mocker):
 		mocker.patch.object(LDAPRecordMixin, "get_soa_serial", return_value=3)
 		m_mixin = LDAPRecordMixin()
 		m_mixin.type = RecordTypes.DNS_RECORD_TYPE_A.value
 		m_mixin.mapping = RECORD_MAPPINGS[m_mixin.type]
-		assert m_mixin.get_serial(
-			record_values={"serial": 2},
-			old_serial=1
-		) == 2
+		assert m_mixin.get_serial(record_values={"serial": 2}, old_serial=1) == 2
 
 	def test_record_exists_in_entry_data_doesnt_exist(self):
-		assert LDAPRecordMixin().record_exists_in_entry(
-			main_field="field",
-			main_field_val="value"
-		) is False
+		assert (
+			LDAPRecordMixin().record_exists_in_entry(main_field="field", main_field_val="value")
+			is False
+		)
 
 	def test_record_exists_in_entry_data_is_none(self):
 		m_mixin = LDAPRecordMixin()
 		m_mixin.data = None
-		assert m_mixin.record_exists_in_entry(
-			main_field="field",
-			main_field_val="value"
-		) is False
+		assert m_mixin.record_exists_in_entry(main_field="field", main_field_val="value") is False
 
 	def test_record_exists_in_entry_len_zero(self):
 		m_mixin = LDAPRecordMixin()
 		m_mixin.data = []
-		assert m_mixin.record_exists_in_entry(
-			main_field="field",
-			main_field_val="value"
-		) is False
+		assert m_mixin.record_exists_in_entry(main_field="field", main_field_val="value") is False
 
 	def test_record_exists_in_entry(self):
 		m_mixin = LDAPRecordMixin()
@@ -299,16 +285,9 @@ class TestLDAPRecordMixin:
 		m_mixin.type = RecordTypes.DNS_RECORD_TYPE_A.value
 		m_mixin.mapping = RECORD_MAPPINGS[m_mixin.type]
 		m_mixin.data = [
-			{
-				"name":"subdomain",
-				"type": RecordTypes.DNS_RECORD_TYPE_A.value,
-				"value": "abcd"
-			}
+			{"name": "subdomain", "type": RecordTypes.DNS_RECORD_TYPE_A.value, "value": "abcd"}
 		]
-		assert m_mixin.record_exists_in_entry(
-			main_field="value",
-			main_field_val="abcd"
-		) is True
+		assert m_mixin.record_exists_in_entry(main_field="value", main_field_val="abcd") is True
 
 	@pytest.mark.parametrize(
 		"record_type, existing_record_type, expected_result",
@@ -316,43 +295,25 @@ class TestLDAPRecordMixin:
 			(
 				RecordTypes.DNS_RECORD_TYPE_CNAME.value,
 				RecordTypes.DNS_RECORD_TYPE_CNAME.value,
-				True
+				True,
 			),
-			(
-				RecordTypes.DNS_RECORD_TYPE_CNAME.value,
-				RecordTypes.DNS_RECORD_TYPE_A.value,
-				False
-			),
-			(
-				RecordTypes.DNS_RECORD_TYPE_A.value,
-				RecordTypes.DNS_RECORD_TYPE_A.value,
-				False
-			),
-			(
-				RecordTypes.DNS_RECORD_TYPE_SOA.value,
-				RecordTypes.DNS_RECORD_TYPE_SOA.value,
-				True
-			),
+			(RecordTypes.DNS_RECORD_TYPE_CNAME.value, RecordTypes.DNS_RECORD_TYPE_A.value, False),
+			(RecordTypes.DNS_RECORD_TYPE_A.value, RecordTypes.DNS_RECORD_TYPE_A.value, False),
+			(RecordTypes.DNS_RECORD_TYPE_SOA.value, RecordTypes.DNS_RECORD_TYPE_SOA.value, True),
 		),
 		ids=[
 			"Matching CNAME records, multi_record forbidden",
 			"Non-matching CNAME-A records",
 			"Matching A records, multi_record allowed",
 			"Matching SOA records, multi_record forbidden",
-		]
+		],
 	)
 	def test_record_of_type_exists(self, record_type, existing_record_type, expected_result):
 		m_mixin = LDAPRecordMixin()
 		m_mixin.name = "subdomain"
 		m_mixin.type = record_type
 		m_mixin.mapping = RECORD_MAPPINGS[m_mixin.type]
-		m_mixin.data = [
-			{
-				"name":"aa",
-				"type": existing_record_type,
-				"value": "abcd"
-			}
-		]
+		m_mixin.data = [{"name": "aa", "type": existing_record_type, "value": "abcd"}]
 		assert m_mixin.record_of_type_exists() == expected_result
 
 	def test_record_soa_exists_data_is_none(self):
@@ -371,11 +332,7 @@ class TestLDAPRecordMixin:
 		m_mixin.type = RecordTypes.DNS_RECORD_TYPE_A.value
 		m_mixin.mapping = RECORD_MAPPINGS[m_mixin.type]
 		m_mixin.data = [
-			{
-				"name":"@",
-				"type": RecordTypes.DNS_RECORD_TYPE_SOA.value,
-				"value": "abcd"
-			}
+			{"name": "@", "type": RecordTypes.DNS_RECORD_TYPE_SOA.value, "value": "abcd"}
 		]
 		assert m_mixin.record_soa_exists() is True
 
@@ -418,12 +375,12 @@ class TestLDAPRecordMixin:
 		m_mixin.mapping = RECORD_MAPPINGS[m_mixin.type]
 		m_mixin.data = [
 			{
-				"name":"subdomain",
+				"name": "subdomain",
 				"type": collision_type,
 				"value": "abcd",
 			},
 			{
-				"name":"subdomain2",
+				"name": "subdomain2",
 				"type": collision_type,
 				"value": "abcd",
 			},
@@ -438,12 +395,12 @@ class TestLDAPRecordMixin:
 		m_mixin.mapping = RECORD_MAPPINGS[m_mixin.type]
 		m_mixin.data = [
 			{
-				"name":"subdomain",
+				"name": "subdomain",
 				"type": RecordTypes.DNS_RECORD_TYPE_CNAME.value,
 				"value": "abcd",
 			},
 			{
-				"name":"subdomain2",
+				"name": "subdomain2",
 				"type": RecordTypes.DNS_RECORD_TYPE_A.value,
 				"value": "abcd",
 			},
@@ -454,34 +411,24 @@ class TestLDAPRecordMixin:
 		"record_type, collision_type",
 		(
 			pytest.param(
-				RecordTypes.DNS_RECORD_TYPE_A.value,
-				None,
-				id="DNS_RECORD_TYPE_A with itself"
+				RecordTypes.DNS_RECORD_TYPE_A.value, None, id="DNS_RECORD_TYPE_A with itself"
 			),
 			pytest.param(
 				RecordTypes.DNS_RECORD_TYPE_CNAME.value,
 				None,
-				id="DNS_RECORD_TYPE_CNAME with itself"
+				id="DNS_RECORD_TYPE_CNAME with itself",
 			),
 			pytest.param(
-				RecordTypes.DNS_RECORD_TYPE_AAAA.value,
-				None,
-				id="DNS_RECORD_TYPE_AAAA with itself"
+				RecordTypes.DNS_RECORD_TYPE_AAAA.value, None, id="DNS_RECORD_TYPE_AAAA with itself"
 			),
 			pytest.param(
-				RecordTypes.DNS_RECORD_TYPE_NS.value,
-				None,
-				id="DNS_RECORD_TYPE_NS with itself"
+				RecordTypes.DNS_RECORD_TYPE_NS.value, None, id="DNS_RECORD_TYPE_NS with itself"
 			),
 			pytest.param(
-				RecordTypes.DNS_RECORD_TYPE_TXT.value,
-				None,
-				id="DNS_RECORD_TYPE_TXT with itself"
+				RecordTypes.DNS_RECORD_TYPE_TXT.value, None, id="DNS_RECORD_TYPE_TXT with itself"
 			),
 			pytest.param(
-				RecordTypes.DNS_RECORD_TYPE_MX.value,
-				None,
-				id="DNS_RECORD_TYPE_MX with itself"
+				RecordTypes.DNS_RECORD_TYPE_MX.value, None, id="DNS_RECORD_TYPE_MX with itself"
 			),
 		),
 	)
@@ -493,21 +440,13 @@ class TestLDAPRecordMixin:
 		m_mixin.type = record_type
 		m_mixin.mapping = RECORD_MAPPINGS[m_mixin.type]
 		m_mixin.data = [
-			{
-				"name":"subdomain",
-				"type": collision_type,
-				"value": "abcd"
-			},
-			{
-				"name":"subdomain2",
-				"type": collision_type,
-				"value": "abcd"
-			},
+			{"name": "subdomain", "type": collision_type, "value": "abcd"},
+			{"name": "subdomain2", "type": collision_type, "value": "abcd"},
 		]
 		assert m_mixin.record_has_collision() is False
 
-class TestLDAPRecord:
 
+class TestLDAPRecord:
 	@pytest.mark.parametrize(
 		"test_args, expected_exc",
 		(
@@ -517,7 +456,7 @@ class TestLDAPRecord:
 					"rZone": LDAP_DOMAIN,
 					"rType": RecordTypes.DNS_RECORD_TYPE_A.value,
 				},
-				"name cannot be none"
+				"name cannot be none",
 			),
 			(
 				{
@@ -525,7 +464,7 @@ class TestLDAPRecord:
 					"rZone": None,
 					"rType": RecordTypes.DNS_RECORD_TYPE_A.value,
 				},
-				"zone cannot be none"
+				"zone cannot be none",
 			),
 			(
 				{
@@ -533,7 +472,7 @@ class TestLDAPRecord:
 					"rZone": LDAP_DOMAIN,
 					"rType": None,
 				},
-				"type cannot be none"
+				"type cannot be none",
 			),
 			(
 				{
@@ -541,29 +480,28 @@ class TestLDAPRecord:
 					"rZone": LDAP_DOMAIN,
 					"rType": "A",
 				},
-				"valid enum integer"
+				"valid enum integer",
 			),
 			(
 				{
 					"rName": "subdomain",
 					"rZone": LDAP_DOMAIN,
 					"rType": RecordTypes.DNS_RECORD_TYPE_A.value,
-					"zoneType":"revLookup"
+					"zoneType": "revLookup",
 				},
-				"currently unsupported"
+				"currently unsupported",
 			),
-		)
+		),
 	)
 	def test_init_raise_value_error(
-			self,
-			mocker,
-			f_connection,
-			f_runtime_settings,
-			test_args,
-			expected_exc,
-		):
-		m_record_fetch: MockType = mocker.patch.object(
-			LDAPRecord, "fetch", return_value=None)
+		self,
+		mocker,
+		f_connection,
+		f_runtime_settings,
+		test_args,
+		expected_exc,
+	):
+		m_record_fetch: MockType = mocker.patch.object(LDAPRecord, "fetch", return_value=None)
 		with pytest.raises((ValueError, TypeError)) as exc_info:
 			m_record = LDAPRecord(connection=f_connection, **test_args)
 		assert expected_exc in exc_info.value.args[0].lower()
@@ -572,7 +510,7 @@ class TestLDAPRecord:
 	@pytest.mark.parametrize(
 		"test_types, expected_cls",
 		(
-			(	# DNS_RPC_RECORD_NODE_NAME Cases
+			(  # DNS_RPC_RECORD_NODE_NAME Cases
 				(
 					RecordTypes.DNS_RECORD_TYPE_NS.value,
 					RecordTypes.DNS_RECORD_TYPE_CNAME.value,
@@ -581,7 +519,7 @@ class TestLDAPRecord:
 				),
 				DNS_COUNT_NAME,
 			),
-			(	# DNS_RPC_RECORD_STRING Cases
+			(  # DNS_RPC_RECORD_STRING Cases
 				(
 					RecordTypes.DNS_RECORD_TYPE_TXT.value,
 					RecordTypes.DNS_RECORD_TYPE_X25.value,
@@ -591,31 +529,23 @@ class TestLDAPRecord:
 				),
 				DNS_RPC_NAME,
 			),
-			(	# DNS_RPC_RECORD_NAME_PREFERENCE Case
-				(
-					RecordTypes.DNS_RECORD_TYPE_MX.value,
-				),
+			(  # DNS_RPC_RECORD_NAME_PREFERENCE Case
+				(RecordTypes.DNS_RECORD_TYPE_MX.value,),
 				DNS_RPC_RECORD_NAME_PREFERENCE,
 			),
-			(	# A Record Case
-				(
-					RecordTypes.DNS_RECORD_TYPE_A.value,
-				),
+			(  # A Record Case
+				(RecordTypes.DNS_RECORD_TYPE_A.value,),
 				DNS_RPC_RECORD_A,
 			),
-			(	# AAAA Record Case
-				(
-					RecordTypes.DNS_RECORD_TYPE_AAAA.value,
-				),
+			(  # AAAA Record Case
+				(RecordTypes.DNS_RECORD_TYPE_AAAA.value,),
 				DNS_RPC_RECORD_AAAA,
 			),
-			(	# SOA Record Case
-				(
-					RecordTypes.DNS_RECORD_TYPE_SOA.value,
-				),
+			(  # SOA Record Case
+				(RecordTypes.DNS_RECORD_TYPE_SOA.value,),
 				DNS_RPC_RECORD_SOA,
 			),
-		)
+		),
 	)
 	def test_init(
 		self,
@@ -628,13 +558,12 @@ class TestLDAPRecord:
 	):
 		expected_dn = f"DC=subdomain,DC={f_runtime_settings.LDAP_DOMAIN},{f_dns_root}"
 		for test_t in test_types:
-			m_record_fetch: MockType = mocker.patch.object(
-				LDAPRecord, "fetch", return_value=None)
+			m_record_fetch: MockType = mocker.patch.object(LDAPRecord, "fetch", return_value=None)
 			m_record = LDAPRecord(
 				connection=f_connection,
 				rName="subdomain",
 				rType=test_t,
-				rZone=f_runtime_settings.LDAP_DOMAIN
+				rZone=f_runtime_settings.LDAP_DOMAIN,
 			)
 			assert m_record.record_cls == expected_cls
 			assert m_record.distinguishedName == expected_dn
@@ -650,7 +579,7 @@ class TestLDAPRecord:
 			RecordTypes.DNS_RECORD_TYPE_KEY.value,
 			RecordTypes.DNS_RECORD_TYPE_WINS.value,
 		),
-		ids=lambda x: RecordTypes(x).name + " raises ValueError"
+		ids=lambda x: RecordTypes(x).name + " raises ValueError",
 	)
 	def test_init_unsupported_record(
 		self,
@@ -659,26 +588,24 @@ class TestLDAPRecord:
 		f_runtime_settings,
 		test_type,
 	):
-		m_record_fetch: MockType = mocker.patch.object(
-			LDAPRecord, "fetch", return_value=None)
+		m_record_fetch: MockType = mocker.patch.object(LDAPRecord, "fetch", return_value=None)
 		with pytest.raises(ValueError, match="not valid for type"):
 			m_record = LDAPRecord(
 				connection=f_connection,
 				rName="subdomain",
 				rType=test_type,
-				rZone=f_runtime_settings.LDAP_DOMAIN
+				rZone=f_runtime_settings.LDAP_DOMAIN,
 			)
 		m_record_fetch.assert_not_called()
 
 	def test_init_class_not_in_def(self, mocker, f_connection, f_runtime_settings):
-		mocker.patch("core.models.dns.RECORD_MAPPINGS",
-			{ RecordTypes.DNS_RECORD_TYPE_A.value: {} })
+		mocker.patch("core.models.dns.RECORD_MAPPINGS", {RecordTypes.DNS_RECORD_TYPE_A.value: {}})
 		with pytest.raises(TypeError, match="key not in"):
 			LDAPRecord(
 				connection=f_connection,
 				rName="subdomain",
 				rType=RecordTypes.DNS_RECORD_TYPE_A.value,
-				rZone=f_runtime_settings.LDAP_DOMAIN
+				rZone=f_runtime_settings.LDAP_DOMAIN,
 			)
 
 	def test_init_record_type_no_mapping(self, mocker, f_connection, f_runtime_settings):
@@ -688,7 +615,7 @@ class TestLDAPRecord:
 				connection=f_connection,
 				rName="subdomain",
 				rType=RecordTypes.DNS_RECORD_TYPE_A.value,
-				rZone=f_runtime_settings.LDAP_DOMAIN
+				rZone=f_runtime_settings.LDAP_DOMAIN,
 			)
 
 	def test_dunder_attributes(self, mocker):

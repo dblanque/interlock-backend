@@ -17,7 +17,10 @@ from core.models.dns import LDAPRecord
 class DomainViewMixin(viewsets.ViewSetMixin):
 	def get_zone_soa(self, zone):
 		self.soa_object = LDAPRecord(
-			connection=self.connection, rName="@", rZone=zone, rType=RecordTypes.DNS_RECORD_TYPE_SOA.value
+			connection=self.connection,
+			rName="@",
+			rZone=zone,
+			rType=RecordTypes.DNS_RECORD_TYPE_SOA.value,
 		)
 		for index, record in enumerate(self.soa_object.data):
 			if record["type"] == RecordTypes.DNS_RECORD_TYPE_SOA.value:

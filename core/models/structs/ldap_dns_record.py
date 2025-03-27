@@ -143,11 +143,7 @@ RECORD_MAPPINGS = {
 		"fields": ["nameNode"],
 		"multi_record": False,
 	},
-	RecordTypes.DNS_RECORD_TYPE_WINS.value: {
-		"name": "WINS",
-		"class": None,
-		"fields": []
-	},
+	RecordTypes.DNS_RECORD_TYPE_WINS.value: {"name": "WINS", "class": None, "fields": []},
 	# DEPRECATED BY RFCs
 	RecordTypes.DNS_RECORD_TYPE_MB.value: {
 		"name": "MB",
@@ -220,14 +216,14 @@ def record_to_dict(record, ts=False):
 				if valueField == "tstime":
 					record_dict[valueField] = data.toDatetime()
 				elif (
-						valueField == "address" and
-						record["Type"] == RecordTypes.DNS_RECORD_TYPE_A.value
-					):
+					valueField == "address"
+					and record["Type"] == RecordTypes.DNS_RECORD_TYPE_A.value
+				):
 					record_dict[valueField] = data.formatCanonical()
 				elif (
-						valueField == "ipv6Address" and 
-		  				record["Type"] == RecordTypes.DNS_RECORD_TYPE_AAAA.value
-					):
+					valueField == "ipv6Address"
+					and record["Type"] == RecordTypes.DNS_RECORD_TYPE_AAAA.value
+				):
 					record_dict[valueField] = data.formatCanonical()
 				elif valueField == "stringData":
 					record_dict[valueField] = data[valueField].toString()

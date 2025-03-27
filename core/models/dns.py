@@ -162,11 +162,7 @@ class LDAPRecordMixin:
 			logger.exception(e)
 			raise exc_dns.DNSCouldNotGetSerial
 
-	def record_exists_in_entry(
-			self: "LDAPRecord",
-			main_field: str,
-			main_field_val
-		) -> bool:
+	def record_exists_in_entry(self: "LDAPRecord", main_field: str, main_field_val) -> bool:
 		"""
 		Checks if the record exists in the current LDAP Entry
 
@@ -246,7 +242,11 @@ class LDAPRecordMixin:
 						# A -> CNAME
 						# AAAA -> CNAME
 						or (
-							self.type in [RecordTypes.DNS_RECORD_TYPE_A.value, RecordTypes.DNS_RECORD_TYPE_AAAA.value]
+							self.type
+							in [
+								RecordTypes.DNS_RECORD_TYPE_A.value,
+								RecordTypes.DNS_RECORD_TYPE_AAAA.value,
+							]
 							and record["type"] == RecordTypes.DNS_RECORD_TYPE_CNAME.value
 						)
 					):
@@ -356,12 +356,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		else:
 			return f"{self.name}.{self.zone} ({self.mapping['name']})"
 
-	def make_record_bytes(
-			self,
-			values: dict,
-			serial: int | str,
-			ttl: int = None
-		) -> ldr.DNS_RECORD:
+	def make_record_bytes(self, values: dict, serial: int | str, ttl: int = None) -> ldr.DNS_RECORD:
 		"""Make record byte struct from values dictionary
 
 		Args:
@@ -446,7 +441,10 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 	def get_soa(self):
 		try:
 			self.soa_object = LDAPRecord(
-				connection=self.connection, rName="@", rZone=self.zone, rType=RecordTypes.DNS_RECORD_TYPE_SOA.value
+				connection=self.connection,
+				rName="@",
+				rZone=self.zone,
+				rType=RecordTypes.DNS_RECORD_TYPE_SOA.value,
 			)
 		except:
 			logger.error(traceback.format_exc())

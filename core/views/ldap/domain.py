@@ -254,7 +254,10 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 
 			# Create Start of Authority
 			base_soaRecord = LDAPRecord(
-				connection=ldapConnection, rName="@", rZone=target_zone, rType=RecordTypes.DNS_RECORD_TYPE_SOA.value
+				connection=ldapConnection,
+				rName="@",
+				rZone=target_zone,
+				rType=RecordTypes.DNS_RECORD_TYPE_SOA.value,
 			)
 			values_soa = {
 				"dwSerialNo": 1,
@@ -280,7 +283,10 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 			if ipv4:
 				values_a = {"address": currentLDAPServer.host, "ttl": 900, "serial": 1}
 				base_aRecord = LDAPRecord(
-					connection=ldapConnection, rName="@", rZone=target_zone, rType=RecordTypes.DNS_RECORD_TYPE_A.value
+					connection=ldapConnection,
+					rName="@",
+					rZone=target_zone,
+					rType=RecordTypes.DNS_RECORD_TYPE_A.value,
 				)
 				base_aRecord.create(values=values_a)
 
@@ -321,7 +327,10 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 
 			values_ns = {"nameNode": f"ns1.{target_zone}.", "ttl": 3600, "serial": 1}
 			base_nsRecord = LDAPRecord(
-				connection=ldapConnection, rName="@", rZone=target_zone, rType=RecordTypes.DNS_RECORD_TYPE_NS.value
+				connection=ldapConnection,
+				rName="@",
+				rZone=target_zone,
+				rType=RecordTypes.DNS_RECORD_TYPE_NS.value,
 			)
 			base_nsRecord.create(values=values_ns)
 

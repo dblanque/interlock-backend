@@ -47,7 +47,10 @@ class DNSRecordMixin(DomainViewMixin):
 		if record_data["zone"] == "Root DNS Servers":
 			raise exc_dns.DNSRootServersOnlyCLI
 
-		if record_data["type"] == RecordTypes.DNS_RECORD_TYPE_SOA.value and record_data["name"] != "@":
+		if (
+			record_data["type"] == RecordTypes.DNS_RECORD_TYPE_SOA.value
+			and record_data["name"] != "@"
+		):
 			raise exc_dns.SOARecordRootOnly
 
 		if "stringData" in record_data:
