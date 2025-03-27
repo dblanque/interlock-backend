@@ -12,7 +12,16 @@
 from core.exceptions import dns as exc_dns
 
 ### Models
-from core.models.structs.ldap_dns_record import *
+from core.models.structs import ldap_dns_record as ldr
+from core.models.structs.ldap_dns_record import (
+	RECORD_MAPPINGS,
+	RecordMapping,
+	DNS_RECORD,
+	DNS_RPC_RECORD_NAME_PREFERENCE,
+	DNS_COUNT_NAME,
+	DNS_RPC_NAME,
+)
+from core.models.types.ldap_dns_record import RecordTypes
 
 ### Interlock
 from core.ldap.adsi import search_filter_add
@@ -139,7 +148,7 @@ class LDAPRecordMixin:
 
 	def get_serial(self: "LDAPRecord", record_values, old_serial=None) -> int:
 		try:
-			if self.type == DNS_RECORD_TYPE_SOA:
+			if self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
 				return int(record_values["dwSerialNo"])
 			if not "serial" in record_values:
 				return self.get_soa_serial()
@@ -191,8 +200,8 @@ class LDAPRecordMixin:
 			bool
 		"""
 		multi_record = False
-		if "multi_record" in RECORD_MAPPINGS[self.type]:
-			multi_record = RECORD_MAPPINGS[self.type]["multi_record"]
+		if "multi_record" in self.mapping:
+			multi_record = self.mapping["multi_record"]
 
 		if not multi_record:
 			if self.data:
@@ -206,7 +215,7 @@ class LDAPRecordMixin:
 		if self.data:
 			if len(self.data) > 0:
 				for record in self.data:
-					if record["type"] == DNS_RECORD_TYPE_SOA:
+					if record["type"] == RecordTypes.DNS_RECORD_TYPE_SOA.value:
 						return True
 		return False
 
@@ -231,14 +240,14 @@ class LDAPRecordMixin:
 					if (
 						# If Any other type of Entry conflicts with CNAME
 						(
-							self.type == DNS_RECORD_TYPE_CNAME
+							self.type == RecordTypes.DNS_RECORD_TYPE_CNAME.value
 							and record["type"] != self.type
 						)
 						# A -> CNAME
 						# AAAA -> CNAME
 						or (
-							self.type in [DNS_RECORD_TYPE_A, DNS_RECORD_TYPE_AAAA]
-							and record["type"] == DNS_RECORD_TYPE_CNAME
+							self.type in [RecordTypes.DNS_RECORD_TYPE_A.value, RecordTypes.DNS_RECORD_TYPE_AAAA.value]
+							and record["type"] == RecordTypes.DNS_RECORD_TYPE_CNAME.value
 						)
 					):
 						exc = True
@@ -246,7 +255,7 @@ class LDAPRecordMixin:
 							"A conflicting DNS Record %s was found for this %s Entry: \n -> %s"
 							% (
 								RECORD_MAPPINGS[record["type"]]["name"],
-								RECORD_MAPPINGS[self.type]["name"],
+								self.mapping["name"],
 								record,
 							)
 						)
@@ -277,12 +286,20 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
 		)
 
+		# Record Name Checks
 		if rName is None:
 			raise ValueError("Name cannot be none (LDAPRecord Object Class)")
+		# Record Zone Checks
 		if rZone is None:
 			raise ValueError("Zone cannot be none (LDAPRecord Object Class)")
+		# Record Type checks
 		if rType is None:
 			raise ValueError("Record Type cannot be none (LDAPRecord Object Class)")
+		elif not isinstance(rType, int):
+			raise TypeError("Record Type must be a valid Enum Integer")
+		elif rType not in RECORD_MAPPINGS:
+			raise TypeError("LDAPRecord type not found in Record Type Mappings.")
+		# Zone Type Checks
 		if zoneType != "fwdLookup":
 			raise ValueError(
 				"Reverse Lookup Entries are currently unsupported (LDAPRecord Object Class)"
@@ -294,22 +311,27 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		self.zone: str = rZone
 		self.zoneType = zoneType
 		self.type = rType
+		self.mapping: RecordMapping = RECORD_MAPPINGS[self.type]
 		# Dynamically fetch the class based on the mapping
-		if RECORD_MAPPINGS[self.type]["class"] != None:
-			if RECORD_MAPPINGS[self.type]["class"] == "DNS_RPC_RECORD_NODE_NAME":
+		if "class" in self.mapping:
+			if not self.mapping["class"]:
+				msg = f"Record Class definition is not valid for type."
+				logger.exception(msg, self.mapping)
+				raise ValueError(msg)
+			if self.mapping["class"] == "DNS_RPC_RECORD_NODE_NAME":
 				# If it's NODE_NAME create the record Data as DNS_COUNT_NAME
-				self.cls = DNS_COUNT_NAME
-			elif RECORD_MAPPINGS[self.type]["class"] == "DNS_RPC_RECORD_NAME_PREFERENCE":
+				self.record_cls = DNS_COUNT_NAME
+			elif self.mapping["class"] == "DNS_RPC_RECORD_NAME_PREFERENCE":
 				# If it's NODE_NAME create the record Data as DNS_COUNT_NAME
-				self.cls = DNS_COUNT_NAME
-			elif RECORD_MAPPINGS[self.type]["class"] == "DNS_RPC_RECORD_STRING":
+				self.record_cls = DNS_RPC_RECORD_NAME_PREFERENCE
+			elif self.mapping["class"] == "DNS_RPC_RECORD_STRING":
 				# If it's RECORD_STRING create the record Data as DNS_RPC_NAME
-				self.cls = DNS_RPC_NAME
+				self.record_cls = DNS_RPC_NAME
 			else:
-				if self.type not in RECORD_MAPPINGS:
-					raise TypeError("LDAPRecord type not found in Record Type Mappings.")
 				# Standard Class Creation
-				self.cls = getattr(dnstool, RECORD_MAPPINGS[self.type]["class"])
+				self.record_cls = getattr(ldr, self.mapping["class"])
+		else:
+			raise TypeError("Class key not in Record Mapping definition.")
 
 		self.distinguishedName = f"DC={self.name},DC={self.zone},{self.dnsroot}"
 		self.fetch()
@@ -330,11 +352,16 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 
 	def __fullname__(self):
 		if self.name == "@":
-			return f"{self.zone} ({RECORD_MAPPINGS[self.type]['name']})"
+			return f"{self.zone} ({self.mapping['name']})"
 		else:
-			return f"{self.name}.{self.zone} ({RECORD_MAPPINGS[self.type]['name']})"
+			return f"{self.name}.{self.zone} ({self.mapping['name']})"
 
-	def make_record_bytes(self, values: dict, serial: int | str, ttl: int = None) -> DNS_RECORD:
+	def make_record_bytes(
+			self,
+			values: dict,
+			serial: int | str,
+			ttl: int = None
+		) -> ldr.DNS_RECORD:
 		"""Make record byte struct from values dictionary
 
 		Args:
@@ -354,11 +381,11 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		if self.type in RECORD_MAPPINGS:
 			record = new_record(self.type, serial, ttl=ttl)
 			# Dynamically fetch the class based on the mapping
-			if RECORD_MAPPINGS[self.type]["class"] != None:
-				record["Data"] = self.cls()
+			if self.mapping["class"] != None:
+				record["Data"] = self.record_cls()
 
 				# ! Print Chosen Class
-				# print(RECORD_MAPPINGS[self.type]['class'])
+				# print(self.mapping['class'])
 
 				int_fields = [
 					"dwSerialNo",
@@ -372,21 +399,21 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				]
 
 				# Additional Operations based on special case type
-				for field in RECORD_MAPPINGS[self.type]["fields"]:
+				for field in self.mapping["fields"]:
 					if (
-						RECORD_MAPPINGS[self.type]["class"] == "DNS_RPC_RECORD_A"
-						or RECORD_MAPPINGS[self.type]["class"] == "DNS_RPC_RECORD_AAAA"
+						self.mapping["class"] == "DNS_RPC_RECORD_A"
+						or self.mapping["class"] == "DNS_RPC_RECORD_AAAA"
 					):
 						record["Data"].fromCanonical(values[field])
 
-					if RECORD_MAPPINGS[self.type]["class"] == "DNS_RPC_RECORD_NODE_NAME":
+					if self.mapping["class"] == "DNS_RPC_RECORD_NODE_NAME":
 						record["Data"].toCountName(values[field])
 
-					if RECORD_MAPPINGS[self.type]["class"] == "DNS_RPC_RECORD_STRING":
+					if self.mapping["class"] == "DNS_RPC_RECORD_STRING":
 						if field == "stringData":
 							record["Data"].toRPCName(values[field])
 
-					if RECORD_MAPPINGS[self.type]["class"] == "DNS_RPC_RECORD_NAME_PREFERENCE":
+					if self.mapping["class"] == "DNS_RPC_RECORD_NAME_PREFERENCE":
 						if field == "wPreference":
 							record["Data"].insert_field_to_struct(
 								fieldName=field, fieldStructVal=">H"
@@ -395,13 +422,13 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 						if field == "nameExchange":
 							record["Data"].toCountName(values[field])
 
-					if RECORD_MAPPINGS[self.type]["class"] == "DNS_RPC_RECORD_SOA":
+					if self.mapping["class"] == "DNS_RPC_RECORD_SOA":
 						if field in int_fields:
 							record["Data"].setField(field, values[field])
 						else:
 							record["Data"][field] = record["Data"].addCountName(values[field])
 
-					if RECORD_MAPPINGS[self.type]["class"] == "DNS_RPC_RECORD_SRV":
+					if self.mapping["class"] == "DNS_RPC_RECORD_SRV":
 						if field in int_fields:
 							record["Data"].setField(field, values[field])
 						else:
@@ -410,7 +437,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		else:
 			self.connection.unbind()
 			data = {
-				"type_name": RECORD_MAPPINGS[self.type]["name"],
+				"type_name": self.mapping["name"],
 				"type_code": self.type,
 				"name": self.name,
 			}
@@ -419,13 +446,13 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 	def get_soa(self):
 		try:
 			self.soa_object = LDAPRecord(
-				connection=self.connection, rName="@", rZone=self.zone, rType=DNS_RECORD_TYPE_SOA
+				connection=self.connection, rName="@", rZone=self.zone, rType=RecordTypes.DNS_RECORD_TYPE_SOA.value
 			)
 		except:
 			logger.error(traceback.format_exc())
 			raise exc_dns.DNSCouldNotGetSOA
 		for index, record in enumerate(self.soa_object.data):
-			if record["type"] == DNS_RECORD_TYPE_SOA:
+			if record["type"] == RecordTypes.DNS_RECORD_TYPE_SOA.value:
 				self.soa_bytes = self.soa_object.rawEntry["raw_attributes"]["dnsRecord"][index]
 				self.soa = record
 
@@ -487,10 +514,10 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		# LDAP entry exists
 		else:
 			# If it exists add the record to the entry after all the required checks
-			if "main_field" in RECORD_MAPPINGS[self.type]:
-				main_field = RECORD_MAPPINGS[self.type]["main_field"]
+			if "main_field" in self.mapping:
+				main_field = self.mapping["main_field"]
 			else:
-				main_field = RECORD_MAPPINGS[self.type]["fields"][0]
+				main_field = self.mapping["fields"][0]
 
 			# ! Check if record exists in LDAP Entry
 			exists = self.record_exists_in_entry(
@@ -498,11 +525,11 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			)
 			if exists:
 				logger.error(
-					f"{RECORD_MAPPINGS[self.type]['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
+					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
 				self.connection.unbind()
 				data = {
-					"type_name": RECORD_MAPPINGS[self.type]["name"],
+					"type_name": self.mapping["name"],
 					"type_code": self.type,
 					"name": self.name,
 					"conflict_val": values[main_field],
@@ -513,12 +540,12 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			# Check Multi-Record eligibility
 			if self.record_of_type_exists() == True:
 				logger.error(
-					f"{RECORD_MAPPINGS[self.type]['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
+					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
 				logger.error(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
 				self.connection.unbind()
 				data = {
-					"type_name": RECORD_MAPPINGS[self.type]["name"],
+					"type_name": self.mapping["name"],
 					"type_code": self.type,
 					"name": self.name,
 					"conflict_val": values[main_field],
@@ -527,15 +554,15 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				raise exc_dns.DNSRecordExistsConflict(data=data)
 
 			# Check if a SOA Record already Exists
-			if self.type == DNS_RECORD_TYPE_SOA:
+			if self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
 				if self.record_soa_exists() == True:
 					logger.error(
-						f"{RECORD_MAPPINGS[self.type]['name']} Record already exists in an LDAP Entry and must be unique in Zone (Conflicting value: {values[main_field]})"
+						f"{self.mapping['name']} Record already exists in an LDAP Entry and must be unique in Zone (Conflicting value: {values[main_field]})"
 					)
 					logger.error(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
 					self.connection.unbind()
 					data = {
-						"type_name": RECORD_MAPPINGS[self.type]["name"],
+						"type_name": self.mapping["name"],
 						"type_code": self.type,
 						"name": self.name,
 						"conflict_val": values[main_field],
@@ -550,7 +577,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				logger.error(e)
 				self.connection.unbind()
 				data = {
-					"type_name": RECORD_MAPPINGS[self.type]["name"],
+					"type_name": self.mapping["name"],
 					"type_code": self.type,
 					"name": self.name,
 				}
@@ -643,10 +670,10 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			self.connection.unbind()
 			raise exc_dns.DNSRecordEntryDoesNotExist
 
-		if "main_field" in RECORD_MAPPINGS[self.type]:
-			main_field = RECORD_MAPPINGS[self.type]["main_field"]
+		if "main_field" in self.mapping:
+			main_field = self.mapping["main_field"]
 		else:
-			main_field = RECORD_MAPPINGS[self.type]["fields"][0]
+			main_field = self.mapping["fields"][0]
 
 		self.serial = None
 		try:
@@ -659,18 +686,18 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 
 		# ! Check if the record with the new values exists, if true raise exception
 		# Exclude SOA from condition as that record is unique in Zone.
-		if self.type != DNS_RECORD_TYPE_SOA:
+		if self.type != RecordTypes.DNS_RECORD_TYPE_SOA.value:
 			# ! Check if record exists in Entry
 			exists = self.record_exists_in_entry(
 				main_field=main_field, main_field_val=values[main_field]
 			)
 			if exists != False and old_record_name != self.name:
 				logger.error(
-					f"{RECORD_MAPPINGS[self.type]['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
+					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
 				self.connection.unbind()
 				data = {
-					"type_name": RECORD_MAPPINGS[self.type]["name"],
+					"type_name": self.mapping["name"],
 					"type_code": self.type,
 					"name": self.name,
 					"conflict_val": values[main_field],
@@ -683,12 +710,12 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				and self.rawEntry["raw_attributes"]["dnsRecord"][0] != old_record_bytes
 			):
 				logger.error(
-					f"{RECORD_MAPPINGS[self.type]['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
+					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
 				logger.error(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
 				self.connection.unbind()
 				data = {
-					"type_name": RECORD_MAPPINGS[self.type]["name"],
+					"type_name": self.mapping["name"],
 					"type_code": self.type,
 					"name": self.name,
 					"conflict_val": values[main_field],

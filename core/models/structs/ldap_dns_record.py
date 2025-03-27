@@ -10,7 +10,7 @@
 from struct import unpack, pack
 from core.utils.ipv6 import ipv6_to_integer
 from impacket.structure import Structure
-from core.models.types.ldap_dns_record import *
+from core.models.types.ldap_dns_record import RecordTypes
 import socket
 import datetime
 import sys
@@ -33,42 +33,42 @@ RecordMapping = TypedDict(
 
 RECORD_MAPPINGS: dict[RecordMapping]
 RECORD_MAPPINGS = {
-	DNS_RECORD_TYPE_ZERO: {
+	RecordTypes.DNS_RECORD_TYPE_ZERO.value: {
 		"name": "ZERO",
 		"class": "DNS_RPC_RECORD_TS",
 		"fields": ["tstime"],
 	},
-	DNS_RECORD_TYPE_A: {
+	RecordTypes.DNS_RECORD_TYPE_A.value: {
 		"name": "A",
 		"class": "DNS_RPC_RECORD_A",
 		"fields": ["address"],
 		"multi_record": True,
 	},
-	DNS_RECORD_TYPE_AAAA: {
+	RecordTypes.DNS_RECORD_TYPE_AAAA.value: {
 		"name": "AAAA",
 		"class": "DNS_RPC_RECORD_AAAA",
 		"fields": ["ipv6Address"],
 		"multi_record": True,
 	},
-	DNS_RECORD_TYPE_NS: {
+	RecordTypes.DNS_RECORD_TYPE_NS.value: {
 		"name": "NS",
 		"class": "DNS_RPC_RECORD_NODE_NAME",
 		"fields": ["nameNode"],
 		"multi_record": True,
 	},
-	DNS_RECORD_TYPE_CNAME: {
+	RecordTypes.DNS_RECORD_TYPE_CNAME.value: {
 		"name": "CNAME",
 		"class": "DNS_RPC_RECORD_NODE_NAME",
 		"fields": ["nameNode"],
 		"multi_record": False,
 	},
-	DNS_RECORD_TYPE_DNAME: {
+	RecordTypes.DNS_RECORD_TYPE_DNAME.value: {
 		"name": "DNAME",
 		"class": "DNS_RPC_RECORD_NODE_NAME",
 		"fields": ["nameNode"],
 		"multi_record": False,
 	},
-	DNS_RECORD_TYPE_SOA: {
+	RecordTypes.DNS_RECORD_TYPE_SOA.value: {
 		"name": "SOA",
 		"class": "DNS_RPC_RECORD_SOA",
 		"main_field": "namePrimaryServer",
@@ -83,65 +83,97 @@ RECORD_MAPPINGS = {
 		],
 		"multi_record": False,
 	},
-	DNS_RECORD_TYPE_TXT: {
+	RecordTypes.DNS_RECORD_TYPE_TXT.value: {
 		"name": "TXT",
 		"class": "DNS_RPC_RECORD_STRING",
 		"fields": ["stringData"],
 		"multi_record": True,
 	},
-	DNS_RECORD_TYPE_X25: {
+	RecordTypes.DNS_RECORD_TYPE_X25.value: {
 		"name": "X25",
 		"class": "DNS_RPC_RECORD_STRING",
 		"fields": ["stringData"],
 		"multi_record": True,
 	},
-	DNS_RECORD_TYPE_ISDN: {
+	RecordTypes.DNS_RECORD_TYPE_ISDN.value: {
 		"name": "ISDN",
 		"class": "DNS_RPC_RECORD_STRING",
 		"fields": ["stringData"],
 		"multi_record": True,
 	},
-	DNS_RECORD_TYPE_LOC: {
+	RecordTypes.DNS_RECORD_TYPE_LOC.value: {
 		"name": "LOC",
 		"class": "DNS_RPC_RECORD_STRING",
 		"fields": ["stringData"],
 		"multi_record": True,
 	},
-	DNS_RECORD_TYPE_HINFO: {
+	RecordTypes.DNS_RECORD_TYPE_HINFO.value: {
 		"name": "HINFO",
 		"class": "DNS_RPC_RECORD_STRING",
 		"fields": ["stringData"],
 		"multi_record": True,
 	},
-	DNS_RECORD_TYPE_MX: {
+	RecordTypes.DNS_RECORD_TYPE_MX.value: {
 		"name": "MX",
 		"class": "DNS_RPC_RECORD_NAME_PREFERENCE",
 		"main_field": "nameExchange",
 		"fields": ["wPreference", "nameExchange"],
 		"multi_record": True,
 	},
-	DNS_RECORD_TYPE_SIG: {"name": "SIG", "class": None, "fields": []},
-	DNS_RECORD_TYPE_KEY: {"name": "KEY", "class": None, "fields": []},
-	DNS_RECORD_TYPE_SRV: {
+	RecordTypes.DNS_RECORD_TYPE_SIG.value: {
+		"name": "SIG",
+		"class": None,
+		"fields": [],
+	},
+	RecordTypes.DNS_RECORD_TYPE_KEY.value: {
+		"name": "KEY",
+		"class": None,
+		"fields": [],
+	},
+	RecordTypes.DNS_RECORD_TYPE_SRV.value: {
 		"name": "SRV",
 		"class": "DNS_RPC_RECORD_SRV",
 		"main_field": "nameTarget",
 		"fields": ["wPriority", "wWeight", "wPort", "nameTarget"],
 		"multi_record": True,
 	},
-	DNS_RECORD_TYPE_PTR: {
+	RecordTypes.DNS_RECORD_TYPE_PTR.value: {
 		"name": "PTR",
 		"class": "DNS_RPC_RECORD_NODE_NAME",
 		"fields": ["nameNode"],
 		"multi_record": False,
 	},
-	DNS_RECORD_TYPE_WINS: {"name": "WINS", "class": None, "fields": []},
+	RecordTypes.DNS_RECORD_TYPE_WINS.value: {
+		"name": "WINS",
+		"class": None,
+		"fields": []
+	},
 	# DEPRECATED BY RFCs
-	DNS_RECORD_TYPE_MB: {"name": "MB", "class": "DNS_RPC_RECORD_NODE_NAME", "fields": ["nameNode"]},
-	DNS_RECORD_TYPE_MR: {"name": "MR", "class": "DNS_RPC_RECORD_NODE_NAME", "fields": ["nameNode"]},
-	DNS_RECORD_TYPE_MG: {"name": "MG", "class": "DNS_RPC_RECORD_NODE_NAME", "fields": ["nameNode"]},
-	DNS_RECORD_TYPE_MD: {"name": "MD", "class": "DNS_RPC_RECORD_NODE_NAME", "fields": ["nameNode"]},
-	DNS_RECORD_TYPE_MF: {"name": "MF", "class": "DNS_RPC_RECORD_NODE_NAME", "fields": ["nameNode"]},
+	RecordTypes.DNS_RECORD_TYPE_MB.value: {
+		"name": "MB",
+		"class": "DNS_RPC_RECORD_NODE_NAME",
+		"fields": ["nameNode"],
+	},
+	RecordTypes.DNS_RECORD_TYPE_MR.value: {
+		"name": "MR",
+		"class": "DNS_RPC_RECORD_NODE_NAME",
+		"fields": ["nameNode"],
+	},
+	RecordTypes.DNS_RECORD_TYPE_MG.value: {
+		"name": "MG",
+		"class": "DNS_RPC_RECORD_NODE_NAME",
+		"fields": ["nameNode"],
+	},
+	RecordTypes.DNS_RECORD_TYPE_MD.value: {
+		"name": "MD",
+		"class": "DNS_RPC_RECORD_NODE_NAME",
+		"fields": ["nameNode"],
+	},
+	RecordTypes.DNS_RECORD_TYPE_MF.value: {
+		"name": "MF",
+		"class": "DNS_RPC_RECORD_NODE_NAME",
+		"fields": ["nameNode"],
+	},
 }
 
 
@@ -187,9 +219,15 @@ def record_to_dict(record, ts=False):
 			try:
 				if valueField == "tstime":
 					record_dict[valueField] = data.toDatetime()
-				elif valueField == "address" and record["Type"] == DNS_RECORD_TYPE_A:
+				elif (
+						valueField == "address" and
+						record["Type"] == RecordTypes.DNS_RECORD_TYPE_A.value
+					):
 					record_dict[valueField] = data.formatCanonical()
-				elif valueField == "ipv6Address" and record["Type"] == DNS_RECORD_TYPE_AAAA:
+				elif (
+						valueField == "ipv6Address" and 
+		  				record["Type"] == RecordTypes.DNS_RECORD_TYPE_AAAA.value
+					):
 					record_dict[valueField] = data.formatCanonical()
 				elif valueField == "stringData":
 					record_dict[valueField] = data[valueField].toString()
