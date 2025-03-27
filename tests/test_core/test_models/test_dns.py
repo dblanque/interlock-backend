@@ -668,3 +668,15 @@ class TestLDAPRecord:
 				rType=test_type,
 				rZone=f_runtime_settings.LDAP_DOMAIN
 			)
+			m_record_fetch.assert_not_called()
+
+	def test_init_class_not_in_def(self, mocker, f_connection, f_runtime_settings):
+		mocker.patch("core.models.dns.RECORD_MAPPINGS",
+			{ RecordTypes.DNS_RECORD_TYPE_A.value: {} })
+		with pytest.raises(TypeError):
+			LDAPRecord(
+				connection=f_connection,
+				rName="subdomain",
+				rType=RecordTypes.DNS_RECORD_TYPE_A.value,
+				rZone=f_runtime_settings.LDAP_DOMAIN
+			)
