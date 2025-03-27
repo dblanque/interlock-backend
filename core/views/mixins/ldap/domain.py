@@ -9,7 +9,7 @@
 # ---------------------------------- IMPORTS -----------------------------------#
 from copy import deepcopy
 from rest_framework import viewsets
-from core.models.types.ldap_dns_record import *
+from core.models.types.ldap_dns_record import RecordTypes
 from core.models.dns import LDAPRecord
 ################################################################################
 
@@ -17,17 +17,17 @@ from core.models.dns import LDAPRecord
 class DomainViewMixin(viewsets.ViewSetMixin):
 	def get_zone_soa(self, zone):
 		self.soa_object = LDAPRecord(
-			connection=self.connection, rName="@", rZone=zone, rType=DNS_RECORD_TYPE_SOA
+			connection=self.connection, rName="@", rZone=zone, rType=RecordTypes.DNS_RECORD_TYPE_SOA.value
 		)
 		for index, record in enumerate(self.soa_object.data):
-			if record["type"] == DNS_RECORD_TYPE_SOA:
+			if record["type"] == RecordTypes.DNS_RECORD_TYPE_SOA.value:
 				self.soa_bytes = self.soa_object.rawEntry["raw_attributes"]["dnsRecord"][index]
 				self.soa = record
 		return self.soa
 
 	def increment_soa_serial(self, soa_entry: LDAPRecord, record_serial):
 		for index, record in enumerate(soa_entry.data):
-			if record["type"] != DNS_RECORD_TYPE_SOA:
+			if record["type"] != RecordTypes.DNS_RECORD_TYPE_SOA.value:
 				continue
 			# If there's a SOA Record
 			prev_soa_entry = soa_entry.rawEntry["raw_attributes"]["dnsRecord"][index]

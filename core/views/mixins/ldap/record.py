@@ -13,8 +13,7 @@ from core.exceptions import base as exc_base, ldap as exc_ldap, dns as exc_dns
 ### Models
 from core.views.mixins.logs import LogMixin
 from core.models.dns import LDAPRecord
-from core.models.types.ldap_dns_record import *
-from core.models.structs.ldap_dns_record import RECORD_MAPPINGS
+from core.models.structs.ldap_dns_record import RECORD_MAPPINGS, RecordTypes
 from core.models.validators.ldap_dns_record import FIELD_VALIDATORS as DNS_FIELD_VALIDATORS
 from core.models.validators import ldap_dns_record as dnsValidators
 
@@ -48,7 +47,7 @@ class DNSRecordMixin(DomainViewMixin):
 		if record_data["zone"] == "Root DNS Servers":
 			raise exc_dns.DNSRootServersOnlyCLI
 
-		if record_data["type"] == DNS_RECORD_TYPE_SOA and record_data["name"] != "@":
+		if record_data["type"] == RecordTypes.DNS_RECORD_TYPE_SOA.value and record_data["name"] != "@":
 			raise exc_dns.SOARecordRootOnly
 
 		if "stringData" in record_data:
@@ -162,7 +161,7 @@ class DNSRecordMixin(DomainViewMixin):
 
 		#########################################
 		# Update Start of Authority Record Serial
-		if record_type != DNS_RECORD_TYPE_SOA:
+		if record_type != RecordTypes.DNS_RECORD_TYPE_SOA.value:
 			try:
 				self.increment_soa_serial(dnsRecord.soa_object, dnsRecord.serial)
 			except:
@@ -219,7 +218,7 @@ class DNSRecordMixin(DomainViewMixin):
 
 		#########################################
 		# Update Start of Authority Record Serial
-		if record_type != DNS_RECORD_TYPE_SOA:
+		if record_type != RecordTypes.DNS_RECORD_TYPE_SOA.value:
 			try:
 				self.increment_soa_serial(dnsRecord.soa_object, dnsRecord.serial)
 			except:

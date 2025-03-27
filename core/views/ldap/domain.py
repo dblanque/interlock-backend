@@ -11,7 +11,7 @@
 from core.views.mixins.logs import LogMixin
 from core.models.interlock_settings import InterlockSetting, INTERLOCK_SETTING_ENABLE_LDAP
 from core.models.dns import LDAPDNS, LDAPRecord
-from core.models.types.ldap_dns_record import *
+from core.models.types.ldap_dns_record import RecordTypes
 from core.models.user import User
 
 ### ViewSets
@@ -254,7 +254,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 
 			# Create Start of Authority
 			base_soaRecord = LDAPRecord(
-				connection=ldapConnection, rName="@", rZone=target_zone, rType=DNS_RECORD_TYPE_SOA
+				connection=ldapConnection, rName="@", rZone=target_zone, rType=RecordTypes.DNS_RECORD_TYPE_SOA.value
 			)
 			values_soa = {
 				"dwSerialNo": 1,
@@ -280,7 +280,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 			if ipv4:
 				values_a = {"address": currentLDAPServer.host, "ttl": 900, "serial": 1}
 				base_aRecord = LDAPRecord(
-					connection=ldapConnection, rName="@", rZone=target_zone, rType=DNS_RECORD_TYPE_A
+					connection=ldapConnection, rName="@", rZone=target_zone, rType=RecordTypes.DNS_RECORD_TYPE_A.value
 				)
 				base_aRecord.create(values=values_a)
 
@@ -291,7 +291,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 					connection=ldapConnection,
 					rName="ns1",
 					rZone=target_zone,
-					rType=DNS_RECORD_TYPE_A,
+					rType=RecordTypes.DNS_RECORD_TYPE_A.value,
 				)
 				a_nsRecord.create(values=values_a_ns)
 
@@ -302,7 +302,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 					connection=ldapConnection,
 					rName="@",
 					rZone=target_zone,
-					rType=DNS_RECORD_TYPE_AAAA,
+					rType=RecordTypes.DNS_RECORD_TYPE_AAAA.value,
 				)
 				base_aaaaRecord.create(values=values_aaaa)
 
@@ -313,7 +313,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 					connection=ldapConnection,
 					rName="ns1",
 					rZone=target_zone,
-					rType=DNS_RECORD_TYPE_AAAA,
+					rType=RecordTypes.DNS_RECORD_TYPE_AAAA.value,
 				)
 				aaaa_nsRecord.create(values=values_aaaa_ns)
 
@@ -321,7 +321,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 
 			values_ns = {"nameNode": f"ns1.{target_zone}.", "ttl": 3600, "serial": 1}
 			base_nsRecord = LDAPRecord(
-				connection=ldapConnection, rName="@", rZone=target_zone, rType=DNS_RECORD_TYPE_NS
+				connection=ldapConnection, rName="@", rZone=target_zone, rType=RecordTypes.DNS_RECORD_TYPE_NS.value
 			)
 			base_nsRecord.create(values=values_ns)
 
