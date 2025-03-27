@@ -381,13 +381,13 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		if self.type in RECORD_MAPPINGS:
 			record = new_record(self.type, serial, ttl=ttl)
 			# Dynamically fetch the class based on the mapping
-			if self.mapping["class"] != None:
+			if self.mapping["class"]:
 				record["Data"] = self.record_cls()
 
 				# ! Print Chosen Class
 				# print(self.mapping['class'])
 
-				int_fields = [
+				INT_FIELDS = [
 					"dwSerialNo",
 					"dwRefresh",
 					"dwRetry",
@@ -423,13 +423,13 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 							record["Data"].toCountName(values[field])
 
 					if self.mapping["class"] == "DNS_RPC_RECORD_SOA":
-						if field in int_fields:
+						if field in INT_FIELDS:
 							record["Data"].setField(field, values[field])
 						else:
 							record["Data"][field] = record["Data"].addCountName(values[field])
 
 					if self.mapping["class"] == "DNS_RPC_RECORD_SRV":
-						if field in int_fields:
+						if field in INT_FIELDS:
 							record["Data"].setField(field, values[field])
 						else:
 							record["Data"][field] = record["Data"].addCountName(values[field])
@@ -459,7 +459,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 	def __soa__(self):
 		return self.soa
 
-	def create(self, values, debugMode=False):
+	def create(self, values, dry_run=False):
 		"""
 		Create a Record in the LDAP Entry identified by it's Bytes
 
@@ -505,7 +505,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				"dnsRecord": [result],
 			}
 			try:
-				if not debugMode:
+				if not dry_run:
 					self.connection.add(self.distinguishedName, ["top", "dnsNode"], node_data)
 			except Exception as e:
 				logger.exception(e)
@@ -586,7 +586,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			logger.debug(record_to_dict(dnstool.DNS_RECORD(result), ts=False))
 
 			# If all checks passed
-			if not debugMode:
+			if not dry_run:
 				self.connection.modify(
 					self.distinguishedName, {"dnsRecord": [(MODIFY_ADD, self.structure.getData())]}
 				)
