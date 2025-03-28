@@ -1015,3 +1015,9 @@ class TestLDAPRecord:
 		m_record.get_soa()
 		assert m_record.soa_bytes == b"record_soa"
 		assert m_record.soa == f_record_data_type_soa
+
+	def test_dunder_soa(self, mocker):
+		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
+		m_record = LDAPRecord()
+		m_record.soa = "soa"
+		assert m_record.__soa__() == "soa"
