@@ -455,16 +455,19 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				}
 			)
 
-	def get_soa(self):
+	def get_soa_object(self):
 		if self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
 			raise Exception("Unhandled SOA Recursion.")
+		return LDAPRecord(
+			connection=self.connection,
+			rName="@",
+			rZone=self.zone,
+			rType=RecordTypes.DNS_RECORD_TYPE_SOA.value,
+		)
+
+	def get_soa(self):
 		try:
-			self.soa_object = LDAPRecord(
-				connection=self.connection,
-				rName="@",
-				rZone=self.zone,
-				rType=RecordTypes.DNS_RECORD_TYPE_SOA.value,
-			)
+			self.soa_object = self.get_soa_object()
 		except:
 			logger.error(traceback.format_exc())
 			raise exc_dns.DNSCouldNotGetSOA
@@ -476,7 +479,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 	def __soa__(self):
 		return self.soa
 
-	def create(self, values, dry_run=False):
+	def create(self, values: dict, dry_run=False):
 		"""
 		Create a Record in the LDAP Entry identified by it's Bytes
 
@@ -486,6 +489,9 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		Returns:
 			self.connection.result
 		"""
+		if not values or not isinstance(values, dict):
+			raise TypeError("values must be a dict.")
+
 		if "ttl" not in values:
 			values["ttl"] = self.DEFAULT_TTL
 
