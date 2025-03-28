@@ -315,11 +315,13 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		# Dynamically fetch the class based on the mapping
 		if "class" in self.mapping:
 			if not self.mapping["class"]:
-				raise exc_dns.DNSRecordTypeUnsupported(data={
-					"type_name": self.mapping["name"],
-					"type_code": self.type,
-					"name": self.name,
-				})
+				raise exc_dns.DNSRecordTypeUnsupported(
+					data={
+						"type_name": self.mapping["name"],
+						"type_code": self.type,
+						"name": self.name,
+					}
+				)
 			if self.mapping["class"] == "DNS_RPC_RECORD_NODE_NAME":
 				# If it's NODE_NAME create the record Data as DNS_COUNT_NAME
 				self.record_cls = DNS_COUNT_NAME
@@ -433,11 +435,13 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 							record["Data"][field] = record["Data"].addCountName(values[field])
 			return record
 		else:
-			raise exc_dns.DNSRecordTypeUnsupported(data={
-				"type_name": self.mapping["name"],
-				"type_code": self.type,
-				"name": self.name,
-			})
+			raise exc_dns.DNSRecordTypeUnsupported(
+				data={
+					"type_name": self.mapping["name"],
+					"type_code": self.type,
+					"name": self.name,
+				}
+			)
 
 	def get_soa(self):
 		if self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
@@ -528,13 +532,15 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				logger.error(
 					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
-				raise exc_dns.DNSRecordTypeConflict(data={
-					"type_name": self.mapping["name"],
-					"type_code": self.type,
-					"name": self.name,
-					"conflict_val": values[main_field],
-					"conflict_field": main_field,
-				})
+				raise exc_dns.DNSRecordTypeConflict(
+					data={
+						"type_name": self.mapping["name"],
+						"type_code": self.type,
+						"name": self.name,
+						"conflict_val": values[main_field],
+						"conflict_field": main_field,
+					}
+				)
 
 			# Check Multi-Record eligibility
 			if self.record_of_type_exists() == True:
@@ -542,13 +548,15 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
 				logger.error(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
-				raise exc_dns.DNSRecordExistsConflict(data={
-					"type_name": self.mapping["name"],
-					"type_code": self.type,
-					"name": self.name,
-					"conflict_val": values[main_field],
-					"conflict_field": main_field,
-				})
+				raise exc_dns.DNSRecordExistsConflict(
+					data={
+						"type_name": self.mapping["name"],
+						"type_code": self.type,
+						"name": self.name,
+						"conflict_val": values[main_field],
+						"conflict_field": main_field,
+					}
+				)
 
 			# Check if a SOA Record already Exists
 			if self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
@@ -557,24 +565,28 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 						f"{self.mapping['name']} Record already exists in an LDAP Entry and must be unique in Zone (Conflicting value: {values[main_field]})"
 					)
 					logger.error(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
-					raise exc_dns.DNSRecordExistsConflict(data={
-						"type_name": self.mapping["name"],
-						"type_code": self.type,
-						"name": self.name,
-						"conflict_val": values[main_field],
-						"conflict_field": main_field,
-					})
+					raise exc_dns.DNSRecordExistsConflict(
+						data={
+							"type_name": self.mapping["name"],
+							"type_code": self.type,
+							"name": self.name,
+							"conflict_val": values[main_field],
+							"conflict_field": main_field,
+						}
+					)
 
 			# Check for record type conflicts in Entry
 			try:
 				self.record_has_collision()
 			except Exception as e:
 				logger.error(e)
-				raise exc_dns.DNSRecordTypeConflict(data={
-					"type_name": self.mapping["name"],
-					"type_code": self.type,
-					"name": self.name,
-				})
+				raise exc_dns.DNSRecordTypeConflict(
+					data={
+						"type_name": self.mapping["name"],
+						"type_code": self.type,
+						"name": self.name,
+					}
+				)
 			logger.info("Adding Record to Entry with name %s" % (self.name))
 			logger.debug(record_to_dict(dnstool.DNS_RECORD(result), ts=False))
 
