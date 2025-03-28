@@ -543,10 +543,9 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				main_field = self.mapping["fields"][0]
 
 			# ! Check if record exists in LDAP Entry
-			exists = self.record_exists_in_entry(
+			if self.record_exists_in_entry(
 				main_field=main_field, main_field_val=values[main_field]
-			)
-			if exists:
+			):
 				logger.error(
 					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
