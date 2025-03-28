@@ -79,7 +79,7 @@ def f_dns_root():
 
 
 @pytest.fixture
-def f_record(mocker, f_dns_zones, f_forest_zones) -> LDAPRecord:
+def f_record(mocker, f_connection, f_dns_zones, f_forest_zones) -> LDAPRecord:
 	def maker(record_type, record_values):
 		mocker.patch.object(LDAPRecord, "fetch")
 		mocker.patch.object(LDAPRecord, "list_dns_zones", return_value=f_dns_zones)
@@ -1034,35 +1034,85 @@ class TestLDAPRecord:
 			f_record_instance_type_a.create(None)
 
 	def test_create_raises_no_serial(
-			self,
-			mocker,
-			f_record_instance_type_a: LDAPRecord,
-			f_record_data_type_a: dict
-		):
+		self,
+		mocker,
+		f_record_instance_type_a: LDAPRecord,
+		f_record_data_type_a: dict
+	):
 		mocker.patch.object(f_record_instance_type_a, "get_serial", side_effect=Exception)
 		with pytest.raises(exc_dns.DNSCouldNotGetSerial):
 			f_record_instance_type_a.create(f_record_data_type_a)
 
 	def test_create_raises_from_make_bytes(
-			self,
-			mocker,
-			f_record_instance_type_a: LDAPRecord,
-			f_record_data_type_a: dict
-		):
+		self,
+		mocker,
+		f_record_instance_type_a: LDAPRecord,
+		f_record_data_type_a: dict
+	):
 		mocker.patch.object(f_record_instance_type_a, "get_serial", return_value=get_mock_serial(1))
 		mocker.patch.object(f_record_instance_type_a, "make_record_bytes", side_effect=Exception)
 		with pytest.raises(exc_dns.DNSRecordCreate):
 			f_record_instance_type_a.create(f_record_data_type_a)
 
 	def test_create_raises_from_structure(
-			self,
-			mocker,
-			f_record_instance_type_a: LDAPRecord,
-			f_record_data_type_a: dict
-		):
+		self,
+		mocker,
+		f_record_instance_type_a: LDAPRecord,
+		f_record_data_type_a: dict,
+	):
 		m_data_structure = mocker.MagicMock()
 		m_data_structure.getData.side_effect = Exception
 		mocker.patch.object(f_record_instance_type_a, "get_serial", return_value=get_mock_serial(1))
 		mocker.patch.object(f_record_instance_type_a, "make_record_bytes", return_value=m_data_structure)
 		with pytest.raises(exc_dns.DNSRecordCreate):
 			f_record_instance_type_a.create(f_record_data_type_a)
+
+	def test_create_entry_not_exists(
+		self,
+		mocker,
+		f_connection,
+		f_record_instance_type_a: LDAPRecord,
+		f_record_data_type_a: dict,
+	):
+		f_connection.add = mocker.MagicMock(return_value=None)
+		mocker.patch("core.models.dns.dnstool.DNS_RECORD", return_value="DNS_RECORD")
+		m_record_to_dict: MockType = mocker.patch("core.models.dns.record_to_dict")
+		f_record_instance_type_a.rawEntry = None
+		m_serial = get_mock_serial(1)
+		m_getData_result = b"record_result"
+		m_data_structure = mocker.MagicMock()
+		m_data_structure.getData.return_value = m_getData_result
+		m_get_serial: MockType = mocker.patch.object(
+			f_record_instance_type_a,
+			"get_serial",
+			return_value=m_serial
+		)
+		m_make_record_bytes: MockType = mocker.patch.object(
+			f_record_instance_type_a,
+			"make_record_bytes",
+			return_value=m_data_structure
+		)
+		m_node_data = {
+			"objectCategory": "CN=Dns-Node,%s" % f_record_instance_type_a.schemaNamingContext,
+			"dNSTombstoned": "FALSE",
+			"name": f_record_instance_type_a.name,
+			"dnsRecord": [m_getData_result],
+		}
+
+		# Do Create
+		f_record_instance_type_a.create(f_record_data_type_a)
+
+		# Check fn calls
+		m_record_to_dict.assert_called_once_with("DNS_RECORD", ts=False)
+		m_get_serial.assert_called_once_with(record_values=f_record_data_type_a)
+		m_make_record_bytes.assert_called_once_with(
+			f_record_data_type_a,
+			ttl=f_record_instance_type_a.DEFAULT_TTL,
+			serial=m_serial
+		)
+		m_data_structure.getData.assert_called_once()
+		f_connection.add.assert_called_once_with(
+			f_record_instance_type_a.distinguishedName,
+			["top", "dnsNode"],
+			m_node_data,
+		)
