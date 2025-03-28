@@ -44,6 +44,10 @@ logger = logging.getLogger(__name__)
 
 class LDAPDNS:
 	connection: Connection
+	dnszones: list[str]
+	forestzones: list[str]
+	dnsroot: str
+	forestroot: str
 
 	def __init__(self, connection):
 		if RuntimeSettings.LDAP_DNS_LEGACY:
@@ -267,6 +271,14 @@ class LDAPRecordMixin:
 
 
 class LDAPRecord(LDAPDNS, LDAPRecordMixin):
+	rawEntry: list[bytes]
+	data: dict
+	name: str
+	zone: str
+	zoneType: str
+	type: str
+	mapping: RecordMapping
+	structure: bytes
 	DEFAULT_TTL = 900
 	EXCLUDED_ENTRIES = ["ForestDnsZones", "DomainDnsZones"]
 
@@ -378,7 +390,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			ttl = self.DEFAULT_TTL
 		## Check if class type is supported for creation ##
 		if self.type in RECORD_MAPPINGS and RECORD_MAPPINGS[self.type]["class"]:
-			record = new_record(self.type, serial, ttl=ttl)
+			record: DNS_RECORD = new_record(self.type, serial, ttl=ttl)
 			# Dynamically fetch the class based on the mapping
 			if self.mapping["class"]:
 				record["Data"] = self.record_cls()
@@ -499,7 +511,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 
 		## Check if LDAP Entry Exists ##
 		# LDAP Entry does not exist
-		if self.rawEntry is None:
+		if not self.rawEntry:
 			# If Entry does not exist create it with the record in it
 			logger.info("Create Entry for %s" % (self.name))
 			logger.debug(record_to_dict(dnstool.DNS_RECORD(result), ts=False))
@@ -543,7 +555,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				)
 
 			# Check Multi-Record eligibility
-			if self.record_of_type_exists() == True:
+			if self.record_of_type_exists():
 				logger.error(
 					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
