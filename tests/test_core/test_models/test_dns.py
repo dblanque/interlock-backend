@@ -14,6 +14,7 @@ from core.models.dns import (
 )
 from core.models.types.ldap_dns_record import RecordTypes
 from core.models.structs.ldap_dns_record import (
+	DNS_RECORD,
 	DNS_COUNT_NAME,
 	DNS_RPC_NAME,
 	DNS_RPC_RECORD_NAME_PREFERENCE,
@@ -25,6 +26,7 @@ from core.exceptions.dns import (
 	DNSRecordDataMalformed,
 	DNSCouldNotGetSOA,
 	DNSCouldNotGetSerial,
+	DNSRecordTypeUnsupported,
 )
 from datetime import datetime
 from pytest_mock import MockType
@@ -579,7 +581,7 @@ class TestLDAPRecord:
 			RecordTypes.DNS_RECORD_TYPE_KEY.value,
 			RecordTypes.DNS_RECORD_TYPE_WINS.value,
 		),
-		ids=lambda x: RecordTypes(x).name + " raises ValueError",
+		ids=lambda x: RecordTypes(x).name + " raises DNSRecordTypeUnsupported",
 	)
 	def test_init_unsupported_record(
 		self,
@@ -589,7 +591,7 @@ class TestLDAPRecord:
 		test_type,
 	):
 		m_record_fetch: MockType = mocker.patch.object(LDAPRecord, "fetch", return_value=None)
-		with pytest.raises(ValueError, match="not valid for type"):
+		with pytest.raises(DNSRecordTypeUnsupported):
 			m_record = LDAPRecord(
 				connection=f_connection,
 				rName="subdomain",
@@ -662,3 +664,179 @@ class TestLDAPRecord:
 		m_record.type = RecordTypes.DNS_RECORD_TYPE_A.value
 		m_record.mapping = RECORD_MAPPINGS[m_record.type]
 		assert m_record.__fullname__() == f"subdomain.{LDAP_DOMAIN} (A)"
+
+	@pytest.mark.parametrize(
+		"record_types, record_ttl, test_values, required_methods",
+		(
+			(
+				# DNS_RPC_RECORD_A
+				(
+					RecordTypes.DNS_RECORD_TYPE_A.value,
+				),
+				60, # TTL
+				# Record Values
+				{
+					"address":"127.0.0.1"
+				},
+				("fromCanonical",),
+			),
+			(
+				# Types for DNS_RPC_RECORD_NODE_NAME
+				(
+					RecordTypes.DNS_RECORD_TYPE_NS.value,
+					RecordTypes.DNS_RECORD_TYPE_CNAME.value,
+					RecordTypes.DNS_RECORD_TYPE_DNAME.value,
+					RecordTypes.DNS_RECORD_TYPE_PTR.value,
+				),
+				None, # TTL
+				# Record Values
+				{
+					"nameNode": f"subdomain2.{LDAP_DOMAIN}."
+				},
+				("toCountName",),
+			),
+			(
+				# Types for DNS_RPC_RECORD_STRING
+				(
+					RecordTypes.DNS_RECORD_TYPE_TXT.value,
+					RecordTypes.DNS_RECORD_TYPE_X25.value,
+					RecordTypes.DNS_RECORD_TYPE_ISDN.value,
+					RecordTypes.DNS_RECORD_TYPE_LOC.value,
+					RecordTypes.DNS_RECORD_TYPE_HINFO.value,
+				),
+				None, # TTL
+				# Record Values
+				{
+					"stringData": f"this is a text string."
+				},
+				("toRPCName",),
+			),
+			(
+				# Types for DNS_RPC_RECORD_NAME_PREFERENCE
+				(
+					RecordTypes.DNS_RECORD_TYPE_MX.value,
+				),
+				None, # TTL
+				# Record Values
+				{
+					"wPreference": 10,
+					"nameExchange": f"mx.{LDAP_DOMAIN}.",
+				},
+				("insert_field_to_struct", "setField", "toCountName"),
+			),
+			(
+				# Types for DNS_RPC_RECORD_SOA
+				(
+					RecordTypes.DNS_RECORD_TYPE_SOA.value,
+				),
+				None, # TTL
+				# Record Values
+				{
+					"dwSerialNo": 1,
+					"dwRefresh": 900,
+					"dwRetry": 600,
+					"dwExpire": 86400,
+					"dwMinimumTtl": 900,
+					"namePrimaryServer": f"ns.{LDAP_DOMAIN}.",
+					"zoneAdminEmail": f"hostmaster.{LDAP_DOMAIN}",
+				},
+				("addCountName", "setField",),
+			),
+			(
+				# Types for DNS_RPC_RECORD_SRV
+				(
+					RecordTypes.DNS_RECORD_TYPE_SRV.value,
+				),
+				None, # TTL
+				# Record Values
+				{
+					"wPriority": 0,
+					"wWeight": 5,
+					"wPort": 22,
+					"nameTarget":f"_ssh._tcp.{LDAP_DOMAIN}."
+				},
+				("addCountName", "setField",),
+			),
+		),
+	)
+	def test_make_record_bytes(
+		self,
+		mocker,
+		f_connection,
+		record_types: list[int] | tuple[int],
+		record_ttl: int,
+		test_values: dict,
+		required_methods,
+	):
+		mocker.patch.object(LDAPRecord, "fetch")
+		m_ttl = record_ttl
+		m_serial = get_mock_serial(1)
+
+		for record_type in record_types:
+			m_record = LDAPRecord(
+				connection=f_connection,
+				rName="subdomain",
+				rZone=LDAP_DOMAIN,
+				rType=record_type
+			)
+			m_record_record_cls: MockType = mocker.MagicMock(spec=m_record.record_cls)
+			m_record.record_cls = m_record_record_cls
+			m_record_record_cls.return_value = test_values
+			m_struct_base: MockType = mocker.MagicMock(name="m_struct_base", spec=DNS_RECORD)
+			m_struct_base.__setitem__.return_value = None
+			m_struct_base.__getitem__.return_value = m_record_record_cls
+
+			m_record_new_record: MockType = mocker.patch(
+				"core.models.dns.new_record", return_value=m_struct_base)
+
+			check_calls = []
+			for m in required_methods:
+				m_method: MockType = mocker.Mock(name=m, return_value=None)
+				check_calls.append(m_method)
+				setattr(m_record_record_cls, m, m_method)
+
+			m_record.make_record_bytes(values=test_values, serial=m_serial, ttl=m_ttl)
+			m_record_new_record.assert_called_once_with(
+				m_record.type,
+				m_serial,
+				ttl=(m_ttl or m_record.DEFAULT_TTL)
+			)
+			m_record_record_cls.assert_called_once()
+			for m_method in check_calls:
+				m_method_name = m_method._extract_mock_name()
+				if record_type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
+					if m_method_name == "setField":
+						assert m_method.call_count == 5
+						m_method.assert_any_call("dwSerialNo", test_values["dwSerialNo"])
+						m_method.assert_any_call("dwRefresh", test_values["dwRefresh"])
+						m_method.assert_any_call("dwRetry", test_values["dwRetry"])
+						m_method.assert_any_call("dwExpire", test_values["dwExpire"])
+						m_method.assert_any_call("dwMinimumTtl", test_values["dwMinimumTtl"])
+					else:
+						assert m_method.call_count == 2
+						m_method.assert_any_call(test_values["namePrimaryServer"])
+						m_method.assert_any_call(test_values["zoneAdminEmail"])
+				elif record_type == RecordTypes.DNS_RECORD_TYPE_SRV.value:
+					if m_method_name == "setField":
+						assert m_method.call_count == 3
+						m_method.assert_any_call("wPriority", test_values["wPriority"])
+						m_method.assert_any_call("wWeight", test_values["wWeight"])
+						m_method.assert_any_call("wPort", test_values["wPort"])
+					else:
+						m_method.assert_called_once_with(test_values["nameTarget"])
+				else:
+					m_method.assert_called_once()
+
+	def test_make_record_bytes_raises_unsupported(self, mocker, f_connection):
+		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
+		m_record = LDAPRecord(
+			connection=f_connection,
+			rName="subdomain",
+			rZone=LDAP_DOMAIN,
+			rType=RecordTypes.DNS_RECORD_TYPE_SIG.value
+		)
+		m_record.name="subdomain"
+		m_record.type = RecordTypes.DNS_RECORD_TYPE_SIG.value
+		m_record.mapping = RECORD_MAPPINGS[m_record.type]
+		with pytest.raises(DNSRecordTypeUnsupported):
+			m_record.make_record_bytes({}, serial=1)
