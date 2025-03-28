@@ -60,11 +60,27 @@ class LDAPObject:
 	 - ldapFilter: (OPTIONAL) | LDAP Formatted Filter
 	 - ldapAttributes: (OPTIONAL) | LDAP Attributes to Fetch
 	 - excludedLdapAttributes: (OPTIONAL) | LDAP Attributes to Exclude
-	"""
+	"""	
+	# Django
+	use_in_migrations: bool = False
 
+	# Type Hints
+	attributes: dict
 	connection: Connection
+	containerTypes: list[str]
+	entry: object
+	excludedLdapAttributes: list[str]
 	ldapAttributes: list
-	use_in_migrations = False
+	ldapAttributes: list[str]
+	ldapFilter: str
+	name: str
+	recursive: bool
+	requiredLdapAttributes: list[str]
+	searchBase: str
+	subobjectId: int
+	testFetch: bool
+	userClasses: list[str]
+	usernameIdentifier: str
 
 	def __init__(self, **kwargs):
 		if "connection" not in kwargs:
