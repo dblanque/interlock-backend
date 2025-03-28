@@ -982,8 +982,16 @@ class TestLDAPRecord:
 	def test_get_soa_raises_exception(self, mocker):
 		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
 		m_record = LDAPRecord()
+		m_record.type = RecordTypes.DNS_RECORD_TYPE_A.value
 		m_record.soa_object = mocker.Mock(side_effect=Exception)
 		with pytest.raises(DNSCouldNotGetSOA):
+			m_record.get_soa()
+
+	def test_get_soa_raises_recursion_exception(self, mocker):
+		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
+		m_record = LDAPRecord()
+		m_record.type = RecordTypes.DNS_RECORD_TYPE_SOA.value
+		with pytest.raises(Exception, match="SOA Recursion"):
 			m_record.get_soa()
 
 	def test_get_soa(
