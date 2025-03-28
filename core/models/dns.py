@@ -440,6 +440,8 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			})
 
 	def get_soa(self):
+		if self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
+			raise Exception("Unhandled SOA Recursion.")
 		try:
 			self.soa_object = LDAPRecord(
 				connection=self.connection,
@@ -526,14 +528,13 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				logger.error(
 					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
-				data = {
+				raise exc_dns.DNSRecordTypeConflict(data={
 					"type_name": self.mapping["name"],
 					"type_code": self.type,
 					"name": self.name,
 					"conflict_val": values[main_field],
 					"conflict_field": main_field,
-				}
-				raise exc_dns.DNSRecordTypeConflict(data=data)
+				})
 
 			# Check Multi-Record eligibility
 			if self.record_of_type_exists() == True:
@@ -541,14 +542,13 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
 				logger.error(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
-				data = {
+				raise exc_dns.DNSRecordExistsConflict(data={
 					"type_name": self.mapping["name"],
 					"type_code": self.type,
 					"name": self.name,
 					"conflict_val": values[main_field],
 					"conflict_field": main_field,
-				}
-				raise exc_dns.DNSRecordExistsConflict(data=data)
+				})
 
 			# Check if a SOA Record already Exists
 			if self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
@@ -557,26 +557,24 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 						f"{self.mapping['name']} Record already exists in an LDAP Entry and must be unique in Zone (Conflicting value: {values[main_field]})"
 					)
 					logger.error(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
-					data = {
+					raise exc_dns.DNSRecordExistsConflict(data={
 						"type_name": self.mapping["name"],
 						"type_code": self.type,
 						"name": self.name,
 						"conflict_val": values[main_field],
 						"conflict_field": main_field,
-					}
-					raise exc_dns.DNSRecordExistsConflict(data=data)
+					})
 
 			# Check for record type conflicts in Entry
 			try:
 				self.record_has_collision()
 			except Exception as e:
 				logger.error(e)
-				data = {
+				raise exc_dns.DNSRecordTypeConflict(data={
 					"type_name": self.mapping["name"],
 					"type_code": self.type,
 					"name": self.name,
-				}
-				raise exc_dns.DNSRecordTypeConflict(data=data)
+				})
 			logger.info("Adding Record to Entry with name %s" % (self.name))
 			logger.debug(record_to_dict(dnstool.DNS_RECORD(result), ts=False))
 
