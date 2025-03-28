@@ -25,12 +25,7 @@ from core.models.structs.ldap_dns_record import (
 	DNS_RPC_RECORD_SOA,
 	DNS_RPC_RECORD_SRV,
 )
-from core.exceptions.dns import (
-	DNSRecordDataMalformed,
-	DNSCouldNotGetSOA,
-	DNSCouldNotGetSerial,
-	DNSRecordTypeUnsupported,
-)
+from core.exceptions import dns as exc_dns
 from datetime import datetime
 from pytest_mock import MockType
 
@@ -93,9 +88,14 @@ def f_record(mocker, f_dns_zones, f_forest_zones) -> LDAPRecord:
 			connection=f_connection, rName="subdomain", rZone=LDAP_DOMAIN, rType=record_type
 		)
 		return m_record
-
 	return maker
 
+@pytest.fixture
+def f_record_instance_type_a(f_record) -> LDAPRecord:
+	return f_record(
+		RecordTypes.DNS_RECORD_TYPE_A.value,
+		{"address":"127.0.0.1"}
+	)
 
 @pytest.fixture
 def f_record_data_type_a():
@@ -249,7 +249,7 @@ class TestLDAPRecordMixin:
 		m_mixin = LDAPRecordMixin()
 		m_mixin.get_soa = m_get_soa
 		m_mixin.soa = {"dwSerialNo": 1, "serial": 2}
-		with pytest.raises(DNSRecordDataMalformed):
+		with pytest.raises(exc_dns.DNSRecordDataMalformed):
 			m_mixin.get_soa_serial()
 			m_get_soa.assert_called_once()
 
@@ -261,7 +261,7 @@ class TestLDAPRecordMixin:
 			"serial": "a",
 			"dwSerialNo": "a",
 		}
-		with pytest.raises(DNSCouldNotGetSOA):
+		with pytest.raises(exc_dns.DNSCouldNotGetSOA):
 			m_mixin.get_soa_serial()
 			m_get_soa.assert_called_once()
 
@@ -303,15 +303,15 @@ class TestLDAPRecordMixin:
 		m_mixin = LDAPRecordMixin()
 		m_mixin.type = RecordTypes.DNS_RECORD_TYPE_SOA.value
 		m_mixin.mapping = RECORD_MAPPINGS[m_mixin.type]
-		with pytest.raises(DNSCouldNotGetSerial):
+		with pytest.raises(exc_dns.DNSCouldNotGetSerial):
 			m_mixin.get_serial(record_values={"dwSerialNo": "a"})
 
 	def test_get_serial_raise(self, mocker):
-		mocker.patch.object(LDAPRecordMixin, "get_soa_serial", side_effect=DNSCouldNotGetSOA)
+		mocker.patch.object(LDAPRecordMixin, "get_soa_serial", side_effect=exc_dns.DNSCouldNotGetSOA)
 		m_mixin = LDAPRecordMixin()
 		m_mixin.type = RecordTypes.DNS_RECORD_TYPE_A.value
 		m_mixin.mapping = RECORD_MAPPINGS[m_mixin.type]
-		with pytest.raises(DNSCouldNotGetSerial):
+		with pytest.raises(exc_dns.DNSCouldNotGetSerial):
 			m_mixin.get_serial({})
 
 	def test_get_serial_key_doesnt_exist(self, mocker):
@@ -680,7 +680,7 @@ class TestLDAPRecord:
 		test_type,
 	):
 		m_record_fetch: MockType = mocker.patch.object(LDAPRecord, "fetch", return_value=None)
-		with pytest.raises(DNSRecordTypeUnsupported):
+		with pytest.raises(exc_dns.DNSRecordTypeUnsupported):
 			m_record = LDAPRecord(
 				connection=f_connection,
 				rName="subdomain",
@@ -976,7 +976,7 @@ class TestLDAPRecord:
 		m_record.name = "subdomain"
 		m_record.type = RecordTypes.DNS_RECORD_TYPE_SIG.value
 		m_record.mapping = RECORD_MAPPINGS[m_record.type]
-		with pytest.raises(DNSRecordTypeUnsupported):
+		with pytest.raises(exc_dns.DNSRecordTypeUnsupported):
 			m_record.make_record_bytes({}, serial=1)
 
 	def test_get_soa_raises_exception(self, mocker):
@@ -984,27 +984,24 @@ class TestLDAPRecord:
 		m_record = LDAPRecord()
 		m_record.type = RecordTypes.DNS_RECORD_TYPE_A.value
 		m_record.soa_object = mocker.Mock(side_effect=Exception)
-		with pytest.raises(DNSCouldNotGetSOA):
+		with pytest.raises(exc_dns.DNSCouldNotGetSOA):
 			m_record.get_soa()
 
-	def test_get_soa_raises_recursion_exception(self, mocker):
+	def test_get_soa_object_raises_recursion_exception(self, mocker):
 		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
 		m_record = LDAPRecord()
 		m_record.type = RecordTypes.DNS_RECORD_TYPE_SOA.value
 		with pytest.raises(Exception, match="SOA Recursion"):
-			m_record.get_soa()
+			m_record.get_soa_object()
 
 	def test_get_soa(
 		self,
 		mocker,
-		f_record,
+		f_record_instance_type_a: LDAPRecord,
 		f_record_data_type_a,
 		f_record_data_type_ns,
 		f_record_data_type_soa,
 	):
-		m_record: LDAPRecord = f_record(
-			RecordTypes.DNS_RECORD_TYPE_A.value, {"address": "127.0.0.1"}
-		)
 		m_soa_object = mocker.MagicMock(name="m_soa_object")
 		m_soa_object.data = [
 			f_record_data_type_a,
@@ -1018,14 +1015,54 @@ class TestLDAPRecord:
 				"dNSTombstoned": [],
 			}
 		}
-		mocker.patch.object(LDAPRecord, "__new__", return_value=m_soa_object)
+		mocker.patch.object(f_record_instance_type_a, "get_soa_object", return_value=m_soa_object)
 
-		m_record.get_soa()
-		assert m_record.soa_bytes == b"record_soa"
-		assert m_record.soa == f_record_data_type_soa
+		f_record_instance_type_a.get_soa()
+		assert f_record_instance_type_a.soa_bytes == b"record_soa"
+		assert f_record_instance_type_a.soa == f_record_data_type_soa
 
 	def test_dunder_soa(self, mocker):
 		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
 		m_record = LDAPRecord()
 		m_record.soa = "soa"
 		assert m_record.__soa__() == "soa"
+
+	def test_create_raises_type_error(self, f_record_instance_type_a: LDAPRecord):
+		with pytest.raises(TypeError, match="must be a dict"):
+			f_record_instance_type_a.create("a")
+		with pytest.raises(TypeError, match="must be a dict"):
+			f_record_instance_type_a.create(None)
+
+	def test_create_raises_no_serial(
+			self,
+			mocker,
+			f_record_instance_type_a: LDAPRecord,
+			f_record_data_type_a: dict
+		):
+		mocker.patch.object(f_record_instance_type_a, "get_serial", side_effect=Exception)
+		with pytest.raises(exc_dns.DNSCouldNotGetSerial):
+			f_record_instance_type_a.create(f_record_data_type_a)
+
+	def test_create_raises_from_make_bytes(
+			self,
+			mocker,
+			f_record_instance_type_a: LDAPRecord,
+			f_record_data_type_a: dict
+		):
+		mocker.patch.object(f_record_instance_type_a, "get_serial", return_value=get_mock_serial(1))
+		mocker.patch.object(f_record_instance_type_a, "make_record_bytes", side_effect=Exception)
+		with pytest.raises(exc_dns.DNSRecordCreate):
+			f_record_instance_type_a.create(f_record_data_type_a)
+
+	def test_create_raises_from_structure(
+			self,
+			mocker,
+			f_record_instance_type_a: LDAPRecord,
+			f_record_data_type_a: dict
+		):
+		m_data_structure = mocker.MagicMock()
+		m_data_structure.getData.side_effect = Exception
+		mocker.patch.object(f_record_instance_type_a, "get_serial", return_value=get_mock_serial(1))
+		mocker.patch.object(f_record_instance_type_a, "make_record_bytes", return_value=m_data_structure)
+		with pytest.raises(exc_dns.DNSRecordCreate):
+			f_record_instance_type_a.create(f_record_data_type_a)
