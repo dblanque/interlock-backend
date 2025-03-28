@@ -315,9 +315,11 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		# Dynamically fetch the class based on the mapping
 		if "class" in self.mapping:
 			if not self.mapping["class"]:
-				msg = f"Record Class definition is not valid for type."
-				logger.exception(msg, self.mapping)
-				raise ValueError(msg)
+				raise exc_dns.DNSRecordTypeUnsupported(data={
+					"type_name": self.mapping["name"],
+					"type_code": self.type,
+					"name": self.name,
+				})
 			if self.mapping["class"] == "DNS_RPC_RECORD_NODE_NAME":
 				# If it's NODE_NAME create the record Data as DNS_COUNT_NAME
 				self.record_cls = DNS_COUNT_NAME
@@ -373,7 +375,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		if not ttl:
 			ttl = self.DEFAULT_TTL
 		## Check if class type is supported for creation ##
-		if self.type in RECORD_MAPPINGS:
+		if self.type in RECORD_MAPPINGS and RECORD_MAPPINGS[self.type]["class"]:
 			record = new_record(self.type, serial, ttl=ttl)
 			# Dynamically fetch the class based on the mapping
 			if self.mapping["class"]:
@@ -382,6 +384,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				# ! Print Chosen Class
 				# print(self.mapping['class'])
 
+				# ! DO NOT ADD wPreference here
 				INT_FIELDS = [
 					"dwSerialNo",
 					"dwRefresh",
@@ -430,13 +433,11 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 							record["Data"][field] = record["Data"].addCountName(values[field])
 			return record
 		else:
-			self.connection.unbind()
-			data = {
+			raise exc_dns.DNSRecordTypeUnsupported(data={
 				"type_name": self.mapping["name"],
 				"type_code": self.type,
 				"name": self.name,
-			}
-			raise exc_dns.DNSRecordTypeUnsupported(data=data)
+			})
 
 	def get_soa(self):
 		try:
@@ -508,7 +509,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			except Exception as e:
 				logger.exception(e)
 				logger.error(record_to_dict(dnstool.DNS_RECORD(result), ts=False))
-				self.connection.unbind()
+				raise e
 		# LDAP entry exists
 		else:
 			# If it exists add the record to the entry after all the required checks
@@ -525,7 +526,6 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				logger.error(
 					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
-				self.connection.unbind()
 				data = {
 					"type_name": self.mapping["name"],
 					"type_code": self.type,
@@ -541,7 +541,6 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
 				logger.error(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
-				self.connection.unbind()
 				data = {
 					"type_name": self.mapping["name"],
 					"type_code": self.type,
@@ -558,7 +557,6 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 						f"{self.mapping['name']} Record already exists in an LDAP Entry and must be unique in Zone (Conflicting value: {values[main_field]})"
 					)
 					logger.error(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
-					self.connection.unbind()
 					data = {
 						"type_name": self.mapping["name"],
 						"type_code": self.type,
@@ -573,7 +571,6 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				self.record_has_collision()
 			except Exception as e:
 				logger.error(e)
-				self.connection.unbind()
 				data = {
 					"type_name": self.mapping["name"],
 					"type_code": self.type,
@@ -665,7 +662,6 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			self.rawEntry is None
 			or old_record_bytes not in self.rawEntry["raw_attributes"]["dnsRecord"]
 		):
-			self.connection.unbind()
 			raise exc_dns.DNSRecordEntryDoesNotExist
 
 		if "main_field" in self.mapping:
@@ -693,7 +689,6 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				logger.error(
 					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
-				self.connection.unbind()
 				data = {
 					"type_name": self.mapping["name"],
 					"type_code": self.type,
@@ -711,7 +706,6 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
 				logger.error(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
-				self.connection.unbind()
 				data = {
 					"type_name": self.mapping["name"],
 					"type_code": self.type,
@@ -728,7 +722,6 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			self.record_has_collision()
 		except Exception as e:
 			logger.error(e)
-			self.connection.unbind()
 			raise exc_dns.DNSRecordTypeConflict
 
 		# All checks passed
@@ -755,7 +748,6 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			self.rawEntry is None
 			or record_bytes not in self.rawEntry["raw_attributes"]["dnsRecord"]
 		):
-			self.connection.unbind()
 			raise exc_dns.DNSRecordEntryDoesNotExist
 
 		# Check if Entry has more than one Record
@@ -767,13 +759,13 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				)
 			except Exception as e:
 				logger.error(e)
-				self.connection.unbind()
+				raise e
 		else:
 			try:
 				self.connection.delete(self.distinguishedName)
 			except Exception as e:
 				logger.error(e)
 				logger.error(record_to_dict(dnstool.DNS_RECORD(record_bytes)))
-				self.connection.unbind()
+				raise e
 		# Only record in Entry -> Delete entire Entry
 		return self.connection.result
