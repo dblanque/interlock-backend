@@ -404,14 +404,14 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 					):
 						record["Data"].fromCanonical(values[field])
 
-					if self.mapping["class"] == "DNS_RPC_RECORD_NODE_NAME":
+					elif self.mapping["class"] == "DNS_RPC_RECORD_NODE_NAME":
 						record["Data"].toCountName(values[field])
 
-					if self.mapping["class"] == "DNS_RPC_RECORD_STRING":
+					elif self.mapping["class"] == "DNS_RPC_RECORD_STRING":
 						if field == "stringData":
 							record["Data"].toRPCName(values[field])
 
-					if self.mapping["class"] == "DNS_RPC_RECORD_NAME_PREFERENCE":
+					elif self.mapping["class"] == "DNS_RPC_RECORD_NAME_PREFERENCE":
 						if field == "wPreference":
 							record["Data"].insert_field_to_struct(
 								fieldName=field, fieldStructVal=">H"
@@ -420,13 +420,13 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 						if field == "nameExchange":
 							record["Data"].toCountName(values[field])
 
-					if self.mapping["class"] == "DNS_RPC_RECORD_SOA":
+					elif self.mapping["class"] == "DNS_RPC_RECORD_SOA":
 						if field in INT_FIELDS:
 							record["Data"].setField(field, values[field])
 						else:
 							record["Data"][field] = record["Data"].addCountName(values[field])
 
-					if self.mapping["class"] == "DNS_RPC_RECORD_SRV":
+					elif self.mapping["class"] == "DNS_RPC_RECORD_SRV":
 						if field in INT_FIELDS:
 							record["Data"].setField(field, values[field])
 						else:
