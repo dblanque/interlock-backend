@@ -60,7 +60,8 @@ class LDAPObject:
 	 - ldapFilter: (OPTIONAL) | LDAP Formatted Filter
 	 - ldapAttributes: (OPTIONAL) | LDAP Attributes to Fetch
 	 - excludedLdapAttributes: (OPTIONAL) | LDAP Attributes to Exclude
-	"""	
+	"""
+
 	# Django
 	use_in_migrations: bool = False
 
