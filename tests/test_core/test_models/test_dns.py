@@ -82,7 +82,7 @@ def f_dns_root():
 
 
 @pytest.fixture
-def f_record(mocker, f_dns_zones, f_forest_zones):
+def f_record(mocker, f_dns_zones, f_forest_zones) -> LDAPRecord:
 	def maker(record_type, record_values):
 		mocker.patch.object(LDAPRecord, "fetch")
 		mocker.patch.object(LDAPRecord, "list_dns_zones", return_value=f_dns_zones)
@@ -95,6 +95,48 @@ def f_record(mocker, f_dns_zones, f_forest_zones):
 		)
 		return m_record
 	return maker
+
+@pytest.fixture
+def f_record_data_type_a():
+	return {
+		'ts': False,
+		'type': RecordTypes.DNS_RECORD_TYPE_A.value,
+		'typeName': 'A',
+		'serial': 1,
+		'address': '127.0.0.1',
+		'name': '@',
+		'ttl': 900
+	}
+
+@pytest.fixture
+def f_record_data_type_ns():
+	return {
+		'ts': False,
+		'type': RecordTypes.DNS_RECORD_TYPE_NS.value,
+		'typeName': 'NS',
+		'serial': 1,
+		'nameNode': f'ldap-server.{LDAP_DOMAIN}.',
+		'name': '@',
+		'ttl': 900
+	}
+
+@pytest.fixture
+def f_record_data_type_soa():
+	return {
+		'ts': False,
+		'type': RecordTypes.DNS_RECORD_TYPE_SOA.value,
+		'typeName': 'SOA',
+		'serial': 2025032602,
+		'dwSerialNo': 2025032602,
+		'dwRefresh': 900,
+		'dwRetry': 7200,
+		'dwExpire': 86400,
+		'dwMinimumTtl': 900,
+		'namePrimaryServer': f'ldap-server.{LDAP_DOMAIN}.',
+		'zoneAdminEmail': f'hostmaster.{LDAP_DOMAIN}.',
+		'name': '@',
+		'ttl': 900
+	}
 
 @pytest.mark.django_db
 class TestLDAPDNS:
@@ -915,3 +957,39 @@ class TestLDAPRecord:
 		m_record.mapping = RECORD_MAPPINGS[m_record.type]
 		with pytest.raises(DNSRecordTypeUnsupported):
 			m_record.make_record_bytes({}, serial=1)
+
+	def test_get_soa_raises_exception(self, mocker):
+		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
+		m_record = LDAPRecord()
+		m_record.soa_object = mocker.Mock(side_effect=Exception)
+		with pytest.raises(DNSCouldNotGetSOA):
+			m_record.get_soa()
+
+	def test_get_soa(
+			self,
+			mocker,
+			f_record,
+			f_record_data_type_a,
+			f_record_data_type_ns,
+			f_record_data_type_soa,
+		):
+			m_record: LDAPRecord = f_record(
+				RecordTypes.DNS_RECORD_TYPE_A.value, {"address":"127.0.0.1"})
+			m_soa_object = mocker.MagicMock(name="m_soa_object")
+			m_soa_object.data = [
+				f_record_data_type_a,
+				f_record_data_type_ns,
+				f_record_data_type_soa,
+			]
+			m_soa_object.rawEntry = {
+				"raw_attributes": {
+					'name': [b'@'],
+					'dnsRecord': [b'record_a',b'record_ns',b'record_soa'],
+					'dNSTombstoned': []
+				}
+			}
+			mocker.patch.object(LDAPRecord, "__new__", return_value=m_soa_object)
+
+			m_record.get_soa()
+			assert m_record.soa_bytes == b'record_soa'
+			assert m_record.soa == f_record_data_type_soa
