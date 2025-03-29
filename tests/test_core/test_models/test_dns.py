@@ -4,7 +4,7 @@ from core.ldap.defaults import (
 	LDAP_DOMAIN,
 	LDAP_SCHEMA_NAMING_CONTEXT,
 )
-from ldap3 import MODIFY_ADD, MODIFY_DELETE, MODIFY_INCREMENT, MODIFY_REPLACE
+from ldap3 import MODIFY_ADD, MODIFY_DELETE, MODIFY_INCREMENT, MODIFY_REPLACE, Connection
 from core.models.dns import (
 	LDAPDNS,
 	SerialGenerator,
@@ -41,6 +41,7 @@ def f_connection(mocker):
 	m_connection.add = mocker.MagicMock(return_value=None)
 	m_connection.modify = mocker.MagicMock(return_value=None)
 	m_connection.delete = mocker.MagicMock(return_value=None)
+	m_connection.search = mocker.MagicMock(return_value=None)
 	return m_connection
 
 
@@ -991,14 +992,9 @@ class TestLDAPRecord:
 		assert m_data_struct.setField.call_count == len(INT_FIELDS)
 		m_data_struct.addCountName.assert_called_once_with(test_values["nameTarget"])
 
-	def test_make_record_bytes_raises_unsupported(self, mocker, f_connection):
+	def test_make_record_bytes_raises_unsupported(self, mocker):
 		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
-		m_record = LDAPRecord(
-			connection=f_connection,
-			rName="subdomain",
-			rZone=LDAP_DOMAIN,
-			rType=RecordTypes.DNS_RECORD_TYPE_SIG.value,
-		)
+		m_record = LDAPRecord()
 		m_record.name = "subdomain"
 		m_record.type = RecordTypes.DNS_RECORD_TYPE_SIG.value
 		m_record.mapping = RECORD_MAPPINGS[m_record.type]
@@ -1311,28 +1307,80 @@ class TestLDAPRecord:
 			{"dnsRecord": [(MODIFY_ADD, m_getData_result)]},
 		)
 
-	def test_fetch_raises_foreign_zone(self, mocker, f_connection, f_dns_zones):
+	def test_fetch_raises_foreign_zone(self, mocker, f_dns_zones):
 		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
-		m_record = LDAPRecord(
-			connection=f_connection,
-			rName="subdomain",
-			rZone=LDAP_DOMAIN,
-			rType=RecordTypes.DNS_RECORD_TYPE_A.value,
-		)
+		m_record = LDAPRecord()
 		m_record.dnszones = f_dns_zones
 		m_record.zone = "foreignzone"
 		with pytest.raises(exc_dns.DNSZoneIsForeign):
 			m_record.fetch()
 
-	def test_fetch_raises_zone_in_record(self, mocker, f_connection, f_dns_zones):
+	def test_fetch_raises_zone_in_record(self, mocker, f_dns_zones):
 		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
-		m_record = LDAPRecord(
-			connection=f_connection,
-			rName=f"subdomain.{LDAP_DOMAIN}",
-			rZone=LDAP_DOMAIN,
-			rType=RecordTypes.DNS_RECORD_TYPE_A.value,
-		)
+		m_record = LDAPRecord()
+		m_record.name = f"subdomain.{LDAP_DOMAIN}"
 		m_record.dnszones = f_dns_zones
 		m_record.zone = LDAP_DOMAIN
 		with pytest.raises(exc_dns.DNSZoneInRecord):
 			m_record.fetch()
+
+	def test_fetch_no_entry_on_server(self, f_connection: Connection, f_dns_zones):
+		f_connection.search.return_value = []
+		# Mocks
+		m_record = LDAPRecord(
+			connection=f_connection,
+			rName="subdomain",
+			rType=RecordTypes.DNS_RECORD_TYPE_A.value,
+			rZone=LDAP_DOMAIN,
+			auto_fetch=False
+		)
+		m_record.dnszones = f_dns_zones
+		expected_filter = f"(&(objectClass=dnsNode)(distinguishedName={m_record.distinguishedName}))"
+
+		# Assertion
+		assert m_record.fetch() is None
+		f_connection.search.assert_called_with(
+			search_base=f"DC={m_record.zone},{m_record.dnsroot}",
+			search_filter=expected_filter,
+			attributes=["dnsRecord", "dNSTombstoned", "name"],
+		)
+
+	def test_fetch(self, mocker, f_connection: Connection, f_dns_zones, f_record_data_type_a_subdomain):
+		# Mocks
+		m_record_struct = mocker.patch("core.models.dns.dnstool.DNS_RECORD", return_value=mocker.Mock(spec=DNS_RECORD))
+		m_record_to_dict = mocker.patch("core.models.dns.record_to_dict", return_value=f_record_data_type_a_subdomain)
+		m_record = LDAPRecord(
+			connection=f_connection,
+			rName=f_record_data_type_a_subdomain["name"],
+			rType=f_record_data_type_a_subdomain["type"],
+			rZone=LDAP_DOMAIN,
+			auto_fetch=False
+		)
+		f_connection.response = [
+			{
+				'raw_dn': m_record.distinguishedName.encode(),
+				'dn': m_record.distinguishedName,
+				'raw_attributes': {
+					'name': [m_record.name.encode()],
+					'dNSTombstoned': [b'FALSE'],
+					'dnsRecord': [b'record_bytes']
+				},
+				'attributes': {
+					'name': [m_record.name],
+					'dNSTombstoned': ['FALSE'],
+					'dnsRecord': [b'record_bytes']
+				},
+				'type': 'searchResEntry'
+			}
+		]
+		m_record.dnszones = f_dns_zones
+		expected_filter = f"(&(objectClass=dnsNode)(distinguishedName={m_record.distinguishedName}))"
+
+		# Assertion
+		assert m_record.fetch() == [f_record_data_type_a_subdomain]
+		assert m_record.data == [f_record_data_type_a_subdomain]
+		f_connection.search.assert_called_with(
+			search_base=f"DC={m_record.zone},{m_record.dnsroot}",
+			search_filter=expected_filter,
+			attributes=["dnsRecord", "dNSTombstoned", "name"],
+		)
