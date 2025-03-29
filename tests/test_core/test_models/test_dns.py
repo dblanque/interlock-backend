@@ -269,6 +269,48 @@ class TestSerialGenerator:
 
 
 class TestLDAPRecordMixin:
+	def test_get_soa_raises_exception(self, mocker):
+		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
+		m_record = LDAPRecord()
+		m_record.type = RecordTypes.DNS_RECORD_TYPE_A.value
+		m_record.soa_object = mocker.Mock(side_effect=Exception)
+		with pytest.raises(exc_dns.DNSCouldNotGetSOA):
+			m_record.get_soa()
+
+	def test_get_soa_object_raises_recursion_exception(self, mocker):
+		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
+		m_record = LDAPRecord()
+		m_record.type = RecordTypes.DNS_RECORD_TYPE_SOA.value
+		with pytest.raises(Exception, match="SOA Recursion"):
+			m_record.get_soa_object()
+
+	def test_get_soa(
+		self,
+		mocker,
+		f_record_instance_type_a: LDAPRecord,
+		f_record_data_type_a,
+		f_record_data_type_ns,
+		f_record_data_type_soa,
+	):
+		m_soa_object = mocker.MagicMock(name="m_soa_object")
+		m_soa_object.data = [
+			f_record_data_type_a,
+			f_record_data_type_ns,
+			f_record_data_type_soa,
+		]
+		m_soa_object.rawEntry = {
+			"raw_attributes": {
+				"name": [b"@"],
+				"dnsRecord": [b"record_a", b"record_ns", b"record_soa"],
+				"dNSTombstoned": [],
+			}
+		}
+		mocker.patch.object(f_record_instance_type_a, "get_soa_object", return_value=m_soa_object)
+
+		f_record_instance_type_a.get_soa()
+		assert f_record_instance_type_a.soa_bytes == b"record_soa"
+		assert f_record_instance_type_a.soa == f_record_data_type_soa
+
 	def test_get_soa_serial_raise_malformed(self, mocker):
 		m_get_soa: MockType = mocker.Mock(return_value=None)
 		m_mixin = LDAPRecordMixin()
@@ -781,6 +823,12 @@ class TestLDAPRecord:
 		m_record.mapping = RECORD_MAPPINGS[m_record.type]
 		assert m_record.__fullname__() == f"subdomain.{LDAP_DOMAIN} (A)"
 
+	def test_dunder_soa(self, mocker):
+		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
+		m_record = LDAPRecord()
+		m_record.soa = "soa"
+		assert m_record.__soa__() == "soa"
+
 	@pytest.mark.parametrize(
 		"record_type, record_spec, test_field_key, test_field_value",
 		(
@@ -1000,54 +1048,6 @@ class TestLDAPRecord:
 		m_record.mapping = RECORD_MAPPINGS[m_record.type]
 		with pytest.raises(exc_dns.DNSRecordTypeUnsupported):
 			m_record.make_record_bytes({}, serial=1)
-
-	def test_get_soa_raises_exception(self, mocker):
-		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
-		m_record = LDAPRecord()
-		m_record.type = RecordTypes.DNS_RECORD_TYPE_A.value
-		m_record.soa_object = mocker.Mock(side_effect=Exception)
-		with pytest.raises(exc_dns.DNSCouldNotGetSOA):
-			m_record.get_soa()
-
-	def test_get_soa_object_raises_recursion_exception(self, mocker):
-		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
-		m_record = LDAPRecord()
-		m_record.type = RecordTypes.DNS_RECORD_TYPE_SOA.value
-		with pytest.raises(Exception, match="SOA Recursion"):
-			m_record.get_soa_object()
-
-	def test_get_soa(
-		self,
-		mocker,
-		f_record_instance_type_a: LDAPRecord,
-		f_record_data_type_a,
-		f_record_data_type_ns,
-		f_record_data_type_soa,
-	):
-		m_soa_object = mocker.MagicMock(name="m_soa_object")
-		m_soa_object.data = [
-			f_record_data_type_a,
-			f_record_data_type_ns,
-			f_record_data_type_soa,
-		]
-		m_soa_object.rawEntry = {
-			"raw_attributes": {
-				"name": [b"@"],
-				"dnsRecord": [b"record_a", b"record_ns", b"record_soa"],
-				"dNSTombstoned": [],
-			}
-		}
-		mocker.patch.object(f_record_instance_type_a, "get_soa_object", return_value=m_soa_object)
-
-		f_record_instance_type_a.get_soa()
-		assert f_record_instance_type_a.soa_bytes == b"record_soa"
-		assert f_record_instance_type_a.soa == f_record_data_type_soa
-
-	def test_dunder_soa(self, mocker):
-		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
-		m_record = LDAPRecord()
-		m_record.soa = "soa"
-		assert m_record.__soa__() == "soa"
 
 	def test_create_raises_type_error(self, f_record_instance_type_a: LDAPRecord):
 		with pytest.raises(TypeError, match="must be a dict"):

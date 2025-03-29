@@ -127,6 +127,27 @@ class SerialGenerator:
 
 
 class LDAPRecordMixin:
+	def get_soa_object(self):
+		if self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
+			raise Exception("Unhandled SOA Recursion.")
+		return LDAPRecord(
+			connection=self.connection,
+			rName="@",
+			rZone=self.zone,
+			rType=RecordTypes.DNS_RECORD_TYPE_SOA.value,
+		)
+
+	def get_soa(self):
+		try:
+			self.soa_object = self.get_soa_object()
+		except:
+			logger.error(traceback.format_exc())
+			raise exc_dns.DNSCouldNotGetSOA
+		for index, record in enumerate(self.soa_object.data):
+			if record["type"] == RecordTypes.DNS_RECORD_TYPE_SOA.value:
+				self.soa_bytes = self.soa_object.rawEntry["raw_attributes"]["dnsRecord"][index]
+				self.soa = record
+
 	def get_soa_serial(self: "LDAPRecord") -> int:
 		"""
 		Gets the current Start of Authority Serial
@@ -401,6 +422,9 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		else:
 			return f"{self.name}.{self.zone} ({self.mapping['name']})"
 
+	def __soa__(self):
+		return self.soa
+
 	def make_record_bytes(self, values: dict, serial: int | str, ttl: int = None) -> ldr.DNS_RECORD:
 		"""Make record byte struct from values dictionary
 
@@ -483,30 +507,6 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 					"name": self.name,
 				}
 			)
-
-	def get_soa_object(self):
-		if self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
-			raise Exception("Unhandled SOA Recursion.")
-		return LDAPRecord(
-			connection=self.connection,
-			rName="@",
-			rZone=self.zone,
-			rType=RecordTypes.DNS_RECORD_TYPE_SOA.value,
-		)
-
-	def get_soa(self):
-		try:
-			self.soa_object = self.get_soa_object()
-		except:
-			logger.error(traceback.format_exc())
-			raise exc_dns.DNSCouldNotGetSOA
-		for index, record in enumerate(self.soa_object.data):
-			if record["type"] == RecordTypes.DNS_RECORD_TYPE_SOA.value:
-				self.soa_bytes = self.soa_object.rawEntry["raw_attributes"]["dnsRecord"][index]
-				self.soa = record
-
-	def __soa__(self):
-		return self.soa
 
 	def create(self, values: dict, dry_run=False):
 		"""
