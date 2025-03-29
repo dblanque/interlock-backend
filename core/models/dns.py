@@ -452,9 +452,6 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			if self.mapping["class"]:
 				record["Data"] = self.record_cls()
 
-				# ! Print Chosen Class
-				# print(self.mapping['class'])
-
 				# ! DO NOT ADD wPreference here
 				INT_FIELDS = [
 					"dwSerialNo",
