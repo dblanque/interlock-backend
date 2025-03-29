@@ -33,7 +33,7 @@ from core.utils import dnstool
 from core.utils.dnstool import new_record, record_to_dict
 from ldap3 import MODIFY_ADD, MODIFY_DELETE, MODIFY_INCREMENT, MODIFY_REPLACE, Connection
 import logging
-import re
+from typing import TypedDict
 from datetime import datetime
 from core.config.runtime import RuntimeSettings
 ################################################################################
@@ -246,8 +246,7 @@ class LDAPRecordMixin:
 						# A -> CNAME
 						# AAAA -> CNAME
 						or (
-							self.type
-							in [
+							self.type in [
 								RecordTypes.DNS_RECORD_TYPE_A.value,
 								RecordTypes.DNS_RECORD_TYPE_AAAA.value,
 							]
@@ -270,8 +269,32 @@ class LDAPRecordMixin:
 		return False
 
 
+class LDAPRecordRawAttributes(TypedDict):
+	name: list[bytes] # The Record Name
+	dNSTombstoned: list[bytes] # It's actually a list of string boolean as bytes
+	dnsRecord: list[bytes] # DNS Record Struct
+
+class LDAPRecordAttributes(TypedDict):
+	name: list[str] # The Record Name
+	dNSTombstoned: list[str] # It's actually a list of string boolean as bytes
+	dnsRecord: list[bytes] # DNS Record Struct
+
+class LDAPRecordEntry(TypedDict):
+	# {
+	# 	'raw_dn': b'DC=testblackhole,DC=brconsulting,CN=MicrosoftDNS,DC=DomainDnsZones,DC=brconsulting',
+	# 	'dn': 'DC=testblackhole,DC=brconsulting,CN=MicrosoftDNS,DC=DomainDnsZones,DC=brconsulting',
+	# 	'raw_attributes': {'name': [b'testblackhole'], 'dNSTombstoned': [b'FALSE'], 'dnsRecord': [b'\x04\x00\x01\x00\x05\xf0\x00\x00a\x8c\xb3x\x00\x00\x03\x84\x00\x00\x00\x00\x00\x00\x00\x00\x7f\x00\x00\x02']},
+	#   'attributes': {'name': ['testblackhole'], 'dNSTombstoned': ['FALSE'], 'dnsRecord': [b'\x04\x00\x01\x00\x05\xf0\x00\x00a\x8c\xb3x\x00\x00\x03\x84\x00\x00\x00\x00\x00\x00\x00\x00\x7f\x00\x00\x02']},
+	# 	'type': 'searchResEntry'
+	# }
+	raw_dn: bytes
+	dn: str
+	raw_attributes: LDAPRecordRawAttributes
+	attributes: LDAPRecordAttributes
+	type: str
+
 class LDAPRecord(LDAPDNS, LDAPRecordMixin):
-	rawEntry: list[bytes]
+	rawEntry: LDAPRecordEntry
 	data: dict
 	name: str
 	zone: str
@@ -518,9 +541,6 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		## Check if LDAP Entry Exists ##
 		# LDAP Entry does not exist
 		if not self.rawEntry:
-			# If Entry does not exist create it with the record in it
-			logger.info("Create Entry for %s" % (self.name))
-			logger.debug(record_to_dict(dnstool.DNS_RECORD(result), ts=False))
 			node_data = {
 				"objectCategory": "CN=Dns-Node,%s" % self.schemaNamingContext,
 				"dNSTombstoned": "FALSE",
@@ -532,8 +552,15 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 					self.connection.add(self.distinguishedName, ["top", "dnsNode"], node_data)
 			except Exception as e:
 				logger.exception(e)
-				logger.error(record_to_dict(dnstool.DNS_RECORD(result), ts=False))
+				try:
+					logger.error(record_to_dict(dnstool.DNS_RECORD(result), ts=False))
+				except: # pragma: no cover
+					pass
 				raise e
+
+			# Log entry creation
+			logger.info("Create Entry for %s" % (self.name))
+			logger.debug(record_to_dict(dnstool.DNS_RECORD(result), ts=False))
 		# LDAP entry exists
 		else:
 			# If it exists add the record to the entry after all the required checks
@@ -549,7 +576,11 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				logger.error(
 					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
-				raise exc_dns.DNSRecordTypeConflict(
+				try:
+					logger.error(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
+				except: # pragma: no cover
+					pass
+				raise exc_dns.DNSRecordExistsConflict(
 					data={
 						"type_name": self.mapping["name"],
 						"type_code": self.type,
@@ -564,8 +595,11 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				logger.error(
 					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
-				logger.error(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
-				raise exc_dns.DNSRecordExistsConflict(
+				try:
+					logger.error(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
+				except: # pragma: no cover
+					pass
+				raise exc_dns.DNSRecordTypeConflict(
 					data={
 						"type_name": self.mapping["name"],
 						"type_code": self.type,
@@ -577,7 +611,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 
 			# Check if a SOA Record already Exists
 			if self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
-				if self.record_soa_exists() == True:
+				if self.record_soa_exists():
 					logger.error(
 						f"{self.mapping['name']} Record already exists in an LDAP Entry and must be unique in Zone (Conflicting value: {values[main_field]})"
 					)
@@ -604,8 +638,10 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 						"name": self.name,
 					}
 				)
+
+			# Logging entry modify
 			logger.info("Adding Record to Entry with name %s" % (self.name))
-			logger.debug(record_to_dict(dnstool.DNS_RECORD(result), ts=False))
+			logger.debug(record_to_dict(dnstool.DNS_RECORD(result)))
 
 			# If all checks passed
 			if not dry_run:
