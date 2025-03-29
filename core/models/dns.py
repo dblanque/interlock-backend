@@ -189,7 +189,7 @@ class LDAPRecordMixin:
 			logger.exception(e)
 			raise exc_dns.DNSCouldNotGetSerial
 
-	def record_exists_in_entry(self: "LDAPRecord", main_field: str, main_field_val) -> bool:
+	def record_in_entry(self: "LDAPRecord", main_field: str, main_field_val) -> bool:
 		"""
 		Checks if the record exists in the current LDAP Entry
 
@@ -214,7 +214,7 @@ class LDAPRecordMixin:
 							return True
 		return False
 
-	def record_of_type_exists(self: "LDAPRecord") -> bool:
+	def record_type_in_entry(self: "LDAPRecord") -> bool:
 		"""
 		Checks if a record of this type exists in the LDAP Entry,
 		if multi_record is not allowed for self.type
@@ -578,7 +578,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				main_field = self.mapping["fields"][0]
 
 			# ! Check if record exists in LDAP Entry
-			if self.record_exists_in_entry(
+			if self.record_in_entry(
 				main_field=main_field, main_field_val=values[main_field]
 			):
 				logger.error(
@@ -599,7 +599,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				)
 
 			# Check Multi-Record eligibility
-			if self.record_of_type_exists():
+			if self.record_type_in_entry():
 				logger.error(
 					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
@@ -753,10 +753,12 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		# Exclude SOA from condition as that record is unique in Zone.
 		if self.type != RecordTypes.DNS_RECORD_TYPE_SOA.value:
 			# ! Check if record exists in Entry
-			exists = self.record_exists_in_entry(
-				main_field=main_field, main_field_val=values[main_field]
-			)
-			if exists and old_record_name != self.name:
+			check_args = {
+				"main_field": main_field,
+				"main_field_val":values[main_field],
+			}
+			record_name_changed = old_record_name != self.name
+			if self.record_in_entry(**check_args) and record_name_changed:
 				logger.error(
 					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
@@ -769,7 +771,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				})
 			# Check Multi-Record eligibility
 			if (
-				self.record_of_type_exists()
+				self.record_type_in_entry()
 				and self.rawEntry["raw_attributes"]["dnsRecord"][0] != old_record_bytes
 			):
 				logger.error(
