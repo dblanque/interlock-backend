@@ -317,6 +317,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		rZone=None,
 		rType=None,
 		zoneType="fwdLookup",
+		auto_fetch=True,
 	):
 		super().__init__(connection=connection)
 
@@ -377,7 +378,8 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			raise TypeError("Class key not in Record Mapping definition.")
 
 		self.distinguishedName = f"DC={self.name},DC={self.zone},{self.dnsroot}"
-		self.fetch()
+		if auto_fetch:
+			self.fetch()
 
 	def __attributes__(self):
 		# Exclude specific keys from self record attributes
@@ -687,7 +689,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 
 			# Set Record Name
 			record_name = self.rawEntry["raw_attributes"]["name"][0]
-			record_name = str(record_name)[2:-1]
+			record_name = record_name.decode()
 			logger.debug(f"{__name__} [DEBUG] - Record Name: {record_name}")
 
 			# Set Record Data
