@@ -406,10 +406,7 @@ class TestLDAPRecordMixin:
 		assert m_mixin.get_serial(record_values={"serial": 2}, old_serial=1) == 2
 
 	def test_record_in_entry_data_doesnt_exist(self):
-		assert (
-			LDAPRecordMixin().record_in_entry(main_field="field", main_field_val="value")
-			is False
-		)
+		assert LDAPRecordMixin().record_in_entry(main_field="field", main_field_val="value") is False
 
 	def test_record_in_entry_data_is_none(self):
 		m_mixin = LDAPRecordMixin()
@@ -1219,9 +1216,7 @@ class TestLDAPRecord:
 	):
 		mocker.patch("core.models.dns.dnstool.DNS_RECORD", return_value="DNS_RECORD")
 		mocker.patch("core.models.dns.record_to_dict")
-		mocker.patch.object(
-			f_record_instance_type_soa, "record_in_entry", return_value=False
-		)
+		mocker.patch.object(f_record_instance_type_soa, "record_in_entry", return_value=False)
 		mocker.patch.object(f_record_instance_type_soa, "record_type_in_entry", return_value=False)
 		mocker.patch.object(f_record_instance_type_soa, "record_soa_exists", return_value=True)
 		f_record_instance_type_soa.rawEntry = {"attributes": {}}
@@ -1333,10 +1328,12 @@ class TestLDAPRecord:
 			rName="subdomain",
 			rType=RecordTypes.DNS_RECORD_TYPE_A.value,
 			rZone=LDAP_DOMAIN,
-			auto_fetch=False
+			auto_fetch=False,
 		)
 		m_record.dnszones = f_dns_zones
-		expected_filter = f"(&(objectClass=dnsNode)(distinguishedName={m_record.distinguishedName}))"
+		expected_filter = (
+			f"(&(objectClass=dnsNode)(distinguishedName={m_record.distinguishedName}))"
+		)
 
 		# Assertion
 		assert m_record.fetch() is None
@@ -1346,36 +1343,44 @@ class TestLDAPRecord:
 			attributes=["dnsRecord", "dNSTombstoned", "name"],
 		)
 
-	def test_fetch(self, mocker, f_connection: Connection, f_dns_zones, f_record_data_type_a_subdomain):
+	def test_fetch(
+		self, mocker, f_connection: Connection, f_dns_zones, f_record_data_type_a_subdomain
+	):
 		# Mocks
-		m_record_struct = mocker.patch("core.models.dns.dnstool.DNS_RECORD", return_value=mocker.Mock(spec=DNS_RECORD))
-		m_record_to_dict = mocker.patch("core.models.dns.record_to_dict", return_value=f_record_data_type_a_subdomain)
+		m_record_struct = mocker.patch(
+			"core.models.dns.dnstool.DNS_RECORD", return_value=mocker.Mock(spec=DNS_RECORD)
+		)
+		m_record_to_dict = mocker.patch(
+			"core.models.dns.record_to_dict", return_value=f_record_data_type_a_subdomain
+		)
 		m_record = LDAPRecord(
 			connection=f_connection,
 			rName=f_record_data_type_a_subdomain["name"],
 			rType=f_record_data_type_a_subdomain["type"],
 			rZone=LDAP_DOMAIN,
-			auto_fetch=False
+			auto_fetch=False,
 		)
 		f_connection.response = [
 			{
-				'raw_dn': m_record.distinguishedName.encode(),
-				'dn': m_record.distinguishedName,
-				'raw_attributes': {
-					'name': [m_record.name.encode()],
-					'dNSTombstoned': [b'FALSE'],
-					'dnsRecord': [b'record_bytes']
+				"raw_dn": m_record.distinguishedName.encode(),
+				"dn": m_record.distinguishedName,
+				"raw_attributes": {
+					"name": [m_record.name.encode()],
+					"dNSTombstoned": [b"FALSE"],
+					"dnsRecord": [b"record_bytes"],
 				},
-				'attributes': {
-					'name': [m_record.name],
-					'dNSTombstoned': ['FALSE'],
-					'dnsRecord': [b'record_bytes']
+				"attributes": {
+					"name": [m_record.name],
+					"dNSTombstoned": ["FALSE"],
+					"dnsRecord": [b"record_bytes"],
 				},
-				'type': 'searchResEntry'
+				"type": "searchResEntry",
 			}
 		]
 		m_record.dnszones = f_dns_zones
-		expected_filter = f"(&(objectClass=dnsNode)(distinguishedName={m_record.distinguishedName}))"
+		expected_filter = (
+			f"(&(objectClass=dnsNode)(distinguishedName={m_record.distinguishedName}))"
+		)
 
 		# Assertion
 		assert m_record.fetch() == [f_record_data_type_a_subdomain]

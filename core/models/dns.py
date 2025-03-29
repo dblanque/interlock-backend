@@ -222,7 +222,9 @@ class LDAPRecordMixin:
 		Returns:
 			bool
 		"""
+		# Default: multi_record is disallowed
 		multi_record = False
+		# If mapped, use mapped value
 		if "multi_record" in self.mapping:
 			multi_record = self.mapping["multi_record"]
 
@@ -569,18 +571,17 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			# Log entry creation
 			logger.info("Create Entry for %s" % (self.name))
 			logger.debug(record_to_dict(dnstool.DNS_RECORD(result), ts=False))
+
 		# LDAP entry exists
 		else:
-			# If it exists add the record to the entry after all the required checks
+			# Add the record to the entry after all the required checks
 			if "main_field" in self.mapping:
 				main_field = self.mapping["main_field"]
 			else:
 				main_field = self.mapping["fields"][0]
 
 			# ! Check if record exists in LDAP Entry
-			if self.record_in_entry(
-				main_field=main_field, main_field_val=values[main_field]
-			):
+			if self.record_in_entry(main_field=main_field, main_field_val=values[main_field]):
 				logger.error(
 					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
@@ -755,20 +756,22 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			# ! Check if record exists in Entry
 			check_args = {
 				"main_field": main_field,
-				"main_field_val":values[main_field],
+				"main_field_val": values[main_field],
 			}
 			record_name_changed = old_record_name != self.name
 			if self.record_in_entry(**check_args) and record_name_changed:
 				logger.error(
 					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
-				raise exc_dns.DNSRecordTypeConflict(data={
-					"type_name": self.mapping["name"],
-					"type_code": self.type,
-					"name": self.name,
-					"conflict_val": values[main_field],
-					"conflict_field": main_field,
-				})
+				raise exc_dns.DNSRecordTypeConflict(
+					data={
+						"type_name": self.mapping["name"],
+						"type_code": self.type,
+						"name": self.name,
+						"conflict_val": values[main_field],
+						"conflict_field": main_field,
+					}
+				)
 			# Check Multi-Record eligibility
 			if (
 				self.record_type_in_entry()
@@ -778,13 +781,15 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
 				logger.error(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
-				raise exc_dns.DNSRecordExistsConflict(data={
-					"type_name": self.mapping["name"],
-					"type_code": self.type,
-					"name": self.name,
-					"conflict_val": values[main_field],
-					"conflict_field": main_field,
-				})
+				raise exc_dns.DNSRecordExistsConflict(
+					data={
+						"type_name": self.mapping["name"],
+						"type_code": self.type,
+						"name": self.name,
+						"conflict_val": values[main_field],
+						"conflict_field": main_field,
+					}
+				)
 
 		newRecord = self.structure.getData()
 
