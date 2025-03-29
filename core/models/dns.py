@@ -246,7 +246,8 @@ class LDAPRecordMixin:
 						# A -> CNAME
 						# AAAA -> CNAME
 						or (
-							self.type in [
+							self.type
+							in [
 								RecordTypes.DNS_RECORD_TYPE_A.value,
 								RecordTypes.DNS_RECORD_TYPE_AAAA.value,
 							]
@@ -270,14 +271,16 @@ class LDAPRecordMixin:
 
 
 class LDAPRecordRawAttributes(TypedDict):
-	name: list[bytes] # The Record Name
-	dNSTombstoned: list[bytes] # It's actually a list of string boolean as bytes
-	dnsRecord: list[bytes] # DNS Record Struct
+	name: list[bytes]  # The Record Name
+	dNSTombstoned: list[bytes]  # It's actually a list of string boolean as bytes
+	dnsRecord: list[bytes]  # DNS Record Struct
+
 
 class LDAPRecordAttributes(TypedDict):
-	name: list[str] # The Record Name
-	dNSTombstoned: list[str] # It's actually a list of string boolean as bytes
-	dnsRecord: list[bytes] # DNS Record Struct
+	name: list[str]  # The Record Name
+	dNSTombstoned: list[str]  # It's actually a list of string boolean as bytes
+	dnsRecord: list[bytes]  # DNS Record Struct
+
 
 class LDAPRecordEntry(TypedDict):
 	# {
@@ -292,6 +295,7 @@ class LDAPRecordEntry(TypedDict):
 	raw_attributes: LDAPRecordRawAttributes
 	attributes: LDAPRecordAttributes
 	type: str
+
 
 class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 	rawEntry: LDAPRecordEntry
@@ -554,7 +558,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				logger.exception(e)
 				try:
 					logger.error(record_to_dict(dnstool.DNS_RECORD(result), ts=False))
-				except: # pragma: no cover
+				except:  # pragma: no cover
 					pass
 				raise e
 
@@ -578,7 +582,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				)
 				try:
 					logger.error(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
-				except: # pragma: no cover
+				except:  # pragma: no cover
 					pass
 				raise exc_dns.DNSRecordExistsConflict(
 					data={
@@ -597,7 +601,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				)
 				try:
 					logger.error(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
-				except: # pragma: no cover
+				except:  # pragma: no cover
 					pass
 				raise exc_dns.DNSRecordTypeConflict(
 					data={
