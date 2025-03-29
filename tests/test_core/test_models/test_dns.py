@@ -3,9 +3,8 @@ from copy import deepcopy
 from core.ldap.defaults import (
 	LDAP_AUTH_SEARCH_BASE,
 	LDAP_DOMAIN,
-	LDAP_SCHEMA_NAMING_CONTEXT,
 )
-from ldap3 import MODIFY_ADD, MODIFY_DELETE, MODIFY_INCREMENT, MODIFY_REPLACE, Connection
+from ldap3 import MODIFY_ADD, Connection
 from core.models.dns import (
 	LDAPDNS,
 	SerialGenerator,
@@ -35,6 +34,10 @@ from pytest_mock import MockType
 TODAY_DATETIME = datetime.today()
 TODAY_STR = TODAY_DATETIME.strftime(DATE_FMT)
 
+@pytest.fixture
+def f_runtime_settings(g_runtime_settings, mocker):
+	mocker.patch("core.models.dns.RuntimeSettings", g_runtime_settings)
+	return g_runtime_settings
 
 @pytest.fixture
 def f_connection(mocker):
@@ -73,16 +76,11 @@ def f_forest_zones():
 
 
 @pytest.fixture
-def f_runtime_settings(mocker):
-	m_runtime_settings = mocker.Mock()
-	m_runtime_settings.LDAP_SCHEMA_NAMING_CONTEXT = LDAP_SCHEMA_NAMING_CONTEXT
-	m_runtime_settings.LDAP_AUTH_SEARCH_BASE = LDAP_AUTH_SEARCH_BASE
-	return mocker.patch("core.models.dns.RuntimeSettings", m_runtime_settings)
-
-
-@pytest.fixture
-def f_dns_root():
-	return f"CN=MicrosoftDNS,CN=System,{LDAP_AUTH_SEARCH_BASE}"
+def f_dns_root(f_runtime_settings):
+	if f_runtime_settings.LDAP_DNS_LEGACY:
+		return "CN=MicrosoftDNS,CN=System,%s" % f_runtime_settings.LDAP_AUTH_SEARCH_BASE
+	else:
+		return "CN=MicrosoftDNS,DC=DomainDnsZones,%s" % f_runtime_settings.LDAP_AUTH_SEARCH_BASE
 
 
 @pytest.fixture

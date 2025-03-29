@@ -1,13 +1,13 @@
 import pytest
-import inspect
 from pytest_mock import MockType
-from core.models.ldap_settings import LDAP_SETTING_MAP
 from ldap3 import Server, ServerPool, Connection, Tls
-from core.models.ldap_settings_runtime import RunningSettingsClass
 from core.models.user import USER_TYPE_LDAP, User
 from core.ldap import defaults as ldap_defaults
 from typing import Union
 
+@pytest.fixture
+def f_runtime_settings(g_runtime_settings):
+	return g_runtime_settings
 
 @pytest.fixture
 def f_ldap_connection(mocker) -> MockType:
@@ -27,19 +27,6 @@ def f_server(mocker) -> MockType:
 @pytest.fixture
 def f_tls(mocker) -> MockType:
 	return mocker.MagicMock(spec=Tls)
-
-
-@pytest.fixture
-def f_runtime_settings(mocker) -> Union[MockType, RunningSettingsClass]:
-	mock = mocker.MagicMock(spec=RunningSettingsClass)
-	attributes = inspect.getmembers(RunningSettingsClass, lambda a: not (inspect.isroutine(a)))
-	for setting_key, default_value in attributes:
-		if setting_key.startswith("__") and setting_key.endswith("__"):
-			continue
-		setting_value = getattr(ldap_defaults, setting_key, None)
-		setattr(mock, setting_key, setting_value)
-	return mock
-
 
 @pytest.fixture
 def f_user_dn():
