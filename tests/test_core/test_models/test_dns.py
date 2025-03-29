@@ -1359,3 +1359,22 @@ class TestLDAPRecord:
 			{"dnsRecord": [(MODIFY_ADD, m_getData_result)]}
 		)
 
+	def test_fetch_raises_foreign_zone(self, mocker, f_connection, f_dns_zones):
+		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
+		m_record = LDAPRecord(
+			connection=f_connection, rName="subdomain", rZone=LDAP_DOMAIN, rType=RecordTypes.DNS_RECORD_TYPE_A.value
+		)
+		m_record.dnszones = f_dns_zones
+		m_record.zone = "foreignzone"
+		with pytest.raises(exc_dns.DNSZoneIsForeign):
+			m_record.fetch()
+
+	def test_fetch_raises_zone_in_record(self, mocker, f_connection, f_dns_zones):
+		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
+		m_record = LDAPRecord(
+			connection=f_connection, rName=f"subdomain.{LDAP_DOMAIN}", rZone=LDAP_DOMAIN, rType=RecordTypes.DNS_RECORD_TYPE_A.value
+		)
+		m_record.dnszones = f_dns_zones
+		m_record.zone = LDAP_DOMAIN
+		with pytest.raises(exc_dns.DNSZoneInRecord):
+			m_record.fetch()
