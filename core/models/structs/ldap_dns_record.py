@@ -173,7 +173,7 @@ RECORD_MAPPINGS = {
 }
 
 
-def record_to_dict(record, ts=False):
+def record_to_dict(record: "DNS_RECORD", ts=False):
 	thismodule = sys.modules[__name__]
 
 	# For original reference see print_record
