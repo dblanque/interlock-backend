@@ -151,7 +151,9 @@ class LDAPRecordMixin:
 	def get_soa_serial(self: "LDAPRecord") -> int:
 		"""
 		Gets the current Start of Authority Serial
-		MUST RETURN AN INTEGER SERIAL
+
+		Returns:
+			int
 		"""
 		self.get_soa()
 		if self.soa["dwSerialNo"] != self.soa["serial"]:
@@ -754,35 +756,33 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			exists = self.record_exists_in_entry(
 				main_field=main_field, main_field_val=values[main_field]
 			)
-			if exists != False and old_record_name != self.name:
+			if exists and old_record_name != self.name:
 				logger.error(
 					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
-				data = {
+				raise exc_dns.DNSRecordTypeConflict(data={
 					"type_name": self.mapping["name"],
 					"type_code": self.type,
 					"name": self.name,
 					"conflict_val": values[main_field],
 					"conflict_field": main_field,
-				}
-				raise exc_dns.DNSRecordTypeConflict(data=data)
+				})
 			# Check Multi-Record eligibility
 			if (
-				self.record_of_type_exists() == True
+				self.record_of_type_exists()
 				and self.rawEntry["raw_attributes"]["dnsRecord"][0] != old_record_bytes
 			):
 				logger.error(
 					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[main_field]})"
 				)
 				logger.error(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
-				data = {
+				raise exc_dns.DNSRecordExistsConflict(data={
 					"type_name": self.mapping["name"],
 					"type_code": self.type,
 					"name": self.name,
 					"conflict_val": values[main_field],
 					"conflict_field": main_field,
-				}
-				raise exc_dns.DNSRecordExistsConflict(data=data)
+				})
 
 		newRecord = self.structure.getData()
 
