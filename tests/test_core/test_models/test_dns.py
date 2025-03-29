@@ -1,4 +1,5 @@
 import pytest
+from copy import deepcopy
 from core.ldap.defaults import (
 	LDAP_AUTH_SEARCH_BASE,
 	LDAP_DOMAIN,
@@ -1384,3 +1385,43 @@ class TestLDAPRecord:
 			search_filter=expected_filter,
 			attributes=["dnsRecord", "dNSTombstoned", "name"],
 		)
+
+	# def test_update(self, mocker, f_connection: Connection, f_record_data_type_a_subdomain: dict, f_dns_zones):
+	# 	# Mocks
+	# 	m_new_values = deepcopy(f_record_data_type_a_subdomain)
+	# 	m_record = LDAPRecord(
+	# 		connection=f_connection,
+	# 		rName=f_record_data_type_a_subdomain["name"],
+	# 		rType=f_record_data_type_a_subdomain["type"],
+	# 		rZone=LDAP_DOMAIN,
+	# 		auto_fetch=False
+	# 	)
+	# 	m_get_serial = mocker.patch(m_record, "get_serial", return_value=get_mock_serial(1))
+	# 	m_make_record_bytes = mocker.patch(m_record, "make_record_bytes", return_value=b"new_record_bytes")
+	# 	m_record_exists_in_entry = mocker.patch(m_record, "record_exists_in_entry", return_value=False)
+
+	# 	# Assertion
+	# 	m_record.rawEntry = [
+	# 		{
+	# 			'raw_dn': m_record.distinguishedName.encode(),
+	# 			'dn': m_record.distinguishedName,
+	# 			'raw_attributes': {
+	# 				'name': [m_record.name.encode()],
+	# 				'dNSTombstoned': [b'FALSE'],
+	# 				'dnsRecord': [b'record_bytes']
+	# 			},
+	# 			'attributes': {
+	# 				'name': [m_record.name],
+	# 				'dNSTombstoned': ['FALSE'],
+	# 				'dnsRecord': [b'record_bytes']
+	# 			},
+	# 			'type': 'searchResEntry'
+	# 		}
+	# 	]
+	# 	m_record.data = [f_record_data_type_a_subdomain]
+
+	# 	m_record.update(
+	# 		values=m_new_values,
+	# 		old_record_values=f_record_data_type_a_subdomain,
+	# 		old_record_bytes=b"record_bytes",
+	# 	)
