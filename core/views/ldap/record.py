@@ -78,7 +78,7 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 		user: User = request.user
 		data = {}
 		code = 0
-		required_values = ["name", "serial", "type", "zone", "ttl", "index", "record_bytes"]
+		required_values = ["name", "serial", "type", "zone", "ttl", "index"]
 
 		if "record" not in request.data or "oldRecord" not in request.data:
 			raise exc_dns.DNSRecordNotInRequest
@@ -119,7 +119,7 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 		user: User = request.user
 		data = {}
 		code = 0
-		required_values = ["name", "type", "zone", "ttl", "index", "record_bytes"]
+		required_values = ["name", "type", "zone", "ttl", "index"]
 
 		key = "record"
 		if "records" in request.data:
@@ -149,11 +149,11 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 			self.ldap_connection = ldc.connection
 			if isinstance(record_data, dict):
 				logger.debug(record_data)
-				result = self.delete_record(record_data, user)
+				result = self.delete_record(record_data)
 			elif isinstance(record_data, list):
 				result = []
 				for r in record_data:
 					logger.debug(r)
-					result.append(self.delete_record(r, user))
+					result.append(self.delete_record(r))
 
 		return Response(data={"code": code, "code_msg": "ok", "data": result})

@@ -117,14 +117,14 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 			attributes = ["dnsRecord", "dNSTombstoned", "name"]
 
 			dnsList = LDAPDNS(ldapConnection)
-			dnsZones = dnsList.dnszones
-			forestZones = dnsList.forestzones
+			dnsZones = dnsList.dns_zones
+			forestZones = dnsList.forest_zones
 
 			if zoneFilter is not None:
 				target_zone = zoneFilter
 			else:
 				target_zone = RuntimeSettings.LDAP_DOMAIN
-			search_target = "DC=%s,%s" % (target_zone, dnsList.dnsroot)
+			search_target = "DC=%s,%s" % (target_zone, dnsList.dns_root)
 			try:
 				ldapConnection.search(
 					search_base=search_target, search_filter=searchFilter, attributes=attributes
@@ -159,7 +159,6 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 					dr = dnstool.DNS_RECORD(record)
 					record_dict = record_to_dict(dr, entry["attributes"]["dNSTombstoned"])
 					record_dict["id"] = record_id
-					record_dict["record_bytes"] = str(record)
 					record_dict["index"] = record_index
 					record_dict["displayName"] = record_name
 					record_dict["name"] = orig_name
@@ -219,16 +218,16 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
-			ldapConnection = ldc.connection
-			dnsList = LDAPDNS(ldapConnection)
-			dnsZones = dnsList.dnszones
-			forestZones = dnsList.forestzones
+			connection = ldc.connection
+			dns_list = LDAPDNS(connection)
+			dns_zones = dns_list.dns_zones
+			forest_zones = dns_list.forest_zones
 
-			if target_zone in dnsZones:
+			if target_zone in dns_zones:
 				raise exc_dns.DNSZoneExists
 
-			zoneToCreate_dns = "DC=%s,%s" % (target_zone, dnsList.dnsroot)
-			zoneToCreate_forest = "DC=_msdcs.%s,%s" % (target_zone, dnsList.forestroot)
+			zone_to_create_dns = "DC=%s,%s" % (target_zone, dns_list.dns_root)
+			zone_to_create_forest = "DC=_msdcs.%s,%s" % (target_zone, dns_list.forest_root)
 			forest_dc = "_msdcs.%s" % (target_zone)
 
 			attributes_dns = {}
@@ -237,27 +236,28 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 			attributes_forest = {}
 			attributes_forest["dc"] = forest_dc
 
-			ldapConnection.add(
-				dn=zoneToCreate_dns, object_class=["dnsZone", "top"], attributes=attributes_dns
+			connection.add(
+				dn=zone_to_create_dns, object_class=["dnsZone", "top"], attributes=attributes_dns
 			)
-			dnsCreateResult = ldapConnection.result
+			create_result = connection.result
 
-			ldapConnection.add(
-				dn=zoneToCreate_forest,
+			connection.add(
+				dn=zone_to_create_forest,
 				object_class=["dnsZone", "top"],
 				attributes=attributes_forest,
 			)
-			forestCreateResult = ldapConnection.result
+			forestCreateResult = connection.result
 
-			currentLDAPServer = ldapConnection.server_pool.get_current_server(ldapConnection)
-			currentLDAPServer_IP = currentLDAPServer.host
+			current_ldap_server = connection.server_pool.get_current_server(connection)
+			current_ldap_server_ip = current_ldap_server.host
 
 			# Create Start of Authority
 			base_soaRecord = LDAPRecord(
-				connection=ldapConnection,
-				rName="@",
-				rZone=target_zone,
-				rType=RecordTypes.DNS_RECORD_TYPE_SOA.value,
+				connection=connection,
+				record_name="@",
+				record_zone=target_zone,
+				record_type=RecordTypes.DNS_RECORD_TYPE_SOA.value,
+				record_main_value=f"ns.{target_zone}."
 			)
 			values_soa = {
 				"dwSerialNo": 1,
@@ -270,85 +270,90 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 			}
 			base_soaRecord.create(values=values_soa)
 
-			soaCreateResult = ldapConnection.result
+			soaCreateResult = connection.result
 
 			ipv4 = False
 			ipv6 = False
-			if ipv4_validator(currentLDAPServer_IP):
+			if ipv4_validator(current_ldap_server_ip):
 				ipv4 = True
-			elif ipv6_validator(currentLDAPServer_IP):
+			elif ipv6_validator(current_ldap_server_ip):
 				ipv6 = True
 
 			# LDAP Server IP Address
 			if ipv4:
-				values_a = {"address": currentLDAPServer.host, "ttl": 900, "serial": 1}
-				base_aRecord = LDAPRecord(
-					connection=ldapConnection,
-					rName="@",
-					rZone=target_zone,
-					rType=RecordTypes.DNS_RECORD_TYPE_A.value,
+				values_a = {"address": current_ldap_server_ip, "ttl": 900, "serial": 1}
+				base_record_a = LDAPRecord(
+					connection=connection,
+					record_name="@",
+					record_zone=target_zone,
+					record_type=RecordTypes.DNS_RECORD_TYPE_A.value,
+					record_main_value=current_ldap_server_ip
 				)
-				base_aRecord.create(values=values_a)
+				base_record_a.create(values=values_a)
 
-				aCreateResult = ldapConnection.result
+				a_record_result = connection.result
 
-				values_a_ns = {"address": currentLDAPServer.host, "ttl": 900, "serial": 1}
-				a_nsRecord = LDAPRecord(
-					connection=ldapConnection,
-					rName="ns1",
-					rZone=target_zone,
-					rType=RecordTypes.DNS_RECORD_TYPE_A.value,
+				values_a_ns = {"address": current_ldap_server_ip, "ttl": 900, "serial": 1}
+				base_record_a_to_ns = LDAPRecord(
+					connection=connection,
+					record_name="ns1",
+					record_zone=target_zone,
+					record_type=RecordTypes.DNS_RECORD_TYPE_A.value,
+					record_main_value=current_ldap_server_ip
 				)
-				a_nsRecord.create(values=values_a_ns)
+				base_record_a_to_ns.create(values=values_a_ns)
 
-				a_nsCreateResult = ldapConnection.result
+				a_to_ns_record_result = connection.result
 			elif ipv6:
-				values_aaaa = {"address": currentLDAPServer.host, "ttl": 900, "serial": 1}
-				base_aaaaRecord = LDAPRecord(
-					connection=ldapConnection,
-					rName="@",
-					rZone=target_zone,
-					rType=RecordTypes.DNS_RECORD_TYPE_AAAA.value,
+				values_aaaa = {"address": current_ldap_server_ip, "ttl": 900, "serial": 1}
+				base_record_a = LDAPRecord(
+					connection=connection,
+					record_name="@",
+					record_zone=target_zone,
+					record_type=RecordTypes.DNS_RECORD_TYPE_AAAA.value,
+					record_main_value=current_ldap_server_ip
 				)
-				base_aaaaRecord.create(values=values_aaaa)
+				base_record_a.create(values=values_aaaa)
 
-				aaaaCreateResult = ldapConnection.result
+				aaaa_record_result = connection.result
 
-				values_aaaa_ns = {"address": currentLDAPServer.host, "ttl": 900, "serial": 1}
-				aaaa_nsRecord = LDAPRecord(
-					connection=ldapConnection,
-					rName="ns1",
-					rZone=target_zone,
-					rType=RecordTypes.DNS_RECORD_TYPE_AAAA.value,
+				values_aaaa_ns = {"address": current_ldap_server_ip, "ttl": 900, "serial": 1}
+				base_record_aaaa_to_ns = LDAPRecord(
+					connection=connection,
+					record_name="ns1",
+					record_zone=target_zone,
+					record_type=RecordTypes.DNS_RECORD_TYPE_AAAA.value,
+					record_main_value=current_ldap_server_ip
 				)
-				aaaa_nsRecord.create(values=values_aaaa_ns)
+				base_record_aaaa_to_ns.create(values=values_aaaa_ns)
 
-				aaaa_nsCreateResult = ldapConnection.result
+				aaaa_to_ns_record_result = connection.result
 
 			values_ns = {"nameNode": f"ns1.{target_zone}.", "ttl": 3600, "serial": 1}
-			base_nsRecord = LDAPRecord(
-				connection=ldapConnection,
-				rName="@",
-				rZone=target_zone,
-				rType=RecordTypes.DNS_RECORD_TYPE_NS.value,
+			base_record_a_to_ns = LDAPRecord(
+				connection=connection,
+				record_name="@",
+				record_zone=target_zone,
+				record_type=RecordTypes.DNS_RECORD_TYPE_NS.value,
+				record_main_value=f"ns1.{target_zone}."
 			)
-			base_nsRecord.create(values=values_ns)
+			base_record_a_to_ns.create(values=values_ns)
 
-			nsCreateResult = ldapConnection.result
+			a_to_ns_record_result = connection.result
 
-			ldapConnection.unbind()
+			connection.unbind()
 
 			result = {
-				"dns": dnsCreateResult,
+				"dns": create_result,
 				"forest": forestCreateResult,
 				"soa": soaCreateResult,
-				"ns": nsCreateResult,
+				"ns": a_to_ns_record_result,
 			}
 
 			if ipv4:
-				result.update({"a_ns": a_nsCreateResult, "a": aCreateResult})
+				result.update({"a_ns": a_to_ns_record_result, "a": a_record_result})
 			elif ipv6:
-				result.update({"aaaa_ns": aaaa_nsCreateResult, "aaaa": aaaaCreateResult})
+				result.update({"aaaa_ns": aaaa_to_ns_record_result, "aaaa": aaaa_record_result})
 
 			if RuntimeSettings.LDAP_LOG_CREATE == True:
 				# Log this action to DB
@@ -388,14 +393,14 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 		with LDAPConnector(user) as ldc:
 			ldapConnection = ldc.connection
 			dnsList = LDAPDNS(ldapConnection)
-			dnsZones = dnsList.dnszones
-			forestZones = dnsList.forestzones
+			dnsZones = dnsList.dns_zones
+			forestZones = dnsList.forest_zones
 
 			if target_zone not in dnsZones:
 				raise exc_dns.DNSZoneDoesNotExist
 
-			zoneToCreate_dns = "DC=%s,%s" % (target_zone, dnsList.dnsroot)
-			zoneToCreate_forest = "DC=_msdcs.%s,%s" % (target_zone, dnsList.forestroot)
+			zoneToCreate_dns = "DC=%s,%s" % (target_zone, dnsList.dns_root)
+			zoneToCreate_forest = "DC=_msdcs.%s,%s" % (target_zone, dnsList.forest_root)
 			forest_dc = "_msdcs.%s" % (target_zone)
 
 			attributes_dns = {}
@@ -404,7 +409,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 			attributes_forest = {}
 			attributes_forest["dc"] = forest_dc
 
-			search_target = "DC=%s,%s" % (target_zone, dnsList.dnsroot)
+			search_target = "DC=%s,%s" % (target_zone, dnsList.dns_root)
 			searchFilter = search_filter_add("", "objectClass=dnsNode")
 			attributes = ["dnsRecord", "dNSTombstoned", "name"]
 			records = ldapConnection.extend.standard.paged_search(

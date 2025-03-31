@@ -75,6 +75,11 @@ class DNSRecordExistsConflict(CoreException):
 	default_detail = "Requested Record Insertion or Update already exists"
 	default_code = "dns_record_exists_conflict"
 
+class DNSRecordDoesNotExist(CoreException):
+	status_code = status.HTTP_404_NOT_FOUND
+	default_detail = "Requested Record does not exist in entry."
+	default_code = "dns_record_does_not_exist"
+
 
 class DNSRecordTypeUnsupported(CoreException):
 	status_code = status.HTTP_400_BAD_REQUEST
