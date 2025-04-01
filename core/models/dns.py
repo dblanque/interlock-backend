@@ -446,7 +446,7 @@ def record_type_main_field(t: RecordTypes | int | str) -> str:
 	"""Gets the corresponding main field identifier for a record type.
 
 	Args:
-		t (RecordTypes): The record type to fetch the main field for.
+		t (RecordTypes | int | str): The record type to fetch the main field for.
 
 	Returns:
 		str: Key string for field
