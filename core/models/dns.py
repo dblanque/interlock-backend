@@ -459,7 +459,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				raise ValueError("Start of Authority must be in the root of the DNS Zone.")
 		else:
 			if record_main_value is None:
-				raise ValueError("Value dictionary is required for LDAPRecord initialization.")
+				raise ValueError("Main value is required for LDAPRecord initialization.")
 		# Zone Type Checks
 		if zone_type != "fwdLookup":
 			raise ValueError(
@@ -507,7 +507,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 
 	def __attributes__(self):
 		# Exclude specific keys from self record attributes
-		excluded_keys = ["rawEntry", "connection", "ldap_info"]
+		excluded_keys = ["raw_entry", "connection", "ldap_info"]
 		return [v for v in self.__dict__.keys() if v not in excluded_keys]
 
 	def __printAttributes__(self, print_raw_data=False):
