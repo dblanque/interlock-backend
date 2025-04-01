@@ -906,20 +906,15 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 
 		# Check if Entry has more than one Record
 		# More than one record -> Delete Record Byte Data
-		if len(self.raw_entry["raw_attributes"]["dnsRecord"]) > 1:
-			try:
+		try:
+			if len(self.raw_entry["raw_attributes"]["dnsRecord"]) > 1:
 				self.connection.modify(
 					self.distinguished_name, {"dnsRecord": [(MODIFY_DELETE, self.as_bytes)]}
 				)
-			except Exception as e:
-				logger.error(e)
-				raise e
-		else:
-			try:
+			else: # Delete full entry
 				self.connection.delete(self.distinguished_name)
-			except Exception as e:
-				logger.error(e)
-				logger.error(record_to_dict(dnstool.DNS_RECORD(self.as_bytes)))
-				raise e
+		except Exception as e:
+			logger.exception(e)
+			raise exc_base.CoreException from e
 		# Only record in Entry -> Delete entire Entry
 		return self.connection.result

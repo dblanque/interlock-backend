@@ -1930,17 +1930,87 @@ class TestLDAPRecord:
 			return_value=m_record_bytes
 		)
 		result = f_record_instance_type_a.delete()
+		f_connection.modify.assert_not_called()
 		f_connection.delete.assert_called_once_with(f_record_instance_type_a.distinguished_name)
 		m_as_bytes.assert_called_once()
 		assert result == "result"
 
-	# test delete non existing entry raise
-	# test connection delete exceptions
-	# def test_delete_partial_entry(
-	# 		self,
-	# 		mocker,
-	# 		f_record_instance_type_a: LDAPRecord,
-	# 		f_connection: Connection,
-	# 		f_dns_zones
-	# 	):
-	# 	assert False is True
+	def test_delete_partial_entry(
+			self,
+			mocker,
+			f_record_instance_type_a: LDAPRecord,
+			f_connection: Connection,
+			f_dns_zones
+		):
+		m_record_bytes = b"record_a"
+		f_record_instance_type_a.raw_entry = {
+			"raw_attributes":{
+				"dnsRecord": [m_record_bytes, b"another_record"],
+			}
+		}
+		m_as_bytes = mocker.patch.object(
+			LDAPRecord,
+			"as_bytes",
+			new_callable=mocker.PropertyMock,
+			return_value=m_record_bytes
+		)
+		result = f_record_instance_type_a.delete()
+		f_connection.delete.assert_not_called()
+		f_connection.modify.assert_called_once_with(
+			f_record_instance_type_a.distinguished_name,
+			{"dnsRecord": [(MODIFY_DELETE, m_record_bytes)]}
+		)
+		m_as_bytes.call_count == 2
+		assert result == "result"
+
+	@pytest.mark.parametrize(
+		"raw_entry_records",
+		(
+			[b"record_a", b"another_record"],
+			[b"record_a"]
+		)
+	)
+	def test_delete_entry_raises(
+			self,
+			mocker,
+			raw_entry_records,
+			f_record_instance_type_a: LDAPRecord,
+			f_connection: Connection,
+			f_dns_zones
+		):
+		m_logger = mocker.patch("core.models.dns.logger", mocker.MagicMock())
+		f_record_instance_type_a.raw_entry = {
+			"raw_attributes":{
+				"dnsRecord": raw_entry_records,
+			}
+		}
+		m_as_bytes = mocker.patch.object(
+			LDAPRecord,
+			"as_bytes",
+			new_callable=mocker.PropertyMock,
+			return_value=raw_entry_records[0]
+		)
+		f_connection.modify = mocker.Mock(side_effect=Exception)
+		f_connection.delete = mocker.Mock(side_effect=Exception)
+		with pytest.raises(exc_base.CoreException):
+			f_record_instance_type_a.delete()
+		m_logger.exception.assert_called_once()
+
+	@pytest.mark.parametrize(
+		"test_value",
+		(
+			None,
+			{}
+		)
+	)
+	def test_delete_raise_no_entry(
+			self,
+			mocker,
+			test_value,
+			f_record_instance_type_a: LDAPRecord,
+			f_connection: Connection,
+			f_dns_zones
+		):
+		f_record_instance_type_a.raw_entry = test_value
+		with pytest.raises(exc_dns.DNSRecordEntryDoesNotExist):
+			f_record_instance_type_a.delete()
