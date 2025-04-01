@@ -12,7 +12,7 @@ from core.exceptions import base as exc_base, ldap as exc_ldap, dns as exc_dns
 
 ### Models
 from core.views.mixins.logs import LogMixin
-from core.models.dns import LDAPRecord, get_main_field_from_record_type
+from core.models.dns import LDAPRecord, record_type_main_field
 from core.models.structs.ldap_dns_record import RECORD_MAPPINGS, RecordTypes
 from core.models.validators.ldap_dns_record import FIELD_VALIDATORS as DNS_FIELD_VALIDATORS
 from core.models.validators import ldap_dns_record as dnsValidators
@@ -153,7 +153,7 @@ class DNSRecordMixin(DomainViewMixin):
 			record_name=record_name,
 			record_zone=record_zone,
 			record_type=record_type,
-			record_main_value=record_data[get_main_field_from_record_type(record_type)]
+			record_main_value=record_data[record_type_main_field(record_type)]
 		)
 
 		dnsRecord.create(values=record_data)
@@ -202,7 +202,7 @@ class DNSRecordMixin(DomainViewMixin):
 			record_name=record_name,
 			record_zone=record_zone,
 			record_type=record_type,
-			record_main_value=record_data[get_main_field_from_record_type(record_type)]
+			record_main_value=record_data[record_type_main_field(record_type)]
 		)
 
 		# ! If Record Name is being changed create the new one and delete the old.
@@ -212,7 +212,7 @@ class DNSRecordMixin(DomainViewMixin):
 				record_name=old_record_name,
 				record_zone=old_record_zone,
 				record_type=old_record_type,
-				record_main_value=old_record_data[get_main_field_from_record_type(old_record_type)]
+				record_main_value=old_record_data[record_type_main_field(old_record_type)]
 			)
 			# Create new Record
 			result = dnsRecord.create(values=record_data)
@@ -259,7 +259,7 @@ class DNSRecordMixin(DomainViewMixin):
 			record_name=record_name,
 			record_zone=record_zone,
 			record_type=record_type,
-			record_main_value=record_data[get_main_field_from_record_type(record_type)]
+			record_main_value=record_data[record_type_main_field(record_type)]
 		)
 
 		try:

@@ -129,9 +129,9 @@ class SerialGenerator:
 
 
 class LDAPRecordMixin:
-	def get_soa_object(self: "LDAPRecord") -> "LDAPRecord":
+	def get_soa_entry(self: "LDAPRecord") -> "LDAPRecord":
 		if self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
-			raise Exception("Unhandled SOA Recursion.")
+			raise exc_base.CoreException("SOA Recursion Exception (get_soa_entry).")
 		return LDAPRecord(
 			connection=self.connection,
 			record_name="@",
@@ -140,8 +140,11 @@ class LDAPRecordMixin:
 		)
 
 	def get_soa(self: "LDAPRecord") -> None:
+		if self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
+			raise exc_base.CoreException("SOA Recursion Exception (get_soa).")
+
 		try:
-			self.soa_object = self.get_soa_object()
+			self.soa_object = self.get_soa_entry()
 		except:
 			logger.error(traceback.format_exc())
 			raise exc_dns.DNSCouldNotGetSOA
@@ -157,6 +160,9 @@ class LDAPRecordMixin:
 		Returns:
 			int
 		"""
+		if self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
+			raise exc_base.CoreException("SOA Recursion Exception (get_soa_serial).")
+
 		self.get_soa()
 		if self.soa["dwSerialNo"] != self.soa["serial"]:
 			raise exc_dns.DNSRecordDataMalformed
@@ -178,6 +184,7 @@ class LDAPRecordMixin:
 	def get_serial(self: "LDAPRecord", record_values, old_serial=None) -> int:
 		if self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
 			return int(record_values["dwSerialNo"])
+
 		if not "serial" in record_values:
 			return self.get_soa_serial()
 
@@ -215,18 +222,26 @@ class LDAPRecordMixin:
 		except:
 			raise Exception("LDAPRecord could not obtain a valid main_field key.")
 
-	def record_in_entry(self: "LDAPRecord") -> bool:
+	def record_in_entry(self: "LDAPRecord", values: dict = None) -> bool:
 		"""
-		Checks if the record exists in the current LDAP Entry
+		Checks if the record exists in the current LDAP Entry.
 
 		Args:
-			main_field (str): The main value field for this record
-			main_field_val: The main value for this record
+			values (dict): If passed will check against dict. Defaults to None.
 
 		Returns:
 			bool
 		"""
-		if not hasattr(self, "data"):
+		if values is not None and not isinstance(values, dict):
+			raise TypeError("values must be a dictionary or None.")
+
+		check_against = None
+		if hasattr(self, "main_value"):
+			check_against = self.main_value
+		if values:
+			if self.main_field in values:
+				check_against = values[self.main_field]
+		if not hasattr(self, "entry"):
 			return False
 		if self.entry:
 			for record in self.entry:
@@ -234,7 +249,7 @@ class LDAPRecordMixin:
 					if (
 						record["name"] == self.name
 						and record["type"] == self.type
-						and record[self.main_field] == self.main_value
+						and record[self.main_field] == check_against
 					):
 						return True
 		return False
@@ -260,7 +275,10 @@ class LDAPRecordMixin:
 					logger.error(
 						f"{self.mapping['name']} Record already exists in an LDAP Entry and must be unique in Zone."
 					)
-					logger.error(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
+					try:
+						logger.error(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
+					except:
+						pass
 					raise exc_dns.DNSRecordExistsConflict(
 						data={
 							"type_name": self.mapping["name"],
@@ -288,7 +306,7 @@ class LDAPRecordMixin:
 		"""
 		# All other types
 		if self.multi_record or (not self.multi_record and create):
-			if self.record_in_entry():
+			if self.record_in_entry(values=values):
 				logger.error(
 					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[self.main_field]})"
 				)
@@ -307,10 +325,9 @@ class LDAPRecordMixin:
 				)
 
 		# Check for record type conflicts in Entry
-		try:
-			self.record_has_collision()
-		except Exception as e:
-			logger.error(e)
+		record_has_collision, record_error_msg = self.record_has_collision()
+		if record_has_collision:
+			logger.error(record_error_msg)
 			raise exc_dns.DNSRecordTypeConflict
 
 	def validate_create(self: "LDAPRecord", values: dict):
@@ -322,7 +339,7 @@ class LDAPRecordMixin:
 	def validate_update(self: "LDAPRecord", new_values: dict):
 		self._validate_create_update(values=new_values, create=False)
 
-	def record_has_collision(self: "LDAPRecord", raise_exc=True) -> bool | Exception:
+	def record_has_collision(self: "LDAPRecord") -> tuple[bool, str]:
 		"""
 		Checks if a record of this type conflicts with another record type
 		in this entry.
@@ -333,7 +350,7 @@ class LDAPRecordMixin:
 		Raises Exception by default.
 
 		Returns:
-			bool | Exception
+			tuple(has_collision: bool, error_message: str)
 		"""
 		if self.entry:
 			if len(self.entry) > 0:
@@ -366,11 +383,9 @@ class LDAPRecordMixin:
 								record,
 							)
 						)
-				if exc and raise_exc:
-					raise Exception(msg)
-				elif exc:
-					return True
-		return False
+				if exc:
+					return True, msg
+		return False, ""
 
 
 class LDAPRecordRawAttributes(TypedDict):
@@ -401,6 +416,19 @@ class LDAPRecordEntry(TypedDict):
 
 
 def get_record_mapping_from_type(t: RecordTypes) -> RecordMapping:
+	"""Gets the corresponding mapping for a record type.
+
+	Args:
+		t (RecordTypes): The record type to fetch the mapping for.
+
+	Raises:
+		ValueError: If t is None
+		TypeError: If t is not a valid int
+		TypeError: If t is not a valid RecordTypes Enum value.
+
+	Returns:
+		RecordMapping: A typed dictionary.
+	"""
 	if t is None:
 		raise ValueError("Record Type cannot be none (LDAPRecord Object Class)")
 	elif not isinstance(t, int):
@@ -409,7 +437,15 @@ def get_record_mapping_from_type(t: RecordTypes) -> RecordMapping:
 		raise TypeError("LDAPRecord type not found in Record Type Mappings.")
 	return RECORD_MAPPINGS[t]
 
-def get_main_field_from_record_type(t: RecordTypes) -> RecordMapping:
+def record_type_main_field(t: RecordTypes) -> str:
+	"""Gets the corresponding main field identifier for a record type.
+
+	Args:
+		t (RecordTypes): The record type to fetch the main field for.
+
+	Returns:
+		str: Key string for field
+	"""
 	mapping = get_record_mapping_from_type(t)
 	if "main_field" in mapping:
 		return mapping["main_field"]
@@ -542,6 +578,8 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 
 	@property
 	def data(self) -> dict:
+		if not self.entry:
+			raise exc_dns.DNSRecordEntryDoesNotExist
 		if self.main_value is None and self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
 			return self.entry[0]
 		for index, record in enumerate(self.entry):
@@ -666,20 +704,23 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 
 		if "ttl" not in values:
 			values["ttl"] = self.DEFAULT_TTL
-		self.serial = self.get_serial(record_values=values)
+		try:
+			self.serial = self.get_serial(record_values=values)
+		except Exception as e:
+			raise exc_dns.DNSCouldNotGetSerial from e
 
 		try:
 			self.structure = self.make_record_bytes(values, ttl=values["ttl"], serial=self.serial)
 		except Exception as e:
 			logger.exception(e)
-			raise exc_dns.DNSRecordCreate
+			raise exc_dns.DNSRecordCreate from e
 
 		# ! For debugging, do the decoding process to see if it's not a broken entry
 		try:
 			result = self.structure.getData()
 		except Exception as e:
 			logger.exception(e)
-			raise exc_dns.DNSRecordCreate
+			raise exc_dns.DNSRecordCreate from e
 
 		## Check if LDAP Entry Exists ##
 		# LDAP Entry does not exist
@@ -798,6 +839,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			logger.error(traceback.format_exc())
 			raise exc_dns.DNSCouldNotGetSerial
 
+		# Make new record struct
 		self.structure = self.make_record_bytes(
 			values=new_values,
 			ttl=new_values["ttl"],
