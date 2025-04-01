@@ -906,7 +906,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 
 		# Check if Entry has more than one Record
 		# More than one record -> Delete Record Byte Data
-		if len(self.raw_entry["raw_attributes"]["dnsRecord"]) >= 2:
+		if len(self.raw_entry["raw_attributes"]["dnsRecord"]) > 1:
 			try:
 				self.connection.modify(
 					self.distinguished_name, {"dnsRecord": [(MODIFY_DELETE, self.as_bytes)]}
