@@ -31,6 +31,7 @@ RecordMapping = TypedDict(
 	},
 )
 
+RECORD_TYPE_ENUM_PREFIX = "DNS_RECORD_TYPE_"
 RECORD_MAPPINGS: dict[RecordMapping]
 RECORD_MAPPINGS = {
 	RecordTypes.DNS_RECORD_TYPE_ZERO.value: {
