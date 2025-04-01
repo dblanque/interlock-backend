@@ -23,6 +23,7 @@ from core.models.structs.ldap_dns_record import (
 	DNS_RPC_RECORD_NAME_PREFERENCE,
 	DNS_COUNT_NAME,
 	DNS_RPC_NAME,
+	RECORD_TYPE_ENUM_PREFIX,
 )
 from core.models.types.ldap_dns_record import RecordTypes
 
@@ -34,7 +35,7 @@ import traceback
 from core.utils.dns import *
 from core.utils import dnstool
 from core.utils.dnstool import new_record, record_to_dict
-from ldap3 import MODIFY_ADD, MODIFY_DELETE, MODIFY_INCREMENT, MODIFY_REPLACE, Connection
+from ldap3 import MODIFY_ADD, MODIFY_DELETE, Connection
 import logging
 from typing import TypedDict, Iterable
 from datetime import datetime
@@ -177,9 +178,11 @@ class LDAPRecordMixin:
 					)
 				#########################################################
 				return serial + 1
+		except exc_dns.DNSCouldNotGetSOA:
+			raise
 		except Exception as e:
 			logger.exception(e)
-			raise exc_dns.DNSCouldNotGetSOA
+			raise exc_dns.DNSCouldNotGetSOA from e
 
 	def get_serial(self: "LDAPRecord", record_values, old_serial=None) -> int:
 		if self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
@@ -333,7 +336,9 @@ class LDAPRecordMixin:
 	def validate_create(self: "LDAPRecord", values: dict):
 		# If SOA Type
 		if self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
-			return self.validate_soa()
+			self.validate_soa()
+			return
+		# All other types
 		self._validate_create_update(values=values)
 
 	def validate_update(self: "LDAPRecord", new_values: dict):
@@ -415,7 +420,7 @@ class LDAPRecordEntry(TypedDict):
 	type: str
 
 
-def get_record_mapping_from_type(t: RecordTypes) -> RecordMapping:
+def get_record_mapping_from_type(t: RecordTypes | int) -> RecordMapping:
 	"""Gets the corresponding mapping for a record type.
 
 	Args:
@@ -437,7 +442,7 @@ def get_record_mapping_from_type(t: RecordTypes) -> RecordMapping:
 		raise TypeError("LDAPRecord type not found in Record Type Mappings.")
 	return RECORD_MAPPINGS[t]
 
-def record_type_main_field(t: RecordTypes) -> str:
+def record_type_main_field(t: RecordTypes | int | str) -> str:
 	"""Gets the corresponding main field identifier for a record type.
 
 	Args:
@@ -446,6 +451,22 @@ def record_type_main_field(t: RecordTypes) -> str:
 	Returns:
 		str: Key string for field
 	"""
+	if (
+		not isinstance(t, RecordTypes) and
+		not isinstance(t, int) and
+		not isinstance(t, str)
+	):
+		raise TypeError(f"t must be a valid RecordType Enum, RecordType int, or string identifier.")
+	if isinstance(t, str):
+		t_str = t.upper()
+		if not t_str.startswith(RECORD_TYPE_ENUM_PREFIX):
+			t_str = (RECORD_TYPE_ENUM_PREFIX + t).upper()
+		try:
+			t = RecordTypes[t_str].value
+		except:
+			raise ValueError("Could not fetch RecordTypes value from string identifier.")
+	elif isinstance(t, RecordTypes):
+		t = t.value
 	mapping = get_record_mapping_from_type(t)
 	if "main_field" in mapping:
 		return mapping["main_field"]
