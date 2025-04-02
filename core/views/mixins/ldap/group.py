@@ -80,7 +80,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 					args = {
 						"connection": connection,
 						"dn": g.distinguishedName,
-						"ldapAttributes": attributes,
+						"ldap_attrs": attributes,
 					}
 					result = LDAPObject(**args)
 					connection.unbind()
@@ -243,10 +243,10 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 						args = {
 							"connection": self.ldap_connection,
 							"dn": u,
-							"ldapAttributes": memberAttributes,
+							"ldap_attrs": memberAttributes,
 						}
 						memberObject = LDAPObject(**args)
-						self.ldap_connection = memberObject.__getConnection__()
+						self.ldap_connection = memberObject.__get_connection__()
 						memberArray.append(memberObject.attributes)
 					group_dict[str_key] = memberArray
 				# Do the standard for every other key
@@ -287,8 +287,8 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		args = {
 			"connection": self.ldap_connection,
-			"ldapFilter": self.ldap_filter_object,
-			"ldapAttributes": self.ldap_filter_attr,
+			"ldap_filter": self.ldap_filter_object,
+			"ldap_attrs": self.ldap_filter_attr,
 			"hideErrors": True,
 		}
 
@@ -401,7 +401,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		args = {
 			"connection": self.ldap_connection,
 			"dn": distinguished_name,
-			"ldapAttributes": self.ldap_filter_attr,
+			"ldap_attrs": self.ldap_filter_attr,
 			"hideErrors": True,
 		}
 

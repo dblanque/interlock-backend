@@ -55,11 +55,11 @@ def recursiveFindInDict(obj, key):
 # if children have children call itself
 
 
-def __getCN__(dn):
+def __get_common_name__(dn):
 	return str(dn).split(",")[0].split("=")[-1]
 
 
-def __getRelativeDN__(dn):
+def __get_relative_dn__(dn):
 	return str(dn).split(",").pop(0).join(",")
 
 

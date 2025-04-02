@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 	def processFilter(self, data, filterDict=None):
-		ldapFilter = ""
+		ldap_filter = ""
 
 		if "filter" in data and "iexact" in data["filter"]:
 			logger.debug("Dirtree fetching with Filter iexact")
@@ -60,15 +60,15 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 							operator = LDAP_FILTER_OR
 						else:
 							operator = LDAP_FILTER_AND
-						ldapFilter = search_filter_add(
-							ldapFilter,
+						ldap_filter = search_filter_add(
+							ldap_filter,
 							f"{lookup_type}={f}",
 							operator=operator,
 							negate=lookup_exclude,
 						)
 					else:
 						lookup_type = lookup_value
-						ldapFilter = search_filter_add(ldapFilter, lookup_type + "=" + f)
+						ldap_filter = search_filter_add(ldap_filter, lookup_type + "=" + f)
 		else:
 			logger.debug("Dirtree fetching with Standard Exclusion Filter")
 			if filterDict is None:
@@ -83,7 +83,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 						if f in filterDict:
 							del filterDict[f]
 
-			ldapFilter = search_filter_from_dict(filterDict)
+			ldap_filter = search_filter_from_dict(filterDict)
 
 			# Where f is Filter Value, fType is the filter Type (not a Jaguar)
 			# Example: objectClass=computer
@@ -93,14 +93,14 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 				if len(data["filter"]["exclude"]) > 0:
 					for f in data["filter"]["exclude"]:
 						lookup_type = data["filter"]["exclude"][f]
-						ldapFilter = search_filter_add(
-							ldapFilter, f"{lookup_type}={f}", negate=True
+						ldap_filter = search_filter_add(
+							ldap_filter, f"{lookup_type}={f}", negate=True
 						)
 
 		logger.debug("LDAP Filter for Dirtree: ")
-		logger.debug(ldapFilter)
+		logger.debug(ldap_filter)
 
-		return ldapFilter
+		return ldap_filter
 
 	def move_or_rename_object(
 		self, distinguished_name: str, relative_dn: str = None, ldap_path: str = None

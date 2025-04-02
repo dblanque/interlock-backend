@@ -27,19 +27,30 @@ logger = getLogger()
 
 class LDAPObjectOptions(TypedDict):
 	name: NotRequired[str]
-	searchBase: NotRequired[str]
+	search_base: NotRequired[str]
 	connection: Required[Connection]
-	usernameIdentifier: str
-	subobjectId: int
-	excludedLdapAttributes: NotRequired[list[str]]
-	requiredLdapAttributes: NotRequired[list[str]]
-	containerTypes: NotRequired[list[str]]
-	userClasses: NotRequired[list[str]]
+	username_identifier: str
+	excluded_ldap_attrs: NotRequired[list[str]]
+	required_ldap_attrs: NotRequired[list[str]]
+	container_types: NotRequired[list[str]]
+	user_types: NotRequired[list[str]]
 	recursive: NotRequired[bool]
-	testFetch: NotRequired[bool]
-	ldapAttributes: NotRequired[list[str]]
-	ldapFilter: NotRequired[str]
+	test_fetch: NotRequired[bool]
+	ldap_attrs: NotRequired[list[str]]
+	ldap_filter: NotRequired[str]
 
+DEFAULT_EXCLUDED_LDAP_ATTRS = ["objectGUID", "objectSid"]
+DEFAULT_REQUIRED_LDAP_ATTRS = [
+	"distinguishedName",
+	"objectCategory",
+	"objectClass",
+]
+DEFAULT_CONTAINER_TYPES = ["container", "organizational-unit"]
+DEFAULT_USER_TYPES = [
+	"user",
+	"person",
+	"organizationalPerson",
+]
 
 class LDAPObject:
 	"""
@@ -54,12 +65,12 @@ class LDAPObject:
 	})
 
 	#### Arguments
-	 - searchBase: (REQUIRED) | DN of Object to Search
+	 - search_base: (REQUIRED) | DN of Object to Search
 	 - connection: (REQUIRED) | LDAP Connection Object
 	 - recursive: (OPTIONAL) | Whether or not the Object should be Recursively searched
-	 - ldapFilter: (OPTIONAL) | LDAP Formatted Filter
-	 - ldapAttributes: (OPTIONAL) | LDAP Attributes to Fetch
-	 - excludedLdapAttributes: (OPTIONAL) | LDAP Attributes to Exclude
+	 - ldap_filter: (OPTIONAL) | LDAP Formatted Filter
+	 - ldap_attrs: (OPTIONAL) | LDAP Attributes to Fetch
+	 - excluded_ldap_attrs: (OPTIONAL) | LDAP Attributes to Exclude
 	"""
 
 	# Django
@@ -68,94 +79,84 @@ class LDAPObject:
 	# Type Hints
 	attributes: dict
 	connection: Connection
-	containerTypes: list[str]
+	container_types: list[str]
 	entry: object
-	excludedLdapAttributes: list[str]
-	ldapAttributes: list[str]
-	ldapFilter: str
+	excluded_ldap_attrs: list[str]
+	ldap_attrs: list[str]
+	ldap_filter: str
 	name: str
 	recursive: bool
-	requiredLdapAttributes: list[str]
-	searchBase: str
-	subobjectId: int
-	testFetch: bool
-	userClasses: list[str]
-	usernameIdentifier: str
+	required_ldap_attrs: list[str]
+	search_base: str
+	test_fetch: bool
+	user_types: list[str]
+	username_identifier: str
 
-	def __init__(self, auto_fetch=True, **kwargs):
+	def __init__(self, auto_fetch=True, **kwargs) -> None:
 		if "connection" not in kwargs:
 			raise Exception("LDAP Object requires an LDAP Connection to Initialize")
-		if "dn" not in kwargs and "ldapFilter" not in kwargs:
+		if "dn" not in kwargs and "ldap_filter" not in kwargs:
 			raise Exception(
-				"LDAP Object requires a distinguishedName or a valid ldapFilter to search for the object"
+				"LDAP Object requires a Distinguished Name or a valid ldap_filter to search for the object"
 			)
 
 		# Set LDAPTree Default Values
 		self.entry = None
 		self.attributes = None
 		self.name = RuntimeSettings.LDAP_AUTH_SEARCH_BASE
-		self.searchBase = RuntimeSettings.LDAP_AUTH_SEARCH_BASE
+		self.search_base = RuntimeSettings.LDAP_AUTH_SEARCH_BASE
 		self.connection = kwargs.pop("connection")
-		self.usernameIdentifier = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
-		self.subobjectId = 0
-		self.excludedLdapAttributes = ["objectGUID", "objectSid"]
-		self.requiredLdapAttributes = [
-			"distinguishedName",
-			"objectCategory",
-			"objectClass",
-		]
-		self.containerTypes = ["container", "organizational-unit"]
-		self.userClasses = [
-			"user",
-			"person",
-			"organizationalPerson",
-		]
+		self.username_identifier = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
+		self.excluded_ldap_attrs = DEFAULT_EXCLUDED_LDAP_ATTRS
+		self.required_ldap_attrs = DEFAULT_REQUIRED_LDAP_ATTRS
+		self.container_types = DEFAULT_CONTAINER_TYPES
+		self.user_types = DEFAULT_USER_TYPES
 		self.recursive = False
-		self.testFetch = False
-		self.ldapAttributes = RuntimeSettings.LDAP_DIRTREE_ATTRIBUTES
+		self.test_fetch = False
+		self.ldap_attrs = RuntimeSettings.LDAP_DIRTREE_ATTRIBUTES
 		if "dn" in kwargs:
-			self.ldapFilter = search_filter_add("", f"distinguishedName={str(kwargs['dn'])}")
+			self.ldap_filter = search_filter_add(None, f"distinguishedName={str(kwargs['dn'])}")
 
-		self.__resetKwargs__(kwargs)
+		self.__set_kwargs__(kwargs)
 
 		if auto_fetch:
-			self.__fetchObject__()
+			self.__fetch_object__()
 
-	def __resetKwargs__(self, kwargs):
+	def __set_kwargs__(self, kwargs):
 		# Set passed kwargs from Object Call
 		for kw in kwargs:
 			setattr(self, kw, kwargs[kw])
 
 		# Set required attributes, these are unremovable from the tree searches
-		for attr in self.requiredLdapAttributes:
-			if attr not in self.ldapAttributes:
-				self.ldapAttributes.append(attr)
+		for attr in self.required_ldap_attrs:
+			if attr not in self.ldap_attrs:
+				self.ldap_attrs.append(attr)
 
-	def __getConnection__(self):
+	def __get_connection__(self):
 		return self.connection
 
-	def __getEntry__(self):
+	def __get_entry__(self):
 		return self.entry
 
-	def __getObject__(self):
+	def __get_object__(self):
 		return self.attributes
 
-	def __fetchObject__(self):
+	def __fetch_object__(self):
 		self.connection.search(
-			search_base=self.searchBase,
-			search_filter=self.ldapFilter,
+			search_base=self.search_base,
+			search_filter=self.ldap_filter,
 			search_scope="SUBTREE",
-			attributes=self.ldapAttributes,
+			attributes=self.ldap_attrs,
 		)
-		searchResult = self.connection.entries
-		if len(searchResult) <= 0:
+		search_result = self.connection.entries
+		if len(search_result) <= 0:
 			return
 		try:
-			self.entry = searchResult[0]
+			self.entry = search_result[0]
 		except Exception as e:
 			if not hasattr(self, "hideErrors") == True:
 				logger.error("Search Result")
-				logger.error(searchResult)
+				logger.error(search_result)
 				logger.error("Error")
 				logger.exception(e)
 			raise ValueError("Error setting LDAP Object Entry Result") from e
@@ -173,18 +174,18 @@ class LDAPObject:
 		):
 			self.attributes["builtin"] = True
 
-		for attr_key in self.ldapAttributes:
+		for attr_key in self.ldap_attrs:
 			attr_value = getattr(self.entry, attr_key)
 			str_key = str(attr_key)
 			str_value = str(attr_value)
-			if attr_key == self.usernameIdentifier:
+			if attr_key == self.username_identifier:
 				self.attributes[attr_key] = str_value
 				self.attributes["username"] = str_value
 			elif attr_key == "cn" and "group" in self.entry["objectClass"]:
 				value = getattr(self.entry, attr_key)
 				self.attributes[attr_key] = str_value
 				self.attributes["groupname"] = str_value
-			elif attr_key == "objectSid" and self.__getCN__(distinguishedName).lower() != "builtin":
+			elif attr_key == "objectSid" and self.__get_common_name__(distinguishedName).lower() != "builtin":
 				value = getattr(self.entry, attr_key)
 				try:
 					sid = SID(value)
@@ -205,8 +206,8 @@ class LDAPObject:
 					self.attributes[str_key] = str_value
 		return self.attributes
 
-	def __ldapAttributes__(self):
+	def __ldap_attrs__(self):
 		return self.attributes.keys()
 
-	def __getCN__(self, dn):
+	def __get_common_name__(self, dn):
 		return str(dn).split(",")[0].split("=")[-1]

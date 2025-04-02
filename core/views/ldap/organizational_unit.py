@@ -73,12 +73,12 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 
 			# Read-only end-point, build filters from default dictionary
 			filterDict = RuntimeSettings.LDAP_DIRTREE_OU_FILTER
-			ldapFilter = search_filter_from_dict(filterDict)
+			ldap_filter = search_filter_from_dict(filterDict)
 			ldap_tree_options: LDAPTreeOptions = {
 				"connection": self.ldap_connection,
 				"recursive": True,
-				"ldapFilter": ldapFilter,
-				"ldapAttributes": attributesToSearch,
+				"ldap_filter": ldap_filter,
+				"ldap_attrs": attributesToSearch,
 			}
 
 			try:
@@ -146,8 +146,8 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			ldap_tree_options: LDAPTreeOptions = {
 				"connection": self.ldap_connection,
 				"recursive": True,
-				"ldapFilter": ldap_filter_object,
-				"ldapAttributes": ldap_filter_attr,
+				"ldap_filter": ldap_filter_object,
+				"ldap_attrs": ldap_filter_attr,
 			}
 
 			# Should have:

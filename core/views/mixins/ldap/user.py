@@ -111,8 +111,8 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		object_class_filter = search_filter_add(object_class_filter, idFilter)
 		args = {
 			"connection": self.ldap_connection,
-			"ldapFilter": object_class_filter,
-			"ldapAttributes": attributes,
+			"ldap_filter": object_class_filter,
+			"ldap_attrs": attributes,
 		}
 		group = LDAPObject(**args)
 		return group.attributes
@@ -549,8 +549,8 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		)
 		ldap_object_options: LDAPObjectOptions = {
 			"connection": self.ldap_connection,
-			"ldapFilter": self.ldap_filter_object,
-			"ldapAttributes": self.ldap_filter_attr,
+			"ldap_filter": self.ldap_filter_object,
+			"ldap_attrs": self.ldap_filter_attr,
 		}
 
 		user_obj = LDAPObject(**ldap_object_options)
