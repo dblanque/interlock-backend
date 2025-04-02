@@ -71,7 +71,6 @@ class LDAPObject:
 	containerTypes: list[str]
 	entry: object
 	excludedLdapAttributes: list[str]
-	ldapAttributes: list
 	ldapAttributes: list[str]
 	ldapFilter: str
 	name: str
@@ -83,7 +82,7 @@ class LDAPObject:
 	userClasses: list[str]
 	usernameIdentifier: str
 
-	def __init__(self, **kwargs):
+	def __init__(self, auto_fetch=True, **kwargs):
 		if "connection" not in kwargs:
 			raise Exception("LDAP Object requires an LDAP Connection to Initialize")
 		if "dn" not in kwargs and "ldapFilter" not in kwargs:
@@ -119,7 +118,8 @@ class LDAPObject:
 
 		self.__resetKwargs__(kwargs)
 
-		self.__fetchObject__()
+		if auto_fetch:
+			self.__fetchObject__()
 
 	def __resetKwargs__(self, kwargs):
 		# Set passed kwargs from Object Call
