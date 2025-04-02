@@ -599,15 +599,11 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 
 	@property
 	def data(self) -> dict:
-		if not self.entry:
+		if not hasattr(self, "entry") or not self.entry:
 			raise exc_dns.DNSRecordEntryDoesNotExist
-		if self.main_value is None and self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
-			return self.entry[0]
-		for index, record in enumerate(self.entry):
-			if record["type"] == self.type and record[self.main_field] == self.main_value:
-				return self.entry[index]
+		return self.entry[self.get_record_index_from_entry()]
 
-	@property	
+	@property
 	def as_dict(self) -> dict:
 		return self.data
 
@@ -624,11 +620,10 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		Returns:
 			DNS_RECORD: record_bytes
 		"""
-		if not self.raw_entry:
+		if not hasattr(self, "raw_entry") or not self.raw_entry:
 			raise exc_dns.DNSRecordEntryDoesNotExist
 		_raw_entry_records = self.raw_entry["raw_attributes"]["dnsRecord"]
-		_i = self.get_record_index_from_entry()
-		return _raw_entry_records[_i]
+		return _raw_entry_records[self.get_record_index_from_entry()]
 
 	def make_record_bytes(self, values: dict, serial: int | str, ttl: int = None) -> ldr.DNS_RECORD:
 		"""Make record byte struct from values dictionary
