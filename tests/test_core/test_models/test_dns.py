@@ -44,17 +44,6 @@ def f_runtime_settings(g_runtime_settings, mocker):
 	mocker.patch("core.models.dns.RuntimeSettings", g_runtime_settings)
 	return g_runtime_settings
 
-@pytest.fixture
-def f_connection(mocker):
-	m_connection = mocker.MagicMock()
-	m_connection.add = mocker.MagicMock(return_value=None)
-	m_connection.modify = mocker.MagicMock(return_value=None)
-	m_connection.delete = mocker.MagicMock(return_value=None)
-	m_connection.search = mocker.MagicMock(return_value=None)
-	m_connection.result = "result"
-	return m_connection
-
-
 def get_mock_serial(serial: int = 1):
 	if len(str(serial)) >= 10:
 		return serial
