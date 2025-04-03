@@ -103,6 +103,15 @@ class RunningSettingsClass:
 	def __getattribute__(self, name: str):
 		return super().__getattribute__(name)
 
+	def postsync(self) -> None:
+		for f in [
+			self.LDAP_AUTH_USER_FIELDS["username"],
+			"username",
+		]:
+			if not f in self.LDAP_DIRTREE_ATTRIBUTES:
+				self.LDAP_DIRTREE_ATTRIBUTES.append(f)
+		self.LDAP_DIRTREE_ATTRIBUTES = list(set(self.LDAP_DIRTREE_ATTRIBUTES))
+
 	def resync(self) -> bool:
 		self.__newUuid__()
 		try:
@@ -111,6 +120,7 @@ class RunningSettingsClass:
 				setattr(self, k, v)
 		except:
 			return False
+		self.postsync()
 		return True
 
 
