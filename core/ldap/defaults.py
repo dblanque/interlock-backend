@@ -152,7 +152,7 @@ LDAP_DIRTREE_CN_FILTER = {
 	"computer": "objectClass",
 }
 
-LDAP_DIRTREE_ATTRIBUTES = [
+LDAP_DIRTREE_ATTRIBUTES = list({
 	# User Attrs
 	"givenName",
 	"sn",
@@ -167,7 +167,6 @@ LDAP_DIRTREE_ATTRIBUTES = [
 	"co",  # 2 Letter Code for Country
 	"c",  # Full Country Name
 	"wWWHomePage",
-	"distinguishedName",
 	"userPrincipalName",
 	"userAccountControl",  # Permission ACLs
 	"whenCreated",
@@ -182,15 +181,21 @@ LDAP_DIRTREE_ATTRIBUTES = [
 	# Group Attrs
 	"cn",
 	"member",
-	"distinguishedName",
 	"groupType",
+	# User & Group Attrs
+	"distinguishedName",
 	"objectSid",
-]
+})
 
 # See https://en.wikipedia.org/wiki/LDAP_Data_Interchange_Format
-LDAP_LDIF_IDENTIFIERS = ["dn", "dc", "ou", "cn"]
+LDAP_LDIF_IDENTIFIERS = list({
+	"dn",
+	"dc",
+	"ou",
+	"cn"
+})
 
-LDAP_OPERATIONS = [
+LDAP_OPERATIONS = list({
 	"BIND",
 	"UNBIND",
 	"ADD",
@@ -201,7 +206,7 @@ LDAP_OPERATIONS = [
 	"COMPARE",
 	"ABANDON",
 	"EXTENDED",
-]
+})
 
 ################################## Logging #####################################
 LDAP_LOG_READ = False
