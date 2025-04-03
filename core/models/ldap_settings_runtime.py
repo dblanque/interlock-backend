@@ -104,9 +104,6 @@ class RunningSettingsClass:
 		self.resync()
 		self._initialized = True
 
-	def __getattribute__(self, name: str):
-		return super().__getattribute__(name)
-
 	def postsync(self) -> None:
 		for f in [
 			self.LDAP_AUTH_USER_FIELDS["username"],
