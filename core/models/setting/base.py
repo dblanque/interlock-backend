@@ -133,8 +133,11 @@ class BaseSetting(BaseModel):
 
 	@value.setter
 	def value(self, v):
+		# Set unrelated value fields to None
 		for field in self.setting_fields.values():
 			self._set_value(None, value_fields=field)
+
+		# Set corresponding value field
 		self._set_value(v, value_fields=self.setting_fields[self.type])
 
 	@property
