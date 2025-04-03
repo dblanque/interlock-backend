@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.models.ldap_settings_db
+# Module: core.models.ldap_settings_runtime
 # Description:	Contains required functions to import LDAP Connection constants
 # from file defaults and database entries.
 #
@@ -34,8 +34,8 @@ this_module = sys.modules[__name__]
 
 # ! You also have to add the settings to the following files:
 # core.models.ldap_settings
-# core.models.ldap_settings_db		<------------ You're Here
-# interlock_backend.ldap.defaults
+# core.models.ldap_settings_runtime <--- You're Here
+# core.ldap.defaults
 class RunningSettingsClass:
 	_instance = None
 	PLAIN_TEXT_BIND_PASSWORD = defaults.PLAIN_TEXT_BIND_PASSWORD
@@ -128,6 +128,10 @@ def get_settings(uuid) -> dict:
 	logger.info(f"Re-synchronizing settings for {this_module} (Configuration Instance {uuid})")
 	active_preset = None
 	r = {}
+
+	for t in [LDAP_PRESET_TABLE, LDAP_SETTING_TABLE]:
+		if not db_table_exists(t):
+			logger.warning("Table %s does not exist, please check migrations.", t)
 
 	if db_table_exists(LDAP_PRESET_TABLE):
 		active_preset = LDAPPreset.objects.get(active=True)
