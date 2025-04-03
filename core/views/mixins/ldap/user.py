@@ -578,16 +578,11 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		### Also add default Users Group to be available as Selectable PID
 		if "primaryGroupID" in self.ldap_filter_attr:
-			try:
-				memberOfObjects.append(GroupViewMixin.getGroupByRID(user_dict["primaryGroupID"]))
-			except:
-				self.ldap_connection.unbind()
-				raise
+			memberOfObjects.append(GroupViewMixin.getGroupByRID(user_dict["primaryGroupID"]))
 
 		if len(memberOfObjects) > 0:
 			user_dict["memberOfObjects"] = memberOfObjects
 		else:
-			self.ldap_connection.unbind()
 			raise exc_user.UserGroupsFetchError
 
 		del memberOfObjects
