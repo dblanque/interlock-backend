@@ -12,7 +12,7 @@
 # - Brian Blanque
 # ---------------------------------- IMPORTS -----------------------------------#
 from core.ldap import defaults
-from .ldap_settings import (
+from core.models.ldap_settings import (
 	LDAP_SETTING_MAP,
 	LDAPSetting,
 	LDAPPreset,
@@ -38,6 +38,7 @@ this_module = sys.modules[__name__]
 # core.ldap.defaults
 class RunningSettingsClass:
 	_instance = None
+	_initialized = False
 	PLAIN_TEXT_BIND_PASSWORD = defaults.PLAIN_TEXT_BIND_PASSWORD
 	LDAP_AUTH_URL = defaults.LDAP_AUTH_URL
 	LDAP_DOMAIN = defaults.LDAP_DOMAIN
@@ -93,12 +94,15 @@ class RunningSettingsClass:
 		self.uuid = uuid1(node=uuid_getnode(), clock_seq=getrandbits(14))
 
 	def __init__(self):
+		if self._initialized:
+			return
 		self.__newUuid__()
 
 		# Set defaults / constants
 		for k, v in defaults.__dict__.items():
 			setattr(self, k, v)
 		self.resync()
+		self._initialized = True
 
 	def __getattribute__(self, name: str):
 		return super().__getattribute__(name)
@@ -112,14 +116,17 @@ class RunningSettingsClass:
 				self.LDAP_DIRTREE_ATTRIBUTES.append(f)
 		self.LDAP_DIRTREE_ATTRIBUTES = list(set(self.LDAP_DIRTREE_ATTRIBUTES))
 
-	def resync(self) -> bool:
+	def resync(self, raise_exc=False) -> bool:
 		self.__newUuid__()
 		try:
 			_current_settings: dict = get_settings(self.uuid)
 			for k, v in _current_settings.items():
 				setattr(self, k, v)
 		except:
-			return False
+			if raise_exc:
+				raise
+			else:
+				return False
 		self.postsync()
 		return True
 
