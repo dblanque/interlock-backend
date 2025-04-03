@@ -128,8 +128,9 @@ class RunningSettingsClass:
 		return True
 
 
-def get_settings(uuid) -> dict:
-	logger.info(f"Re-synchronizing settings for {this_module} (Configuration Instance {uuid})")
+def get_settings(uuid, quiet=False) -> dict:
+	if not quiet:
+		logger.info(f"Re-synchronizing settings for {this_module} (Configuration Instance {uuid})")
 	active_preset = None
 	r = {}
 
