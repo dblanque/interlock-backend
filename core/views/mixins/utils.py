@@ -7,8 +7,10 @@
 # Contains extra utilities and functions
 
 # ---------------------------------- IMPORTS -----------------------------------#
-import socket, struct
-
+from core.ldap.defaults import LDAP_LDIF_IDENTIFIERS
+import socket
+import struct
+from typing import Iterable
 
 def convert_string_to_bytes(string):
 	if not isinstance(string, str):
@@ -48,12 +50,12 @@ def recursiveFindInDict(obj, key):
 			if item is not None:
 				return item
 
-
-# Check if in current level array
-# check if has children
-# if has children check in children array
-# if children have children call itself
-
+def uppercase_ldif_identifiers(v: str):
+	if not isinstance(v, str):
+		raise TypeError("Value must be str.")
+	for ldif_ident in LDAP_LDIF_IDENTIFIERS:
+		v = v.replace(f"{ldif_ident}=",f"{ldif_ident.upper()}=")
+	return v
 
 def __get_common_name__(dn):
 	return str(dn).split(",")[0].split("=")[-1]
@@ -66,3 +68,8 @@ def __get_relative_dn__(dn):
 def testFunc(*args):
 	for i in args:
 		print(i)
+
+def is_non_str_iterable(v):
+	if isinstance(v, str):
+		return False
+	return isinstance(v, Iterable)
