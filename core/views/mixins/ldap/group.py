@@ -48,6 +48,8 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 	ldap_filter_attr = None
 
 	def getGroupByRID(ridToSearch=None, attributes=["objectSid", "distinguishedName"]):
+		if isinstance(ridToSearch, list):
+			ridToSearch = ridToSearch[0]
 		if ridToSearch is None:
 			raise ValueError("RID To Search cannot be None")
 
@@ -55,9 +57,9 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		try:
 			ridToSearch = int(ridToSearch)
 		except Exception as e:
-			print(ridToSearch)
-			print(e)
-			raise ValueError("RID To Search must be an Integer")
+			logger.error(ridToSearch)
+			logger.exception(e)
+			raise ValueError("RID To Search must be an Integer") from e
 
 		with LDAPConnector(force_admin=True) as ldc:
 			connection = ldc.connection
