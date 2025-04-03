@@ -5,6 +5,7 @@ from core.models.ldap_settings_runtime import RunningSettingsClass
 from inspect import getmembers, isroutine
 from core.ldap import defaults as ldap_defaults
 
+
 @pytest.fixture
 def g_runtime_settings(mocker) -> Union[MockType, RunningSettingsClass]:
 	mock: MockType = mocker.MagicMock(spec=RunningSettingsClass)

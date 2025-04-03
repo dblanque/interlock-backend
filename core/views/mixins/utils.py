@@ -12,6 +12,7 @@ import socket
 import struct
 from typing import Iterable
 
+
 def convert_string_to_bytes(string):
 	if not isinstance(string, str):
 		raise ValueError("Value must be a string")
@@ -50,12 +51,14 @@ def recursiveFindInDict(obj, key):
 			if item is not None:
 				return item
 
+
 def uppercase_ldif_identifiers(v: str):
 	if not isinstance(v, str):
 		raise TypeError("Value must be str.")
 	for ldif_ident in LDAP_LDIF_IDENTIFIERS:
-		v = v.replace(f"{ldif_ident}=",f"{ldif_ident.upper()}=")
+		v = v.replace(f"{ldif_ident}=", f"{ldif_ident.upper()}=")
 	return v
+
 
 def __get_common_name__(dn):
 	return str(dn).split(",")[0].split("=")[-1]
@@ -68,6 +71,7 @@ def __get_relative_dn__(dn):
 def testFunc(*args):
 	for i in args:
 		print(i)
+
 
 def is_non_str_iterable(v):
 	if isinstance(v, str):

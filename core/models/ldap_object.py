@@ -40,6 +40,7 @@ class LDAPObjectOptions(TypedDict):
 	ldap_attrs: NotRequired[list[str]]
 	ldap_filter: NotRequired[str]
 
+
 DEFAULT_EXCLUDED_LDAP_ATTRS = ["objectGUID", "objectSid"]
 DEFAULT_REQUIRED_LDAP_ATTRS = [
 	"distinguishedName",
@@ -52,6 +53,7 @@ DEFAULT_USER_TYPES = [
 	"person",
 	"organizationalPerson",
 ]
+
 
 class LDAPObject:
 	"""
@@ -163,10 +165,11 @@ class LDAPObject:
 		self.attributes = {}
 		self.attributes["name"] = str(distinguished_name).split(",")[0].split("=")[1]
 		self.attributes["distinguishedName"] = distinguished_name
-		self.attributes["type"] = str(getattr(self.entry, "objectCategory")).split(",")[0].split("=")[1]
-		if (
-			self.attributes["name"] in LDAP_BUILTIN_OBJECTS
-			or "builtinDomain" in getattr(self.entry, "objectClass")
+		self.attributes["type"] = (
+			str(getattr(self.entry, "objectCategory")).split(",")[0].split("=")[1]
+		)
+		if self.attributes["name"] in LDAP_BUILTIN_OBJECTS or "builtinDomain" in getattr(
+			self.entry, "objectClass"
 		):
 			self.attributes["builtin"] = True
 
@@ -183,7 +186,10 @@ class LDAPObject:
 				value = getattr(self.entry, attr_key)
 				self.attributes[attr_key] = str_value
 				self.attributes["groupname"] = str_value
-			elif attr_key == "objectSid" and self.__get_common_name__(distinguished_name).lower() != "builtin":
+			elif (
+				attr_key == "objectSid"
+				and self.__get_common_name__(distinguished_name).lower() != "builtin"
+			):
 				value = getattr(self.entry, attr_key)
 				try:
 					sid = SID(value)

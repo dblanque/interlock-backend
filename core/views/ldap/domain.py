@@ -257,7 +257,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 				record_name="@",
 				record_zone=target_zone,
 				record_type=RecordTypes.DNS_RECORD_TYPE_SOA.value,
-				record_main_value=f"ns.{target_zone}."
+				record_main_value=f"ns.{target_zone}.",
 			)
 			values_soa = {
 				"dwSerialNo": 1,
@@ -287,7 +287,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 					record_name="@",
 					record_zone=target_zone,
 					record_type=RecordTypes.DNS_RECORD_TYPE_A.value,
-					record_main_value=current_ldap_server_ip
+					record_main_value=current_ldap_server_ip,
 				)
 				base_record_a.create(values=values_a)
 
@@ -299,7 +299,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 					record_name="ns1",
 					record_zone=target_zone,
 					record_type=RecordTypes.DNS_RECORD_TYPE_A.value,
-					record_main_value=current_ldap_server_ip
+					record_main_value=current_ldap_server_ip,
 				)
 				base_record_a_to_ns.create(values=values_a_ns)
 
@@ -311,7 +311,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 					record_name="@",
 					record_zone=target_zone,
 					record_type=RecordTypes.DNS_RECORD_TYPE_AAAA.value,
-					record_main_value=current_ldap_server_ip
+					record_main_value=current_ldap_server_ip,
 				)
 				base_record_a.create(values=values_aaaa)
 
@@ -323,7 +323,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 					record_name="ns1",
 					record_zone=target_zone,
 					record_type=RecordTypes.DNS_RECORD_TYPE_AAAA.value,
-					record_main_value=current_ldap_server_ip
+					record_main_value=current_ldap_server_ip,
 				)
 				base_record_aaaa_to_ns.create(values=values_aaaa_ns)
 
@@ -335,7 +335,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 				record_name="@",
 				record_zone=target_zone,
 				record_type=RecordTypes.DNS_RECORD_TYPE_NS.value,
-				record_main_value=f"ns1.{target_zone}."
+				record_main_value=f"ns1.{target_zone}.",
 			)
 			base_record_a_to_ns.create(values=values_ns)
 

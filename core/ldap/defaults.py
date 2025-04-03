@@ -152,61 +152,60 @@ LDAP_DIRTREE_CN_FILTER = {
 	"computer": "objectClass",
 }
 
-LDAP_DIRTREE_ATTRIBUTES = list({
-	# User Attrs
-	"givenName",
-	"sn",
-	"displayName",
-	"mail",
-	"telephoneNumber",
-	"streetAddress",
-	"postalCode",
-	"l",  # Local / City
-	"st",  # State/Province
-	"countryCode",  # INT
-	"co",  # 2 Letter Code for Country
-	"c",  # Full Country Name
-	"wWWHomePage",
-	"userPrincipalName",
-	"userAccountControl",  # Permission ACLs
-	"whenCreated",
-	"whenChanged",
-	"lastLogon",
-	"badPwdCount",
-	"pwdLastSet",
-	"primaryGroupID",
-	"objectClass",
-	"objectCategory",
-	"sAMAccountType",
-	# Group Attrs
-	"cn",
-	"member",
-	"groupType",
-	# User & Group Attrs
-	"distinguishedName",
-	"objectSid",
-})
+LDAP_DIRTREE_ATTRIBUTES = list(
+	{
+		# User Attrs
+		"givenName",
+		"sn",
+		"displayName",
+		"mail",
+		"telephoneNumber",
+		"streetAddress",
+		"postalCode",
+		"l",  # Local / City
+		"st",  # State/Province
+		"countryCode",  # INT
+		"co",  # 2 Letter Code for Country
+		"c",  # Full Country Name
+		"wWWHomePage",
+		"userPrincipalName",
+		"userAccountControl",  # Permission ACLs
+		"whenCreated",
+		"whenChanged",
+		"lastLogon",
+		"badPwdCount",
+		"pwdLastSet",
+		"primaryGroupID",
+		"objectClass",
+		"objectCategory",
+		"sAMAccountType",
+		# Group Attrs
+		"cn",
+		"member",
+		"groupType",
+		# User & Group Attrs
+		"distinguishedName",
+		"objectSid",
+	}
+)
 
 # See https://en.wikipedia.org/wiki/LDAP_Data_Interchange_Format
-LDAP_LDIF_IDENTIFIERS = list({
-	"dn",
-	"dc",
-	"ou",
-	"cn"
-})
+LDAP_LDIF_IDENTIFIERS = list({"dn", "dc", "ou", "cn"})
 
-LDAP_OPERATIONS = list({
-	"BIND",
-	"UNBIND",
-	"ADD",
-	"DELETE",
-	"MODIFY",
-	"MODIFY-DN",
-	"SEARCH",
-	"COMPARE",
-	"ABANDON",
-	"EXTENDED",
-})
+LDAP_OPERATIONS = list(
+	{
+		"BIND",
+		"UNBIND",
+		"ADD",
+		"DELETE",
+		"MODIFY",
+		"MODIFY-DN",
+		"SEARCH",
+		"COMPARE",
+		"ABANDON",
+		"EXTENDED",
+	}
+)
 
 ################################## Logging #####################################
 LDAP_LOG_READ = False

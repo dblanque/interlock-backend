@@ -69,10 +69,12 @@ class DNSRecordMixin(DomainViewMixin):
 
 			for a in required_values:
 				if a not in record_data:
-					logger.error(f"Record Attribute Failed Validation ({a})") 
-					raise exc_dns.DNSRecordDataMissing(data={
-						"detail": f"A required attribute is missing ({a})",
-					})
+					logger.error(f"Record Attribute Failed Validation ({a})")
+					raise exc_dns.DNSRecordDataMissing(
+						data={
+							"detail": f"A required attribute is missing ({a})",
+						}
+					)
 
 		valid = False
 		# For each field in the Record Value Dictionary
@@ -153,7 +155,7 @@ class DNSRecordMixin(DomainViewMixin):
 			record_name=record_name,
 			record_zone=record_zone,
 			record_type=record_type,
-			record_main_value=record_data[record_type_main_field(record_type)]
+			record_main_value=record_data[record_type_main_field(record_type)],
 		)
 
 		dnsRecord.create(values=record_data)
@@ -202,7 +204,7 @@ class DNSRecordMixin(DomainViewMixin):
 			record_name=record_name,
 			record_zone=record_zone,
 			record_type=record_type,
-			record_main_value=record_data[record_type_main_field(record_type)]
+			record_main_value=record_data[record_type_main_field(record_type)],
 		)
 
 		# ! If Record Name is being changed create the new one and delete the old.
@@ -212,7 +214,7 @@ class DNSRecordMixin(DomainViewMixin):
 				record_name=old_record_name,
 				record_zone=old_record_zone,
 				record_type=old_record_type,
-				record_main_value=old_record_data[record_type_main_field(old_record_type)]
+				record_main_value=old_record_data[record_type_main_field(old_record_type)],
 			)
 			# Create new Record
 			result = dnsRecord.create(values=record_data)
@@ -259,7 +261,7 @@ class DNSRecordMixin(DomainViewMixin):
 			record_name=record_name,
 			record_zone=record_zone,
 			record_type=record_type,
-			record_main_value=record_data[record_type_main_field(record_type)]
+			record_main_value=record_data[record_type_main_field(record_type)],
 		)
 
 		try:

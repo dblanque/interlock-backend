@@ -45,6 +45,7 @@ from core.config.runtime import RuntimeSettings
 DATE_FMT = "%Y%m%d"
 logger = logging.getLogger(__name__)
 
+
 class LDAPDNS:
 	connection: Connection
 	dns_zones: list[str]
@@ -269,9 +270,9 @@ class LDAPRecordMixin:
 			None
 		"""
 		if self.type != RecordTypes.DNS_RECORD_TYPE_SOA.value:
-			raise exc_base.CoreException(data={
-				"detail":"SOA Validation used in incorrect record type."
-			})
+			raise exc_base.CoreException(
+				data={"detail": "SOA Validation used in incorrect record type."}
+			)
 		if self.entry:
 			for record in self.entry:
 				if record["type"] == RecordTypes.DNS_RECORD_TYPE_SOA.value:
@@ -289,9 +290,7 @@ class LDAPRecordMixin:
 							"name": self.name,
 						}
 					)
-		raise exc_base.CoreException(data={
-			"detail":"LDAPRecord has no entry attribute."
-		})
+		raise exc_base.CoreException(data={"detail": "LDAPRecord has no entry attribute."})
 
 	def _validate_create_update(self: "LDAPRecord", values: dict, create=True):
 		"""Validates new record values.
@@ -442,6 +441,7 @@ def get_record_mapping_from_type(t: RecordTypes | int) -> RecordMapping:
 		raise TypeError("LDAPRecord type not found in Record Type Mappings.")
 	return RECORD_MAPPINGS[t]
 
+
 def record_type_main_field(t: RecordTypes | int | str) -> str:
 	"""Gets the corresponding main field identifier for a record type.
 
@@ -451,11 +451,7 @@ def record_type_main_field(t: RecordTypes | int | str) -> str:
 	Returns:
 		str: Key string for field
 	"""
-	if (
-		not isinstance(t, RecordTypes) and
-		not isinstance(t, int) and
-		not isinstance(t, str)
-	):
+	if not isinstance(t, RecordTypes) and not isinstance(t, int) and not isinstance(t, str):
 		raise TypeError(f"t must be a valid RecordType Enum, RecordType int, or string identifier.")
 	if isinstance(t, str):
 		t_str = t.upper()
@@ -489,11 +485,11 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 	def __init__(
 		self,
 		connection,
-		legacy = False,
+		legacy=False,
 		record_name: str = None,
 		record_zone: str = None,
 		record_type: RecordTypes = None,
-		record_main_value = None,
+		record_main_value=None,
 		zone_type="fwdLookup",
 		auto_fetch=True,
 	):
@@ -847,19 +843,14 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 
 		self.serial = None
 		try:
-			self.serial = self.get_serial(
-				record_values=new_values,
-				old_serial=old_values["serial"]
-			)
+			self.serial = self.get_serial(record_values=new_values, old_serial=old_values["serial"])
 		except:
 			logger.error(traceback.format_exc())
 			raise exc_dns.DNSCouldNotGetSerial
 
 		# Make new record struct
 		self.structure = self.make_record_bytes(
-			values=new_values,
-			ttl=new_values["ttl"],
-			serial=self.serial
+			values=new_values, ttl=new_values["ttl"], serial=self.serial
 		)
 		# Get struct as bytes
 		new_record_bytes = self.structure.getData()
@@ -879,7 +870,9 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 
 		## Add new DNS Record
 		self.main_value = new_values[self.main_field]
-		self.connection.modify(self.distinguished_name, {"dnsRecord": [(MODIFY_ADD, new_record_bytes)]})
+		self.connection.modify(
+			self.distinguished_name, {"dnsRecord": [(MODIFY_ADD, new_record_bytes)]}
+		)
 		return self.connection.result
 
 	def delete(self):
@@ -906,7 +899,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				self.connection.modify(
 					self.distinguished_name, {"dnsRecord": [(MODIFY_DELETE, self.as_bytes)]}
 				)
-			else: # Delete full entry
+			else:  # Delete full entry
 				self.connection.delete(self.distinguished_name)
 		except Exception as e:
 			logger.exception(e)

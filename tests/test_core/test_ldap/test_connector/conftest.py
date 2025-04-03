@@ -5,9 +5,11 @@ from core.models.user import USER_TYPE_LDAP, User
 from core.ldap import defaults as ldap_defaults
 from typing import Union
 
+
 @pytest.fixture
 def f_runtime_settings(g_runtime_settings):
 	return g_runtime_settings
+
 
 @pytest.fixture
 def f_ldap_connection(mocker) -> MockType:
@@ -27,6 +29,7 @@ def f_server(mocker) -> MockType:
 @pytest.fixture
 def f_tls(mocker) -> MockType:
 	return mocker.MagicMock(spec=Tls)
+
 
 @pytest.fixture
 def f_user_dn():

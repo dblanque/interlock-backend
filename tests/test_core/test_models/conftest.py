@@ -1,5 +1,6 @@
 import pytest
 
+
 @pytest.fixture
 def f_connection(mocker):
 	m_connection = mocker.MagicMock()
