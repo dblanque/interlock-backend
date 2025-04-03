@@ -1,7 +1,9 @@
 import pytest
+from core.models.ldap_settings import LDAPSetting, LDAPPreset, LDAP_SETTING_MAP
 from core.models.ldap_settings_runtime import RunningSettingsClass, get_settings
 from core.ldap import defaults as ldap_defaults
 from pytest_mock import MockType
+from interlock_backend.encrypt import aes_encrypt
 from inspect import getmembers, isroutine
 
 # Teardown singleton for each test.
@@ -266,9 +268,96 @@ def test_resync_returns_false_on_exception(mocker):
 	assert instance.resync() is False
 	m_postsync.assert_not_called()
 
-# todo
-# test resync when no preset exists
-# test resync when tables dont exist
-# test resync with db mock values
-# test setting decryption
-# test get_settings
+def test_get_settings_no_preset():
+	m_settings = get_settings("non-existing-uuid")
+	for s_key, s_val in m_settings.items():
+		assert s_val == getattr(ldap_defaults, s_key)
+
+def test_get_settings_tables_do_not_exist(mocker):
+	mocker.patch("core.models.ldap_settings_runtime.db_table_exists", return_value=False)
+	m_logger = mocker.patch("core.models.ldap_settings_runtime.logger")
+	m_settings = get_settings("non-existing-uuid")
+	for s_key, s_val in m_settings.items():
+		assert s_val == getattr(ldap_defaults, s_key)
+	m_logger.warning.call_count == 2
+
+
+@pytest.mark.django_db
+class TestLDAPSettingsWithDB:
+	@pytest.fixture(autouse=True)
+	def reset_settings_and_presets(self):
+		LDAPPreset.objects.all().delete()
+		LDAPSetting.objects.all().delete()
+
+	@pytest.fixture
+	def f_ldap_settings_preset(self):
+		return LDAPPreset.objects.create(
+			name="mock_preset",
+			label="Mock Preset",
+			active=True,
+		)
+
+	@pytest.mark.parametrize(
+		"test_key, test_value, expected_result",
+		(
+			(	# TYPE_LDAP_URI
+				"LDAP_AUTH_URL",
+				["ldap://127.0.0.2:389"],
+				None,
+			),
+			(	# TYPE_STRING
+				"LDAP_DOMAIN",
+				"sub.example.com",
+				None,
+			),
+			(	# TYPE_AES_ENCRYPT
+				"LDAP_AUTH_CONNECTION_PASSWORD",
+				(b"m_encrypted_aes_key", b"m_ciphertext", b"m_nonce", b"m_tag"),
+				"mockPassword1234",
+			),
+			(	# TYPE_BOOL
+				"LDAP_AUTH_USE_TLS",
+				True,
+				None,
+			),
+			(	# TYPE_LDAP_TLS_VERSION
+				"LDAP_AUTH_TLS_VERSION",
+				"PROTOCOL_TLSv1",
+				None,
+			),
+			(	# TYPE_INTEGER
+				"LDAP_LOG_MAX",
+				99,
+				None,
+			),
+		),
+	)
+	def test_get_settings_mock_db_overrides(self, test_key, test_value, expected_result, mocker, f_ldap_settings_preset):
+		if not expected_result:
+			expected_result = test_value
+		if test_key == "LDAP_AUTH_CONNECTION_PASSWORD":
+			m_aes_decrypt: MockType = mocker.patch("core.models.ldap_settings_runtime.aes_decrypt", return_value=expected_result)
+		LDAPSetting.objects.create(
+			name=test_key,
+			type=LDAP_SETTING_MAP.get(test_key),
+			value=test_value,
+			preset=f_ldap_settings_preset,
+		)
+
+		m_settings = get_settings("non-existing-uuid", quiet=True)
+		assert m_settings.get(test_key) == expected_result
+		if test_key == "LDAP_AUTH_CONNECTION_PASSWORD":
+			m_aes_decrypt.assert_called_once()
+
+	def test_get_settings_decrypt(self, f_ldap_settings_preset):
+		m_key = "LDAP_AUTH_CONNECTION_PASSWORD"
+		m_value = "mockPassword1234"
+		LDAPSetting.objects.create(
+			name=m_key,
+			type=LDAP_SETTING_MAP.get(m_key),
+			value=aes_encrypt(m_value),
+			preset=f_ldap_settings_preset,
+		)
+
+		m_settings = get_settings("non-existing-uuid", quiet=True)
+		assert m_settings.get(m_key) == m_value
