@@ -6,34 +6,32 @@ from core.models.log import Log
 class LogMixin(viewsets.ViewSetMixin):
 	def log(self, **kwargs):
 		# This function rotates logs based on a Maximum Limit Setting
-		logLimit = RuntimeSettings.LDAP_LOG_MAX
+		log_limit = RuntimeSettings.LDAP_LOG_MAX
 
 		# Truncate Logs if necessary
-		if Log.objects.count() > logLimit:
-			Log.objects.filter(id__gt=logLimit).delete()
+		if Log.objects.count() > log_limit:
+			Log.objects.filter(id__gt=log_limit).delete()
 
-		unrotatedLogCount = Log.objects.filter(rotated=False).count()
-		lastUnrotatedLog = Log.objects.filter(rotated=False).last()
+		unrotated_log_count = Log.objects.filter(rotated=False).count()
+		last_unrotated_log = Log.objects.filter(rotated=False).last()
 		# If there's no last unrotated log, set to 0 to avoid conditional issues
-		if lastUnrotatedLog is None:
-			lastUnrotatedLogId = 0
+		if last_unrotated_log is None:
+			last_unrotated_id = 0
 		else:
-			lastUnrotatedLogId = lastUnrotatedLog.id
+			last_unrotated_id = last_unrotated_log.id
 
 		# If there are no unrotated logs or the range is exceeded, restart sequence
-		if unrotatedLogCount < 1 or lastUnrotatedLogId >= logLimit:
+		if unrotated_log_count < 1 or last_unrotated_id >= log_limit:
 			Log.objects.all().update(rotated=True)
-			logId = 1
+			log_id = 1
 		else:
-			logId = Log.objects.filter(rotated=False).last().id + 1
+			log_id = Log.objects.filter(rotated=False).last().id + 1
 
-		logWithCurrentId = Log.objects.filter(id=logId)
-		if logWithCurrentId.count() > 0:
-			logWithCurrentId.delete()
-			logAction = Log(id=logId, rotated=False, **kwargs)
-			logAction.save()
-		else:
-			logAction = Log(id=logId, rotated=False, **kwargs)
-			logAction.save()
+		log_with_overlapping_id = Log.objects.filter(id=log_id)
+		if log_with_overlapping_id.exists():
+			log_with_overlapping_id.delete()
 
-		return logAction.id
+		log_instance = Log(id=log_id, rotated=False, **kwargs)
+		log_instance.save()
+
+		return log_instance.id
