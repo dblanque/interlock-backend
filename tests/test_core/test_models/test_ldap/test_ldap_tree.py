@@ -103,6 +103,11 @@ class TestLDAPTree:
 		
 		assert isinstance(tree.children, dict)
 
+	def test_get_children_raises_no_distinguished_name(self, mocker, f_connection):
+		tree = LDAPTree(connection=f_connection)
+		with pytest.raises(ValueError):
+			tree.__get_children__(distinguished_name=None)
+
 	def test_get_children_basic(self, mocker, f_connection):
 		"""Test __get_children__ method"""
 		# Setup mock paged search
