@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 
+
 class EmailAuthBackend(object):
 	"""
 	Authenticate Local DB user using an e-mail address.

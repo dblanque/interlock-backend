@@ -17,12 +17,15 @@ from core.config.runtime import RuntimeSettings
 from typing import Union
 from typing_extensions import NotRequired
 import logging
+
 ################################################################################
 logger = logging.getLogger()
+
 
 class LDAPTreeOptions(LDAPObjectOptions):
 	subobject_id: NotRequired[int]
 	children_object_type: NotRequired[Union[str, type]]
+
 
 class LDAPTree(LDAPObject):
 	"""
@@ -197,10 +200,7 @@ class LDAPTree(LDAPObject):
 				or "builtinDomain" in entry["attributes"]["objectClass"]
 				or common_name in LDAP_BUILTIN_OBJECTS
 				or common_name == "Domain Controllers"
-			) and (
-				common_name.lower() != "computers"
-				and common_name.lower() != "users"
-			):
+			) and (common_name.lower() != "computers" and common_name.lower() != "users"):
 				_current_obj["builtin"] = True
 			# Set the sub-object children
 			if self.children_object_type == "array" and "children" not in _current_obj:
@@ -244,7 +244,9 @@ class LDAPTree(LDAPObject):
 							_current_obj["objectRid"] = rid
 						except Exception as e:
 							logger.exception(e)
-							logger.error("Could not translate SID Byte Array for " + distinguished_name)
+							logger.error(
+								"Could not translate SID Byte Array for " + distinguished_name
+							)
 					elif attr not in self.excluded_ldap_attrs:
 						try:
 							if (
@@ -256,7 +258,9 @@ class LDAPTree(LDAPObject):
 								value = entry["attributes"][attr][0]
 						except Exception as e:
 							logger.exception(e)
-							logger.error(f"Could not set attribute {attr} for {_current_obj['distinguishedName']}")
+							logger.error(
+								f"Could not set attribute {attr} for {_current_obj['distinguishedName']}"
+							)
 					try:
 						_current_obj[attr] = value
 					except Exception as e:
