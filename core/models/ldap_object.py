@@ -96,12 +96,7 @@ class LDAPObject:
 	username_identifier: str
 
 	def __init__(self, auto_fetch=True, **kwargs) -> None:
-		if "connection" not in kwargs:
-			raise Exception("LDAP Object requires an LDAP Connection to Initialize")
-		if "dn" not in kwargs and "ldap_filter" not in kwargs:
-			raise Exception(
-				"LDAP Object requires a Distinguished Name or a valid ldap_filter to search for the object"
-			)
+		self.__validate_kwargs__(kwargs=kwargs)
 
 		# Set LDAPTree Default Values
 		self.entry = None
@@ -124,6 +119,14 @@ class LDAPObject:
 
 		if auto_fetch:
 			self.__fetch_object__()
+
+	def __validate_kwargs__(self, kwargs):
+		if "connection" not in kwargs:
+			raise Exception("LDAP Object requires an LDAP Connection to Initialize")
+		if "dn" not in kwargs and "ldap_filter" not in kwargs:
+			raise Exception(
+				"LDAP Object requires a Distinguished Name or a valid ldap_filter to search for the object"
+			)
 
 	def __set_kwargs__(self, kwargs):
 		# Set passed kwargs from Object Call
