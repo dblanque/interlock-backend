@@ -16,7 +16,7 @@ from rest_framework import viewsets
 ### Core
 #### Models
 from core.models.interlock_settings import InterlockSetting, INTERLOCK_SETTING_ENABLE_LDAP
-from core.models.user import User
+from core.models.user import User, USER_TYPE_LDAP
 from core.models.ldap_settings import LDAPPreset
 
 #### Exceptions
@@ -56,7 +56,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 		with LDAPConnector(**ldc_opts) as ldc:
 			for local_user in User.objects.all():
 				try:
-					user: User = ldc.get_user(**{"username": local_user.username})
+					user: User = ldc.get_user(username=local_user.username)
 					if user:
 						user.save()
 				except Exception as e:
