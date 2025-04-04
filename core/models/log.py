@@ -11,7 +11,6 @@
 from django.utils.translation import gettext_lazy as _
 from django.db.models.manager import BaseManager as Manager
 from django.db import models
-from django.utils import timezone as tz
 
 ### Base
 from .base import BaseManager
@@ -29,11 +28,6 @@ class BaseLogModel(models.Model):
 	objects = BaseManager()
 	all_objects = Manager()
 
-	def rotate(self, using=None, keep_parents=False):
-		self.rotated_at = tz.now()
-		self.rotated = True
-		self.save(update_fields=["rotated_at", "rotated"])
-
 	def delete(self, using=None, keep_parents=False):
 		"""
 		Normally use delete instead of this.
@@ -42,11 +36,6 @@ class BaseLogModel(models.Model):
 		:return:
 		"""
 		return super().delete(using=using, keep_parents=keep_parents)
-
-	def __str__(self):
-		if hasattr(self, "name"):
-			return self.name
-		return super(BaseLogModel, self).__str__()
 
 	class Meta:
 		abstract = True
@@ -63,3 +52,6 @@ class Log(BaseLogModel):
 	)
 	affectedObject = models.JSONField(_("affectedObject"), null=True, blank=True)
 	extraMessage = models.CharField(_("extraMessage"), max_length=256, null=True, blank=True)
+
+	def __str__(self):
+		return f"log_{self.id}_{self.actionType.lower()}_{self.objectClass.lower()}"
