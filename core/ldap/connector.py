@@ -371,12 +371,11 @@ class LDAPConnector(object):
 		"""
 		searchFilter = ""
 		for field in RuntimeSettings.LDAP_AUTH_USER_LOOKUP_FIELDS:
-			if field in kwargs:
-				searchFilter = search_filter_add(
-					searchFilter,
-					f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS[field]}={kwargs[field]}",
-					LDAP_FILTER_OR,
-				)
+			searchFilter = search_filter_add(
+				searchFilter,
+				f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS[field]}={kwargs['username']}",
+				LDAP_FILTER_OR,
+			)
 		# Search the LDAP database.
 		if self.connection.search(
 			search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
@@ -407,13 +406,13 @@ class LDAPConnector(object):
 
 		# Create the user data.
 		user_fields = {
-			field_name: (
-				attributes[attribute_name][0]
-				if isinstance(attributes[attribute_name], (list, tuple))
-				else attributes[attribute_name]
+			local_attr_name: (
+				attributes[ldap_attr_name][0]
+				if isinstance(attributes[ldap_attr_name], (list, tuple))
+				else attributes[ldap_attr_name]
 			)
-			for field_name, attribute_name in RuntimeSettings.LDAP_AUTH_USER_FIELDS.items()
-			if attribute_name in attributes
+			for local_attr_name, ldap_attr_name in RuntimeSettings.LDAP_AUTH_USER_FIELDS.items()
+			if ldap_attr_name in attributes
 		}
 		user_fields = import_func(RuntimeSettings.LDAP_AUTH_CLEAN_USER_DATA)(user_fields)
 
