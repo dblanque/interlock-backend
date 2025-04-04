@@ -389,6 +389,18 @@ class LDAPConnector(object):
 		logger.warning("LDAP user lookup failed")
 		return None
 
+	def _get_user_fields(self, attributes) -> dict:
+		_fields = {
+			local_attr_name: (
+				attributes[ldap_attr_name][0]
+				if isinstance(attributes[ldap_attr_name], (list, tuple))
+				else attributes[ldap_attr_name]
+			)
+			for local_attr_name, ldap_attr_name in RuntimeSettings.LDAP_AUTH_USER_FIELDS.items()
+			if ldap_attr_name in attributes
+		}
+		return import_func(RuntimeSettings.LDAP_AUTH_CLEAN_USER_DATA)(_fields)
+
 	def _get_or_create_user(self, user_data) -> User:
 		"""
 		Returns a Django user for the given LDAP user data.
@@ -405,29 +417,23 @@ class LDAPConnector(object):
 		User = get_user_model()
 
 		# Create the user data.
-		user_fields = {
-			local_attr_name: (
-				attributes[ldap_attr_name][0]
-				if isinstance(attributes[ldap_attr_name], (list, tuple))
-				else attributes[ldap_attr_name]
-			)
-			for local_attr_name, ldap_attr_name in RuntimeSettings.LDAP_AUTH_USER_FIELDS.items()
-			if ldap_attr_name in attributes
-		}
-		user_fields = import_func(RuntimeSettings.LDAP_AUTH_CLEAN_USER_DATA)(user_fields)
+		user_fields = self._get_user_fields(attributes=attributes)
 
 		# Create the user lookup.
-		user_lookup = {
-			field_name: user_fields.pop(field_name, "")
-			for field_name in RuntimeSettings.LDAP_AUTH_USER_LOOKUP_FIELDS
-		}
-		# user_lookup = {"username": user_fields["username"]}
+		user_lookup = {}
+		for field_name in RuntimeSettings.LDAP_AUTH_USER_LOOKUP_FIELDS:
+			_v = user_fields.pop(field_name, "")
+			if _v and len(_v) >= 1:
+				user_lookup[field_name] = _v
+
 		# Update or create the user.
 		user, created = User.objects.update_or_create(defaults=user_fields, **user_lookup)
+
 		# If the user was created, set them an unusable password.
 		if created:
 			user.set_unusable_password()
 			user.save()
+
 		# Update relations
 		# sync_user_relations_func = import_func(LDAP_AUTH_SYNC_USER_RELATIONS)
 		sync_user_relations_func = sync_user_relations
@@ -440,8 +446,10 @@ class LDAPConnector(object):
 				raise TypeError(
 					f"Unknown kw argument {argname} in signature for LDAP_AUTH_SYNC_USER_RELATIONS"
 				)
+
 		# call sync_user_relations_func() with original args plus supported named extras
 		sync_user_relations_func(user, attributes, **args)
+
 		# All done!
 		logger.info("LDAP user lookup succeeded")
 		return user
