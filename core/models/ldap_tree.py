@@ -157,7 +157,7 @@ class LDAPTree(LDAPObject):
 		Function to recursively get Object Children
 		Returns JSON Dict
 		"""
-		if distinguished_name is None:
+		if not distinguished_name:
 			raise ValueError("Distinguished Name is None.")
 
 		common_name = self.__get_common_name__(distinguished_name)
