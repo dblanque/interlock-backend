@@ -256,9 +256,10 @@ class User(BaseUser):
 	def encryptedPassword(self):
 		return tuple([getattr(self, f) for f in USER_PASSWORD_FIELDS])
 
-	def get_distinguishedname(self):
+	@property
+	def distinguished_name(self):
 		if self.user_type != USER_TYPE_LDAP:
-			return False
+			return None
 		return self.dn
 
 	def is_user_local(self):

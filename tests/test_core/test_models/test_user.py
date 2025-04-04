@@ -46,24 +46,24 @@ class TestUserModel:
 		assert user.is_enabled is False
 		assert user.is_user_local() is False
 
-	def test_get_distinguishedname_ldap(self):
-		"""Test get_distinguishedname for LDAP user"""
+	def test_distinguished_name_ldap(self):
+		"""Test distinguished_name for LDAP user"""
 		user = User.objects.create(
-			username="test_get_distinguishedname_ldap",
+			username="test_distinguished_name_ldap",
 			password=self.default_password,
 			user_type=USER_TYPE_LDAP,
 			dn="cn=test,ou=users,dc=example,dc=com",
 		)
-		assert user.get_distinguishedname() == "cn=test,ou=users,dc=example,dc=com"
+		assert user.distinguished_name == "cn=test,ou=users,dc=example,dc=com"
 
-	def test_get_distinguishedname_non_ldap(self):
-		"""Test get_distinguishedname for non-LDAP user"""
+	def test_distinguished_name_non_ldap(self):
+		"""Test distinguished_name for non-LDAP user"""
 		user = User.objects.create(
-			username="test_get_distinguishedname_non_ldap",
+			username="test_distinguished_name_non_ldap",
 			password=self.default_password,
 			user_type=USER_TYPE_LOCAL,
 		)
-		assert user.get_distinguishedname() is False
+		assert user.distinguished_name is None
 
 	def test_encryptedPassword_property(self, mocker):
 		"""Test the encryptedPassword property"""
