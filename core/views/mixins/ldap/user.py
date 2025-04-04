@@ -14,7 +14,7 @@ from rest_framework import viewsets
 from core.ldap.adsi import search_filter_add
 from core.config.runtime import RuntimeSettings
 from core.ldap import adsi as ldap_adsi
-from core.ldap.accountTypes import LDAP_ACCOUNT_TYPES
+from core.ldap.types.account import LDAP_ACCOUNT_TYPES
 
 ### Models
 from core.models import User
