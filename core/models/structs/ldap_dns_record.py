@@ -8,9 +8,9 @@
 #
 # ---------------------------------- IMPORTS -----------------------------------#
 from struct import unpack, pack
-from core.utils.ipv6 import ipv6_to_integer
 from impacket.structure import Structure
 from core.models.types.ldap_dns_record import RecordTypes
+from typing import Iterable
 import socket
 import datetime
 import sys
@@ -184,13 +184,17 @@ def record_to_dict(record: "DNS_RECORD", ts=False):
 		rtype = "Unsupported"
 
 	record_dict = {}
+	record_dict["ts"] = False
 
 	# Check if record is Tombstoned / Inactive
-	if ts and len(ts) > 0:
-		if ts[0] == True or str(ts[0]).lower() == "true":
-			record_dict["ts"] = True
-	else:
-		record_dict["ts"] = False
+	if isinstance(ts, bool):
+		record_dict["ts"] = ts
+	elif isinstance(ts, str):
+		if len(ts) > 0:
+			record_dict["ts"] = ts.lower() == "true"
+	elif isinstance(ts, Iterable):
+		if len(ts) >= 1:
+			record_dict["ts"] = ts[0] == True or str(ts[0]).lower() == "true"
 
 	record_dict["type"] = record["Type"]
 	record_dict["typeName"] = rtype
@@ -378,7 +382,7 @@ class DNS_COUNT_NAME(Structure):
 		self["Length"] = length + 1
 		self["LabelCount"] = labelCount
 		try:
-			if addNullAtEnd == True:
+			if addNullAtEnd:
 				self["RawName"] = newString + b"\x00"
 			else:
 				self["RawName"] = newString
