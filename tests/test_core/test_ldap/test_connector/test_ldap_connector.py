@@ -356,8 +356,8 @@ def test_get_user_success(
 		LDAPConnector, "_get_or_create_user", return_value=f_user
 	)
 	expected_filter = search_filter_add(
-		"",
 		f"sAMAccountName={f_user.username}",
+		f"mail={f_user.username}",
 		LDAP_FILTER_OR,
 	)
 
