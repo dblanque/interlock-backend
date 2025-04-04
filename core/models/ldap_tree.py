@@ -11,6 +11,7 @@
 from django.utils.translation import gettext_lazy as _
 
 ### Interlock
+from core.models.ldap_object import LDAPObject, LDAPObjectOptions
 from ldap3 import Connection
 from core.ldap.adsi import search_filter_from_dict, LDAP_BUILTIN_OBJECTS
 from core.ldap.security_identifier import SID
@@ -22,23 +23,11 @@ from typing_extensions import Required, NotRequired
 
 
 ################################################################################
-class LDAPTreeOptions(TypedDict):
-	name: NotRequired[str]
-	search_base: NotRequired[str]
-	connection: Required[Connection]
-	username_identifier: NotRequired[str]
+class LDAPTreeOptions(LDAPObjectOptions):
 	subobject_id: NotRequired[int]
-	excluded_ldap_attrs: NotRequired[list[str]]
-	required_ldap_attrs: NotRequired[list[str]]
-	container_types: NotRequired[list[str]]
-	recursive: NotRequired[bool]
-	test_fetch: NotRequired[bool]
-	ldap_filter: NotRequired[str]
-	ldap_attrs: NotRequired[list[str]]
 	children_object_type: NotRequired[Union[str, type]]
 
-
-class LDAPTree:
+class LDAPTree(LDAPObject):
 	"""
 	## LDAPTree Object
 	Fetches LDAP Directory Tree from the default Search Base or a specified Level
@@ -49,42 +38,27 @@ class LDAPTree:
 	    ...
 	})
 
-	#### Arguments
-	 - search_base: (OPTIONAL) | Default: RunningSettings.LDAP_AUTH_SEARCH_BASE
-	 - connection: (REQUIRED) | LDAP Connection Object
-	 - recursive: (OPTIONAL) | Whether or not the Tree should be Recursively searched
-	 - ldap_filter: (OPTIONAL) | LDAP Formatted Filter
-	 - ldap_attrs: (OPTIONAL) | LDAP Attributes to Fetch
-	 - excluded_ldap_attrs: (OPTIONAL) | LDAP Attributes to Exclude
-	 - children_object_type: (OPTIONAL) | Default: List/Array - Can be dict() or list()
-	 - test_fetch: (OPTIONAL) | Default: False - Only fetch one object to test
+	Args:
+	 search_base: (OPTIONAL) | Default: RunningSettings.LDAP_AUTH_SEARCH_BASE
+	 connection: (REQUIRED) | LDAP Connection Object
+	 recursive: (OPTIONAL) | Whether or not the Tree should be Recursively searched
+	 ldap_filter: (OPTIONAL) | LDAP Formatted Filter
+	 ldap_attrs: (OPTIONAL) | LDAP Attributes to Fetch
+	 excluded_ldap_attrs: (OPTIONAL) | LDAP Attributes to Exclude
+	 children_object_type: (OPTIONAL) | Default: List/Array - Can be dict() or list()
+	 test_fetch: (OPTIONAL) | Default: False - Only fetch one object to test
 	"""
 
 	use_in_migrations = False
 
 	def __init__(self, **kwargs):
-		if "connection" not in kwargs:
-			raise Exception("LDAPTree object requires an LDAP Connection to Initialize")
+		super().__init__(auto_fetch=False)
 
 		# Set LDAPTree Default Values
-		self.name = RuntimeSettings.LDAP_AUTH_SEARCH_BASE
-		self.search_base = RuntimeSettings.LDAP_AUTH_SEARCH_BASE
-		self.connection = kwargs.pop("connection")
-		self.username_identifier = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
 		self.subobject_id = 0
-		self.excluded_ldap_attrs = ["objectGUID", "objectSid"]
-		self.required_ldap_attrs = [
-			"distinguishedName",
-			"objectCategory",
-			"objectClass",
-		]
-		self.container_types = ["container", "organizational-unit"]
-		self.recursive = False
-		self.test_fetch = False
 		self.ldap_filter = search_filter_from_dict(
 			{**RuntimeSettings.LDAP_DIRTREE_CN_FILTER, **RuntimeSettings.LDAP_DIRTREE_OU_FILTER}
 		)
-		self.ldap_attrs = RuntimeSettings.LDAP_DIRTREE_ATTRIBUTES
 		self.children_object_type = "array"
 
 		# Set passed kwargs from Object Call
@@ -96,12 +70,12 @@ class LDAPTree:
 			if attr not in self.ldap_attrs:
 				self.ldap_attrs.append(attr)
 
-		self.children = self.__get_ldap_tree__()
+		self.children = self.__fetch_tree__()
 
-	def __get_connection__(self):
-		return self.connection
+	def __fetch_object__(self):
+		raise AttributeError(f"{type(self).__name__} has no attribute __fetch_object__")
 
-	def __get_ldap_tree__(self):
+	def __fetch_tree__(self):
 		self.connection.search(
 			search_base=self.search_base,
 			search_filter=self.ldap_filter,
@@ -308,6 +282,3 @@ class LDAPTree:
 			return result
 		else:
 			return None
-
-	def __get_common_name__(self, dn):
-		return str(dn).split(",")[0].split("=")[-1]
