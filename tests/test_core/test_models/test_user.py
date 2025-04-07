@@ -3,6 +3,7 @@ from django.core.exceptions import ValidationError
 from django.db.transaction import TransactionManagementError
 from django.db.utils import IntegrityError
 from core.models.user import User, USER_TYPE_LOCAL, USER_TYPE_LDAP
+from interlock_backend.test_settings import DEFAULT_SUPERUSER_PASSWORD, DEFAULT_SUPERUSER_USERNAME
 from django.db import transaction
 
 
@@ -22,6 +23,9 @@ class TestUserModel:
 		assert user.user_type == USER_TYPE_LOCAL
 		assert user.is_enabled is True
 		assert user.is_user_local() is True
+
+	def test_user_get_email_field_name(self):
+		assert User.get_email_field_name() == "email"
 
 	def test_create_user_full(self):
 		"""Test creating a user with all fields"""
@@ -207,6 +211,25 @@ class TestUserModel:
 		user = User.objects.create_superuser(
 			username="manager_create_superuser", password=self.default_password
 		)
+		assert user.is_staff is True
+		assert user.is_superuser is True
+
+	@pytest.mark.parametrize(
+		"field",
+		(
+			"is_staff",
+			"is_superuser",
+		)
+	)
+	def test_create_default_superuser_raises_on_bad_extra_args(self, field):
+		"""Test BaseUserManager.create_default_superuser through User model"""
+		with pytest.raises(ValueError, match=field):
+			User.objects.create_default_superuser(**{field: False})
+
+	def test_create_default_superuser_via_manager(self, mocker):
+		"""Test BaseUserManager.create_default_superuser through User model"""
+		user: User = User.objects.create_default_superuser()
+		assert user.username == DEFAULT_SUPERUSER_USERNAME
 		assert user.is_staff is True
 		assert user.is_superuser is True
 
