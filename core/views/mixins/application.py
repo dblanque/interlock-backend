@@ -43,10 +43,18 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 
 	def get_application_data(
 		self, application_id: int
-	) -> tuple[Application, Client, QuerySet[ResponseType]]:
-		"""
-		:returns: (application, client, response_types)
-		:rtype: Application, Client, ResponseType | None
+	) -> tuple[Application, Client]:
+		"""Fetched Application with corresponding Client
+
+		Args:
+			application_id (int): The primary key for the application.
+
+		Raises:
+			ApplicationDoesNotExist: Raised if Application could not be fetched.
+			ApplicationOidcClientDoesNotExist: Raised if Client could not be fetched.
+
+		Returns:
+			tuple[Application, Client]: Tuple containing Application and Client.
 		"""
 		if not Application.objects.filter(id=application_id).exists():
 			raise ApplicationDoesNotExist
