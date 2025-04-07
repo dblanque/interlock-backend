@@ -219,7 +219,7 @@ class TestUserModel:
 		(
 			"is_staff",
 			"is_superuser",
-		)
+		),
 	)
 	def test_create_default_superuser_raises_on_bad_extra_args(self, field):
 		"""Test BaseUserManager.create_default_superuser through User model"""

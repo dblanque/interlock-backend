@@ -3,8 +3,8 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.views.mixins.application
-# Contains the mixin for SSO Application related operations
+# Module: core.views.mixins.application_group
+# Contains the mixin for SSO Application Group related operations
 
 # ---------------------------------- IMPORTS -----------------------------------#
 ### Models

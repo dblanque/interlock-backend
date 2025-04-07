@@ -671,8 +671,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				]
 				# Additional Operations based on special case type
 				for field in self.mapping["fields"]:
-					if self.mapping["class"] in [
-						"DNS_RPC_RECORD_A", "DNS_RPC_RECORD_AAAA"]:
+					if self.mapping["class"] in ["DNS_RPC_RECORD_A", "DNS_RPC_RECORD_AAAA"]:
 						record_data.fromCanonical(values[field])
 
 					elif self.mapping["class"] == "DNS_RPC_RECORD_NODE_NAME":
@@ -684,9 +683,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 
 					elif self.mapping["class"] == "DNS_RPC_RECORD_NAME_PREFERENCE":
 						if field == "wPreference":
-							record_data.insert_field_to_struct(
-								fieldName=field, fieldStructVal=">H"
-							)
+							record_data.insert_field_to_struct(fieldName=field, fieldStructVal=">H")
 							record_data.setCastField(field, value=values[field])
 						if field == "nameExchange":
 							record_data.toCountName(values[field])

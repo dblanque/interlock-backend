@@ -39,9 +39,7 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 	application_serializer = ApplicationSerializer
 	client_serializer = ClientSerializer
 
-	def get_application_data(
-		self, application_id: int
-	) -> tuple[Application, Client]:
+	def get_application_data(self, application_id: int) -> tuple[Application, Client]:
 		"""Fetched Application with corresponding Client
 
 		Args:

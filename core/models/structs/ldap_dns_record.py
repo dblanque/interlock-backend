@@ -355,7 +355,9 @@ class DNS_COUNT_NAME(Structure):
 			except Exception as e:
 				logger.error("Unable to UNPACK Raw Name in DNS Record")
 				logger.error(f"Length: ({str(type(self['Length']))}): {self['Length']}")
-				logger.error(f"Label Count: ({str( type(self['LabelCount']) )}): {self['LabelCount']}")
+				logger.error(
+					f"Label Count: ({str(type(self['LabelCount']))}): {self['LabelCount']}"
+				)
 				logger.error(f"Raw Name: ({str(type(self['RawName']))}): {self['RawName']}")
 				raise e
 
@@ -392,6 +394,7 @@ class DNS_COUNT_NAME(Structure):
 		if len(self["RawName"]) > 256:
 			print(self["RawName"])
 			raise ValueError("Raw Name Length cannot be more than 256")
+
 
 class DNS_RPC_NODE(Structure):
 	"""

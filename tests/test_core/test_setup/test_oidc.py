@@ -2,9 +2,11 @@ import pytest
 from oidc_provider.models import RSAKey
 from core.setup.oidc import create_default_oidc_rsa_key
 
+
 @pytest.fixture(autouse=True)
 def delete_keys():
 	RSAKey.objects.all().delete()
+
 
 @pytest.mark.django_db
 def test_create_default_oidc_rsa_key_creates_new(mocker):
