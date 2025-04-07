@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.views.token
+# Module: core.views.mixins.auth
 # Contributors: Martín Vilche
 # Contains the ViewSet for Token Authentication related operations
 
@@ -16,6 +16,7 @@ from django.contrib.auth.models import AnonymousUser
 from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS, BAD_LOGIN_COOKIE_NAME
 
 ### Core
+from core.models.user import User
 from core.exceptions.base import AccessTokenInvalid, RefreshTokenExpired
 
 ### Rest Framework
@@ -79,7 +80,20 @@ def RemoveTokenResponse(request, remove_refresh=False, bad_login_count=False) ->
 
 
 class CookieJWTAuthentication(JWTAuthentication):
-	def authenticate(self, request):
+	def authenticate(self, request) -> tuple[User, AccessToken]:
+		"""Authenticates request user.
+
+		Args:
+			request (_type_): _description_
+
+		Raises:
+			AccessTokenInvalid
+			generic_e
+
+		Returns:
+			tuple[User, AccessToken]: Returns a tuple with the corresponding User
+			and Access Token object.
+		"""
 		try:
 			AUTH_TOKEN = request.COOKIES.get(JWT_SETTINGS["AUTH_COOKIE_NAME"])
 			if not AUTH_TOKEN or AUTH_TOKEN == "expired" or len(AUTH_TOKEN) == 0:
@@ -92,7 +106,14 @@ class CookieJWTAuthentication(JWTAuthentication):
 			raise generic_e
 		return self.get_user(validated_token), validated_token
 
-	def refresh(self, request):
+	def refresh(self, request) -> tuple[AccessToken, str]:
+		"""Validates user tokens and returns new access and refresh based on
+		validation outcome.
+
+		Returns:
+			tuple[AccessToken, str]: A tuple with the AccessToken as an object
+				and stringified Refresh Token.
+		"""
 		REFRESH_TOKEN = request.COOKIES.get(JWT_SETTINGS["REFRESH_COOKIE_NAME"])
 		if not REFRESH_TOKEN or REFRESH_TOKEN == "expired" or len(REFRESH_TOKEN) == 0:
 			raise RefreshTokenExpired()
