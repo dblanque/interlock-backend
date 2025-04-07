@@ -27,7 +27,6 @@ from core.serializers.oidc import ClientSerializer
 from rest_framework import viewsets
 
 ### Others
-from django.db.models.query import QuerySet
 from django.db import transaction
 from typing import Iterable
 import logging
