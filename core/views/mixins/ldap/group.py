@@ -525,11 +525,8 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			except:
 				logger.error(traceback.format_exc())
 				logger.warning(
-					"Unable to update group '"
-					+ str(group_cn)
-					+ "' with attribute '"
-					+ str(key)
-					+ "'"
+					"Unable to update group '%s' with attribute '%s'",
+					str(group_cn), str(key)
 				)
 				logger.warning("Attribute Value:" + str(group_dict[key]))
 				if operation is not None:
