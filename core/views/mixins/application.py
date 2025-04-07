@@ -15,7 +15,6 @@ from oidc_provider.models import Client, ResponseType
 from core.exceptions.application import (
 	ApplicationExists,
 	ApplicationDoesNotExist,
-	ApplicationFieldDoesNotExist,
 	ApplicationOidcClientDoesNotExist,
 )
 from core.exceptions.base import BadRequest
@@ -81,10 +80,10 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 		RESPONSE_TYPE_ID_MAP = self.get_response_type_id_map()
 		for key, value in new_response_types.items():
 			if key in RESPONSE_TYPE_ID_MAP:
-				# Add key if in update
+				# Add key if explicit True
 				if value is True:
 					client.response_types.add(RESPONSE_TYPE_ID_MAP[key])
-				# Remove key if not present in update
+				# Remove key if explicitly False
 				elif value is False:
 					client.response_types.remove(RESPONSE_TYPE_ID_MAP[key])
 			else:
@@ -190,8 +189,6 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 		for field in APPLICATION_FIELDS:
 			if hasattr(application, field):
 				data[field] = getattr(application, field)
-			else:
-				raise ApplicationFieldDoesNotExist(data={"field": field})
 
 		if isinstance(data["scopes"], str):
 			data["scopes"] = data["scopes"].split()
@@ -199,8 +196,6 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 		for field in CLIENT_FIELDS:
 			if hasattr(client, field):
 				data[field] = getattr(client, field)
-			else:
-				raise ApplicationFieldDoesNotExist(data={"field": field})
 
 		data["response_types"] = {}
 		for r_type in self.get_response_type_codes():
@@ -210,7 +205,7 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 				data["response_types"][r_type] = True
 		return data
 
-	def update_application(self, application_id: int, data: dict) -> None:
+	def update_application(self, application_id: int, data: dict) -> tuple[Application, Client]:
 		APPLICATION_FIELDS = (
 			"name",
 			"redirect_uris",
@@ -279,7 +274,7 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 			if new_response_types:
 				self.set_client_response_types(new_response_types, client)
 			client.save()
-		return
+		return application, client
 
 	def delete_application(self, application_id: int):
 		if not Application.objects.filter(id=application_id).exists():
