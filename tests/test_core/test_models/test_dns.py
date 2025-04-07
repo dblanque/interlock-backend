@@ -1,4 +1,5 @@
 import pytest
+from typing import Union
 from copy import deepcopy
 from core.ldap.defaults import (
 	LDAP_AUTH_SEARCH_BASE,
@@ -1227,10 +1228,10 @@ class TestLDAPRecord:
 		m_serial = get_mock_serial()
 		m_record: LDAPRecord = f_record(record_type.value, test_values)
 		m_data_struct = mocker.MagicMock(spec=record_spec)
+		m_data_struct: Union[DNS_RPC_RECORD_A, DNS_RPC_RECORD_AAAA, MockType]
 		m_data_struct.fromCanonical = mocker.Mock(return_value=None)
+		m_record.record_cls = mocker.Mock(return_value=m_data_struct)
 		m_record_struct = mocker.MagicMock(spec=DNS_RECORD)
-		m_record_struct.__setitem__.return_value = None
-		m_record_struct.__getitem__.return_value = m_data_struct
 		m_new_record: MockType = mocker.patch(
 			"core.models.dns.new_record", return_value=m_record_struct
 		)
@@ -1258,10 +1259,10 @@ class TestLDAPRecord:
 		m_serial = get_mock_serial()
 		m_record: LDAPRecord = f_record(record_type.value, test_values)
 		m_data_struct = mocker.MagicMock(spec=DNS_RPC_RECORD_NODE_NAME)
+		m_data_struct: Union[DNS_COUNT_NAME, MockType]
 		m_data_struct.toCountName = mocker.Mock(return_value=None)
+		m_record.record_cls = mocker.Mock(return_value=m_data_struct)
 		m_record_struct = mocker.MagicMock(spec=DNS_RECORD)
-		m_record_struct.__setitem__.return_value = None
-		m_record_struct.__getitem__.return_value = m_data_struct
 		m_new_record: MockType = mocker.patch(
 			"core.models.dns.new_record", return_value=m_record_struct
 		)
@@ -1290,10 +1291,10 @@ class TestLDAPRecord:
 		m_serial = get_mock_serial()
 		m_record: LDAPRecord = f_record(record_type.value, test_values)
 		m_data_struct = mocker.MagicMock(spec=DNS_RPC_RECORD_STRING)
+		m_data_struct: Union[DNS_RPC_NAME, MockType]
 		m_data_struct.toRPCName = mocker.Mock(return_value=None)
+		m_record.record_cls = mocker.Mock(return_value=m_data_struct)
 		m_record_struct = mocker.MagicMock(spec=DNS_RECORD)
-		m_record_struct.__setitem__.return_value = None
-		m_record_struct.__getitem__.return_value = m_data_struct
 		m_new_record: MockType = mocker.patch(
 			"core.models.dns.new_record", return_value=m_record_struct
 		)
@@ -1310,12 +1311,12 @@ class TestLDAPRecord:
 		m_serial = get_mock_serial()
 		m_record: LDAPRecord = f_record(RecordTypes.DNS_RECORD_TYPE_MX.value, test_values)
 		m_data_struct = mocker.MagicMock(spec=DNS_RPC_RECORD_NAME_PREFERENCE)
+		m_data_struct: Union[DNS_COUNT_NAME, MockType]
 		m_data_struct.insert_field_to_struct = mocker.Mock(return_value=None)
-		m_data_struct.setField = mocker.Mock(return_value=None)
+		m_data_struct.setCastField = mocker.Mock(return_value=None)
 		m_data_struct.toCountName = mocker.Mock(return_value=None)
+		m_record.record_cls = mocker.Mock(return_value=m_data_struct)
 		m_record_struct = mocker.MagicMock(spec=DNS_RECORD)
-		m_record_struct.__setitem__.return_value = None
-		m_record_struct.__getitem__.return_value = m_data_struct
 		m_new_record: MockType = mocker.patch(
 			"core.models.dns.new_record", return_value=m_record_struct
 		)
@@ -1328,7 +1329,7 @@ class TestLDAPRecord:
 			fieldName="wPreference",
 			fieldStructVal=">H",
 		)
-		m_data_struct.setField.assert_called_once_with(
+		m_data_struct.setCastField.assert_called_once_with(
 			"wPreference",
 			value=test_values["wPreference"],
 		)
@@ -1347,11 +1348,11 @@ class TestLDAPRecord:
 		m_serial = get_mock_serial()
 		m_record: LDAPRecord = f_record(RecordTypes.DNS_RECORD_TYPE_SOA.value, test_values)
 		m_data_struct = mocker.MagicMock(spec=DNS_RPC_RECORD_SOA)
+		m_data_struct: Union[DNS_RPC_RECORD_SOA, MockType]
 		m_data_struct.setField = mocker.Mock(return_value=None)
 		m_data_struct.addCountName = mocker.Mock(return_value=None)
+		m_record.record_cls = mocker.Mock(return_value=m_data_struct)
 		m_record_struct = mocker.MagicMock(spec=DNS_RECORD)
-		m_record_struct.__setitem__.return_value = None
-		m_record_struct.__getitem__.return_value = m_data_struct
 		m_new_record: MockType = mocker.patch(
 			"core.models.dns.new_record", return_value=m_record_struct
 		)
@@ -1385,11 +1386,11 @@ class TestLDAPRecord:
 		m_serial = get_mock_serial()
 		m_record: LDAPRecord = f_record(RecordTypes.DNS_RECORD_TYPE_SRV.value, test_values)
 		m_data_struct = mocker.MagicMock(spec=DNS_RPC_RECORD_SRV)
+		m_data_struct: Union[DNS_RPC_RECORD_SRV, MockType]
 		m_data_struct.setField = mocker.Mock(return_value=None)
 		m_data_struct.addCountName = mocker.Mock(return_value=None)
+		m_record.record_cls = mocker.Mock(return_value=m_data_struct)
 		m_record_struct = mocker.MagicMock(spec=DNS_RECORD)
-		m_record_struct.__setitem__.return_value = None
-		m_record_struct.__getitem__.return_value = m_data_struct
 		m_new_record: MockType = mocker.patch(
 			"core.models.dns.new_record", return_value=m_record_struct
 		)
