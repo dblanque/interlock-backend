@@ -143,17 +143,13 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 			"redirect_uris",
 			"enabled",
 		]
-		HEADERS_EXCLUDE = ["id"]
+		HEADERS_EXCLUDE = ("id",)
 
 		application_query = Application.objects.all()
 		application_data = []
 		for app in application_query:
 			_build_data = {}
 			for field in FIELDS_TO_SEND:
-				if not hasattr(app, field):
-					raise Exception(
-						f"Missing field ({field}) in queryset, is there a database issue?"
-					)
 				_build_data[field] = getattr(app, field)
 			application_data.append(_build_data)
 		data = {"applications": application_data, "headers": FIELDS_TO_SEND}
