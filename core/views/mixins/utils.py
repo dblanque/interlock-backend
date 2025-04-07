@@ -65,12 +65,9 @@ def __get_common_name__(dn):
 
 
 def __get_relative_dn__(dn):
-	return str(dn).split(",").pop(0).join(",")
-
-
-def testFunc(*args):
-	for i in args:
-		print(i)
+	_v: list = str(dn).split(",")
+	_v.remove(0)
+	return ",".join(_v)
 
 
 def is_non_str_iterable(v):
