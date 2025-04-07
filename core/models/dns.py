@@ -15,6 +15,7 @@ from core.exceptions import (
 )
 
 ### Models
+from typing import Union
 from core.models.structs import ldap_dns_record as ldr
 from core.models.structs.ldap_dns_record import (
 	RECORD_MAPPINGS,
@@ -23,6 +24,10 @@ from core.models.structs.ldap_dns_record import (
 	DNS_RPC_RECORD_NAME_PREFERENCE,
 	DNS_COUNT_NAME,
 	DNS_RPC_NAME,
+	DNS_RPC_RECORD_A,
+	DNS_RPC_RECORD_AAAA,
+	DNS_RPC_RECORD_SOA,
+	DNS_RPC_RECORD_SRV,
 	RECORD_TYPE_ENUM_PREFIX,
 )
 from core.models.types.ldap_dns_record import RecordTypes
@@ -642,7 +647,16 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			record: DNS_RECORD = new_record(self.type, serial, ttl=ttl)
 			# Dynamically fetch the class based on the mapping
 			if self.mapping["class"]:
-				record["Data"] = self.record_cls()
+				record_data = self.record_cls()
+				record_data: Union[
+					DNS_RPC_RECORD_A,
+					DNS_RPC_RECORD_AAAA,
+					DNS_COUNT_NAME,
+					DNS_RPC_NAME,
+					DNS_COUNT_NAME,
+					DNS_RPC_RECORD_SOA,
+					DNS_RPC_RECORD_SRV,
+				]
 
 				# ! DO NOT ADD wPreference here
 				INT_FIELDS = [
@@ -655,42 +669,40 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 					"wWeight",
 					"wPort",
 				]
-
 				# Additional Operations based on special case type
 				for field in self.mapping["fields"]:
-					if (
-						self.mapping["class"] == "DNS_RPC_RECORD_A"
-						or self.mapping["class"] == "DNS_RPC_RECORD_AAAA"
-					):
-						record["Data"].fromCanonical(values[field])
+					if self.mapping["class"] in [
+						"DNS_RPC_RECORD_A", "DNS_RPC_RECORD_AAAA"]:
+						record_data.fromCanonical(values[field])
 
 					elif self.mapping["class"] == "DNS_RPC_RECORD_NODE_NAME":
-						record["Data"].toCountName(values[field])
+						record_data.toCountName(values[field])
 
 					elif self.mapping["class"] == "DNS_RPC_RECORD_STRING":
 						if field == "stringData":
-							record["Data"].toRPCName(values[field])
+							record_data.toRPCName(values[field])
 
 					elif self.mapping["class"] == "DNS_RPC_RECORD_NAME_PREFERENCE":
 						if field == "wPreference":
-							record["Data"].insert_field_to_struct(
+							record_data.insert_field_to_struct(
 								fieldName=field, fieldStructVal=">H"
 							)
-							record["Data"].setField(field, value=values[field])
+							record_data.setCastField(field, value=values[field])
 						if field == "nameExchange":
-							record["Data"].toCountName(values[field])
+							record_data.toCountName(values[field])
 
 					elif self.mapping["class"] == "DNS_RPC_RECORD_SOA":
 						if field in INT_FIELDS:
-							record["Data"].setField(field, values[field])
+							record_data.setField(field, values[field])
 						else:
-							record["Data"][field] = record["Data"].addCountName(values[field])
+							record_data[field] = record_data.addCountName(values[field])
 
 					elif self.mapping["class"] == "DNS_RPC_RECORD_SRV":
 						if field in INT_FIELDS:
-							record["Data"].setField(field, values[field])
+							record_data.setField(field, values[field])
 						else:
-							record["Data"][field] = record["Data"].addCountName(values[field])
+							record_data[field] = record_data.addCountName(values[field])
+				record["Data"] = record_data
 			return record
 		else:
 			raise exc_dns.DNSRecordTypeUnsupported(

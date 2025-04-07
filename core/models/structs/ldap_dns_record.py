@@ -208,7 +208,7 @@ def record_to_dict(record: "DNS_RECORD", ts=False):
 		# ! Print class ! #
 		logger.debug(getattr(thismodule, RECORD_MAPPINGS[record["Type"]]["class"]))
 
-		stringFields = [
+		fqdnFields = [
 			"nameNode",
 			"nameExchange",
 			"nameTarget",
@@ -232,14 +232,15 @@ def record_to_dict(record: "DNS_RECORD", ts=False):
 					record_dict[valueField] = data.formatCanonical()
 				elif valueField == "stringData":
 					record_dict[valueField] = data[valueField].toString()
-				elif valueField in stringFields:
+				elif valueField in fqdnFields:
 					record_dict[valueField] = data[valueField].toFqdn()
 				else:
 					record_dict[valueField] = data[valueField]
 			except Exception as e:
 				# data.dump()
-				print(record_dict)
-				print(valueField)
+				logger.error(record_dict)
+				logger.error(valueField)
+				logger.exception(e)
 				raise e
 	return record_dict
 
@@ -333,15 +334,15 @@ class DNS_COUNT_NAME(Structure):
 		self.structure.extend(list(oldStruct))
 		self.structure = tuple(self.structure)
 
-	def setField(self, fieldName, value, type=int):
+	def setCastField(self, fieldName, value, cast=int):
 		"""
 		Set value for an inserted field in the structure
 		You may cast to a specific type, default is int
 		- fieldName: The name of the field
 		- value: The value of the field
-		- type: The type to cast (default: int)
+		- cast: The type to cast (default: int)
 		"""
-		self[fieldName] = type(value)
+		self[fieldName] = cast(value)
 
 	def toFqdn(self):
 		ind = 0
@@ -352,58 +353,45 @@ class DNS_COUNT_NAME(Structure):
 				labels.append(self["RawName"][ind + 1 : ind + 1 + nextlen].decode("utf-8"))
 				ind += nextlen + 1
 			except Exception as e:
-				print("Unable to UNPACK Raw Name in DNS Record")
-				print("Length (" + str(type(self["Length"])) + "): ")
-				print(self["Length"])
-				print("LabelCount (" + str(type(self["LabelCount"])) + "): ")
-				print(self["LabelCount"])
-				print("RawName (" + str(type(self["RawName"])) + "): ")
-				print(self["RawName"])
+				logger.error("Unable to UNPACK Raw Name in DNS Record")
+				logger.error(f"Length: ({str(type(self['Length']))}): {self['Length']}")
+				logger.error(f"Label Count: ({str( type(self['LabelCount']) )}): {self['LabelCount']}")
+				logger.error(f"Raw Name: ({str(type(self['RawName']))}): {self['RawName']}")
 				raise e
 
 		# For the final dot
 		labels.append("")
 		return ".".join(labels)
 
-	def toCountName(self, valueString, addNullAtEnd=True):
+	def toCountName(self, v_str: str, add_null_at_end=True):
 		# Structure:
 		# String -> FQDN -> 1-byte Label Length COUNT for the subsequent label
 
-		length = len(valueString)
-		splitString = valueString.rstrip(".").split(".")
-		labelCount = len(splitString)
-		if labelCount <= 0:
-			labelCount = 0
-		newString = bytes()
-		for i in range(labelCount):
-			newString += pack("B", len(splitString[i])) + (bytes(splitString[i], "utf-8"))
+		length = len(v_str)
+		split_string = v_str.rstrip(".").split(".")
+		label_count = len(split_string)
+		if label_count <= 0:
+			label_count = 0
+		new_string = bytes()
+		for i in range(label_count):
+			new_string += pack("B", len(split_string[i])) + (bytes(split_string[i], "utf-8"))
 
 		# Add 1 to Length as it must include the NULL Terminator Byte
 		self["Length"] = length + 1
-		self["LabelCount"] = labelCount
+		self["LabelCount"] = label_count
 		try:
-			if addNullAtEnd:
-				self["RawName"] = newString + b"\x00"
+			if add_null_at_end:
+				self["RawName"] = new_string + b"\x00"
 			else:
-				self["RawName"] = newString
+				self["RawName"] = new_string
 		except Exception as e:
 			print(e)
 			raise Exception("Error setting RawName key in Data Structure")
 
+		# Impacket Structure should handle this, but just in case...
 		if len(self["RawName"]) > 256:
 			print(self["RawName"])
 			raise ValueError("Raw Name Length cannot be more than 256")
-
-		# print('Length')
-		# print(self['Length'])
-		# print(type(self['Length']))
-		# print('LabelCount')
-		# print(self['LabelCount'])
-		# print(type(self['LabelCount']))
-		# print('RawName')
-		# print(self['RawName'])
-		# print(type(self['RawName']))
-
 
 class DNS_RPC_NODE(Structure):
 	"""
@@ -489,7 +477,7 @@ class DNS_RPC_RECORD_SOA(Structure):
 
 	def addCountName(self, valueString):
 		countName = DNS_COUNT_NAME()
-		countName.toCountName(valueString=valueString, addNullAtEnd=True)
+		countName.toCountName(v_str=valueString, add_null_at_end=True)
 		return countName.getData()
 
 
@@ -621,7 +609,7 @@ class DNS_RPC_RECORD_SRV(Structure):
 
 	def addCountName(self, valueString):
 		countName = DNS_COUNT_NAME()
-		countName.toCountName(valueString=valueString, addNullAtEnd=True)
+		countName.toCountName(v_str=valueString, add_null_at_end=True)
 		return countName.getData()
 
 
