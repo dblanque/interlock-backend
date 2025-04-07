@@ -146,20 +146,53 @@ class TestApplicationMixin:
 
 	def test_insert_application_raises_exists(self, f_pre_application: Application):
 		mixin = ApplicationViewMixin()
-		m_extra_fields = {
-			"require_consent": True,
-			"reuse_consent": True,
-			"response_types": { "code": True },
-		}
 		m_values = {
 			"name":f_pre_application.name,
 			"redirect_uris":"https://subdomain.example.com",
 			"scopes": "scope1 scope2"
 		}
+		serializer, extra_fields = mixin.insert_clean_data(data=m_values)
+		with pytest.raises(exc_app.ApplicationExists):
+			mixin.insert_application(serializer=serializer, extra_fields=extra_fields)
+
+	def test_insert_application(self):
+		m_excluded_fields = {
+			"client_id": "some_id",
+			"client_secret": "some_secret",
+			"enabled": True,
+		}
+		m_extra_fields = {
+			"require_consent": True,
+			"reuse_consent": False,
+			"response_types": { "id_token": True },
+		}
+		m_values = {
+			"name":"Mock Application",
+			"redirect_uris":"https://subdomain.example.com",
+			"scopes": "scope1 scope2",
+		}
 		application_values = {
 			**m_values,
 			**m_extra_fields,
+			**m_excluded_fields,
 		}
+		mixin = ApplicationViewMixin()
 		serializer, extra_fields = mixin.insert_clean_data(data=application_values)
-		with pytest.raises(exc_app.ApplicationExists):
-			mixin.insert_application(serializer=serializer, extra_fields=extra_fields)
+		result = mixin.insert_application(serializer=serializer, extra_fields=extra_fields)
+		assert result.name == "Mock Application"
+		assert Application.objects.count() == 1
+		assert Client.objects.count() == 1
+
+	def test_list_applications(self, f_pre_application, f_pre_client):
+		result = ApplicationViewMixin().list_applications()
+		assert isinstance(result, dict)
+		assert isinstance(result["headers"], list)
+		assert result["headers"].sort() == list(
+			(
+				"id",
+				"name",
+				"redirect_uris",
+				"enabled",
+			)
+		).sort()
+		assert len(result["applications"]) == 1
