@@ -30,7 +30,6 @@ from rest_framework import viewsets
 ### Others
 from django.db.models.query import QuerySet
 from django.db import transaction
-from core.utils.db import db_table_exists
 from typing import Iterable
 import logging
 
@@ -62,21 +61,79 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 
 		return application, client
 
-	def get_response_type_id_map(self):
+	@staticmethod
+	def get_response_type_id_map():
 		return {rt.value: rt.id for rt in ResponseType.objects.all()}
 
-	def get_response_type_codes(self):
+	@staticmethod
+	def get_response_type_codes():
 		return ResponseType.objects.all().values_list("value", flat=True)
 
 	def set_client_response_types(self, new_response_types: dict, client: Client) -> None:
 		RESPONSE_TYPE_ID_MAP = self.get_response_type_id_map()
 		for key, value in new_response_types.items():
-			# Add key if in update
-			if value is True:
-				client.response_types.add(RESPONSE_TYPE_ID_MAP[key])
-			# Remove key if not present in update
-			elif value is False:
-				client.response_types.remove(RESPONSE_TYPE_ID_MAP[key])
+			if key in RESPONSE_TYPE_ID_MAP:
+				# Add key if in update
+				if value is True:
+					client.response_types.add(RESPONSE_TYPE_ID_MAP[key])
+				# Remove key if not present in update
+				elif value is False:
+					client.response_types.remove(RESPONSE_TYPE_ID_MAP[key])
+			else:
+				logger.warning("Unknown response type key (%s)", key)
+
+	def insert_clean_data(self, data: dict) -> tuple[ApplicationSerializer, dict]:
+		FIELDS_EXCLUDE = (
+			"client_id",
+			"client_secret",
+			"enabled",
+		)
+		FIELDS_EXTRA = ("require_consent", "reuse_consent", "response_types")
+		for field in FIELDS_EXCLUDE:
+			if field in data:
+				del data[field]
+
+		extra_fields = {}
+		for field in FIELDS_EXTRA:
+			if field in data:
+				extra_fields[field] = data.pop(field)
+
+		if not isinstance(data["scopes"], str) and isinstance(data["scopes"], Iterable):
+			data["scopes"] = " ".join(data["scopes"])
+
+		serializer = self.application_serializer(data=data)
+		if not serializer.is_valid():
+			raise BadRequest(data={"errors": serializer.errors})
+		return serializer, extra_fields
+
+	def insert_application(
+		self, serializer: ApplicationSerializer, extra_fields: dict
+	) -> Application:
+		if Application.objects.filter(name=serializer.data["name"]).exists():
+			raise ApplicationExists
+
+		if "response_types" in extra_fields:
+			new_response_types = extra_fields.pop("response_types")
+
+		with transaction.atomic():
+			# APPLICATION
+			application = Application.objects.create(**serializer.data)
+			application.save()
+
+			# CLIENT
+			client = Client.objects.create(
+				name=application.name,
+				client_id=application.client_id,
+				client_secret=application.client_secret,
+				redirect_uris=application.redirect_uris.split(","),
+				scope=application.scopes.split(),
+				**extra_fields,
+				# Other OIDC client settings (e.g., token expiration)
+			)
+			if new_response_types:
+				self.set_client_response_types(new_response_types, client)
+			client.save()
+		return application
 
 	def list_applications(self):
 		data = {}
@@ -148,59 +205,6 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 			for r_type in response_types:
 				data["response_types"][r_type] = True
 		return data
-
-	def insert_clean_data(self, data: dict) -> tuple[ApplicationSerializer, dict]:
-		FIELDS_EXCLUDE = (
-			"client_id",
-			"client_secret",
-			"enabled",
-		)
-		FIELDS_EXTRA = ("require_consent", "reuse_consent", "response_types")
-		for field in FIELDS_EXCLUDE:
-			if field in data:
-				del data[field]
-
-		extra_fields = {}
-		for field in FIELDS_EXTRA:
-			if field in data:
-				extra_fields[field] = data.pop(field)
-
-		if not isinstance(data["scopes"], str) and isinstance(data["scopes"], Iterable):
-			data["scopes"] = " ".join(data["scopes"])
-
-		serializer = self.application_serializer(data=data)
-		if not serializer.is_valid():
-			raise BadRequest(data={"errors": serializer.errors})
-		return serializer, extra_fields
-
-	def insert_application(
-		self, serializer: ApplicationSerializer, extra_fields: dict
-	) -> Application:
-		if Application.objects.filter(name=serializer.data["name"]).exists():
-			raise ApplicationExists
-
-		if "response_types" in extra_fields:
-			new_response_types = extra_fields.pop("response_types")
-
-		with transaction.atomic():
-			# APPLICATION
-			application = Application.objects.create(**serializer.data)
-			application.save()
-
-			# CLIENT
-			client = Client.objects.create(
-				name=application.name,
-				client_id=application.client_id,
-				client_secret=application.client_secret,
-				redirect_uris=application.redirect_uris.split(","),
-				scope=application.scopes.split(),
-				**extra_fields,
-				# Other OIDC client settings (e.g., token expiration)
-			)
-			if new_response_types:
-				self.set_client_response_types(new_response_types, client)
-			client.save()
-		return application
 
 	def update_application(self, application_id: int, data: dict) -> None:
 		APPLICATION_FIELDS = (
