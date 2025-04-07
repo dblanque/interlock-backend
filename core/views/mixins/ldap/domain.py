@@ -7,7 +7,6 @@
 # Contains the Mixin for domain related operations
 
 # ---------------------------------- IMPORTS -----------------------------------#
-from copy import deepcopy
 from rest_framework import viewsets
 from core.models.types.ldap_dns_record import RecordTypes
 from core.models.dns import LDAPRecord
