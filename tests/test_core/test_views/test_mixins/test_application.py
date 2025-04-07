@@ -86,7 +86,7 @@ class TestApplicationMixin:
 			application_id=f_pre_application.id
 		) == (f_pre_application, f_pre_client,)
 
-	def test_get_application_data_no_client_raises(self, f_pre_application, f_pre_client: Client):
+	def test_get_application_data_no_client_raises(self, f_pre_application: Application, f_pre_client: Client):
 		f_pre_client.delete()
 		with pytest.raises(exc_app.ApplicationOidcClientDoesNotExist):
 			ApplicationViewMixin().get_application_data(
@@ -120,12 +120,12 @@ class TestApplicationMixin:
 			"redirect_uris":"https://subdomain.example.com",
 			"scopes": test_scopes,
 		}
-		test_values = {
+		application_values = {
 			**m_values,
 			**m_extra_fields,
 			**m_excluded_fields,
 		}
-		serializer, extra_fields = ApplicationViewMixin().insert_clean_data(data=test_values)
+		serializer, extra_fields = ApplicationViewMixin().insert_clean_data(data=application_values)
 		expected = m_values.copy()
 		expected["scopes"] = "scope1 scope2"
 		assert extra_fields == m_extra_fields
@@ -144,7 +144,22 @@ class TestApplicationMixin:
 		with pytest.raises(exc_base.BadRequest):
 			ApplicationViewMixin().insert_clean_data(data=m_values)
 
-
-# @pytest.mark.django_db
-# class TestApplication:
-# 	def 
+	def test_insert_application_raises_exists(self, f_pre_application: Application):
+		mixin = ApplicationViewMixin()
+		m_extra_fields = {
+			"require_consent": True,
+			"reuse_consent": True,
+			"response_types": { "code": True },
+		}
+		m_values = {
+			"name":f_pre_application.name,
+			"redirect_uris":"https://subdomain.example.com",
+			"scopes": "scope1 scope2"
+		}
+		application_values = {
+			**m_values,
+			**m_extra_fields,
+		}
+		serializer, extra_fields = mixin.insert_clean_data(data=application_values)
+		with pytest.raises(exc_app.ApplicationExists):
+			mixin.insert_application(serializer=serializer, extra_fields=extra_fields)
