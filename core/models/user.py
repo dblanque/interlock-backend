@@ -254,7 +254,13 @@ class User(BaseUser):
 
 	@property
 	def encryptedPassword(self):
+		"""Returns tuple of BinaryField memoryview objects"""
 		return tuple([getattr(self, f) for f in USER_PASSWORD_FIELDS])
+	
+	@property
+	def encrypted_password_bytes(self):
+		"""Returns tuple of bytes converted from BinaryField memoryview objects"""
+		return tuple([getattr(self, f).tobytes for f in USER_PASSWORD_FIELDS])
 
 	@property
 	def distinguished_name(self):
