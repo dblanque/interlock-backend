@@ -192,7 +192,7 @@ class LDAPConnector(object):
 		self,
 		user: User = None,
 		force_admin=False,
-		get_ldap_info=ldap3.NONE,
+		get_ldap_info=ldap3.DSA,
 		is_authenticating=False,
 		**kwargs,
 	):
