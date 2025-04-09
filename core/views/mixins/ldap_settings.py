@@ -27,7 +27,7 @@ from core.views.mixins.utils import net_port_test
 
 ### Others
 from core.ldap.connector import test_ldap_connection, LDAPConnector, LDAPConnectionOptions
-from interlock_backend.settings import BASE_DIR
+from interlock_backend.settings import BASE_DIR, DEFAULT_SUPERUSER_USERNAME
 from core.config.runtime import RuntimeSettings
 from django.core.exceptions import ObjectDoesNotExist
 import logging
@@ -88,21 +88,23 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 			file.write("STUB_RELOAD = False")
 
 	def get_admin_status(self):
-		userQuerySet = User.objects.filter(username="admin")
+		userQuerySet = User.objects.filter(username=DEFAULT_SUPERUSER_USERNAME)
 		if userQuerySet.count() > 0:
-			status = userQuerySet.get(username="admin").deleted
+			status = userQuerySet.get(username=DEFAULT_SUPERUSER_USERNAME).deleted
 			return not status
 		else:
 			return False
 
 	@transaction.atomic
-	def set_admin_status(self, status, password=None):
-		userQuerySet = User.objects.get_full_queryset().filter(username="admin")
-		if status == True and userQuerySet.count() == 0:
+	def set_admin_status(self, status: bool, password=None):
+		if not isinstance(status, bool):
+			raise TypeError("status must be of type bool.")
+		userQuerySet = User.objects.get_full_queryset().filter(username=DEFAULT_SUPERUSER_USERNAME)
+		if status and userQuerySet.count() == 0:
 			defaultAdmin: User = User.objects.create_default_superuser()
 
 		if userQuerySet.count() > 0:
-			defaultAdmin = userQuerySet.get(username="admin")
+			defaultAdmin = userQuerySet.get(username=DEFAULT_SUPERUSER_USERNAME)
 			defaultAdmin.deleted = not status
 			defaultAdmin.save()
 
@@ -137,7 +139,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 				raise exception
 			logger.info("Port test successful")
 
-		username = "admin"
+		username = DEFAULT_SUPERUSER_USERNAME
 		user_dn = ldapAuthConnectionUser
 
 		logger.info("Test Connection Endpoint Parameters: ")
