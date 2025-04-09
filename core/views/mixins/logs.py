@@ -62,7 +62,7 @@ class LogMixin(viewsets.ViewSetMixin):
                 message=message,
                 **kwargs
             )
-            log_instance.save()
+            log_instance.save(force_insert=True)
 
             return log_instance.id
 
