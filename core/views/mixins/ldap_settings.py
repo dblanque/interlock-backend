@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.views.mixins.settings_mixin
+# Module: core.views.mixins.ldap_settings
 # Contains the Mixin for Setting related operations
 
 # ---------------------------------- IMPORTS -----------------------------------#
@@ -16,11 +16,11 @@ from rest_framework import viewsets
 ### Core
 #### Models
 from core.models.interlock_settings import InterlockSetting, INTERLOCK_SETTING_ENABLE_LDAP
-from core.models.user import User, USER_TYPE_LDAP
+from core.models.user import User
 from core.models.ldap_settings import LDAPPreset
 
 #### Exceptions
-from core.exceptions import ldap as exc_ldap, users as exc_user
+from core.exceptions import ldap as exc_ldap
 
 #### Mixins
 from core.views.mixins.utils import net_port_test
@@ -35,16 +35,16 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_PRESET_NAME = "default_preset"
 
 class SettingsViewMixin(viewsets.ViewSetMixin):
 	def create_default_preset(self):
-		LDAPPreset.objects.create(name="default_preset", label="Default Preset", active=True)
+		LDAPPreset.objects.create(name=DEFAULT_PRESET_NAME, label="Default Preset", active=True)
 
 	def remove_default_preset(self):
-		try:
-			LDAPPreset.objects.filter(name="default").delete_permanently()
-		except:
-			pass
+		qs = LDAPPreset.objects.filter(name=DEFAULT_PRESET_NAME)
+		if qs.exists():
+			qs[0].delete_permanently()
 
 	def resync_users(self) -> None:
 		ldap_enabled = InterlockSetting.objects.get(name=INTERLOCK_SETTING_ENABLE_LDAP)
