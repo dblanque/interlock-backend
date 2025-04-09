@@ -11,8 +11,9 @@
 from rest_framework import viewsets
 from rest_framework.exceptions import NotFound
 
+
 ################################################################################
-class BaseViewSet(viewsets.ViewSet): # pragma: no cover
+class BaseViewSet(viewsets.ViewSet):  # pragma: no cover
 	def list(self, request, pk=None):
 		raise NotFound
 
