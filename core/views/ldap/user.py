@@ -11,7 +11,7 @@
 from core.exceptions.base import PermissionDenied, BadRequest
 from core.exceptions import base as exc_base, users as exc_user
 from django.core.exceptions import ObjectDoesNotExist
-from interlock_backend.encrypt import aes_encrypt
+from interlock_backend.encrypt import aes_encrypt, aes_decrypt
 
 ### Models
 from core.models.user import (
@@ -144,7 +144,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				)
 			user_dn = self.ldap_user_insert(user_data=data)
 			user_pwd = data["password"]
-			self.ldap_set_password(user_dn=user_dn, user_pwd=user_pwd)
+			self.ldap_set_password(user_dn=user_dn, user_pwd_new=user_pwd, set_by_admin=True)
 
 		return Response(data={"code": code, "code_msg": code_msg, "data": data["username"]})
 
@@ -298,7 +298,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 			if data["password"] != data["passwordConfirm"]:
 				raise exc_user.UserPasswordsDontMatch
-			self.ldap_set_password(user_dn=dn, user_pwd=data["password"])
+			self.ldap_set_password(user_dn=dn, user_pwd_new=data["password"], set_by_admin=True)
 
 		django_user = None
 		try:
@@ -458,7 +458,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 				if set_pwd:
 					try:
-						self.ldap_set_password(user_dn=user_dn, user_pwd=row[mapped_pwd_key])
+						self.ldap_set_password(user_dn=user_dn, user_pwd_new=row[mapped_pwd_key], set_by_admin=True)
 					except:
 						failed_users.append({"username": row[mapped_user_key], "stage": "password"})
 
@@ -674,7 +674,11 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			if data["password"] != data["passwordConfirm"]:
 				raise exc_user.UserPasswordsDontMatch
 
-			self.ldap_set_password(user_dn=distinguishedName, user_pwd=data["password"])
+			self.ldap_set_password(
+				user_dn=distinguishedName,
+				user_pwd_new=data["password"],
+				user_pwd_old=aes_decrypt(*user.encryptedPassword)
+			)
 
 		django_user = None
 		try:

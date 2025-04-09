@@ -33,6 +33,12 @@ from core.models.choices.log import (
 from core.ldap.connector import LDAPConnector
 from core.views.mixins.logs import LogMixin
 from ldap3 import Connection, MODIFY_DELETE, MODIFY_REPLACE
+from ldap3.extend import (
+	ExtendedOperationsRoot,
+	ExtendedOperationContainer,
+	StandardExtendedOperations,
+	MicrosoftExtendedOperations
+)
 
 ### Mixins
 from core.views.mixins.ldap.group import GroupViewMixin
@@ -450,20 +456,39 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			django_user.save()
 		return self.ldap_connection
 
-	def ldap_set_password(self, user_dn: str, user_pwd: str) -> LDAPConnector:
+	def ldap_set_password(self, user_dn: str, user_pwd_new: str, user_pwd_old: str = None, set_by_admin = False) -> LDAPConnector:
 		"""
 		### Sets the LDAP User's Password with Microsoft Extended LDAP Commands
 		Returns the used LDAP Connection
 		### ! Microsoft AD Servers do not allow password changing without LDAPS
 		"""
+		# Type hinting defs
+		extended_operations: ExtendedOperationsRoot = self.ldap_connection.extend
+		eo_standard: StandardExtendedOperations = extended_operations.standard
+		eo_microsoft: MicrosoftExtendedOperations = extended_operations.microsoft
+
+		# Validation
+		old_password_entered = user_pwd_old and isinstance(user_pwd_old, str) and len(user_pwd_old) > 1
+		if not set_by_admin and not old_password_entered:
+			raise exc_user.UserPasswordsDontMatch()
+
+		# Set kwargs
+		pwd_kwargs = {
+			"new_password": user_pwd_new
+		}
+		if old_password_entered:
+			pwd_kwargs["old_password"] = user_pwd_old
+
 		try:
-			return self.ldap_connection.extend.microsoft.modify_password(
-				user=user_dn, new_password=user_pwd
-			)
+			# If available use standard password extended operation
+			if '1.3.6.1.4.1.4203.1.11.1' in self.ldap_connection.server.info.supported_extensions:
+				return eo_standard.modify_password(user=user_dn, **pwd_kwargs)
+			else:
+			# Otherwise attempt to change password directly with Microsoft Extended Op.
+				return eo_microsoft.modify_password(user=user_dn, **pwd_kwargs)
 		except Exception as e:
-			self.ldap_connection.unbind()
-			print(e)
-			print(f"Could not update password for User DN: {user_dn}")
+			logger.exception(e)
+			logger.error(f"Could not update password for User DN: {user_dn}")
 			data = {"ldap_response": self.ldap_connection.result}
 			raise exc_user.UserUpdateError(data=data)
 
