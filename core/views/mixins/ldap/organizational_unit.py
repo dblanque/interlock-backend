@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 
 
 class OrganizationalUnitMixin(viewsets.ViewSetMixin):
-	def processFilter(self, data, filterDict=None):
+	def process_filter(self, data, filterDict=None):
 		ldap_filter = ""
 
 		if "filter" in data and "iexact" in data["filter"]:

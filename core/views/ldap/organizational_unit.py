@@ -128,7 +128,7 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		code_msg = "ok"
 
 		try:
-			ldap_filter_object = self.processFilter(data)
+			ldap_filter_object = self.process_filter(data)
 		except Exception as e:
 			print(e)
 			raise exc_dirtree.DirtreeFilterBad
