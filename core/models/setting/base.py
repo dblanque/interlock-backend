@@ -89,6 +89,8 @@ class BaseSetting(BaseModel):
 			raise ValidationError(f"{choice_type} cannot be null when type is {self.type}.")
 
 	def clean(self):
+		if not self.type or len(self.type) <= 0:
+			raise ValidationError("Type is required.")
 		for choice_type, choice_fields in self.setting_fields.items():
 			if self.type == choice_type:
 				if isinstance(choice_fields, str):
@@ -133,6 +135,8 @@ class BaseSetting(BaseModel):
 
 	@value.setter
 	def value(self, v):
+		if not self.type or len(self.type) <= 0:
+			raise ValidationError("Type is required for BaseSetting based models.")
 		# Set unrelated value fields to None
 		for field in self.setting_fields.values():
 			self._set_value(None, value_fields=field)
