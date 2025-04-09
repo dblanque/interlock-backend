@@ -27,14 +27,22 @@ class LogMixin(viewsets.ViewSetMixin):
 			message = None,
 			**kwargs
         ):
-        """Maintains log rotation while ensuring atomic operations and efficient queries."""
+        """Maintains log rotation while ensuring atomic operations."""
+        if not any(isinstance(user, t) for t in (int, User,)):
+            raise TypeError("user must be of type int | User")
+
         LOG_OPTION = f"LDAP_LOG_{operation_type}"
         if not hasattr(RuntimeSettings, LOG_OPTION):
             logger.warning("RuntimeSettings does not have the %s attribute.", LOG_OPTION)
         if not getattr(RuntimeSettings, LOG_OPTION, False):
             return None
         log_limit = RuntimeSettings.LDAP_LOG_MAX
-        
+
+        if isinstance(user, int):
+            kwargs["user_id"] = user
+        else:
+            kwargs["user"] = user
+
         with transaction.atomic():
             # Get aggregated log information in a single query
             log_info = Log.objects.aggregate(
@@ -48,7 +56,6 @@ class LogMixin(viewsets.ViewSetMixin):
 
             # Determine next log ID using database-generated sequence
             log_instance = Log(
-                user=user,
                 operation_type=operation_type,
                 log_target_class=log_target_class,
                 log_target=log_target,
@@ -60,7 +67,7 @@ class LogMixin(viewsets.ViewSetMixin):
             return log_instance.id
 
     def _rotate_logs(self, log_limit, current_count):
-        """Handle log rotation using efficient bulk operations."""
+        """Handle log rotation using bulk ops."""
         
         # Calculate how many logs to remove
         remove_count = current_count - log_limit + 1  # +1 to make space for new log
