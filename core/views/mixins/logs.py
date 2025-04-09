@@ -13,20 +13,25 @@ from core.models.user import User
 from core.models.log import Log
 from django.db import transaction
 from django.db.models import Count, Max
+import logging
 #################################################################################
+logger = logging.getLogger()
 
 class LogMixin(viewsets.ViewSetMixin):
     def log(
             self,
-            user: int | User = None,
-            operation_type = None,
-			log_target_class = None,
+            user: int | User,
+            operation_type,
+			log_target_class,
 			log_target = None,
 			message = None,
 			**kwargs
         ):
         """Maintains log rotation while ensuring atomic operations and efficient queries."""
-        if not getattr(RuntimeSettings, f"LDAP_LOG_{operation_type}", False):
+        LOG_OPTION = f"LDAP_LOG_{operation_type}"
+        if not hasattr(RuntimeSettings, LOG_OPTION):
+            logger.warning("RuntimeSettings does not have the %s attribute.", LOG_OPTION)
+        if not getattr(RuntimeSettings, LOG_OPTION, False):
             return None
         log_limit = RuntimeSettings.LDAP_LOG_MAX
         
@@ -42,8 +47,15 @@ class LogMixin(viewsets.ViewSetMixin):
                 self._rotate_logs(log_limit, log_info['total_logs'])
 
             # Determine next log ID using database-generated sequence
-            log_instance = Log(**kwargs)
-            log_instance.save(force_insert=True)
+            log_instance = Log(
+                user=user,
+                operation_type=operation_type,
+                log_target_class=log_target_class,
+                log_target=log_target,
+                message=message,
+                **kwargs
+            )
+            log_instance.save()
 
             return log_instance.id
 
