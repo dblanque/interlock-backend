@@ -12,6 +12,17 @@ from core.views.base import BaseViewSet
 
 # Models
 from core.models.user import User
+from core.models.choices.log import (
+	LOG_ACTION_CREATE,
+	LOG_ACTION_READ,
+	LOG_ACTION_UPDATE,
+	LOG_ACTION_DELETE,
+	LOG_CLASS_USER,
+	LOG_EXTRA_USER_END_USER_UPDATE,
+	LOG_EXTRA_ENABLE,
+	LOG_EXTRA_DISABLE,
+	LOG_EXTRA_USER_CHANGE_PASSWORD,
+)
 
 # Serializers
 from core.serializers.user import UserSerializer
@@ -53,9 +64,11 @@ class UserViewSet(BaseViewSet):
 			"dn",
 		)
 		user_queryset = User.objects.all()
-		if RuntimeSettings.LDAP_LOG_READ == True:
-			# Log this action to DB
-			DBLogMixin.log(user_id=request.user.id, actionType="READ", objectClass="USER")
+		DBLogMixin.log(
+			user_id=request.user.id,
+			operation_type=LOG_ACTION_READ,
+			log_target_class=LOG_CLASS_USER
+		)
 		return Response(
 			data={
 				"code": code,
@@ -92,14 +105,12 @@ class UserViewSet(BaseViewSet):
 				user_instance.set_password(password)
 				user_instance.save()
 
-		if RuntimeSettings.LDAP_LOG_CREATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=request.user.id,
-				actionType="CREATE",
-				objectClass="USER",
-				affectedObject=user_instance.username,
-			)
+		DBLogMixin.log(
+			user_id=request.user.id,
+			operation_type=LOG_ACTION_CREATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=user_instance.username,
+		)
 
 		return Response(
 			data={
@@ -117,14 +128,12 @@ class UserViewSet(BaseViewSet):
 		pk = int(pk)
 		user_instance = User.objects.get(id=pk)
 		data = {}
-		if RuntimeSettings.LDAP_LOG_READ == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=request.user.id,
-				actionType="READ",
-				objectClass="USER",
-				affectedObject=user_instance.username,
-			)
+		DBLogMixin.log(
+			user_id=request.user.id,
+			operation_type=LOG_ACTION_READ,
+			log_target_class=LOG_CLASS_USER,
+			log_target=user_instance.username,
+		)
 		for field in PUBLIC_FIELDS:
 			data[field] = getattr(user_instance, field)
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
@@ -157,14 +166,13 @@ class UserViewSet(BaseViewSet):
 		for key in data:
 			setattr(user_instance, key, data[key])
 		user_instance.save()
-		if RuntimeSettings.LDAP_LOG_UPDATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=request.user.id,
-				actionType="UPDATE",
-				objectClass="USER",
-				affectedObject=user_instance.username,
-			)
+
+		DBLogMixin.log(
+			user_id=request.user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=user_instance.username,
+		)
 		return Response(
 			data={
 				"code": code,
@@ -185,14 +193,13 @@ class UserViewSet(BaseViewSet):
 			if req_user.id == pk:
 				raise exc_user.UserAntiLockout
 			user_instance.delete_permanently()
-		if RuntimeSettings.LDAP_LOG_DELETE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=request.user.id,
-				actionType="DELETE",
-				objectClass="USER",
-				affectedObject=user_instance.username,
-			)
+
+		DBLogMixin.log(
+			user_id=request.user.id,
+			operation_type=LOG_ACTION_DELETE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=user_instance.username,
+		)
 		return Response(
 			data={
 				"code": code,
@@ -214,15 +221,13 @@ class UserViewSet(BaseViewSet):
 		user_instance.is_enabled = data.pop("enabled")
 		user_instance.save()
 
-		if RuntimeSettings.LDAP_LOG_UPDATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=request.user.id,
-				actionType="UPDATE",
-				objectClass="USER",
-				affectedObject=user_instance.username,
-				extraMessage="ENABLE" if user_instance.is_enabled is True else "DISABLE",
-			)
+		DBLogMixin.log(
+			user_id=request.user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=user_instance.username,
+			message=LOG_EXTRA_ENABLE if user_instance.is_enabled else LOG_EXTRA_DISABLE,
+		)
 		return Response(
 			data={
 				"code": code,
@@ -248,15 +253,13 @@ class UserViewSet(BaseViewSet):
 		user_instance.set_password(data["password"])
 		user_instance.save()
 
-		if RuntimeSettings.LDAP_LOG_UPDATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=user.id,
-				actionType="UPDATE",
-				objectClass="USER",
-				affectedObject=user_instance.username,
-				extraMessage="CHANGED_PASSWORD",
-			)
+		DBLogMixin.log(
+			user_id=user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=user_instance.username,
+			message=LOG_EXTRA_USER_CHANGE_PASSWORD,
+		)
 
 		return Response(
 			data={"code": code, "code_msg": code_msg, "data": {"username": user_instance.username}}
@@ -277,15 +280,13 @@ class UserViewSet(BaseViewSet):
 		user.set_password(data["password"])
 		user.save()
 
-		if RuntimeSettings.LDAP_LOG_UPDATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=user.id,
-				actionType="UPDATE",
-				objectClass="USER",
-				affectedObject=user.username,
-				extraMessage="CHANGED_PASSWORD",
-			)
+		DBLogMixin.log(
+			user_id=user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=user.username,
+			message=LOG_EXTRA_USER_CHANGE_PASSWORD,
+		)
 
 		return Response(
 			data={"code": code, "code_msg": code_msg, "data": {"username": user.username}}
@@ -315,15 +316,13 @@ class UserViewSet(BaseViewSet):
 			setattr(user, key, data[key])
 		user.save()
 
-		if RuntimeSettings.LDAP_LOG_UPDATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=user.id,
-				actionType="UPDATE",
-				objectClass="USER",
-				affectedObject=user.username,
-				extraMessage="END_USER_UPDATED",
-			)
+		DBLogMixin.log(
+			user_id=user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=user.username,
+			message=LOG_EXTRA_USER_END_USER_UPDATE,
+		)
 
 		return Response(
 			data={

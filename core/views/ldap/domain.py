@@ -13,6 +13,12 @@ from core.models.interlock_settings import InterlockSetting, INTERLOCK_SETTING_E
 from core.models.dns import LDAPDNS, LDAPRecord
 from core.models.types.ldap_dns_record import RecordTypes
 from core.models.user import User
+from core.models.choices.log import (
+	LOG_ACTION_READ,
+	LOG_ACTION_CREATE,
+	LOG_ACTION_DELETE,
+	LOG_CLASS_DNSZ,
+)
 
 ### ViewSets
 from core.views.base import BaseViewSet
@@ -178,14 +184,12 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 						if zoneName == "RootDNSServers":
 							dnsZones[i] = "Root DNS Servers"
 
-					if RuntimeSettings.LDAP_LOG_READ == True:
-						# Log this action to DB
-						DBLogMixin.log(
-							user_id=request.user.id,
-							actionType="READ",
-							objectClass="DNSZ",
-							affectedObject=target_zone,
-						)
+					DBLogMixin.log(
+						user_id=request.user.id,
+						operation_type=LOG_ACTION_READ,
+						log_target_class=LOG_CLASS_DNSZ,
+						log_target=target_zone,
+					)
 
 					responseData["dnsZones"] = dnsZones
 					responseData["forestZones"] = forestZones
@@ -355,14 +359,12 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 			elif ipv6:
 				result.update({"aaaa_ns": aaaa_to_ns_record_result, "aaaa": aaaa_record_result})
 
-			if RuntimeSettings.LDAP_LOG_CREATE == True:
-				# Log this action to DB
-				DBLogMixin.log(
-					user_id=request.user.id,
-					actionType="CREATE",
-					objectClass="DNSZ",
-					affectedObject=target_zone,
-				)
+			DBLogMixin.log(
+				user_id=request.user.id,
+				operation_type=LOG_ACTION_CREATE,
+				log_target_class=LOG_CLASS_DNSZ,
+				log_target=target_zone,
+			)
 
 		return Response(data={"code": code, "code_msg": "ok", "result": result})
 
@@ -430,14 +432,12 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 
 			ldapConnection.unbind()
 
-			if RuntimeSettings.LDAP_LOG_DELETE == True:
-				# Log this action to DB
-				DBLogMixin.log(
-					user_id=request.user.id,
-					actionType="DELETE",
-					objectClass="DNSZ",
-					affectedObject=target_zone,
-				)
+			DBLogMixin.log(
+				user_id=request.user.id,
+				operation_type=LOG_ACTION_DELETE,
+				log_target_class=LOG_CLASS_DNSZ,
+				log_target=target_zone,
+			)
 
 		return Response(
 			data={

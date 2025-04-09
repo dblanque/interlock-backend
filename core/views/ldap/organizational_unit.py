@@ -23,6 +23,14 @@ from core.views.base import BaseViewSet
 from core.views.mixins.logs import LogMixin
 from core.models.ldap_tree import LDAPTree, LDAPTreeOptions
 from core.models.user import User
+from core.models.choices.log import (
+	LOG_ACTION_READ,
+	LOG_ACTION_CREATE,
+	LOG_ACTION_DELETE,
+	LOG_CLASS_OU,
+	LOG_CLASS_LDAP,
+	LOG_TARGET_ALL,
+)
 
 ### Mixins
 from core.views.mixins.ldap.organizational_unit import OrganizationalUnitMixin
@@ -95,14 +103,12 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				print(e)
 				raise exc_ldap.CouldNotFetchDirtree
 
-			if RuntimeSettings.LDAP_LOG_READ == True:
-				# Log this action to DB
-				DBLogMixin.log(
-					user_id=request.user.id,
-					actionType="READ",
-					objectClass="OU",
-					affectedObject="ALL - List Query",
-				)
+			DBLogMixin.log(
+				user_id=request.user.id,
+				operation_type=LOG_ACTION_READ,
+				log_target_class=LOG_CLASS_OU,
+				log_target=LOG_TARGET_ALL,
+			)
 
 		return Response(
 			data={
@@ -167,14 +173,12 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				print(e)
 				raise exc_ldap.CouldNotFetchDirtree
 
-			if RuntimeSettings.LDAP_LOG_READ == True:
-				# Log this action to DB
-				DBLogMixin.log(
-					user_id=request.user.id,
-					actionType="READ",
-					objectClass="LDAP",
-					affectedObject="ALL - Full Dirtree Query",
-				)
+			DBLogMixin.log(
+				user_id=request.user.id,
+				operation_type=LOG_ACTION_READ,
+				log_target_class=LOG_CLASS_LDAP,
+				log_target=LOG_TARGET_ALL,
+			)
 
 		return Response(
 			data={
@@ -287,14 +291,12 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				self.ldap_connection.unbind()
 				raise exc_ou.OUCreate(data=data)
 
-			if RuntimeSettings.LDAP_LOG_CREATE == True:
-				# Log this action to DB
-				DBLogMixin.log(
-					user_id=request.user.id,
-					actionType="CREATE",
-					objectClass="OU",
-					affectedObject=object_name,
-				)
+			DBLogMixin.log(
+				user_id=request.user.id,
+				operation_type=LOG_ACTION_CREATE,
+				log_target_class=LOG_CLASS_OU,
+				log_target=object_name,
+			)
 
 		return Response(
 			data={
@@ -331,13 +333,11 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				data = {"ldap_response": self.ldap_connection.result}
 				raise exc_base.CoreException(data=data)
 
-			if RuntimeSettings.LDAP_LOG_DELETE == True:
-				# Log this action to DB
-				DBLogMixin.log(
-					user_id=request.user.id,
-					actionType="DELETE",
-					objectClass="LDAP",
-					affectedObject=data["name"],
-				)
+			DBLogMixin.log(
+				user_id=request.user.id,
+				operation_type=LOG_ACTION_DELETE,
+				log_target_class=LOG_CLASS_LDAP,
+				log_target=data["name"],
+			)
 
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})

@@ -90,9 +90,9 @@ def test_enter_context_manager(
 		if expects_logging:
 			m_log.assert_called_once_with(
 				user_id=f_user.id,
-				actionType=LOG_ACTION_OPEN,
-				objectClass=LOG_CLASS_CONN,
-				affectedObject=f"{connector.uuid}",
+				operation_type=LOG_ACTION_OPEN,
+				log_target_class=LOG_CLASS_CONN,
+				log_target=f"{connector.uuid}",
 			)
 		else:
 			m_log.assert_not_called()
@@ -129,9 +129,9 @@ def test_exit_context_manager(
 	if expects_logging:
 		m_log.assert_called_once_with(
 			user_id=f_user.id,
-			actionType=LOG_ACTION_CLOSE,
-			objectClass=LOG_CLASS_CONN,
-			affectedObject=f"{connector.uuid}",
+			operation_type=LOG_ACTION_CLOSE,
+			log_target_class=LOG_CLASS_CONN,
+			log_target=f"{connector.uuid}",
 		)
 	else:
 		m_log.assert_not_called()

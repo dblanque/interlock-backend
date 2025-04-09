@@ -37,6 +37,7 @@ class LogsViewSet(BaseViewSet, LogMixin):
 	@auth_required
 	@admin_required
 	def list(self, request, pk=None):
+		#TODO - Add backend pagination
 		user: User = request.user
 		data = {}
 		code = 0
@@ -59,8 +60,14 @@ class LogsViewSet(BaseViewSet, LogMixin):
 					logDict[h] = getattr(log, h).username
 				elif h == "date":
 					logDict[h] = getattr(log, "logged_at").strftime(date_format["iso"])
+				elif h == "actionType":
+					logDict[h] = getattr(log, "operation_type")
+				elif h == "objectClass":
+					logDict[h] = getattr(log, "log_target_class")
 				elif h == "affectedObject":
-					logDict[h] = getattr(log, h)
+					logDict[h] = getattr(log, "log_target")
+				elif h == "extraMessage":
+					logDict[h] = getattr(log, "message")
 				else:
 					logDict[h] = getattr(log, h)
 			response_list.append(logDict)

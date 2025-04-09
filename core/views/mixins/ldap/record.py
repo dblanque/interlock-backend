@@ -16,9 +16,14 @@ from core.models.dns import LDAPRecord, record_type_main_field
 from core.models.structs.ldap_dns_record import RECORD_MAPPINGS, RecordTypes
 from core.models.validators.ldap_dns_record import FIELD_VALIDATORS as DNS_FIELD_VALIDATORS
 from core.models.validators import ldap_dns_record as dnsValidators
+from core.models.choices.log import (
+	LOG_CLASS_DNSR,
+	LOG_ACTION_CREATE,
+	LOG_ACTION_UPDATE,
+	LOG_ACTION_DELETE,
+)
 
 ### Interlock
-from core.config.runtime import RuntimeSettings
 from core.views.mixins.ldap.domain import DomainViewMixin
 import logging
 
@@ -172,14 +177,12 @@ class DNSRecordMixin(DomainViewMixin):
 		result = dnsRecord.structure.getData()
 		dr = dnstool.DNS_RECORD(result)
 
-		if RuntimeSettings.LDAP_LOG_CREATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=self.request.user.id,
-				actionType="CREATE",
-				objectClass="DNSR",
-				affectedObject=dnsRecord.__fullname__(),
-			)
+		DBLogMixin.log(
+			user_id=self.request.user.id,
+			operation_type=LOG_ACTION_CREATE,
+			log_target_class=LOG_CLASS_DNSR,
+			log_target=dnsRecord.__fullname__(),
+		)
 		return dr
 
 	def update_record(self, record_data: dict, old_record_data: dict):
@@ -237,14 +240,12 @@ class DNSRecordMixin(DomainViewMixin):
 		result = dnsRecord.structure.getData()
 		dr = dnstool.DNS_RECORD(result)
 
-		if RuntimeSettings.LDAP_LOG_UPDATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=self.request.user.id,
-				actionType="UPDATE",
-				objectClass="DNSR",
-				affectedObject=dnsRecord.__fullname__(),
-			)
+		DBLogMixin.log(
+			user_id=self.request.user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_DNSR,
+			log_target=dnsRecord.__fullname__(),
+		)
 		return dr
 
 	def delete_record(self, record_data: dict):
@@ -270,13 +271,11 @@ class DNSRecordMixin(DomainViewMixin):
 			self.ldap_connection.unbind()
 			raise e
 
-		if RuntimeSettings.LDAP_LOG_DELETE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=self.request.user.id,
-				actionType="DELETE",
-				objectClass="DNSR",
-				affectedObject=dnsRecord.__fullname__(),
-			)
+		DBLogMixin.log(
+			user_id=self.request.user.id,
+			operation_type=LOG_ACTION_DELETE,
+			log_target_class=LOG_CLASS_DNSR,
+			log_target=dnsRecord.__fullname__(),
+		)
 
 		return result

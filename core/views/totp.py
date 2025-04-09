@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Core
+from core.models.choices.log import LOG_ACTION_DELETE, LOG_CLASS_USER, LOG_EXTRA_TOTP_DELETE
 from core.serializers.token import OTPTokenSerializer
 from core.views.mixins.totp import (
 	create_device_totp_for_user,
@@ -141,10 +142,10 @@ class TOTPViewSet(BaseViewSet):
 				# Log this action to DB
 				DBLogMixin.log(
 					user_id=request.user.id,
-					actionType="DELETE",
-					objectClass="USER",
-					affectedObject=target_user.username,
-					extraMessage="TOTP_DELETE",
+					operation_type=LOG_ACTION_DELETE,
+					log_target_class=LOG_CLASS_USER,
+					log_target=target_user.username,
+					message=LOG_EXTRA_TOTP_DELETE,
 				)
 		except:
 			raise

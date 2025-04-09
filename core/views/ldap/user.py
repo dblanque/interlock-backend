@@ -21,6 +21,13 @@ from core.models.user import (
 	USER_TYPE_LOCAL,
 )
 from core.views.mixins.logs import LogMixin
+from core.models.choices.log import (
+	LOG_ACTION_UPDATE,
+	LOG_ACTION_CREATE,
+	LOG_CLASS_USER,
+	LOG_EXTRA_USER_CHANGE_PASSWORD,
+	LOG_EXTRA_USER_END_USER_UPDATE,
+)
 
 ### Mixins
 from core.views.mixins.ldap.user import UserViewMixin, UserViewLDAPMixin
@@ -305,15 +312,13 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			django_user.set_unusable_password()
 			django_user.save()
 
-		if RuntimeSettings.LDAP_LOG_UPDATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=request.user.id,
-				actionType="UPDATE",
-				objectClass="USER",
-				affectedObject=ldap_user_search,
-				extraMessage="CHANGED_PASSWORD",
-			)
+		DBLogMixin.log(
+			user_id=request.user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=ldap_user_search,
+			message=LOG_EXTRA_USER_CHANGE_PASSWORD,
+		)
 
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
 
@@ -458,14 +463,12 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 						failed_users.append({"username": row[mapped_user_key], "stage": "password"})
 
 				imported_users.append(row[mapped_user_key])
-				if RuntimeSettings.LDAP_LOG_CREATE == True:
-					# Log this action to DB
-					DBLogMixin.log(
-						user_id=request.user.id,
-						actionType="CREATE",
-						objectClass="USER",
-						affectedObject=row[mapped_user_key],
-					)
+				DBLogMixin.log(
+					user_id=request.user.id,
+					operation_type=LOG_ACTION_CREATE,
+					log_target_class=LOG_CLASS_USER,
+					log_target=row[mapped_user_key],
+				)
 
 		return Response(
 			status=200,
@@ -685,15 +688,13 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			django_user.set_unusable_password()
 			django_user.save()
 
-		if RuntimeSettings.LDAP_LOG_UPDATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=request.user.id,
-				actionType="UPDATE",
-				objectClass="USER",
-				affectedObject=ldap_user_search,
-				extraMessage="CHANGED_PASSWORD",
-			)
+		DBLogMixin.log(
+			user_id=request.user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=ldap_user_search,
+			message=LOG_EXTRA_USER_CHANGE_PASSWORD,
+		)
 
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
 
@@ -735,15 +736,13 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		logger.debug(self.ldap_connection.result)
 
-		if RuntimeSettings.LDAP_LOG_UPDATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=request.user.id,
-				actionType="UPDATE",
-				objectClass="USER",
-				affectedObject=ldap_user_search,
-				extraMessage="END_USER_UPDATED",
-			)
+		DBLogMixin.log(
+			user_id=request.user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=ldap_user_search,
+			message=LOG_EXTRA_USER_END_USER_UPDATE,
+		)
 
 		django_user = None
 		try:

@@ -22,7 +22,14 @@ from core.views.mixins.logs import LogMixin
 from core.models.application import ApplicationSecurityGroup
 
 ### Core
-from core.exceptions.ldap import CouldNotOpenConnection
+from core.models.choices.log import (
+	LOG_ACTION_CREATE,
+	LOG_ACTION_READ,
+	LOG_ACTION_UPDATE,
+	LOG_ACTION_DELETE,
+	LOG_CLASS_GROUP,
+	LOG_TARGET_ALL,
+)
 from core.models.ldap_object import LDAPObject
 from core.views.mixins.ldap.organizational_unit import OrganizationalUnitMixin
 
@@ -187,14 +194,12 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		valid_attributes.append("hasMembers")
 
-		if RuntimeSettings.LDAP_LOG_READ == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=self.request.user.id,
-				actionType="READ",
-				objectClass="GROUP",
-				affectedObject="ALL",
-			)
+		DBLogMixin.log(
+			user_id=self.request.user.id,
+			operation_type=LOG_ACTION_READ,
+			log_target_class=LOG_CLASS_GROUP,
+			log_target=LOG_TARGET_ALL,
+		)
 		return data, valid_attributes
 
 	def fetch_group(self):
@@ -267,14 +272,12 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			# Add entry DN to response dictionary
 			group_dict["distinguishedName"] = str(group[0].entry_dn)
 
-		if RuntimeSettings.LDAP_LOG_READ == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=self.request.user.id,
-				actionType="READ",
-				objectClass="GROUP",
-				affectedObject=group_dict["cn"],
-			)
+		DBLogMixin.log(
+			user_id=self.request.user.id,
+			operation_type=LOG_ACTION_READ,
+			log_target_class=LOG_CLASS_GROUP,
+			log_target=group_dict["cn"],
+		)
 		return group_dict, valid_attributes
 
 	def create_group(self, group_data: dict, exclude_keys=["member", "path"]):
@@ -356,14 +359,12 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				group_data = {"ldap_response": self.ldap_connection.result}
 				raise exc_groups.GroupMembersAdd
 
-		if RuntimeSettings.LDAP_LOG_CREATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=self.request.user.id,
-				actionType="CREATE",
-				objectClass="GROUP",
-				affectedObject=group_dict["cn"],
-			)
+		DBLogMixin.log(
+			user_id=self.request.user.id,
+			operation_type=LOG_ACTION_CREATE,
+			log_target_class=LOG_CLASS_GROUP,
+			log_target=group_dict["cn"],
+		)
 		return self.ldap_connection
 
 	def update_group(self, group_data: dict, unbind_on_error: bool = True):
@@ -557,14 +558,12 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 					print(e)
 					raise exc_groups.GroupMembersRemove
 
-		if RuntimeSettings.LDAP_LOG_UPDATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=self.request.user.id,
-				actionType="UPDATE",
-				objectClass="GROUP",
-				affectedObject=group_cn,
-			)
+		DBLogMixin.log(
+			user_id=self.request.user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_GROUP,
+			log_target=group_cn,
+		)
 		return self.ldap_connection
 
 	def delete_group(self, group_data: dict, unbind_on_error: bool = True):
@@ -604,12 +603,10 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 					asg.ldap_objects.remove(distinguishedName)
 					asg.save()
 
-		if RuntimeSettings.LDAP_LOG_DELETE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=self.request.user.id,
-				actionType="DELETE",
-				objectClass="GROUP",
-				affectedObject=group_data["cn"],
-			)
+		DBLogMixin.log(
+			user_id=self.request.user.id,
+			operation_type=LOG_ACTION_DELETE,
+			log_target_class=LOG_CLASS_GROUP,
+			log_target=group_data["cn"],
+		)
 		return self.ldap_connection

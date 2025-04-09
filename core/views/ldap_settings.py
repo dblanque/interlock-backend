@@ -18,6 +18,7 @@ from django.core.exceptions import ObjectDoesNotExist
 ### Models
 from core.views.mixins.logs import LogMixin
 from core.models.types.settings import TYPE_AES_ENCRYPT
+from core.models.choices.log import LOG_ACTION_READ, LOG_ACTION_UPDATE, LOG_CLASS_SET, LOG_TARGET_ALL
 from core.models.interlock_settings import (
 	InterlockSetting,
 	INTERLOCK_SETTING_PUBLIC,
@@ -73,11 +74,12 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 				{"name": p.name, "id": p.id, "label": p.label, "active": p.active or False}
 			)
 
-		if RuntimeSettings.LDAP_LOG_READ == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=request.user.id, actionType="READ", objectClass="SET", affectedObject="ALL"
-			)
+		DBLogMixin.log(
+			user_id=request.user.id,
+			operation_type=LOG_ACTION_READ,
+			log_target_class=LOG_CLASS_SET,
+			log_target=LOG_TARGET_ALL
+		)
 
 		return Response(
 			data={
@@ -99,11 +101,12 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		ldap_settings = get_setting_list(preset_id)
 		ldap_settings["DEFAULT_ADMIN_ENABLED"] = self.get_admin_status()
 
-		if RuntimeSettings.LDAP_LOG_READ == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=request.user.id, actionType="READ", objectClass="SET", affectedObject="ALL"
-			)
+		DBLogMixin.log(
+			user_id=request.user.id,
+			operation_type=LOG_ACTION_READ,
+			log_target_class=LOG_CLASS_SET,
+			log_target=LOG_TARGET_ALL
+		)
 
 		interlock_settings = {}
 		for setting_key in INTERLOCK_SETTING_PUBLIC:
@@ -314,13 +317,11 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 					except ObjectDoesNotExist:
 						LDAPSetting.objects.create(**kwdata)
 
-		if RuntimeSettings.LDAP_LOG_UPDATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=request.user.id,
-				actionType="UPDATE",
-				objectClass="SET",
-			)
+		DBLogMixin.log(
+			user_id=request.user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_SET,
+		)
 
 		self.resync_settings()
 		return Response(

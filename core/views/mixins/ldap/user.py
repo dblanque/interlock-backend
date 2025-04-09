@@ -19,6 +19,17 @@ from core.ldap.types.account import LDAP_ACCOUNT_TYPES
 ### Models
 from core.models import User
 from core.models.ldap_object import LDAPObject, LDAPObjectOptions
+from core.models.choices.log import (
+	LOG_CLASS_USER,
+	LOG_ACTION_CREATE,
+	LOG_ACTION_READ,
+	LOG_ACTION_UPDATE,
+	LOG_ACTION_DELETE,
+	LOG_EXTRA_UNLOCK,
+	LOG_EXTRA_ENABLE, 
+	LOG_EXTRA_DISABLE,
+	LOG_TARGET_ALL,
+)
 from core.ldap.connector import LDAPConnector
 from core.views.mixins.logs import LogMixin
 from ldap3 import Connection, MODIFY_DELETE, MODIFY_REPLACE
@@ -170,14 +181,12 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			raise
 		userList = self.ldap_connection.entries
 
-		if RuntimeSettings.LDAP_LOG_READ == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=self.request.user.id,
-				actionType="READ",
-				objectClass="USER",
-				affectedObject="ALL",
-			)
+		DBLogMixin.log(
+			user_id=self.request.user.id,
+			operation_type=LOG_ACTION_READ,
+			log_target_class=LOG_CLASS_USER,
+			log_target=LOG_TARGET_ALL,
+		)
 
 		# Remove attributes to return as table headers
 		valid_attributes: list = self.ldap_filter_attr
@@ -299,14 +308,12 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				raise exc_user.UserCreate(data=user_data)
 			return None
 
-		if RuntimeSettings.LDAP_LOG_CREATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=self.request.user.id,
-				actionType="CREATE",
-				objectClass="USER",
-				affectedObject=user_data["username"],
-			)
+		DBLogMixin.log(
+			user_id=self.request.user.id,
+			operation_type=LOG_ACTION_CREATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=user_data["username"],
+		)
 
 		return user_dn
 
@@ -420,14 +427,12 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		logger.debug(self.ldap_connection.result)
 
-		if RuntimeSettings.LDAP_LOG_UPDATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=self.request.user.id,
-				actionType="UPDATE",
-				objectClass="USER",
-				affectedObject=user_name,
-			)
+		DBLogMixin.log(
+			user_id=self.request.user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=user_name,
+		)
 
 		try:
 			django_user = User.objects.get(username=user_name)
@@ -557,14 +562,12 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		user_entry = user_obj.entry
 		user_dict = user_obj.attributes
 
-		if RuntimeSettings.LDAP_LOG_READ == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=self.request.user.id,
-				actionType="READ",
-				objectClass="USER",
-				affectedObject=user_search,
-			)
+		DBLogMixin.log(
+			user_id=self.request.user.id,
+			operation_type=LOG_ACTION_READ,
+			log_target_class=LOG_CLASS_USER,
+			log_target=user_search,
+		)
 
 		memberOfObjects = []
 		if "memberOf" in self.ldap_filter_attr and "memberOf" in user_dict:
@@ -673,15 +676,13 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			django_user.is_enabled = target_state
 			django_user.save()
 
-		if RuntimeSettings.LDAP_LOG_UPDATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=self.request.user.id,
-				actionType="UPDATE",
-				objectClass="USER",
-				affectedObject=affected_user,
-				extraMessage="ENABLE" if target_state is True else "DISABLE",
-			)
+		DBLogMixin.log(
+			user_id=self.request.user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=affected_user,
+			message=LOG_EXTRA_ENABLE if target_state else LOG_EXTRA_DISABLE,
+		)
 
 		logger.debug("Located in: " + __name__ + ".disable")
 		logger.debug(self.ldap_connection.result)
@@ -708,15 +709,13 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			raise exc_user.UserDoesNotExist
 
 		self.ldap_connection.extend.microsoft.unlock_account(user_dn)
-		if RuntimeSettings.LDAP_LOG_UPDATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=self.request.user.id,
-				actionType="UPDATE",
-				objectClass="USER",
-				affectedObject=user_name,
-				extraMessage="UNLOCK",
-			)
+		DBLogMixin.log(
+			user_id=self.request.user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=user_name,
+			message=LOG_EXTRA_UNLOCK,
+		)
 		return self.ldap_connection
 
 	def ldap_user_delete(self, user_object):
@@ -762,13 +761,11 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				data = {"ldap_response": self.ldap_connection.result}
 				raise exc_base.CoreException(data=data)
 
-		if RuntimeSettings.LDAP_LOG_DELETE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=self.request.user.id,
-				actionType="DELETE",
-				objectClass="USER",
-				affectedObject=user_name,
-			)
+		DBLogMixin.log(
+			user_id=self.request.user.id,
+			operation_type=LOG_ACTION_DELETE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=user_name,
+		)
 
 		return self.ldap_connection

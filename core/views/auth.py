@@ -11,6 +11,7 @@
 from core.views.mixins.auth import CookieJWTAuthentication
 from core.views.mixins.logs import LogMixin
 from core.models.user import User
+from core.models.choices.log import LOG_ACTION_LOGOUT, LOG_CLASS_USER
 
 ### ViewSets
 from .base import BaseViewSet
@@ -73,17 +74,14 @@ class AuthViewSet(BaseViewSet):
 		return response
 
 	def logout(self, request):
-		user: User = request.user
 		code = 0
 		code_msg = "ok"
 
-		if RuntimeSettings.LDAP_LOG_LOGOUT == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=request.user.id,
-				actionType="LOGOUT",
-				objectClass="USER",
-			)
+		DBLogMixin.log(
+			user_id=request.user.id,
+			operation_type=LOG_ACTION_LOGOUT,
+			log_target_class=LOG_CLASS_USER,
+		)
 
 		response = Response(
 			data={

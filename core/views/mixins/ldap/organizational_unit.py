@@ -24,6 +24,12 @@ from core.config.runtime import RuntimeSettings
 
 ### Models
 from core.views.mixins.logs import LogMixin
+from core.models.choices.log import (
+	LOG_ACTION_UPDATE,
+	LOG_CLASS_LDAP,
+	LOG_ACTION_RENAME,
+	LOG_ACTION_MOVE,
+)
 
 ### Others
 import logging
@@ -110,7 +116,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 		* ldap_path = Will relocate object if changed from what is in distinguished_name
 		Returns new object Distinguished Name
 		"""
-		operation = "RENAME"
+		operation = LOG_ACTION_RENAME
 		new_dn = None
 
 		# If relative_dn is passed, namechange will be executed.
@@ -133,7 +139,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 			raise exc_dirtree.DirtreeDistinguishedNameConflict
 
 		if ldap_path:
-			operation = "MOVE"
+			operation = LOG_ACTION_MOVE
 		try:
 			if ldap_path:
 				self.ldap_connection.modify_dn(
@@ -158,13 +164,11 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 			self.ldap_connection.unbind()
 			raise exc_dirtree.DirtreeMove(data=data)
 
-		if RuntimeSettings.LDAP_LOG_UPDATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=self.request.user.id,
-				actionType="UPDATE",
-				objectClass="LDAP",
-				affectedObject=new_relative_dn,
-				extraMessage=operation,
-			)
+		DBLogMixin.log(
+			user_id=self.request.user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_LDAP,
+			log_target=new_relative_dn,
+			message=operation,
+		)
 		return new_dn

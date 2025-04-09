@@ -1,37 +1,60 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.views.mixins.logs
+# Contains the Mixin for Log related operations
+
+# ---------------------------------- IMPORTS -----------------------------------#
 from rest_framework import viewsets
 from core.config.runtime import RuntimeSettings
+from core.models.user import User
 from core.models.log import Log
-
+from django.db import transaction
+from django.db.models import Count, Max
+#################################################################################
 
 class LogMixin(viewsets.ViewSetMixin):
-	def log(self, **kwargs):
-		# This function rotates logs based on a Maximum Limit Setting
-		log_limit = RuntimeSettings.LDAP_LOG_MAX
+    def log(
+            self,
+            user: int | User = None,
+            operation_type = None,
+			log_target_class = None,
+			log_target = None,
+			message = None,
+			**kwargs
+        ):
+        """Maintains log rotation while ensuring atomic operations and efficient queries."""
+        if not getattr(RuntimeSettings, f"LDAP_LOG_{operation_type}", False):
+            return None
+        log_limit = RuntimeSettings.LDAP_LOG_MAX
+        
+        with transaction.atomic():
+            # Get aggregated log information in a single query
+            log_info = Log.objects.aggregate(
+                total_logs=Count('id'),
+                max_id=Max('id')
+            )
 
-		# Truncate Logs if necessary
-		if Log.objects.count() > log_limit:
-			Log.objects.filter(id__gt=log_limit).delete()
+            # Rotate logs if necessary using bulk operations
+            if log_info['total_logs'] >= log_limit:
+                self._rotate_logs(log_limit, log_info['total_logs'])
 
-		unrotated_log_count = Log.objects.filter(rotated=False).count()
-		last_unrotated_log = Log.objects.filter(rotated=False).last()
-		# If there's no last unrotated log, set to 0 to avoid conditional issues
-		if last_unrotated_log is None:
-			last_unrotated_id = 0
-		else:
-			last_unrotated_id = last_unrotated_log.id
+            # Determine next log ID using database-generated sequence
+            log_instance = Log(**kwargs)
+            log_instance.save(force_insert=True)
 
-		# If there are no unrotated logs or the range is exceeded, restart sequence
-		if unrotated_log_count < 1 or last_unrotated_id >= log_limit:
-			Log.objects.all().update(rotated=True)
-			log_id = 1
-		else:
-			log_id = Log.objects.filter(rotated=False).last().id + 1
+            return log_instance.id
 
-		log_with_overlapping_id = Log.objects.filter(id=log_id)
-		if log_with_overlapping_id.exists():
-			log_with_overlapping_id.delete()
+    def _rotate_logs(self, log_limit, current_count):
+        """Handle log rotation using efficient bulk operations."""
+        
+        # Calculate how many logs to remove
+        remove_count = current_count - log_limit + 1  # +1 to make space for new log
+        
+        # Get IDs of oldest logs to remove
+        old_log_ids = Log.objects.order_by('id').values_list('id', flat=True)[:remove_count]
 
-		log_instance = Log(id=log_id, rotated=False, **kwargs)
-		log_instance.save()
-
-		return log_instance.id
+        # Bulk delete old logs
+        Log.objects.filter(id__in=old_log_ids).delete()

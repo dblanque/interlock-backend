@@ -22,6 +22,11 @@ from core.exceptions import ldap as exc_ldap
 from ldap3.core.exceptions import LDAPException
 
 # Models
+from core.models.choices.log import (
+	LOG_ACTION_OPEN,
+	LOG_ACTION_CLOSE,
+	LOG_CLASS_CONN,
+)
 from core.views.mixins.logs import LogMixin
 from core.models.user import User, USER_PASSWORD_FIELDS, USER_TYPE_LDAP, USER_TYPE_LOCAL
 
@@ -39,7 +44,6 @@ from interlock_backend.encrypt import aes_encrypt, aes_decrypt
 
 # Libs
 from inspect import getfullargspec
-import traceback
 import ssl
 import logging
 import sys
@@ -271,12 +275,12 @@ class LDAPConnector(object):
 		self.bind()
 		logger.info(f"Connection {self.uuid} opened.")
 		# LOG Open Connection Events
-		if RuntimeSettings.LDAP_LOG_OPEN_CONNECTION and not self.is_authenticating and self.user:
+		if not self.is_authenticating and self.user:
 			DBLogMixin.log(
 				user_id=self.user.id,
-				actionType="OPEN",
-				objectClass="CONN",
-				affectedObject=f"{self.uuid}",
+				operation_type=LOG_ACTION_OPEN,
+				log_target_class=LOG_CLASS_CONN,
+				log_target=f"{self.uuid}",
 			)
 		return self
 
@@ -285,12 +289,12 @@ class LDAPConnector(object):
 		if self.connection:
 			self.connection.unbind()
 		# LOG Open Connection Events
-		if RuntimeSettings.LDAP_LOG_CLOSE_CONNECTION and not self.is_authenticating and self.user:
+		if not self.is_authenticating and self.user:
 			DBLogMixin.log(
 				user_id=self.user.id,
-				actionType="CLOSE",
-				objectClass="CONN",
-				affectedObject=f"{self.uuid}",
+				operation_type=LOG_ACTION_CLOSE,
+				log_target_class=LOG_CLASS_CONN,
+				log_target=f"{self.uuid}",
 			)
 		logger.info(f"Connection {self.uuid} closed.")
 		if exc_value:

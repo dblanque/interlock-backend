@@ -13,10 +13,10 @@ from django.db.models.manager import BaseManager as Manager
 from django.db import models
 
 ### Base
-from .base import BaseManager
+from core.models.base import BaseManager
 
 ### Choices
-from .choices.log import ACTION_CHOICES, CLASS_CHOICES
+from core.models.choices.log import ACTION_CHOICES, CLASS_CHOICES
 
 
 # ---------------------------------------------------------------------------- #
@@ -28,30 +28,20 @@ class BaseLogModel(models.Model):
 	objects = BaseManager()
 	all_objects = Manager()
 
-	def delete(self, using=None, keep_parents=False):
-		"""
-		Normally use delete instead of this.
-		:param using:
-		:param keep_parents:
-		:return:
-		"""
-		return super().delete(using=using, keep_parents=keep_parents)
-
 	class Meta:
 		abstract = True
 
 
 class Log(BaseLogModel):
-	id = models.BigIntegerField(primary_key=True)
 	user = models.ForeignKey("User", on_delete=models.CASCADE)
-	actionType = models.CharField(
-		_("actionType"), choices=ACTION_CHOICES, max_length=256, null=False, blank=False
+	operation_type = models.CharField(
+		_("operation_type"), choices=ACTION_CHOICES, max_length=256, null=False, blank=False
 	)
-	objectClass = models.CharField(
-		_("objectClass"), choices=CLASS_CHOICES, max_length=256, null=False, blank=False
+	log_target_class = models.CharField(
+		_("log_target_class"), choices=CLASS_CHOICES, max_length=256, null=False, blank=False
 	)
-	affectedObject = models.JSONField(_("affectedObject"), null=True, blank=True)
-	extraMessage = models.CharField(_("extraMessage"), max_length=256, null=True, blank=True)
+	log_target = models.JSONField(_("log_target"), null=True, blank=True)
+	message = models.CharField(_("message"), max_length=256, null=True, blank=True)
 
 	def __str__(self):
-		return f"log_{self.id}_{self.actionType.lower()}_{self.objectClass.lower()}"
+		return f"log_{self.id}_{self.operation_type.lower()}_{self.log_target_class.lower()}"
