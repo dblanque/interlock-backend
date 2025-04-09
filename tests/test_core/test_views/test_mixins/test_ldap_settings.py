@@ -19,7 +19,8 @@ def auto_teardown():
 
 
 @pytest.fixture(autouse=True)
-def f_runtime_settings(g_runtime_settings):
+def f_runtime_settings(mocker, g_runtime_settings):
+	mocker.patch("core.views.mixins.ldap_settings.RuntimeSettings")
 	return g_runtime_settings
 
 
