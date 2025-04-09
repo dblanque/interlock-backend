@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_PRESET_NAME = "default_preset"
 
+
 class SettingsViewMixin(viewsets.ViewSetMixin):
 	def create_default_preset(self):
 		LDAPPreset.objects.create(name=DEFAULT_PRESET_NAME, label="Default Preset", active=True)
@@ -47,9 +48,15 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 			qs[0].delete_permanently()
 
 	def resync_users(self) -> None:
-		ldap_enabled = InterlockSetting.objects.get(name=INTERLOCK_SETTING_ENABLE_LDAP)
-		if ldap_enabled.value is False:
-			return
+		# If LDAP is not enable, do not resync users.
+		try:
+			ldap_enabled = InterlockSetting.objects.get(name=INTERLOCK_SETTING_ENABLE_LDAP)
+			if not ldap_enabled.value:
+				return None
+		except:
+			logger.warning(f"Could not fetch {INTERLOCK_SETTING_ENABLE_LDAP} from Database.")
+			return None
+
 		ldc_opts = LDAPConnectionOptions()
 		ldc_opts["force_admin"] = True
 		# Open LDAP Connection
@@ -80,12 +87,6 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 	def resync_settings(self):
 		RuntimeSettings.resync()
 		self.resync_users()
-
-	def reload_django(self):
-		reloader = BASE_DIR + "/interlock_backend/reload.py"
-		# Write the file
-		with open(reloader, "w") as file:
-			file.write("STUB_RELOAD = False")
 
 	def get_admin_status(self):
 		userQuerySet = User.objects.filter(username=DEFAULT_SUPERUSER_USERNAME)
