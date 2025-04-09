@@ -33,9 +33,6 @@ from core.models.choices.log import (
 
 ### Others
 import logging
-
-# For future implementation
-from ldap3.utils.dn import safe_rdn
 ################################################################################
 
 DBLogMixin = LogMixin()
