@@ -26,7 +26,8 @@ def test_user():
 	)
 
 @pytest.fixture
-def f_runtime_settings(g_runtime_settings):
+def f_runtime_settings(mocker, g_runtime_settings):
+	mocker.patch("core.views.mixins.logs.RuntimeSettings", g_runtime_settings)
 	g_runtime_settings.LDAP_LOG_MAX = 5
 	return g_runtime_settings
 
