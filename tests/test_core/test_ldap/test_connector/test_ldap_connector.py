@@ -11,35 +11,6 @@ from core.models.user import USER_TYPE_LDAP
 from inspect import getfullargspec
 from copy import deepcopy
 
-ENTER_EXIT_LOGGING_CASES = (
-	(
-		True,
-		False,
-		True,
-	),  # LOGGING, NOT AUTHENTICATING, EXPECTS LOGGING
-	(
-		True,
-		True,
-		False,
-	),  # LOG, AUTHENTICATING, DOES NOT EXPECT LOGGING
-	(
-		False,
-		True,
-		False,
-	),  # NO LOG, AUTHENTICATING, DOES NOT EXPECT LOGGING
-	(
-		False,
-		False,
-		False,
-	),  # NO LOG, NOT AUTHENTICATING, DOES NOT EXPECT LOGGING
-)
-ENTER_EXIT_ARGS = (
-	"logging",
-	"authenticating",
-	"expects_logging",
-)
-
-
 @pytest.fixture
 def f_ldap_connector(
 	mocker,
@@ -63,15 +34,17 @@ def f_ldap_connector(
 
 
 @pytest.mark.parametrize(
-	argnames=ENTER_EXIT_ARGS,
-	argvalues=ENTER_EXIT_LOGGING_CASES,
-	ids=get_ids_for_cases(ENTER_EXIT_ARGS, ENTER_EXIT_LOGGING_CASES),
+	"authenticating",
+	(
+		True,
+		False,
+	),
+	ids=lambda x: "Is authenticating" if x else "Is not authenticating"
 )
 def test_enter_context_manager(
-	logging, authenticating, expects_logging, mocker, f_user, f_runtime_settings
+	authenticating, mocker, f_user, f_runtime_settings
 ):
 	# Mock RuntimeSettings
-	f_runtime_settings.LDAP_LOG_OPEN_CONNECTION = logging
 	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
 	mocker.patch("core.ldap.connector.aes_decrypt", return_value="somepassword")
 
@@ -87,9 +60,9 @@ def test_enter_context_manager(
 	# Enter context manager
 	with connector as c:
 		assert c == connector  # Ensure the context manager returns self
-		if expects_logging:
+		if not authenticating:
 			m_log.assert_called_once_with(
-				user_id=f_user.id,
+				user=f_user.id,
 				operation_type=LOG_ACTION_OPEN,
 				log_target_class=LOG_CLASS_CONN,
 				log_target=f"{connector.uuid}",
@@ -97,17 +70,18 @@ def test_enter_context_manager(
 		else:
 			m_log.assert_not_called()
 
-
 @pytest.mark.parametrize(
-	argnames=ENTER_EXIT_ARGS,
-	argvalues=ENTER_EXIT_LOGGING_CASES,
-	ids=get_ids_for_cases(ENTER_EXIT_ARGS, ENTER_EXIT_LOGGING_CASES),
+	"authenticating",
+	(
+		True,
+		False,
+	),
+	ids=lambda x: "Is authenticating" if x else "Is not authenticating"
 )
 def test_exit_context_manager(
-	logging, authenticating, expects_logging, mocker, f_user, f_runtime_settings, f_ldap_connection
+	authenticating, mocker, f_user, f_runtime_settings, f_ldap_connection
 ):
 	# Mock RuntimeSettings
-	f_runtime_settings.LDAP_LOG_CLOSE_CONNECTION = logging
 	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
 	mocker.patch("core.ldap.connector.aes_decrypt", return_value="somepassword")
 
@@ -126,9 +100,9 @@ def test_exit_context_manager(
 
 	# Verify unbind and logging
 	f_ldap_connection.unbind.assert_called_once()
-	if expects_logging:
+	if not authenticating:
 		m_log.assert_called_once_with(
-			user_id=f_user.id,
+			user=f_user.id,
 			operation_type=LOG_ACTION_CLOSE,
 			log_target_class=LOG_CLASS_CONN,
 			log_target=f"{connector.uuid}",
