@@ -7,9 +7,6 @@
 # Contains the ViewSet for Group related operations
 
 # ---------------------------------- IMPORTS -----------------------------------#
-### Exceptions
-from core.exceptions import ldap as exc_ldap
-
 ### Models
 from core.models.user import User
 
