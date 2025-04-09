@@ -65,7 +65,7 @@ class UserViewSet(BaseViewSet):
 		)
 		user_queryset = User.objects.all()
 		DBLogMixin.log(
-			user_id=request.user.id,
+			user=request.user.id,
 			operation_type=LOG_ACTION_READ,
 			log_target_class=LOG_CLASS_USER
 		)
@@ -106,7 +106,7 @@ class UserViewSet(BaseViewSet):
 				user_instance.save()
 
 		DBLogMixin.log(
-			user_id=request.user.id,
+			user=request.user.id,
 			operation_type=LOG_ACTION_CREATE,
 			log_target_class=LOG_CLASS_USER,
 			log_target=user_instance.username,
@@ -129,7 +129,7 @@ class UserViewSet(BaseViewSet):
 		user_instance = User.objects.get(id=pk)
 		data = {}
 		DBLogMixin.log(
-			user_id=request.user.id,
+			user=request.user.id,
 			operation_type=LOG_ACTION_READ,
 			log_target_class=LOG_CLASS_USER,
 			log_target=user_instance.username,
@@ -168,7 +168,7 @@ class UserViewSet(BaseViewSet):
 		user_instance.save()
 
 		DBLogMixin.log(
-			user_id=request.user.id,
+			user=request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_USER,
 			log_target=user_instance.username,
@@ -195,7 +195,7 @@ class UserViewSet(BaseViewSet):
 			user_instance.delete_permanently()
 
 		DBLogMixin.log(
-			user_id=request.user.id,
+			user=request.user.id,
 			operation_type=LOG_ACTION_DELETE,
 			log_target_class=LOG_CLASS_USER,
 			log_target=user_instance.username,
@@ -222,7 +222,7 @@ class UserViewSet(BaseViewSet):
 		user_instance.save()
 
 		DBLogMixin.log(
-			user_id=request.user.id,
+			user=request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_USER,
 			log_target=user_instance.username,
@@ -254,7 +254,7 @@ class UserViewSet(BaseViewSet):
 		user_instance.save()
 
 		DBLogMixin.log(
-			user_id=user.id,
+			user=user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_USER,
 			log_target=user_instance.username,
@@ -281,7 +281,7 @@ class UserViewSet(BaseViewSet):
 		user.save()
 
 		DBLogMixin.log(
-			user_id=user.id,
+			user=user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_USER,
 			log_target=user.username,
@@ -317,7 +317,7 @@ class UserViewSet(BaseViewSet):
 		user.save()
 
 		DBLogMixin.log(
-			user_id=user.id,
+			user=user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_USER,
 			log_target=user.username,

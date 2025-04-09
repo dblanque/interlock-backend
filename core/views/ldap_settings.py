@@ -75,7 +75,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			)
 
 		DBLogMixin.log(
-			user_id=request.user.id,
+			user=request.user.id,
 			operation_type=LOG_ACTION_READ,
 			log_target_class=LOG_CLASS_SET,
 			log_target=LOG_TARGET_ALL
@@ -102,7 +102,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		ldap_settings["DEFAULT_ADMIN_ENABLED"] = self.get_admin_status()
 
 		DBLogMixin.log(
-			user_id=request.user.id,
+			user=request.user.id,
 			operation_type=LOG_ACTION_READ,
 			log_target_class=LOG_CLASS_SET,
 			log_target=LOG_TARGET_ALL
@@ -318,7 +318,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 						LDAPSetting.objects.create(**kwdata)
 
 		DBLogMixin.log(
-			user_id=request.user.id,
+			user=request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_SET,
 		)

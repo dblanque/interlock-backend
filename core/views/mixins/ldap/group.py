@@ -195,7 +195,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		valid_attributes.append("hasMembers")
 
 		DBLogMixin.log(
-			user_id=self.request.user.id,
+			user=self.request.user.id,
 			operation_type=LOG_ACTION_READ,
 			log_target_class=LOG_CLASS_GROUP,
 			log_target=LOG_TARGET_ALL,
@@ -273,7 +273,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			group_dict["distinguishedName"] = str(group[0].entry_dn)
 
 		DBLogMixin.log(
-			user_id=self.request.user.id,
+			user=self.request.user.id,
 			operation_type=LOG_ACTION_READ,
 			log_target_class=LOG_CLASS_GROUP,
 			log_target=group_dict["cn"],
@@ -360,7 +360,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				raise exc_groups.GroupMembersAdd
 
 		DBLogMixin.log(
-			user_id=self.request.user.id,
+			user=self.request.user.id,
 			operation_type=LOG_ACTION_CREATE,
 			log_target_class=LOG_CLASS_GROUP,
 			log_target=group_dict["cn"],
@@ -559,7 +559,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 					raise exc_groups.GroupMembersRemove
 
 		DBLogMixin.log(
-			user_id=self.request.user.id,
+			user=self.request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_GROUP,
 			log_target=group_cn,
@@ -604,7 +604,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 					asg.save()
 
 		DBLogMixin.log(
-			user_id=self.request.user.id,
+			user=self.request.user.id,
 			operation_type=LOG_ACTION_DELETE,
 			log_target_class=LOG_CLASS_GROUP,
 			log_target=group_data["cn"],

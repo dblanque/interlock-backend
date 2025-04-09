@@ -104,7 +104,7 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				raise exc_ldap.CouldNotFetchDirtree
 
 			DBLogMixin.log(
-				user_id=request.user.id,
+				user=request.user.id,
 				operation_type=LOG_ACTION_READ,
 				log_target_class=LOG_CLASS_OU,
 				log_target=LOG_TARGET_ALL,
@@ -174,7 +174,7 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				raise exc_ldap.CouldNotFetchDirtree
 
 			DBLogMixin.log(
-				user_id=request.user.id,
+				user=request.user.id,
 				operation_type=LOG_ACTION_READ,
 				log_target_class=LOG_CLASS_LDAP,
 				log_target=LOG_TARGET_ALL,
@@ -292,7 +292,7 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				raise exc_ou.OUCreate(data=data)
 
 			DBLogMixin.log(
-				user_id=request.user.id,
+				user=request.user.id,
 				operation_type=LOG_ACTION_CREATE,
 				log_target_class=LOG_CLASS_OU,
 				log_target=object_name,
@@ -334,7 +334,7 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				raise exc_base.CoreException(data=data)
 
 			DBLogMixin.log(
-				user_id=request.user.id,
+				user=request.user.id,
 				operation_type=LOG_ACTION_DELETE,
 				log_target_class=LOG_CLASS_LDAP,
 				log_target=data["name"],

@@ -165,7 +165,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 			raise exc_dirtree.DirtreeMove(data=data)
 
 		DBLogMixin.log(
-			user_id=self.request.user.id,
+			user=self.request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_LDAP,
 			log_target=new_relative_dn,

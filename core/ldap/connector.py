@@ -277,7 +277,7 @@ class LDAPConnector(object):
 		# LOG Open Connection Events
 		if not self.is_authenticating and self.user:
 			DBLogMixin.log(
-				user_id=self.user.id,
+				user=self.user.id,
 				operation_type=LOG_ACTION_OPEN,
 				log_target_class=LOG_CLASS_CONN,
 				log_target=f"{self.uuid}",
@@ -291,7 +291,7 @@ class LDAPConnector(object):
 		# LOG Open Connection Events
 		if not self.is_authenticating and self.user:
 			DBLogMixin.log(
-				user_id=self.user.id,
+				user=self.user.id,
 				operation_type=LOG_ACTION_CLOSE,
 				log_target_class=LOG_CLASS_CONN,
 				log_target=f"{self.uuid}",

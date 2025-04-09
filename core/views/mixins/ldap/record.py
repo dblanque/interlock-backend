@@ -178,7 +178,7 @@ class DNSRecordMixin(DomainViewMixin):
 		dr = dnstool.DNS_RECORD(result)
 
 		DBLogMixin.log(
-			user_id=self.request.user.id,
+			user=self.request.user.id,
 			operation_type=LOG_ACTION_CREATE,
 			log_target_class=LOG_CLASS_DNSR,
 			log_target=dnsRecord.__fullname__(),
@@ -241,7 +241,7 @@ class DNSRecordMixin(DomainViewMixin):
 		dr = dnstool.DNS_RECORD(result)
 
 		DBLogMixin.log(
-			user_id=self.request.user.id,
+			user=self.request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_DNSR,
 			log_target=dnsRecord.__fullname__(),
@@ -272,7 +272,7 @@ class DNSRecordMixin(DomainViewMixin):
 			raise e
 
 		DBLogMixin.log(
-			user_id=self.request.user.id,
+			user=self.request.user.id,
 			operation_type=LOG_ACTION_DELETE,
 			log_target_class=LOG_CLASS_DNSR,
 			log_target=dnsRecord.__fullname__(),

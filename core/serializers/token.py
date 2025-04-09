@@ -57,7 +57,7 @@ class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
 			data["admin_allowed"] = True
 
 		DBLogMixin.log(
-			user_id=self.user.id,
+			user=self.user.id,
 			operation_type=LOG_ACTION_LOGIN,
 			log_target_class=LOG_CLASS_USER
 		)

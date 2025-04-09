@@ -78,7 +78,7 @@ class AuthViewSet(BaseViewSet):
 		code_msg = "ok"
 
 		DBLogMixin.log(
-			user_id=request.user.id,
+			user=request.user.id,
 			operation_type=LOG_ACTION_LOGOUT,
 			log_target_class=LOG_CLASS_USER,
 		)

@@ -313,7 +313,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			django_user.save()
 
 		DBLogMixin.log(
-			user_id=request.user.id,
+			user=request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_USER,
 			log_target=ldap_user_search,
@@ -464,7 +464,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 				imported_users.append(row[mapped_user_key])
 				DBLogMixin.log(
-					user_id=request.user.id,
+					user=request.user.id,
 					operation_type=LOG_ACTION_CREATE,
 					log_target_class=LOG_CLASS_USER,
 					log_target=row[mapped_user_key],
@@ -689,7 +689,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			django_user.save()
 
 		DBLogMixin.log(
-			user_id=request.user.id,
+			user=request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_USER,
 			log_target=ldap_user_search,
@@ -737,7 +737,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		logger.debug(self.ldap_connection.result)
 
 		DBLogMixin.log(
-			user_id=request.user.id,
+			user=request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_USER,
 			log_target=ldap_user_search,

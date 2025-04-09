@@ -185,7 +185,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 							dnsZones[i] = "Root DNS Servers"
 
 					DBLogMixin.log(
-						user_id=request.user.id,
+						user=request.user.id,
 						operation_type=LOG_ACTION_READ,
 						log_target_class=LOG_CLASS_DNSZ,
 						log_target=target_zone,
@@ -360,7 +360,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 				result.update({"aaaa_ns": aaaa_to_ns_record_result, "aaaa": aaaa_record_result})
 
 			DBLogMixin.log(
-				user_id=request.user.id,
+				user=request.user.id,
 				operation_type=LOG_ACTION_CREATE,
 				log_target_class=LOG_CLASS_DNSZ,
 				log_target=target_zone,
@@ -433,7 +433,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 			ldapConnection.unbind()
 
 			DBLogMixin.log(
-				user_id=request.user.id,
+				user=request.user.id,
 				operation_type=LOG_ACTION_DELETE,
 				log_target_class=LOG_CLASS_DNSZ,
 				log_target=target_zone,

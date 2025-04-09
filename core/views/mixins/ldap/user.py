@@ -182,7 +182,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		userList = self.ldap_connection.entries
 
 		DBLogMixin.log(
-			user_id=self.request.user.id,
+			user=self.request.user.id,
 			operation_type=LOG_ACTION_READ,
 			log_target_class=LOG_CLASS_USER,
 			log_target=LOG_TARGET_ALL,
@@ -309,7 +309,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			return None
 
 		DBLogMixin.log(
-			user_id=self.request.user.id,
+			user=self.request.user.id,
 			operation_type=LOG_ACTION_CREATE,
 			log_target_class=LOG_CLASS_USER,
 			log_target=user_data["username"],
@@ -428,7 +428,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		logger.debug(self.ldap_connection.result)
 
 		DBLogMixin.log(
-			user_id=self.request.user.id,
+			user=self.request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_USER,
 			log_target=user_name,
@@ -563,7 +563,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		user_dict = user_obj.attributes
 
 		DBLogMixin.log(
-			user_id=self.request.user.id,
+			user=self.request.user.id,
 			operation_type=LOG_ACTION_READ,
 			log_target_class=LOG_CLASS_USER,
 			log_target=user_search,
@@ -677,7 +677,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			django_user.save()
 
 		DBLogMixin.log(
-			user_id=self.request.user.id,
+			user=self.request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_USER,
 			log_target=affected_user,
@@ -710,7 +710,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		self.ldap_connection.extend.microsoft.unlock_account(user_dn)
 		DBLogMixin.log(
-			user_id=self.request.user.id,
+			user=self.request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_USER,
 			log_target=user_name,
@@ -762,7 +762,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				raise exc_base.CoreException(data=data)
 
 		DBLogMixin.log(
-			user_id=self.request.user.id,
+			user=self.request.user.id,
 			operation_type=LOG_ACTION_DELETE,
 			log_target_class=LOG_CLASS_USER,
 			log_target=user_name,

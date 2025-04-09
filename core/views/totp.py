@@ -141,7 +141,7 @@ class TOTPViewSet(BaseViewSet):
 			if RuntimeSettings.LDAP_LOG_UPDATE == True:
 				# Log this action to DB
 				DBLogMixin.log(
-					user_id=request.user.id,
+					user=request.user.id,
 					operation_type=LOG_ACTION_DELETE,
 					log_target_class=LOG_CLASS_USER,
 					log_target=target_user.username,
