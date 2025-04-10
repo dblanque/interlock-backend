@@ -187,7 +187,6 @@ class LDAPConnector(object):
 	connection: ldap3.Connection
 	log_debug_prefix = "[DEBUG - LDAPConnector] | "
 	_entered = False
-	api_call = True
 
 	def __init__(
 		self,
@@ -195,14 +194,9 @@ class LDAPConnector(object):
 		force_admin=False,
 		get_ldap_info=ldap3.DSA,
 		is_authenticating=False,
-		api_call=True,
 		**kwargs,
 	):
-		if not isinstance(api_call, bool):
-			raise TypeError("api_call must be of type bool.")
-		self.api_call = api_call
-
-		is_local_superuser = (
+		is_local_superuser = hasattr(user, "username") and (
 			user.username == DEFAULT_SUPERUSER_USERNAME
 			or (user.is_superuser and user.user_type == USER_TYPE_LOCAL)
 		)
@@ -278,13 +272,7 @@ class LDAPConnector(object):
 
 	def __enter__(self) -> "LDAPConnector":
 		self._entered = True
-		try:
-			self.bind()
-		except Exception as e:
-			if self.api_call:
-				raise exc_ldap.CouldNotOpenConnection
-			else:
-				raise e
+		self.bind()
 		logger.info(f"Connection {self.uuid} opened.")
 		# LOG Open Connection Events
 		if not self.is_authenticating and self.user:
