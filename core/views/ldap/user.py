@@ -43,7 +43,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Auth
-from core.decorators.login import auth_required
+from core.decorators.login import auth_required, admin_required
 from core.ldap import adsi as ldap_adsi
 from core.ldap import user as ldap_user
 from core.ldap.connector import LDAPConnector
@@ -66,6 +66,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	queryset = User.objects.all()
 
 	@auth_required
+	@admin_required
 	@ldap_backend_intercept
 	def list(self, request):
 		user: User = request.user
@@ -91,7 +92,8 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		)
 
 	@action(detail=False, methods=["post"])
-	@auth_required()
+	@auth_required
+	@admin_required
 	@ldap_backend_intercept
 	def fetch(self, request):
 		user: User = request.user
@@ -113,7 +115,8 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		return Response(data={"code": code, "code_msg": code_msg, "data": user_data})
 
 	@action(detail=False, methods=["post"])
-	@auth_required()
+	@auth_required
+	@admin_required
 	@ldap_backend_intercept
 	def insert(self, request):
 		user: User = request.user
@@ -148,7 +151,8 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		return Response(data={"code": code, "code_msg": code_msg, "data": data["username"]})
 
-	@auth_required()
+	@auth_required
+	@admin_required
 	@ldap_backend_intercept
 	def update(self, request, pk=None):
 		user: User = request.user
@@ -201,7 +205,8 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
 
 	@action(detail=False, methods=["post"])
-	@auth_required()
+	@auth_required
+	@admin_required
 	@ldap_backend_intercept
 	def change_status(self, request):
 		user: User = request.user
@@ -230,7 +235,8 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		return Response(data={"code": code, "code_msg": code_msg})
 
 	@action(detail=False, methods=["post"])
-	@auth_required()
+	@auth_required
+	@admin_required
 	@ldap_backend_intercept
 	def delete(self, request, pk=None):
 		user: User = request.user
@@ -262,7 +268,8 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
 
 	@action(detail=False, methods=["post"])
-	@auth_required()
+	@auth_required
+	@admin_required
 	@ldap_backend_intercept
 	def change_password(self, request, pk=None):
 		user: User = request.user
@@ -323,7 +330,8 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
 
 	@action(detail=False, methods=["post"])
-	@auth_required()
+	@auth_required
+	@admin_required
 	@ldap_backend_intercept
 	def unlock(self, request, pk=None):
 		user: User = request.user
@@ -344,7 +352,8 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		return Response(data={"code": code, "code_msg": code_msg, "data": response_result})
 
 	@action(detail=False, methods=["post"])
-	@auth_required()
+	@auth_required
+	@admin_required
 	@ldap_backend_intercept
 	def bulk_insert(self, request):
 		user: User = request.user
@@ -484,7 +493,8 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		)
 
 	@action(detail=False, methods=["post"])
-	@auth_required()
+	@auth_required
+	@admin_required
 	@ldap_backend_intercept
 	def bulk_update(self, request, pk=None):
 		user: User = request.user
@@ -538,7 +548,8 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
 
 	@action(detail=False, methods=["post"])
-	@auth_required()
+	@auth_required
+	@admin_required
 	@ldap_backend_intercept
 	def bulk_change_status(self, request):
 		user: User = request.user
@@ -573,7 +584,8 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		return Response(data={"code": code, "code_msg": code_msg, "data": success})
 
 	@action(detail=False, methods=["post"])
-	@auth_required()
+	@auth_required
+	@admin_required
 	@ldap_backend_intercept
 	def bulk_delete(self, request, pk=None):
 		user: User = request.user
@@ -597,7 +609,8 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
 
 	@action(detail=False, methods=["post"])
-	@auth_required()
+	@auth_required
+	@admin_required
 	@ldap_backend_intercept
 	def bulk_unlock(self, request, pk=None):
 		user: User = request.user
