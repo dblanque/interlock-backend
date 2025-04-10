@@ -91,22 +91,18 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		username,
 		attributes=[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"], "distinguishedName"],
 		object_class_filter=None,
-	):
+	) -> Connection:
 		"""Default: Search for the dn from a username string param.
-
 		Can also be used to fetch entire object from that username string or filtered attributes.
 
-		ARGUMENTS
+		Args:
+			username (str): User to be searched
+			attributes (str | list): Attributes to return in entry, default are DN and username Identifier
+				(e.g.: sAMAccountName)
+			objectClassFilter (str): Default is obtained from settings
 
-		:username: (String) -- User to be searched
-
-		:attributes: (String || List) -- Attributes to return in entry, default are DN and username Identifier
-
-		e.g.: sAMAccountName
-
-		:objectClassFilter: (String) -- Default is obtained from settings
-
-		Returns the connection.
+		Returns:
+			ldap3.Connection
 		"""
 		if object_class_filter == None:
 			object_class_filter = self.get_user_object_filter(username)
@@ -146,10 +142,8 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 					user_perms += permValue
 					logger.debug("Located in: " + __name__ + ".insert")
 					logger.debug("Permission Value added (cast to string): " + str(permValue))
-				except Exception as error:
-					# If there's an error unbind the connectioön and print traceback
-					self.ldap_connection.unbind()
-					print(traceback.format_exc())
+				except Exception as e:
+					logger.exception(e)
 					raise exc_user.UserPermissionError  # Return error code to client
 
 		# Add Normal Account permission to list
@@ -255,12 +249,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				user_dn = f"CN={user_data['username']},{user_data['path']}"
 				user_data.pop("path")
 			else:
-				user_dn = (
-					"CN="
-					+ user_data["username"]
-					+ ",OU=Users,"
-					+ RuntimeSettings.LDAP_AUTH_SEARCH_BASE
-				)
+				user_dn = f"CN={user_data['username']},OU=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}"
 		except:
 			raise exc_user.UserDNPathException
 
