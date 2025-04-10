@@ -25,7 +25,8 @@ logger = logging.getLogger()
 class LDAPTreeOptions(LDAPObjectOptions):
 	subobject_id: NotRequired[int]
 	children_object_type: NotRequired[Union[str, type]]
-
+	recursive: NotRequired[bool]
+	test_fetch: NotRequired[bool]
 
 class LDAPTree(LDAPObject):
 	"""
@@ -39,14 +40,14 @@ class LDAPTree(LDAPObject):
 	})
 
 	Args:
-	 search_base: (OPTIONAL) | Default: RunningSettings.LDAP_AUTH_SEARCH_BASE
-	 connection: (REQUIRED) | LDAP Connection Object
-	 recursive: (OPTIONAL) | Whether or not the Tree should be Recursively searched
-	 ldap_filter: (OPTIONAL) | LDAP Formatted Filter
-	 ldap_attrs: (OPTIONAL) | LDAP Attributes to Fetch
-	 excluded_ldap_attrs: (OPTIONAL) | LDAP Attributes to Exclude
-	 children_object_type: (OPTIONAL) | Default: List/Array - Can be dict() or list()
-	 test_fetch: (OPTIONAL) | Default: False - Only fetch one object to test
+		search_base: (OPTIONAL) | Default: RunningSettings.LDAP_AUTH_SEARCH_BASE
+		connection: (REQUIRED) | LDAP Connection Object
+		recursive: (OPTIONAL) | Whether or not the Tree should be Recursively searched
+		ldap_filter: (OPTIONAL) | LDAP Formatted Filter
+		ldap_attrs: (OPTIONAL) | LDAP Attributes to Fetch
+		excluded_ldap_attrs: (OPTIONAL) | LDAP Attributes to Exclude
+		children_object_type: (OPTIONAL) | Default: List/Array - Can be dict() or list()
+		test_fetch: (OPTIONAL) | Default: False - Only fetch one object to test
 	"""
 
 	use_in_migrations = False
