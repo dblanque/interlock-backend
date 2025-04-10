@@ -216,27 +216,15 @@ class LDAPConnector(object):
 		else:
 			raise Exception("No valid user in LDAP Connector.")
 
-		r = RuntimeSettings
 		if not isinstance(RuntimeSettings.LDAP_AUTH_TLS_VERSION, Enum):
-			ldapAuthTLSVersion = getattr(ssl, RuntimeSettings.LDAP_AUTH_TLS_VERSION)
+			ldap_auth_tls_version = getattr(ssl, RuntimeSettings.LDAP_AUTH_TLS_VERSION)
 		else:
-			ldapAuthTLSVersion = RuntimeSettings.LDAP_AUTH_TLS_VERSION
+			ldap_auth_tls_version = RuntimeSettings.LDAP_AUTH_TLS_VERSION
 
 		if not self.user_dn and not force_admin:
 			raise ValueError("No user_dn was provided for LDAP Connector.")
 
-		logger.debug(f"{self.log_debug_prefix}User: {user}")
-		logger.debug(f"{self.log_debug_prefix}User DN: {self.user_dn}")
-		logger.debug(f"{self.log_debug_prefix}URL: {RuntimeSettings.LDAP_AUTH_URL}")
-		logger.debug(
-			f"{self.log_debug_prefix}Connect Timeout: {RuntimeSettings.LDAP_AUTH_CONNECT_TIMEOUT}"
-		)
-		logger.debug(
-			f"{self.log_debug_prefix}Receive Timeout: {RuntimeSettings.LDAP_AUTH_RECEIVE_TIMEOUT}"
-		)
-		logger.debug(f"{self.log_debug_prefix}Use SSL: {RuntimeSettings.LDAP_AUTH_USE_SSL}")
-		logger.debug(f"{self.log_debug_prefix}Use TLS: {RuntimeSettings.LDAP_AUTH_USE_TLS}")
-		logger.debug(f"{self.log_debug_prefix}TLS Version: {ldapAuthTLSVersion}")
+		self.__log_init__(user=user, tls_version=ldap_auth_tls_version)
 
 		# Initialize Server Args Dictionary
 		server_args = {
@@ -256,7 +244,7 @@ class LDAPConnector(object):
 		if RuntimeSettings.LDAP_AUTH_USE_TLS:
 			self.tlsSettings = ldap3.Tls(
 				ciphers="ALL",
-				version=ldapAuthTLSVersion,
+				version=ldap_auth_tls_version,
 			)
 			server_args["tls"] = self.tlsSettings
 		else:
@@ -269,6 +257,20 @@ class LDAPConnector(object):
 		self.user = user
 		self.auth_url = self.auth_url
 		self.connection = None
+
+	def __log_init__(self, user, tls_version):
+		logger.debug("%sUser: %s", self.log_debug_prefix, user)
+		logger.debug("%sUser DN: %s", self.log_debug_prefix, self.user_dn)
+		logger.debug("%sURL: %s", self.log_debug_prefix, RuntimeSettings.LDAP_AUTH_URL)
+		logger.debug(
+			"%sConnect Timeout: %s", self.log_debug_prefix, RuntimeSettings.LDAP_AUTH_CONNECT_TIMEOUT
+		)
+		logger.debug(
+			"%sReceive Timeout: %s", self.log_debug_prefix, RuntimeSettings.LDAP_AUTH_RECEIVE_TIMEOUT
+		)
+		logger.debug("%sUse SSL: %s", self.log_debug_prefix, RuntimeSettings.LDAP_AUTH_USE_SSL)
+		logger.debug("%sUse TLS: %s", self.log_debug_prefix, RuntimeSettings.LDAP_AUTH_USE_TLS)
+		logger.debug("%sTLS Version: %s", self.log_debug_prefix, tls_version)
 
 	def __enter__(self) -> "LDAPConnector":
 		self._entered = True

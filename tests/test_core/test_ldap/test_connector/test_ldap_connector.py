@@ -5,11 +5,11 @@ from ldap3.core.exceptions import LDAPException
 from core.ldap.adsi import search_filter_add, LDAP_FILTER_OR
 from ldap3 import SUBTREE as ldap3_SUBTREE, ALL_ATTRIBUTES as ldap3_ALL_ATTRIBUTES
 from core.exceptions.ldap import CouldNotOpenConnection
-from tests.utils import get_ids_for_cases
 from core.models.choices.log import LOG_ACTION_OPEN, LOG_ACTION_CLOSE, LOG_CLASS_CONN
 from core.models.user import USER_TYPE_LDAP
 from inspect import getfullargspec
 from copy import deepcopy
+import ssl
 
 
 @pytest.fixture
@@ -32,7 +32,6 @@ def f_ldap_connector(
 	# Bypass context manager validation to avoid bind/unbind patch
 	connector._entered = True
 	return connector
-
 
 @pytest.mark.parametrize(
 	"authenticating",
@@ -68,7 +67,6 @@ def test_enter_context_manager(authenticating, mocker, f_user, f_runtime_setting
 			)
 		else:
 			m_log.assert_not_called()
-
 
 @pytest.mark.parametrize(
 	"authenticating",
@@ -116,7 +114,6 @@ def test_validate_entered_exception(mocker, f_user):
 	connector = LDAPConnector(user=f_user)
 	with pytest.raises(Exception):
 		connector.__validate_entered__()
-
 
 @pytest.mark.parametrize(
 	"force_admin",
@@ -183,6 +180,27 @@ def test_init_with_invalid_user_dn(mocker, f_runtime_settings):
 	with pytest.raises(ValueError, match="No user_dn was provided for LDAP Connector."):
 		LDAPConnector(user=m_user)
 
+@pytest.fixture
+def tls_version_enum(f_runtime_settings):
+	return f_runtime_settings.LDAP_AUTH_TLS_VERSION
+
+@pytest.fixture
+def tls_version_str(f_runtime_settings):
+	return getattr(ssl, f_runtime_settings.LDAP_AUTH_TLS_VERSION.name)
+
+@pytest.mark.parametrize(
+	"tls_version",
+	(
+		"tls_version_enum",
+		"tls_version_str",
+	)
+)
+def test_log_init(tls_version, mocker, f_ldap_connector, f_runtime_settings, request):
+	_tls_version = request.getfixturevalue(tls_version)
+	m_logger: MockType = mocker.patch("core.ldap.connector.logger")
+	m_logger_debug: MockType = m_logger.debug
+	f_ldap_connector.__log_init__(user="testuser", tls_version=_tls_version)
+	m_logger_debug.call_count == 8
 
 @pytest.mark.parametrize(
 	"use_tls",
