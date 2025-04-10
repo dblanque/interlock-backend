@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.views.mixins.user
+# Module: core.views.mixins.ldap.user
 # Contains the Mixin for User related operations
 
 # ---------------------------------- IMPORTS -----------------------------------#

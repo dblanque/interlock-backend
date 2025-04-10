@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.views.mixins.record
+# Module: core.views.mixins.ldap.record
 # Contains the Mixin for DNS Record related operations
 
 # ---------------------------------- IMPORTS -----------------------------------#

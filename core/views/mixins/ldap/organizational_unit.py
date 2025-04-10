@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.views.mixins.organizational_unit
+# Module: core.views.mixins.ldap.organizational_unit
 # Contains the Mixin for Organizational Unit related operations
 
 # ---------------------------------- IMPORTS -----------------------------------#

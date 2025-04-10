@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.views.mixins.group
+# Module: core.views.mixins.ldap.group
 # Contains the Mixin for Group related operations
 
 # ---------------------------------- IMPORTS -----------------------------------#
