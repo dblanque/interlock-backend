@@ -304,8 +304,6 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			try:
 				new_permissions_int = ldap_adsi.calc_permissions(permissions_list)
 			except:
-				print(traceback.format_exc())
-				self.ldap_connection.unbind()
 				raise exc_user.UserPermissionError
 
 			logger.debug("Located in: " + __name__ + ".update")
@@ -323,18 +321,14 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				# Set ISO Country Code
 				user_data["c"] = LDAP_COUNTRIES[user_data["co"]]["isoCode"]
 			except Exception as e:
-				self.ldap_connection.unbind()
-				print(user_data)
-				print(e)
+				logger.exception(e)
 				raise exc_user.UserCountryUpdateError
 
-		# Catch rare occurring exception
+		# Catch rare front-end mutation exception
 		if "groupsToAdd" in user_data and "groupsToRemove" in user_data:
 			if (
 				user_data["groupsToAdd"] == user_data["groupsToRemove"] and user_data["groupsToAdd"]
 			) != []:
-				self.ldap_connection.unbind()
-				print(user_data)
 				raise exc_user.BadGroupSelection
 
 		if "groupsToAdd" in user_data:
@@ -354,7 +348,6 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			user_data.pop("memberOf")
 
 		################### START STANDARD ARGUMENT UPDATES ####################
-		arguments = {}
 		operation = None
 		for key in user_data:
 			try:
