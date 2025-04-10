@@ -210,6 +210,7 @@ def merge_val_bin(perm_a: str, perm_b: str):
 LDAP_PERM_BIN_BASE = "0" * 32
 LDAP_FILTER_OR = "|"
 LDAP_FILTER_AND = "&"
+LDAP_FILTER_NOT = "!"
 
 LDAP_FILTER_OPERATORS_TYPE = list[Literal["|", "&"]]
 LDAP_FILTER_OPERATORS: LDAP_FILTER_OPERATORS_TYPE = ["|", "&"]
@@ -419,7 +420,8 @@ def calc_permissions(
 	* addPerm: Contains permission(s) to add to calculated result
 	* removePerm: Contains permission(s) to remove from calculated result
 
-	Returns an integer.
+	Returns:
+		int
 	"""
 	perm_int = 0
 	if not isinstance(permission_list, list):
