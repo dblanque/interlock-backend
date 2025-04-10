@@ -370,7 +370,7 @@ def parse_permissions_int(raw_user_permissions: int | str, user_name: str = None
 
 
 # Lists User permissions (LDAP / AD Servers save them as binary)
-def list_user_perms(user, perm_search: str = None, user_is_object: bool = True) -> list:
+def list_user_perms(user, perm_search: str = None, user_is_object: bool = True) -> list | bool:
 	"""
 	### Creates a list of user permissions from raw LDAP Integer Bitmap
 	* user: User dict or object.
