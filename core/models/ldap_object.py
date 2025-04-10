@@ -35,8 +35,6 @@ class LDAPObjectOptions(TypedDict):
 	required_ldap_attrs: NotRequired[list[str]]
 	container_types: NotRequired[list[str]]
 	user_types: NotRequired[list[str]]
-	recursive: NotRequired[bool]
-	test_fetch: NotRequired[bool]
 	ldap_attrs: NotRequired[list[str]]
 	ldap_filter: NotRequired[str]
 
@@ -60,20 +58,17 @@ class LDAPObject:
 	## Interlock LDAP Object Abstraction
 	Fetches LDAP Object from a specified DN
 
-	### Call example
-	LDAPTree(**{
-	    "connection":connection,\n
-	    "dn":"CN=john,DC=example,DC=com",\n
-	    ...
-	})
-
-	#### Arguments
-	 - search_base: (REQUIRED) | DN of Object to Search
-	 - connection: (REQUIRED) | LDAP Connection Object
-	 - recursive: (OPTIONAL) | Whether or not the Object should be Recursively searched
-	 - ldap_filter: (OPTIONAL) | LDAP Formatted Filter
-	 - ldap_attrs: (OPTIONAL) | LDAP Attributes to Fetch
-	 - excluded_ldap_attrs: (OPTIONAL) | LDAP Attributes to Exclude
+	Args:
+		name (str): Object Name.
+		search_base (str): LDAP Search Base.
+		connection (Connection): LDAP Connection.
+		username_identifier (str): Identifier used for Username Fields.
+		excluded_ldap_attrs (list[str]): Fields to exclude from search.
+		required_ldap_attrs (list[str]): Fields to re-add if missing in filter list.
+		container_types (list[str]): Types that are containers (e.g.: organizational-unit)
+		user_types (list[str]): Types that are user objects (e.g.: person)
+		ldap_attrs (list[str]): Filters to fetch for LDAP object
+		ldap_filter (str): Filter to identify LDAP Object in server
 	"""
 
 	# Django
@@ -88,14 +83,12 @@ class LDAPObject:
 	ldap_attrs: list[str]
 	ldap_filter: str
 	name: str
-	recursive: bool
 	required_ldap_attrs: list[str]
 	search_base: str
-	test_fetch: bool
 	user_types: list[str]
 	username_identifier: str
 
-	def __init__(self, auto_fetch=True, **kwargs) -> None:
+	def __init__(self, auto_fetch=True, **kwargs: LDAPObjectOptions) -> None:
 		self.__validate_kwargs__(kwargs=kwargs)
 
 		# Set LDAPTree Default Values
@@ -109,8 +102,6 @@ class LDAPObject:
 		self.required_ldap_attrs = DEFAULT_REQUIRED_LDAP_ATTRS
 		self.container_types = DEFAULT_CONTAINER_TYPES
 		self.user_types = DEFAULT_USER_TYPES
-		self.recursive = False
-		self.test_fetch = False
 		self.ldap_attrs = RuntimeSettings.LDAP_DIRTREE_ATTRIBUTES
 		if "dn" in kwargs:
 			self.ldap_filter = search_filter_add(None, f"distinguishedName={str(kwargs['dn'])}")
