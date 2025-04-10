@@ -230,46 +230,50 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		except:
 			raise exc_user.UserDNPathException
 
-		arguments = {}
+		parsed_user_attrs = {}
 		if "permission_list" in user_data:
-			arguments["userAccountControl"] = ldap_adsi.calc_permissions(
-				user_data["permission_list"]
+			parsed_user_attrs["userAccountControl"] = ldap_adsi.calc_permissions(
+				user_data.pop("permission_list", [])
 			)
 		else:
-			arguments["userAccountControl"] = ldap_adsi.calc_permissions()
-		arguments[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]] = str(
+			parsed_user_attrs["userAccountControl"] = ldap_adsi.calc_permissions()
+		parsed_user_attrs[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]] = str(
 			user_data["username"]
 		).lower()
-		arguments["objectClass"] = ["top", "person", "organizationalPerson", "user"]
-		arguments["userPrincipalName"] = user_data["username"] + "@" + RuntimeSettings.LDAP_DOMAIN
+		parsed_user_attrs["objectClass"] = ["top", "person", "organizationalPerson", "user"]
+		parsed_user_attrs["userPrincipalName"] = user_data["username"] + "@" + RuntimeSettings.LDAP_DOMAIN
 
 		if not exclude_keys:
 			exclude_keys = [
 				"password",
 				"passwordConfirm",
 				"path",
-				"permission_list",  # This array was parsed and calculated, then changed to userAccountControl
+				"permission_list",  # This array was parsed and calculated, we need to ensure it's not looped over
 				"distinguishedName",  # We don't want the front-end generated DN
 				"username",  # LDAP Uses sAMAccountName
 			]
 
 		for key in user_data:
-			if key not in exclude_keys and len(str(user_data[key])) > 0:
-				logger.debug("Key in data: " + key)
-				logger.debug("Value for key above: " + user_data[key])
-				if key_mapping and key in key_mapping.values():
-					for lk in key_mapping:
-						if key_mapping[lk] == key:
-							ldap_key = lk
-							break
-					arguments[ldap_key] = user_data[key]
-				else:
-					arguments[key] = user_data[key]
+			if key in exclude_keys or len(str(user_data[key])) <= 0:
+				continue
+
+			logger.debug("Key in data: " + key)
+			logger.debug("Value for key above: " + user_data[key])
+			if key_mapping and key in key_mapping.values():
+			# In the event of using a mapping translation (e.g.: bulk import from csv)
+				for lk in key_mapping:
+					if key_mapping[lk] == key:
+						ldap_key = lk
+						break
+				parsed_user_attrs[ldap_key] = user_data[key]
+			else:
+			# Normal behavior
+				parsed_user_attrs[key] = user_data[key]
 
 		logger.debug(f"Creating user in DN Path: {user_dn}")
 		try:
 			self.ldap_connection.add(
-				user_dn, RuntimeSettings.LDAP_AUTH_OBJECT_CLASS, attributes=arguments
+				user_dn, RuntimeSettings.LDAP_AUTH_OBJECT_CLASS, attributes=parsed_user_attrs
 			)
 		except Exception as e:
 			logger.error(e)
