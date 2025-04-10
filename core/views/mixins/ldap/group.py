@@ -299,16 +299,14 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		# !!! CHECK IF GROUP EXISTS !!! #
 		try:
-			groupExists = LDAPObject(**args).attributes
-			groupExists = len(groupExists) > 0
+			group_exists = LDAPObject(**args).attributes
+			group_exists = len(group_exists) > 0
 		except:
-			groupExists = False
+			group_exists = False
 
 		# If group exists, return error
-		if groupExists == True:
-			self.ldap_connection.unbind()
-			group_data = {"group": group_data["cn"]}
-			raise exc_ldap.LDAPObjectExists(data=group_data)
+		if group_exists:
+			raise exc_ldap.LDAPObjectExists(data={"group": group_data["cn"]})
 
 		# Set group Type
 		if "groupType" not in group_data or "groupScope" not in group_data:
