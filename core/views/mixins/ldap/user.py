@@ -275,9 +275,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			logger.error(e)
 			logger.error(f"Could not create User: {user_dn}")
 			if return_exception:
-				self.ldap_connection.unbind()
-				user_data = {"ldap_response": self.ldap_connection.result}
-				raise exc_user.UserCreate(data=user_data)
+				raise exc_user.UserCreate(data={"ldap_response": self.ldap_connection.result})
 			return None
 
 		DBLogMixin.log(
@@ -381,20 +379,16 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				else:
 					logger.info("No suitable operation for attribute " + key)
 					pass
-			except:
-				print(traceback.format_exc())
-				logger.warning(
-					"Unable to update user '"
-					+ str(user_name)
-					+ "' with attribute '"
-					+ str(key)
-					+ "'"
+			except Exception as e:
+				logger.exception(e)
+				logger.error(
+					"Unable to update user '%s' with attribute '%s'",
+					str(user_name), str(key)
 				)
-				logger.warning("Attribute Value: " + str(user_data[key]))
-				logger.warning("Attribute Type: " + str(type(user_data[key])))
+				logger.error("Attribute Value: " + str(user_data[key]))
+				logger.error("Attribute Type: " + str(type(user_data[key])))
 				if operation is not None:
-					logger.warning("Operation Type: " + str(operation))
-				self.ldap_connection.unbind()
+					logger.error("Operation Type: " + str(operation))
 				raise exc_user.UserUpdateError
 
 		logger.debug(self.ldap_connection.result)
@@ -489,7 +483,10 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		"""
 		### Checks if LDAP User with email exists on Directory
 		* Optional Argument user allows for conflict checking with distinguishedName and username.
-		Returns the user
+		
+		Returns:
+			(User | Exception | bool): If user exists object or exc is returned.
+			Otherwise returns False.
 		"""
 		try:
 			validate_email(email_search)
@@ -509,22 +506,24 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		)
 		user = self.ldap_connection.entries
 
-		if user != [] and user_check != None:
-			eq_attributes = ["distinguishedName", RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]]
-			# If user with same dn and username exists, return error
-			if not all(
-				(a in user_check) and hasattr(user, a) and user_check[a] == getattr(user, a)
-				for a in eq_attributes
-			):
-				print("A")
+		if user != []:
+			if user_check:
+				# If user with same dn and username exists, return error
+				attrs_to_check = ["distinguishedName", RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]]
+				if not all(
+					(
+						attr in user_check and 
+						hasattr(user, attr) and
+						user_check[attr] == getattr(user, attr)
+					)
+					for attr in attrs_to_check
+				):
+					raise exc_user.UserExists
+			elif return_exception:
+			# If user with email exists, return error
 				raise exc_user.UserWithEmailExists
-		else:
-			# If user exists, return error
-			if user != [] and return_exception:
-				print("B")
-				raise exc_user.UserWithEmailExists
-		if user != [] and not return_exception:
-			return user
+			else:
+				return user
 		return False
 
 	def ldap_user_fetch(self, user_search):
