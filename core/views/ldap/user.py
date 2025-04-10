@@ -458,7 +458,9 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 				if set_pwd:
 					try:
-						self.ldap_set_password(user_dn=user_dn, user_pwd_new=row[mapped_pwd_key], set_by_admin=True)
+						self.ldap_set_password(
+							user_dn=user_dn, user_pwd_new=row[mapped_pwd_key], set_by_admin=True
+						)
 					except:
 						failed_users.append({"username": row[mapped_user_key], "stage": "password"})
 
@@ -677,7 +679,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			self.ldap_set_password(
 				user_dn=distinguishedName,
 				user_pwd_new=data["password"],
-				user_pwd_old=aes_decrypt(*user.encryptedPassword)
+				user_pwd_old=aes_decrypt(*user.encryptedPassword),
 			)
 
 		django_user = None

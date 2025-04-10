@@ -37,7 +37,7 @@ class LogsViewSet(BaseViewSet, LogMixin):
 	@auth_required
 	@admin_required
 	def list(self, request, pk=None):
-		#TODO - Add backend pagination
+		# TODO - Add backend pagination
 		user: User = request.user
 		data = {}
 		code = 0

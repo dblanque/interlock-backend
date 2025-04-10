@@ -26,7 +26,7 @@ from core.models.choices.log import (
 	LOG_ACTION_UPDATE,
 	LOG_ACTION_DELETE,
 	LOG_EXTRA_UNLOCK,
-	LOG_EXTRA_ENABLE, 
+	LOG_EXTRA_ENABLE,
 	LOG_EXTRA_DISABLE,
 	LOG_TARGET_ALL,
 )
@@ -36,18 +36,14 @@ from ldap3 import Connection, MODIFY_DELETE, MODIFY_REPLACE
 from ldap3.extend import (
 	ExtendedOperationsRoot,
 	StandardExtendedOperations,
-	MicrosoftExtendedOperations
+	MicrosoftExtendedOperations,
 )
 
 ### Mixins
 from core.views.mixins.ldap.group import GroupViewMixin
 
 ### Exception Handling
-from core.exceptions import (
-	base as exc_base,
-	users as exc_user,
-	ldap as exc_ldap
-	)
+from core.exceptions import base as exc_base, users as exc_user, ldap as exc_ldap
 import traceback
 import logging
 
@@ -197,7 +193,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			# Check if user is disabled
 			user_dict["is_enabled"] = True
 			try:
-				if ldap_adsi.list_user_perms(user=user, perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE):
+				if ldap_adsi.list_user_perms(
+					user=user, perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE
+				):
 					user_dict["is_enabled"] = False
 			except Exception as e:
 				print(e)
@@ -226,7 +224,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				user_dn = f"CN={user_data['username']},{user_data['path']}"
 				user_data.pop("path")
 			else:
-				user_dn = f"CN={user_data['username']},OU=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}"
+				user_dn = (
+					f"CN={user_data['username']},OU=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}"
+				)
 		except:
 			raise exc_user.UserDNPathException
 
@@ -382,8 +382,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			except Exception as e:
 				logger.exception(e)
 				logger.error(
-					"Unable to update user '%s' with attribute '%s'",
-					str(user_name), str(key)
+					"Unable to update user '%s' with attribute '%s'", str(user_name), str(key)
 				)
 				logger.error("Attribute Value: " + str(user_data[key]))
 				logger.error("Attribute Type: " + str(type(user_data[key])))
@@ -416,7 +415,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			django_user.save()
 		return self.ldap_connection
 
-	def ldap_set_password(self, user_dn: str, user_pwd_new: str, user_pwd_old: str = None, set_by_admin = False) -> LDAPConnector:
+	def ldap_set_password(
+		self, user_dn: str, user_pwd_new: str, user_pwd_old: str = None, set_by_admin=False
+	) -> LDAPConnector:
 		"""
 		### Sets the LDAP User's Password with Microsoft Extended LDAP Commands
 		Returns the used LDAP Connection
@@ -428,23 +429,23 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		eo_microsoft: MicrosoftExtendedOperations = extended_operations.microsoft
 
 		# Validation
-		old_password_entered = user_pwd_old and isinstance(user_pwd_old, str) and len(user_pwd_old) > 1
+		old_password_entered = (
+			user_pwd_old and isinstance(user_pwd_old, str) and len(user_pwd_old) > 1
+		)
 		if not set_by_admin and not old_password_entered:
 			raise exc_user.UserPasswordsDontMatch()
 
 		# Set kwargs
-		pwd_kwargs = {
-			"new_password": user_pwd_new
-		}
+		pwd_kwargs = {"new_password": user_pwd_new}
 		if old_password_entered:
 			pwd_kwargs["old_password"] = user_pwd_old
 
 		try:
 			# If available use standard password extended operation
-			if '1.3.6.1.4.1.4203.1.11.1' in self.ldap_connection.server.info.supported_extensions:
+			if "1.3.6.1.4.1.4203.1.11.1" in self.ldap_connection.server.info.supported_extensions:
 				return eo_standard.modify_password(user=user_dn, **pwd_kwargs)
 			else:
-			# Otherwise attempt to change password directly with Microsoft Extended Op.
+				# Otherwise attempt to change password directly with Microsoft Extended Op.
 				return eo_microsoft.modify_password(user=user_dn, **pwd_kwargs)
 		except Exception as e:
 			logger.exception(e)
@@ -483,7 +484,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		"""
 		### Checks if LDAP User with email exists on Directory
 		* Optional Argument user allows for conflict checking with distinguishedName and username.
-		
+
 		Returns:
 			(User | Exception | bool): If user exists object or exc is returned.
 			Otherwise returns False.
@@ -509,18 +510,21 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		if user != []:
 			if user_check:
 				# If user with same dn and username exists, return error
-				attrs_to_check = ["distinguishedName", RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]]
+				attrs_to_check = [
+					"distinguishedName",
+					RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
+				]
 				if not all(
 					(
-						attr in user_check and 
-						hasattr(user, attr) and
-						user_check[attr] == getattr(user, attr)
+						attr in user_check
+						and hasattr(user, attr)
+						and user_check[attr] == getattr(user, attr)
 					)
 					for attr in attrs_to_check
 				):
 					raise exc_user.UserExists
 			elif return_exception:
-			# If user with email exists, return error
+				# If user with email exists, return error
 				raise exc_user.UserWithEmailExists
 			else:
 				return user

@@ -28,6 +28,7 @@ class LDAPTreeOptions(LDAPObjectOptions):
 	recursive: NotRequired[bool]
 	test_fetch: NotRequired[bool]
 
+
 class LDAPTree(LDAPObject):
 	"""
 	## LDAPTree Object

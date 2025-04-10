@@ -415,7 +415,7 @@ def calc_permissions(
 ):
 	"""
 	### Calculates permissions INT based on a desired array of Permission String Keys
-	
+
 	Args:
 		permission_list (list): List of Permissions
 		perm_add (list | str): Contains permission(s) to add to calculated result

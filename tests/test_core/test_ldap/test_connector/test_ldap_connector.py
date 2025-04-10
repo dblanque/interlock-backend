@@ -11,6 +11,7 @@ from core.models.user import USER_TYPE_LDAP
 from inspect import getfullargspec
 from copy import deepcopy
 
+
 @pytest.fixture
 def f_ldap_connector(
 	mocker,
@@ -39,11 +40,9 @@ def f_ldap_connector(
 		True,
 		False,
 	),
-	ids=lambda x: "Is authenticating" if x else "Is not authenticating"
+	ids=lambda x: "Is authenticating" if x else "Is not authenticating",
 )
-def test_enter_context_manager(
-	authenticating, mocker, f_user, f_runtime_settings
-):
+def test_enter_context_manager(authenticating, mocker, f_user, f_runtime_settings):
 	# Mock RuntimeSettings
 	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
 	mocker.patch("core.ldap.connector.aes_decrypt", return_value="somepassword")
@@ -70,13 +69,14 @@ def test_enter_context_manager(
 		else:
 			m_log.assert_not_called()
 
+
 @pytest.mark.parametrize(
 	"authenticating",
 	(
 		True,
 		False,
 	),
-	ids=lambda x: "Is authenticating" if x else "Is not authenticating"
+	ids=lambda x: "Is authenticating" if x else "Is not authenticating",
 )
 def test_exit_context_manager(
 	authenticating, mocker, f_user, f_runtime_settings, f_ldap_connection

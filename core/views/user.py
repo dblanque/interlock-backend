@@ -65,9 +65,7 @@ class UserViewSet(BaseViewSet):
 		)
 		user_queryset = User.objects.all()
 		DBLogMixin.log(
-			user=request.user.id,
-			operation_type=LOG_ACTION_READ,
-			log_target_class=LOG_CLASS_USER
+			user=request.user.id, operation_type=LOG_ACTION_READ, log_target_class=LOG_CLASS_USER
 		)
 		return Response(
 			data={

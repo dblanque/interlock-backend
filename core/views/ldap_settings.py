@@ -18,7 +18,12 @@ from django.core.exceptions import ObjectDoesNotExist
 ### Models
 from core.views.mixins.logs import LogMixin
 from core.models.types.settings import TYPE_AES_ENCRYPT
-from core.models.choices.log import LOG_ACTION_READ, LOG_ACTION_UPDATE, LOG_CLASS_SET, LOG_TARGET_ALL
+from core.models.choices.log import (
+	LOG_ACTION_READ,
+	LOG_ACTION_UPDATE,
+	LOG_CLASS_SET,
+	LOG_TARGET_ALL,
+)
 from core.models.interlock_settings import (
 	InterlockSetting,
 	INTERLOCK_SETTING_PUBLIC,
@@ -78,7 +83,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			user=request.user.id,
 			operation_type=LOG_ACTION_READ,
 			log_target_class=LOG_CLASS_SET,
-			log_target=LOG_TARGET_ALL
+			log_target=LOG_TARGET_ALL,
 		)
 
 		return Response(
@@ -105,7 +110,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			user=request.user.id,
 			operation_type=LOG_ACTION_READ,
 			log_target_class=LOG_CLASS_SET,
-			log_target=LOG_TARGET_ALL
+			log_target=LOG_TARGET_ALL,
 		)
 
 		interlock_settings = {}
