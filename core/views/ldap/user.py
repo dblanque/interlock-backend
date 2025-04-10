@@ -73,7 +73,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code = 0
 		code_msg = "ok"
 
-		self.ldap_filter_object = "(objectclass=" + RuntimeSettings.LDAP_AUTH_OBJECT_CLASS + ")"
+		self.ldap_filter_object = "(objectClass=" + RuntimeSettings.LDAP_AUTH_OBJECT_CLASS + ")"
 		self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings).get_list_attrs()
 
 		# Open LDAP Connection
@@ -215,7 +215,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		enabled = data.pop("enabled")
 
 		######################## Set LDAP Attributes ###########################
-		self.ldap_filter_object = "(objectclass=" + RuntimeSettings.LDAP_AUTH_OBJECT_CLASS + ")"
+		self.ldap_filter_object = "(objectClass=" + RuntimeSettings.LDAP_AUTH_OBJECT_CLASS + ")"
 		self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings).get_update_attrs()
 		########################################################################
 
@@ -550,7 +550,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			raise BadRequest
 
 		######################## Set LDAP Attributes ###########################
-		self.ldap_filter_object = "(objectclass=" + RuntimeSettings.LDAP_AUTH_OBJECT_CLASS + ")"
+		self.ldap_filter_object = "(objectClass=" + RuntimeSettings.LDAP_AUTH_OBJECT_CLASS + ")"
 		self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings).get_update_attrs()
 		########################################################################
 
@@ -805,7 +805,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				).get_fetch_me_attrs()
 
 				self.ldap_filter_object = (
-					"(objectclass=" + RuntimeSettings.LDAP_AUTH_OBJECT_CLASS + ")"
+					"(objectClass=" + RuntimeSettings.LDAP_AUTH_OBJECT_CLASS + ")"
 				)
 
 				# Add filter for username
