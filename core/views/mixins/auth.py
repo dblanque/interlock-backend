@@ -84,7 +84,7 @@ class CookieJWTAuthentication(JWTAuthentication):
 		"""Authenticates request user.
 
 		Args:
-			request (_type_): _description_
+			request (HttpRequest): The HTTP Request
 
 		Raises:
 			AccessTokenInvalid
