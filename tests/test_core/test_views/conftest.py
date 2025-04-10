@@ -2,7 +2,6 @@
 import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 from core.ldap.defaults import LDAP_DOMAIN
 import pytest
 from rest_framework import status
@@ -57,16 +56,20 @@ def admin_user(user_factory):
 @pytest.fixture
 def normal_user_client(normal_user, api_client: APIClient) -> APIClient:
 	"""Authenticated API client for normal user"""
-	refresh = RefreshToken.for_user(normal_user)
-	api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+	api_client.post("/api/token/", data={
+		"username": normal_user.username,
+		"password": normal_user.raw_password
+	})
 	return api_client
 
 
 @pytest.fixture
 def admin_user_client(admin_user, api_client: APIClient) -> APIClient:
 	"""Authenticated API client for admin user"""
-	refresh = RefreshToken.for_user(admin_user)
-	api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}")
+	api_client.post("/api/token/", data={
+		"username": admin_user.username,
+		"password": admin_user.raw_password
+	})
 	return api_client
 
 
