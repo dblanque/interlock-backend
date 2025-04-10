@@ -35,7 +35,6 @@ from core.views.mixins.logs import LogMixin
 from ldap3 import Connection, MODIFY_DELETE, MODIFY_REPLACE
 from ldap3.extend import (
 	ExtendedOperationsRoot,
-	ExtendedOperationContainer,
 	StandardExtendedOperations,
 	MicrosoftExtendedOperations
 )
@@ -44,7 +43,11 @@ from ldap3.extend import (
 from core.views.mixins.ldap.group import GroupViewMixin
 
 ### Exception Handling
-from core.exceptions import base as exc_base, users as exc_user, ldap as exc_ldap
+from core.exceptions import (
+	base as exc_base,
+	users as exc_user,
+	ldap as exc_ldap
+	)
 import traceback
 import logging
 
@@ -75,8 +78,8 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		filter = "(objectclass=" + RuntimeSettings.LDAP_AUTH_OBJECT_CLASS + ")"
 
 		# Exclude Computer Accounts if settings allow it
-		if RuntimeSettings.EXCLUDE_COMPUTER_ACCOUNTS == True:
-			filter = search_filter_add(filter, "!(objectclass=computer)")
+		if RuntimeSettings.EXCLUDE_COMPUTER_ACCOUNTS:
+			filter = search_filter_add(filter, f"objectclass=computer", negate=True)
 
 		if username:
 			filter_to_use = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"] + "=" + username
@@ -105,7 +108,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			ldap3.Connection
 		"""
 		if object_class_filter == None:
-			object_class_filter = self.get_user_object_filter(username)
+			object_class_filter = self.get_user_object_filter(username=username)
 
 		self.ldap_connection.search(
 			RuntimeSettings.LDAP_AUTH_SEARCH_BASE, object_class_filter, attributes=attributes
@@ -129,27 +132,6 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		}
 		group = LDAPObject(**args)
 		return group.attributes
-
-	def calc_perms_from_list(self, permission_list=None):
-		if permission_list is None:
-			permission_list = []
-		user_perms = 0
-		if len(permission_list) > 0:
-			# Add permissions selected in user creation
-			for perm in permission_list:
-				permValue = int(ldap_adsi.LDAP_PERMS[perm]["value"])
-				try:
-					user_perms += permValue
-					logger.debug("Located in: " + __name__ + ".insert")
-					logger.debug("Permission Value added (cast to string): " + str(permValue))
-				except Exception as e:
-					logger.exception(e)
-					raise exc_user.UserPermissionError  # Return error code to client
-
-		# Add Normal Account permission to list
-		user_perms += ldap_adsi.LDAP_PERMS[ldap_adsi.LDAP_UF_NORMAL_ACCOUNT]["value"]
-		logger.debug("Final User Permissions Value: " + str(user_perms))
-		return user_perms
 
 	def ldap_user_list(self) -> dict:
 		"""
@@ -255,11 +237,11 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		arguments = {}
 		if "permission_list" in user_data:
-			arguments["userAccountControl"] = self.calc_perms_from_list(
+			arguments["userAccountControl"] = ldap_adsi.calc_permissions(
 				user_data["permission_list"]
 			)
 		else:
-			arguments["userAccountControl"] = self.calc_perms_from_list()
+			arguments["userAccountControl"] = ldap_adsi.calc_permissions()
 		arguments[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]] = str(
 			user_data["username"]
 		).lower()
