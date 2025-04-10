@@ -236,6 +236,13 @@ def sum_permissions(perm_list: list[str]) -> int:
 @pytest.mark.parametrize(
 	"permission_list, perm_add, perm_remove, expected",
 	(
+		# Calculate permissions without operations
+		(
+			[LDAP_UF_DONT_EXPIRE_PASSWD, LDAP_UF_NORMAL_ACCOUNT],
+			None,
+			None,
+			[LDAP_UF_DONT_EXPIRE_PASSWD, LDAP_UF_NORMAL_ACCOUNT],
+		),
 		# Add single permission to multiple
 		(
 			[LDAP_UF_DONT_EXPIRE_PASSWD, LDAP_UF_NORMAL_ACCOUNT],
