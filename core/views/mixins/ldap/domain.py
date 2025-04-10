@@ -21,24 +21,19 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			record_zone=zone,
 			record_type=RecordTypes.DNS_RECORD_TYPE_SOA.value,
 		)
-		for index, record in enumerate(self.soa_object.entry):
-			if record["type"] == RecordTypes.DNS_RECORD_TYPE_SOA.value:
-				self.soa_bytes = self.soa_object.raw_entry["raw_attributes"]["dnsRecord"][index]
-				self.soa = record
+		self.soa_bytes = self.soa_object.as_bytes
+		self.soa = self.soa_object.data
 		return self.soa
 
 	def increment_soa_serial(self, soa_entry: LDAPRecord, record_serial):
-		for index, record in enumerate(soa_entry.entry):
-			record: dict
-			if record["type"] != RecordTypes.DNS_RECORD_TYPE_SOA.value:
-				continue
-			prev_soa_r = record.copy()
-			next_soa_r = record.copy()
-			next_soa_r["dwSerialNo"] = record_serial
-			next_soa_r["serial"] = next_soa_r["dwSerialNo"]
+		record: dict = soa_entry.data
+		prev_soa_r = record.copy()
+		next_soa_r = record.copy()
+		next_soa_r["dwSerialNo"] = record_serial
+		next_soa_r["serial"] = next_soa_r["dwSerialNo"]
 
-			try:
-				soa_entry.update(new_values=next_soa_r, old_values=prev_soa_r)
-				return soa_entry.connection.result
-			except Exception as e:
-				print(e)
+		try:
+			soa_entry.update(new_values=next_soa_r, old_values=prev_soa_r)
+			return soa_entry.connection.result
+		except Exception as e:
+			print(e)
