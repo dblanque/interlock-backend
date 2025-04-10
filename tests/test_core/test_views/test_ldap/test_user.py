@@ -1,8 +1,7 @@
 import pytest
 from rest_framework import status
-from core.models.user import User
 from core.views.mixins.ldap.user import UserViewLDAPMixin
-from core.ldap.connector import LDAPConnector
+from core.exceptions.ldap import CouldNotOpenConnection
 from core.models.interlock_settings import (
 	InterlockSetting,
 	INTERLOCK_SETTING_ENABLE_LDAP,
@@ -67,7 +66,7 @@ class TestLDAPUserViewSet:
 	def test_list_users_ldap_error(self, admin_user_client, mocker):
 		"""Test LDAP connection failure"""
 		# Mock LDAPConnector to raise an exception
-		mocker.patch("core.views.ldap.user.LDAPConnector.bind", side_effect=Exception)
+		mocker.patch("core.views.ldap.user.LDAPConnector.bind", side_effect=CouldNotOpenConnection)
 
 		response = admin_user_client.get('/api/ldap/users/')
 		assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
