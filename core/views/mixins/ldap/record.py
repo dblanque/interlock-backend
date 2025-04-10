@@ -55,7 +55,7 @@ class DNSRecordMixin(DomainViewMixin):
 			raise exc_dns.SOARecordRootOnly
 
 		if "stringData" in record_data:
-			if len(record_data["stringData"]) > 255:
+			if len(record_data["stringData"]) >= 255:
 				raise exc_dns.DNSStringDataLimit
 
 		if "nameNode" in record_data:
