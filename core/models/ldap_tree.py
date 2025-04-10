@@ -85,6 +85,7 @@ class LDAPTree(LDAPObject):
 		self.children = self.__fetch_tree__()
 
 	def __validate_kwargs__(self, kwargs):
+		"""Super class override."""
 		if "connection" not in kwargs:
 			raise Exception("LDAP Object requires an LDAP Connection to Initialize")
 
