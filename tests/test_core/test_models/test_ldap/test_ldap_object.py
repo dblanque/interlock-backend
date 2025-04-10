@@ -183,8 +183,6 @@ def test_init(mocker, f_connection, g_runtime_settings, auto_fetch, f_object_arg
 	assert m_ldap_object.required_ldap_attrs == DEFAULT_REQUIRED_LDAP_ATTRS
 	assert m_ldap_object.container_types == DEFAULT_CONTAINER_TYPES
 	assert m_ldap_object.user_types == DEFAULT_USER_TYPES
-	assert m_ldap_object.recursive is False
-	assert m_ldap_object.test_fetch is False
 	dirtree_attrs = g_runtime_settings.LDAP_DIRTREE_ATTRIBUTES + [
 		g_runtime_settings.LDAP_AUTH_USER_FIELDS["username"],
 		"username",

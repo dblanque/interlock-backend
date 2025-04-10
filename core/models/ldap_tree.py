@@ -50,11 +50,19 @@ class LDAPTree(LDAPObject):
 	"""
 
 	use_in_migrations = False
+	recursive = False
+	test_fetch = False
 
 	def __init__(self, **kwargs):
 		# Disallow changing auto_fetch
 		if "auto_fetch" in kwargs:
 			kwargs.pop("auto_fetch")
+
+		_kw = {}
+		for a in ["recursive", "test_fetch"]:
+			if a in kwargs:
+				setattr(self, a, kwargs.pop(a))
+
 		super().__init__(auto_fetch=False, **kwargs)
 
 		# Set LDAPTree Default Values
