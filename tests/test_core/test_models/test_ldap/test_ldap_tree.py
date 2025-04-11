@@ -146,7 +146,7 @@ class TestLDAPTree:
 		"""Test __get_children__ with user objects"""
 		mock_search = [
 			{
-				"dn": "CN=User1,OU=Users,DC=example,DC=com",
+				"dn": "CN=User1,CN=Users,DC=example,DC=com",
 				"attributes": {
 					"objectClass": ["top", "person", "organizationalPerson", "user"],
 					"objectCategory": "CN=Person,CN=Schema,CN=Configuration,DC=example,DC=com",
@@ -159,7 +159,7 @@ class TestLDAPTree:
 
 		tree = LDAPTree(connection=f_connection)
 		tree.username_identifier = "sAMAccountName"
-		result = tree.__get_children__("OU=Users,DC=example,DC=com")
+		result = tree.__get_children__("CN=Users,DC=example,DC=com")
 
 		assert len(result) == 1
 		assert result[0]["username"] == "user1"

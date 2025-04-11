@@ -226,7 +226,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				user_dn = f"CN={user_data['username']},{user_path}"
 			else:
 				user_dn = (
-					f"CN={user_data['username']},OU=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}"
+					f"CN={user_data['username']},CN=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}"
 				)
 			user_dn = safe_dn(dn=user_dn)
 		except:
@@ -239,7 +239,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				.calc_permissions(permission_list=permission_list)
 			)
 		else:
-			parsed_user_attrs["userAccountControl"] = ldap_adsi.calc_permissions()
+			parsed_user_attrs["userAccountControl"] = ldap_adsi.calc_permissions([
+				ldap_adsi.LDAP_UF_NORMAL_ACCOUNT,
+			])
 		parsed_user_attrs[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]] = str(
 			user_data["username"]
 		).lower()

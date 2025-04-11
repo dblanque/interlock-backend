@@ -474,7 +474,7 @@ def test_dunder_ldap_attrs_returns_empty_list_when_no_attributes(f_object_args, 
 def test_dunder_get_common_name_extracts_cn_from_dn(f_object_args, f_connection):
 	# Setup
 	object_args: LDAPObjectOptions = f_object_args()
-	test_dn = "CN=Test User,OU=Users,DC=example,DC=com"
+	test_dn = "CN=Test User,CN=Users,DC=example,DC=com"
 
 	# Instantiate
 	ldap_obj = LDAPObject(auto_fetch=False, **object_args)

@@ -7,9 +7,10 @@ from core.ldap.adsi import (
 	LDAP_UF_ACCOUNT_DISABLE,
 	LDAP_UF_DONT_EXPIRE_PASSWD,
 	LDAP_UF_NORMAL_ACCOUNT,
+	calc_permissions,
 )
 from core.models.ldap_settings_runtime import RunningSettingsClass
-
+from core.exceptions import users as exc_users
 
 @pytest.fixture
 def f_user_mixin(mocker):
@@ -72,7 +73,7 @@ def fc_user_entry(
 		attrs = {
 			f_auth_field_username: username,
 			f_auth_field_email: f"{username}@{f_ldap_domain}",
-			"distinguishedName": f"CN={username},OU=Users,{f_ldap_search_base}",
+			"distinguishedName": f"CN={username},CN=Users,{f_ldap_search_base}",
 		} | kwargs
 		mock = mocker.MagicMock()
 		for k, v in attrs.items():
@@ -180,7 +181,7 @@ class TestUserViewLDAPMixin:
 			),
 		]
 		f_user_mixin.ldap_filter_object = (
-			"(objectclass=" + f_runtime_settings.LDAP_AUTH_OBJECT_CLASS + ")"
+			"(objectClass=" + f_runtime_settings.LDAP_AUTH_OBJECT_CLASS + ")"
 		)
 		f_user_mixin.ldap_filter_attr = f_user_mixin.filter_attr_builder(
 			f_runtime_settings
@@ -197,3 +198,92 @@ class TestUserViewLDAPMixin:
 
 		assert result["users"][0]["is_enabled"] is True
 		assert result["users"][1]["is_enabled"] is False
+
+	@pytest.mark.parametrize(
+		"m_user_data, expected_permissions",
+		(
+			(
+				{
+					'username': 'testuser',
+					'password': 'some_password',
+					'passwordConfirm': 'some_password',
+					'givenName': 'Test',
+					'sn': 'User',
+					'permission_list': [],
+				},
+				calc_permissions([LDAP_UF_NORMAL_ACCOUNT]),
+			),
+			(
+				{
+					'username': 'testuser2',
+					'password': 'some_password',
+					'passwordConfirm': 'some_password',
+					'givenName': 'Test',
+					'sn': 'User 2',
+					'permission_list': [LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
+				},
+				calc_permissions([LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD]),
+			),
+			(
+				{
+					'username': 'testuser3',
+					'password': 'some_password',
+					'passwordConfirm': 'some_password',
+					'permission_list': [LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
+				},
+				calc_permissions([LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD]),
+			),
+			(
+				{
+					'username': 'testuser4',
+					'password': 'some_password',
+					'passwordConfirm': 'some_password',
+					'path': None
+				},
+				calc_permissions([LDAP_UF_NORMAL_ACCOUNT]),
+			),
+		),
+	)
+	def test_ldap_user_insert_normal(self, m_user_data: dict, expected_permissions: int, f_ldap_search_base: str, f_user_mixin: UserViewLDAPMixin, f_runtime_settings: RunningSettingsClass, f_ldap_domain: str, f_auth_field_username):
+		m_user_rdn = f'CN=Users,{f_ldap_search_base}'
+		m_user_name = m_user_data['username']
+		if not "path" in m_user_data:
+			m_user_data["path"] = m_user_rdn
+		expected_dn = f"CN={m_user_name},{m_user_rdn}"
+		expected_attrs = {
+			'userAccountControl': expected_permissions,
+			f_auth_field_username: m_user_name,
+			'objectClass': ['top', 'person', 'organizationalPerson', 'user'],
+			'userPrincipalName': f'{m_user_name}@{f_ldap_domain}',
+		}
+		for k in ['givenName','sn']:
+			if m_user_data.get(k, None):
+				expected_attrs[k] = m_user_data[k]
+
+		result = f_user_mixin.ldap_user_insert(user_data=m_user_data)
+		f_user_mixin.ldap_connection.add.assert_called_with(
+			expected_dn,
+			f_runtime_settings.LDAP_AUTH_OBJECT_CLASS,
+			attributes=expected_attrs
+		)
+		assert result == expected_dn
+		# user_data
+		# exclude_keys?
+		# key_mapping?
+
+	def test_ldap_user_insert_raises_path_exc(self, mocker, f_user_mixin: UserViewLDAPMixin):
+		mocker.patch("core.views.mixins.ldap.user.safe_dn", side_effect=Exception)
+		with pytest.raises(exc_users.UserDNPathException):
+			f_user_mixin.ldap_user_insert(user_data={})
+
+	def test_ldap_user_insert_raises_add_exc(self, mocker, f_user_mixin: UserViewLDAPMixin):
+		f_user_mixin.ldap_connection.add.side_effect = Exception
+		with pytest.raises(exc_users.UserCreate):
+			f_user_mixin.ldap_user_insert(user_data={
+				'username': 'testuser',
+				'password': 'some_password',
+				'passwordConfirm': 'some_password',
+				'givenName': 'Test',
+				'sn': 'User',
+				'permission_list': [],
+			})
