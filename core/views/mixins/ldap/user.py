@@ -223,12 +223,12 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		try:
 			user_path = user_data.pop("path", None)
 			if user_path:
-				user_path = safe_dn(dn=user_path)
-				user_dn = f"CN={user_data['username']},{user_data.pop('path')}"
+				user_dn = f"CN={user_data['username']},{user_path}"
 			else:
 				user_dn = (
 					f"CN={user_data['username']},OU=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}"
 				)
+			user_dn = safe_dn(dn=user_dn)
 		except:
 			raise exc_user.UserDNPathException
 
