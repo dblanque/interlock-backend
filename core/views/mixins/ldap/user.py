@@ -270,9 +270,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			logger.debug("Value for key above: " + user_data[key])
 			if key_mapping and key in key_mapping.values():
 				# In the event of using a mapping translation (e.g.: bulk import from csv)
-				for _ldap_key, _mapped_key in key_mapping.items():
-					if _mapped_key == key:
-						ldap_key = _ldap_key
+				for _k, _mapped_k in key_mapping.items():
+					if _mapped_k == key:
+						ldap_key = _k
 						break
 				parsed_user_attrs[ldap_key] = user_data[key]
 			else:
