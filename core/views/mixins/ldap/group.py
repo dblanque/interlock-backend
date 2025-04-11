@@ -281,11 +281,11 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		return group_dict, valid_attributes
 
 	def create_group(self, group_data: dict, exclude_keys=["member", "path"]):
-		if group_data["path"] is not None and group_data["path"] != "":
+		if group_data.get("path", None):
 			distinguishedName = "cn=" + group_data["cn"] + "," + group_data["path"]
 		else:
 			distinguishedName = (
-				"CN=" + group_data["cn"] + ",OU=Users," + RuntimeSettings.LDAP_AUTH_SEARCH_BASE
+				"CN=" + group_data["cn"] + ",CN=Users," + RuntimeSettings.LDAP_AUTH_SEARCH_BASE
 			)
 
 		group_data[RuntimeSettings.LDAP_GROUP_FIELD] = str(group_data["cn"]).lower()
