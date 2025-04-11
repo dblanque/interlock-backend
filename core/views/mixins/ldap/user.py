@@ -313,7 +313,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		################# START NON-STANDARD ARGUMENT UPDATES ##################
 		if permissions_list:
-			if "LDAP_UF_LOCKOUT" in permissions_list:
+			if ldap_adsi.LDAP_UF_LOCKOUT in permissions_list:
 				# Default is 30 Minutes
 				user_data["lockoutTime"] = 30
 			try:
@@ -321,8 +321,8 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			except:
 				raise exc_user.UserPermissionError
 
-			logger.debug("Located in: " + __name__ + ".update")
-			logger.debug("New Permission Integer (cast to String):" + str(new_permissions_int))
+			logger.debug("Located in: %s.update", __name__)
+			logger.debug("New Permission Integer (cast to String): %s", str(new_permissions_int))
 			user_data["userAccountControl"] = new_permissions_int
 		else:
 			user_data["userAccountControl"] = ldap_adsi.LDAP_PERMS[
