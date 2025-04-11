@@ -304,9 +304,10 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 	def ldap_user_update(
 		self, user_dn: str, user_name: str, user_data: dict, permissions_list: list = None
 	) -> LDAPConnector:
-		"""
-		### Updates LDAP User with provided data
-		Returns the used LDAP Connection
+		"""Updates LDAP User with provided data
+
+		Returns:
+			ldap3.Connection
 		"""
 		connection_entries = self.ldap_connection.entries
 
@@ -346,21 +347,20 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			) != []:
 				raise exc_user.BadGroupSelection
 
-		if "groupsToAdd" in user_data:
-			groupsToAdd = user_data.pop("groupsToAdd")
-			if len(groupsToAdd) > 0:
-				self.ldap_connection.extend.microsoft.add_members_to_groups(user_dn, groupsToAdd)
-		if "groupsToRemove" in user_data:
-			groupsToRemove = user_data.pop("groupsToRemove")
-			if len(groupsToRemove) > 0:
-				self.ldap_connection.extend.microsoft.remove_members_from_groups(
-					user_dn, groupsToRemove
-				)
+		# Group Add
+		groupsToAdd = user_data.pop("groupsToAdd", None)
+		if groupsToAdd:
+			self.ldap_connection.extend.microsoft.add_members_to_groups(user_dn, groupsToAdd)
 
-		if "memberOfObjects" in user_data:
-			user_data.pop("memberOfObjects")
-		if "memberOf" in user_data:
-			user_data.pop("memberOf")
+		# Group Remove
+		groupsToRemove = user_data.pop("groupsToRemove", None)
+		if groupsToRemove:
+			self.ldap_connection.extend.microsoft.remove_members_from_groups(
+				user_dn, groupsToRemove
+			)
+
+		user_data.pop("memberOfObjects", None)
+		user_data.pop("memberOf", None)
 
 		################### START STANDARD ARGUMENT UPDATES ####################
 		operation = None
@@ -436,16 +436,18 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		eo_standard: StandardExtendedOperations = extended_operations.standard
 		eo_microsoft: MicrosoftExtendedOperations = extended_operations.microsoft
 
+		if not isinstance(user_pwd_new, str):
+			raise TypeError("user_pwd_new must be of type str.")
+		if not isinstance(user_pwd_old, str):
+			raise TypeError("user_pwd_old must be of type str.")
+
 		# Validation
-		old_password_entered = (
-			user_pwd_old and isinstance(user_pwd_old, str) and len(user_pwd_old) > 1
-		)
-		if not set_by_admin and not old_password_entered:
+		if not set_by_admin and not user_pwd_old:
 			raise exc_user.UserPasswordsDontMatch()
 
 		# Set kwargs
 		pwd_kwargs = {"new_password": user_pwd_new}
-		if old_password_entered:
+		if user_pwd_old:
 			pwd_kwargs["old_password"] = user_pwd_old
 
 		try:
