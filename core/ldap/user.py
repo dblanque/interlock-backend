@@ -23,3 +23,4 @@ COUNTRY_ISO = "c"
 
 ACCOUNT_NAME = "sAMAccountName"
 ACCOUNT_TYPE = "sAMAccountType"
+USER_ACCOUNT_CONTROL = "userAccountControl"
