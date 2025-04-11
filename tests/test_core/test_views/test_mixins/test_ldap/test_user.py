@@ -282,9 +282,70 @@ class TestUserViewLDAPMixin:
 			expected_dn, f_runtime_settings.LDAP_AUTH_OBJECT_CLASS, attributes=expected_attrs
 		)
 		assert result == expected_dn
-		# user_data
-		# exclude_keys?
-		# key_mapping?
+
+	@pytest.mark.parametrize(
+		"m_user_data, key_mapping, expected_mapped",
+		(
+			(
+				{
+					"username": "testuser",
+					"password": "some_password",
+					"passwordConfirm": "some_password",
+					"first_name": "Test",
+					"last_name": "User",
+				},
+				{ ldap_user.FIRST_NAME: "first_name", ldap_user.LAST_NAME: "last_name" },
+				{
+					ldap_user.FIRST_NAME: "Test",
+					ldap_user.LAST_NAME: "User",
+				}
+			),
+			(
+				{
+					"username": "testuser",
+					"password": "some_password",
+					"passwordConfirm": "some_password",
+					"first_name": "Test",
+					"l_name": "User",
+				},
+				{ ldap_user.FIRST_NAME: "first_name", ldap_user.LAST_NAME: "last_name" },
+				{
+					ldap_user.FIRST_NAME: "Test",
+					"l_name": "User",
+				}
+			),
+		),
+	)
+	def test_ldap_user_insert_mapped(
+		self,
+		m_user_data: dict,
+		key_mapping: dict,
+		expected_mapped: dict,
+		f_ldap_search_base: str,
+		f_user_mixin: UserViewLDAPMixin,
+		f_runtime_settings: RunningSettingsClass,
+		f_ldap_domain: str,
+		f_auth_field_username,
+	):
+		m_user_rdn = f"CN=Users,{f_ldap_search_base}"
+		m_user_name = m_user_data["username"]
+		m_user_data["path"] = m_user_rdn
+		expected_dn = f"CN={m_user_name},{m_user_rdn}"
+		expected_attrs = {
+			**{
+				"userAccountControl": calc_permissions([LDAP_UF_NORMAL_ACCOUNT]),
+				f_auth_field_username: m_user_name,
+				"objectClass": ["top", "person", "organizationalPerson", "user"],
+				"userPrincipalName": f"{m_user_name}@{f_ldap_domain}",
+			},
+			**expected_mapped
+		}
+
+		result = f_user_mixin.ldap_user_insert(user_data=m_user_data, key_mapping=key_mapping)
+		f_user_mixin.ldap_connection.add.assert_called_with(
+			expected_dn, f_runtime_settings.LDAP_AUTH_OBJECT_CLASS, attributes=expected_attrs
+		)
+		assert result == expected_dn
 
 	def test_ldap_user_insert_raises_path_exc(self, mocker, f_user_mixin: UserViewLDAPMixin):
 		mocker.patch("core.views.mixins.ldap.user.safe_dn", side_effect=Exception)
@@ -304,3 +365,17 @@ class TestUserViewLDAPMixin:
 					"permission_list": [],
 				}
 			)
+
+	def test_ldap_user_insert_returns_none(self, f_user_mixin: UserViewLDAPMixin):
+		f_user_mixin.ldap_connection.add.side_effect = Exception
+		assert f_user_mixin.ldap_user_insert(
+			user_data={
+				"username": "testuser",
+				"password": "some_password",
+				"passwordConfirm": "some_password",
+				"givenName": "Test",
+				"sn": "User",
+				"permission_list": [],
+			},
+			return_exception=False
+		) is None
