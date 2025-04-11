@@ -56,20 +56,18 @@ def admin_user(user_factory):
 @pytest.fixture
 def normal_user_client(normal_user, api_client: APIClient) -> APIClient:
 	"""Authenticated API client for normal user"""
-	api_client.post("/api/token/", data={
-		"username": normal_user.username,
-		"password": normal_user.raw_password
-	})
+	api_client.post(
+		"/api/token/", data={"username": normal_user.username, "password": normal_user.raw_password}
+	)
 	return api_client
 
 
 @pytest.fixture
 def admin_user_client(admin_user, api_client: APIClient) -> APIClient:
 	"""Authenticated API client for admin user"""
-	api_client.post("/api/token/", data={
-		"username": admin_user.username,
-		"password": admin_user.raw_password
-	})
+	api_client.post(
+		"/api/token/", data={"username": admin_user.username, "password": admin_user.raw_password}
+	)
 	return api_client
 
 

@@ -263,10 +263,14 @@ class LDAPConnector(object):
 		logger.debug("%sUser DN: %s", self.log_debug_prefix, self.user_dn)
 		logger.debug("%sURL: %s", self.log_debug_prefix, RuntimeSettings.LDAP_AUTH_URL)
 		logger.debug(
-			"%sConnect Timeout: %s", self.log_debug_prefix, RuntimeSettings.LDAP_AUTH_CONNECT_TIMEOUT
+			"%sConnect Timeout: %s",
+			self.log_debug_prefix,
+			RuntimeSettings.LDAP_AUTH_CONNECT_TIMEOUT,
 		)
 		logger.debug(
-			"%sReceive Timeout: %s", self.log_debug_prefix, RuntimeSettings.LDAP_AUTH_RECEIVE_TIMEOUT
+			"%sReceive Timeout: %s",
+			self.log_debug_prefix,
+			RuntimeSettings.LDAP_AUTH_RECEIVE_TIMEOUT,
 		)
 		logger.debug("%sUse SSL: %s", self.log_debug_prefix, RuntimeSettings.LDAP_AUTH_USE_SSL)
 		logger.debug("%sUse TLS: %s", self.log_debug_prefix, RuntimeSettings.LDAP_AUTH_USE_TLS)

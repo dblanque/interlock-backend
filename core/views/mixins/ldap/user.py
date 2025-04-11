@@ -235,18 +235,22 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		parsed_user_attrs = {}
 		permission_list = user_data.pop("permission_list", [])
 		if permission_list and isinstance(permission_list, list):
-			parsed_user_attrs["userAccountControl"] = (ldap_adsi
-				.calc_permissions(permission_list=permission_list)
+			parsed_user_attrs["userAccountControl"] = ldap_adsi.calc_permissions(
+				permission_list=permission_list
 			)
 		else:
-			parsed_user_attrs["userAccountControl"] = ldap_adsi.calc_permissions([
-				ldap_adsi.LDAP_UF_NORMAL_ACCOUNT,
-			])
+			parsed_user_attrs["userAccountControl"] = ldap_adsi.calc_permissions(
+				[
+					ldap_adsi.LDAP_UF_NORMAL_ACCOUNT,
+				]
+			)
 		parsed_user_attrs[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]] = str(
 			user_data["username"]
 		).lower()
 		parsed_user_attrs["objectClass"] = ["top", "person", "organizationalPerson", "user"]
-		parsed_user_attrs["userPrincipalName"] = user_data["username"] + "@" + RuntimeSettings.LDAP_DOMAIN
+		parsed_user_attrs["userPrincipalName"] = (
+			f"{user_data['username']}@{RuntimeSettings.LDAP_DOMAIN}"
+		)
 
 		if not exclude_keys:
 			exclude_keys = [
@@ -265,14 +269,14 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			logger.debug("Key in data: " + key)
 			logger.debug("Value for key above: " + user_data[key])
 			if key_mapping and key in key_mapping.values():
-			# In the event of using a mapping translation (e.g.: bulk import from csv)
-				for lk in key_mapping:
-					if key_mapping[lk] == key:
-						ldap_key = lk
+				# In the event of using a mapping translation (e.g.: bulk import from csv)
+				for _ldap_key, _mapped_key in key_mapping.items():
+					if _mapped_key == key:
+						ldap_key = _ldap_key
 						break
 				parsed_user_attrs[ldap_key] = user_data[key]
 			else:
-			# Normal behavior
+				# Normal behavior
 				parsed_user_attrs[key] = user_data[key]
 
 		logger.debug(f"Creating user in DN Path: {user_dn}")
