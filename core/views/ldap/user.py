@@ -99,12 +99,14 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
-		data = request.data
-		if RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"] in data:
-			user_search = data[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]]
-		elif "username" in data:
-			user_search = data["username"]
-		else:
+		data: dict = request.data
+
+		user_search = None
+		for _k in [RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"], "username"]:
+			if not user_search:
+				user_search = data.get(_k, None)
+
+		if not user_search or not isinstance(user_search, str):
 			raise exc_base.BadRequest
 
 		# Open LDAP Connection
