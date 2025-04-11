@@ -20,3 +20,6 @@ STATE_PROVINCE = "st"
 COUNTRY = "co"
 COUNTRY_DCC = "countryCode"
 COUNTRY_ISO = "c"
+
+ACCOUNT_NAME = "sAMAccountName"
+ACCOUNT_TYPE = "sAMAccountType"
