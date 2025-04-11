@@ -13,6 +13,7 @@ from rest_framework import viewsets
 ### Interlock
 from core.ldap.adsi import search_filter_add
 from core.config.runtime import RuntimeSettings
+from core.ldap import user as ldap_user
 from core.ldap import adsi as ldap_adsi
 from core.ldap.types.account import LDAP_ACCOUNT_TYPES
 
@@ -327,12 +328,13 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				ldap_adsi.LDAP_UF_NORMAL_ACCOUNT
 			]["value"]
 
-		if "co" in user_data and user_data["co"] != "" and user_data["co"] != 0:
+		user_country = user_data.get(ldap_user.COUNTRY, None)
+		if user_country:
 			try:
 				# Set numeric country code (DCC Standard)
-				user_data["countryCode"] = LDAP_COUNTRIES[user_data["co"]]["dccCode"]
+				user_data[ldap_user.COUNTRY_DCC] = LDAP_COUNTRIES[user_country]["dccCode"]
 				# Set ISO Country Code
-				user_data["c"] = LDAP_COUNTRIES[user_data["co"]]["isoCode"]
+				user_data[ldap_user.COUNTRY_ISO] = LDAP_COUNTRIES[user_country]["isoCode"]
 			except Exception as e:
 				logger.exception(e)
 				raise exc_user.UserCountryUpdateError
