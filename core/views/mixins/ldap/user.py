@@ -48,6 +48,7 @@ import traceback
 import logging
 
 ### Others
+from ldap3.utils.dn import safe_dn
 from core.constants.user import UserViewsetFilterAttributeBuilder
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
@@ -209,7 +210,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 	def ldap_user_insert(
 		self,
-		user_data,
+		user_data: dict,
 		exclude_keys: list = None,
 		return_exception: bool = True,
 		key_mapping: dict = None,
@@ -220,9 +221,10 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		# TODO Check by authUsernameIdentifier and CN
 		# TODO Add customizable default user path
 		try:
-			if "path" in user_data and user_data["path"] is not None and user_data["path"] != "":
-				user_dn = f"CN={user_data['username']},{user_data['path']}"
-				user_data.pop("path")
+			user_path = user_data.pop("path", None)
+			if user_path:
+				user_path = safe_dn(dn=user_path)
+				user_dn = f"CN={user_data['username']},{user_data.pop('path')}"
 			else:
 				user_dn = (
 					f"CN={user_data['username']},OU=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}"
@@ -231,9 +233,10 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			raise exc_user.UserDNPathException
 
 		parsed_user_attrs = {}
-		if "permission_list" in user_data:
-			parsed_user_attrs["userAccountControl"] = ldap_adsi.calc_permissions(
-				user_data.pop("permission_list", [])
+		permission_list = user_data.pop("permission_list", [])
+		if permission_list and isinstance(permission_list, list):
+			parsed_user_attrs["userAccountControl"] = (ldap_adsi
+				.calc_permissions(permission_list=permission_list)
 			)
 		else:
 			parsed_user_attrs["userAccountControl"] = ldap_adsi.calc_permissions()
