@@ -122,7 +122,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
-		data = request.data
+		data: dict = request.data
 
 		if "username" not in data:
 			raise exc_base.MissingDataKey(data={"key": "username"})
@@ -132,19 +132,21 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				data={"code": "user_passwords_dont_match", "user": data["username"]}
 			)
 
+		# TODO - Add Deserializer Validation
 		user_search = data["username"]
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
+
+			# Username check
 			self.ldap_user_exists(user_search=user_search)
-			if (
-				RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"] in data
-				and len(data[RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"]]) > 0
-			):
-				self.ldap_user_with_email_exists(
-					email_search=data[RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"]]
-				)
+
+			# Email check
+			_email_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"]
+			if data.get(_email_field, False):
+				self.ldap_user_with_email_exists(email_search=data[_email_field])
+
 			user_dn = self.ldap_user_insert(user_data=data)
 			user_pwd = data["password"]
 			self.ldap_set_password(user_dn=user_dn, user_pwd_new=user_pwd, set_by_admin=True)
