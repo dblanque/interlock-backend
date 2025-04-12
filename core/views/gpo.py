@@ -52,7 +52,7 @@ class GPOViewSet(BaseViewSet):
 			### List GPOs here
 			self.ldap_filter_object = ldap_adsi.search_filter_from_dict(
 				{"*": ["gpLink", "objectClass"]},
-				operator=ldap_adsi.LDAP_FILTER_AND,
+				expression=ldap_adsi.LDAP_FILTER_AND,
 				reverse_key=False,
 			)
 			try:
@@ -88,7 +88,7 @@ class GPOViewSet(BaseViewSet):
 					# This is from a dev environment, doesn't matter
 					"CN={6AC1786C-016F-11D2-945F-00C04FB984F9},CN=Policies,CN=System,DC=brconsulting": "distinguishedName",
 				},
-				operator="&",
+				expression="&",
 				reverse_key=False,
 			)
 			try:

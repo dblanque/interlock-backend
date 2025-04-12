@@ -49,7 +49,7 @@ def test_is_encapsulated_raises():
 		is_encapsulated(False)
 
 @pytest.mark.parametrize(
-	"filter_string,filter_add,operator,negate,negate_add,expected",
+	"filter_string,filter_add,expression,negate,negate_add,expected",
 	(
 		(
 			"objectClass=person",
@@ -117,11 +117,11 @@ def test_is_encapsulated_raises():
 		),
 	),
 )
-def test_search_filter_add(filter_string, filter_add, operator, negate, negate_add, expected):
+def test_search_filter_add(filter_string, filter_add, expression, negate, negate_add, expected):
 	assert search_filter_add(
 		filter_string,
 		filter_add,
-		operator,
+		expression,
 		negate,
 		negate_add
 	) == expected
@@ -131,13 +131,13 @@ def test_search_filter_add_raises_empty_string():
 		search_filter_add("", "", LDAP_FILTER_AND)
 
 
-def test_search_filter_add_raises_invalid_operator():
+def test_search_filter_add_raises_invalid_expression():
 	with pytest.raises(ValueError):
 		search_filter_add("", "objectClass=person", "A")
 
 
 @pytest.mark.parametrize(
-	"filter_dict,operator,reverse_key,expected",
+	"filter_dict,expression,reverse_key,expected",
 	(
 		(
 			LDAP_DIRTREE_OU_FILTER,
@@ -159,8 +159,8 @@ def test_search_filter_add_raises_invalid_operator():
 		),
 	),
 )
-def test_search_filter_from_dict(filter_dict, operator, reverse_key, expected):
-	assert search_filter_from_dict(filter_dict, operator, reverse_key) == expected
+def test_search_filter_from_dict(filter_dict, expression, reverse_key, expected):
+	assert search_filter_from_dict(filter_dict, expression, reverse_key) == expected
 
 
 @pytest.mark.parametrize(

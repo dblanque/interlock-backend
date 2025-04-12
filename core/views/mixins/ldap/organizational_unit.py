@@ -60,13 +60,13 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 							lookup_or = False
 
 						if lookup_or:
-							operator = LDAP_FILTER_OR
+							expr = LDAP_FILTER_OR
 						else:
-							operator = LDAP_FILTER_AND
+							expr = LDAP_FILTER_AND
 						ldap_filter = search_filter_add(
 							ldap_filter,
 							f"{lookup_type}={f}",
-							operator=operator,
+							expression=expr,
 							negate=lookup_exclude,
 						)
 					else:

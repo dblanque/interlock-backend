@@ -111,13 +111,13 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			id_filter = search_filter_add(
 				id_filter,
 				f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS['username']}={username}",
-				operator=id_filter_op
+				expression=id_filter_op
 			)
 		if email:
 			id_filter = search_filter_add(
 				id_filter,
 				f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS['email']}={email}",
-				operator=id_filter_op
+				expression=id_filter_op
 			)
 		return search_filter_add(class_filter, id_filter)
 

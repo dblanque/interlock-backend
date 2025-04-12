@@ -212,8 +212,8 @@ LDAP_FILTER_OR = "|"
 LDAP_FILTER_AND = "&"
 LDAP_FILTER_NOT = "!"
 
-LDAP_FILTER_OPERATORS_TYPE = list[Literal["|", "&"]]
-LDAP_FILTER_OPERATORS: LDAP_FILTER_OPERATORS_TYPE = ["|", "&"]
+LDAP_FILTER_EXPRESSION_TYPE = list[Literal["|", "&"]]
+LDAP_FILTER_EXPRESSIONS: LDAP_FILTER_EXPRESSION_TYPE = ["|", "&"]
 LDAP_BUILTIN_OBJECTS = [
 	"Domain Controllers",
 	"Computers",
@@ -234,21 +234,21 @@ def is_encapsulated(v: str) -> bool:
 def search_filter_add(
 	filter_string: str,
 	filter_to_add: str,
-	operator: LDAP_FILTER_OPERATORS_TYPE = LDAP_FILTER_AND,
+	expression: LDAP_FILTER_EXPRESSION_TYPE = LDAP_FILTER_AND,
 	negate: bool = False,
 	negate_add: bool = False,
 ) -> str:
-	"""Combine two LDAP filters with a logical operator (AND/OR) and optionally negate the result.
+	"""Combine two LDAP filters with a logical expression (AND/OR) and optionally negate the result.
 
 	Args:
 		filter_string (str): The base LDAP filter (can be empty).
 		filter_to_add (str): The filter to append (required).
-		operator (str, optional): LDAP operator ("&" or "|"). Defaults to "&".
+		expression (str, optional): LDAP expression ("&" or "|"). Defaults to "&".
 		negate (bool, optional): Whether to negate the entire combined filter. Defaults to False.
 		negate_add (bool, optional): Whether to negate the added filter. Defaults to False.
 
 	Raises:
-		ValueError: If `filter_to_add` is empty or operator is invalid.
+		ValueError: If `filter_to_add` is empty or expression is invalid.
 
 	Returns:
 		str: The combined LDAP filter.
@@ -256,12 +256,12 @@ def search_filter_add(
 	if not filter_to_add:
 		raise ValueError("filter_to_add cannot be empty.")
 
-	if isinstance(operator, str) and operator.lower() == "or":
-		operator = LDAP_FILTER_OR
-	if isinstance(operator, str) and operator.lower() == "and":
-		operator = LDAP_FILTER_AND
-	if operator not in LDAP_FILTER_OPERATORS:
-		raise ValueError(f"Invalid operator: {operator}. Must be one of {LDAP_FILTER_OPERATORS}")
+	if isinstance(expression, str) and expression.lower() == "or":
+		expression = LDAP_FILTER_OR
+	if isinstance(expression, str) and expression.lower() == "and":
+		expression = LDAP_FILTER_AND
+	if expression not in LDAP_FILTER_EXPRESSIONS:
+		raise ValueError(f"Invalid expression: {expression}. Must be one of {LDAP_FILTER_EXPRESSIONS}")
 
 	# Ensure both filters are properly encapsulated
 	if filter_string and not is_encapsulated(filter_string):
@@ -271,11 +271,11 @@ def search_filter_add(
 	if negate_add:
 		filter_to_add = f"(!{filter_to_add})"
 
-	# Combine filters with the operator
+	# Combine filters with the expression
 	if not filter_string:
 		combined_filter = filter_to_add
 	else:
-		combined_filter = f"({operator}{filter_string}{filter_to_add})"
+		combined_filter = f"({expression}{filter_string}{filter_to_add})"
 
 	# Apply negation if needed
 	if negate:
@@ -285,7 +285,7 @@ def search_filter_add(
 
 
 def search_filter_from_dict(
-	filter_dict: dict, operator: LDAP_FILTER_OPERATORS_TYPE = LDAP_FILTER_OR, reverse_key=False
+	filter_dict: dict, expression: LDAP_FILTER_EXPRESSION_TYPE = LDAP_FILTER_OR, reverse_key=False
 ):
 	"""
 	Valid Operators: | &
@@ -300,11 +300,11 @@ def search_filter_from_dict(
 		if isinstance(_ldap_obj_key, list):
 			for obj in _ldap_obj_key:
 				search_filter = search_filter_add(
-					search_filter, f"{_ldap_obj_type}={obj}", operator
+					search_filter, f"{_ldap_obj_type}={obj}", expression
 				)
 		else:
 			search_filter = search_filter_add(
-				search_filter, f"{_ldap_obj_type}={_ldap_obj_key}", operator
+				search_filter, f"{_ldap_obj_type}={_ldap_obj_key}", expression
 			)
 	return search_filter
 
