@@ -214,6 +214,8 @@ LDAP_FILTER_NOT = "!"
 
 LDAP_FILTER_EXPRESSION_TYPE = list[Literal["|", "&"]]
 LDAP_FILTER_EXPRESSIONS: LDAP_FILTER_EXPRESSION_TYPE = ["|", "&"]
+LDAP_FILTER_OPERATOR_TYPE = list[Literal["=", ">=", "<=", "~="]]
+LDAP_FILTER_OPERATORS: LDAP_FILTER_OPERATOR_TYPE = ["=", ">=", "<=", "~="]
 LDAP_BUILTIN_OBJECTS = [
 	"Domain Controllers",
 	"Computers",
@@ -283,6 +285,48 @@ def join_ldap_filter(
 
 	return combined_filter
 
+# This is not used or tested yet
+class LDAPFilter: # pragma: no cover
+	def __init__(self, filter_str: str = None):
+		self._filter = filter_str or ""
+
+	def _wrap(self, value: str) -> str:
+		"""Ensure proper parentheses wrapping."""
+		return f"({value})" if not value.startswith("(") else value
+
+	def _validate_operator(self, operator: str):
+		if not isinstance(operator, str):
+			raise TypeError("LDAPFilter operator must be of type str.")
+		if not operator in LDAP_FILTER_OPERATORS:
+			raise ValueError(f"Invalid operator, must be one of [{','.join(LDAP_FILTER_OPERATORS)}]")
+
+	def _combine(self, operator: str, attribute: str, value: str, filter_op: str) -> "LDAPFilter":
+		"""Core logic for combining filters."""
+		self._validate_operator(operator)
+		new_part = f"({attribute}{filter_op}{value})"
+		
+		if not self._filter:
+			return LDAPFilter(new_part)
+
+		combined = f"({operator}{self._wrap(self._filter)}{self._wrap(new_part)})"
+		return LDAPFilter(combined)
+
+	def c_and(self, attribute: str, value: str, operator: str = "=") -> "LDAPFilter":
+		"""Add an AND condition."""
+		return self._combine("&", attribute, value, operator)
+
+	def c_or(self, attribute: str, value: str, operator: str = "=") -> "LDAPFilter":
+		"""Add an OR condition."""
+		return self._combine("|", attribute, value, operator)
+
+	def negate(self) -> "LDAPFilter":
+		"""Negate the entire filter."""
+		if self._filter:
+			return LDAPFilter(f"(!{self._filter})")
+		return self
+
+	def __str__(self) -> str:
+		return self._filter
 
 def search_filter_from_dict(
 	filter_dict: dict, expression: LDAP_FILTER_EXPRESSION_TYPE = LDAP_FILTER_OR, reverse_key=False
