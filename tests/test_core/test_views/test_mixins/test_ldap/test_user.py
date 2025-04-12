@@ -1,9 +1,11 @@
 import pytest
 from core.views.mixins.ldap.user import UserViewLDAPMixin
 from core.ldap.defaults import LDAP_DOMAIN
+from django.core.exceptions import ValidationError
 from core.ldap import user as ldap_user
 from core.ldap.adsi import (
 	LDAP_FILTER_AND,
+	LDAP_FILTER_OR,
 	LDAP_PERMS,
 	LDAP_UF_ACCOUNT_DISABLE,
 	LDAP_UF_DONT_EXPIRE_PASSWD,
@@ -105,6 +107,16 @@ class TestUserViewLDAPMixin:
 				"({operator_and}({operator_and}(objectClass=person)(!(objectClass=computer)))({user_field}={identifier}))",
 			),
 			(
+				{"username": "testuser", "email": f"email@{LDAP_DOMAIN}", "xor": False},
+				True,
+				"({operator_and}({operator_and}(objectClass=person)(!(objectClass=computer)))(({operator_or}({user_field}=testuser)({email_field}={identifier}))))",
+			),
+			(
+				{"username": "testuser", "email": f"email@{LDAP_DOMAIN}", "xor": False, "match_both": True},
+				True,
+				"({operator_and}({operator_and}(objectClass=person)(!(objectClass=computer)))(({operator_and}({user_field}=testuser)({email_field}={identifier}))))",
+			),
+			(
 				{"email": f"email@{LDAP_DOMAIN}"},
 				False,
 				"({operator_and}(objectClass=person)({email_field}={identifier}))",
@@ -113,6 +125,8 @@ class TestUserViewLDAPMixin:
 		ids=[
 			"With Username Field",
 			"With Email Field",
+			"With Username and Email Fields",
+			"With Username and Email Fields, match both.",
 			"With Username Field, exclude computers",
 		],
 	)
@@ -128,6 +142,7 @@ class TestUserViewLDAPMixin:
 	):
 		expected = expected.format(
 			operator_and=LDAP_FILTER_AND,
+			operator_or=LDAP_FILTER_OR,
 			user_field=f_auth_field_username,
 			email_field=f_auth_field_email,
 			identifier=test_kwargs.get("email", test_kwargs.get("username")),
@@ -139,16 +154,33 @@ class TestUserViewLDAPMixin:
 		with pytest.raises(ValueError, match="XOR"):
 			f_user_mixin.get_user_object_filter(username="a", email="b")
 
-	def test_get_user_object(
-		self, mocker, f_user_mixin: UserViewLDAPMixin, f_ldap_search_base, f_auth_field_username
-	):
-		result = f_user_mixin.get_user_object(username="testuser")
-		f_user_mixin.ldap_connection.search.assert_called_once_with(
-			f_ldap_search_base,
-			f"({LDAP_FILTER_AND}({LDAP_FILTER_AND}(objectClass=person)(!(objectClass=computer)))({f_auth_field_username}=testuser))",
-			attributes=[f_auth_field_username, "distinguishedName"],
-		)
-		assert result == f_user_mixin.ldap_connection
+	@pytest.mark.parametrize(
+		"test_kwargs",
+		(
+			{
+				"username": "testuser"
+			},
+			{
+				"email": f"testuser@{LDAP_DOMAIN}",
+			},
+			{
+				"username": "testuser",
+				"email": f"testuser@{LDAP_DOMAIN}",
+			},
+		),
+	)
+	def test_get_user_object(self, mocker, test_kwargs, f_user_mixin: UserViewLDAPMixin):
+		m_entry = mocker.Mock()
+		m_entry.username = "testuser"
+		m_entry.email = f"testuser@{LDAP_DOMAIN}"
+		f_user_mixin.ldap_connection.entries = [ m_entry ]
+		result = f_user_mixin.get_user_object(**test_kwargs)
+		f_user_mixin.ldap_connection.search.assert_called_once()
+		assert result == m_entry
+
+	def test_get_user_object_raises(self, f_user_mixin: UserViewLDAPMixin):
+		with pytest.raises(ValidationError):
+			f_user_mixin.get_user_object()
 
 	def test_get_group_attributes(self, f_user_mixin: UserViewLDAPMixin, f_group_dn, mocker):
 		m_group_attrs = ["some_attribute_list"]

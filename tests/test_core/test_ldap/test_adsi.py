@@ -16,17 +16,46 @@ from core.ldap.adsi import (
 	merge_val_bin,
 	parse_permissions_int,
 	list_user_perms,
+	is_encapsulated,
 	LengthError,
 )
 
+@pytest.mark.parametrize(
+	"test_value, expected",
+	(
+		(
+			"(something)",
+			True,
+		),
+		(
+			"(something",
+			False,
+		),
+		(
+			"something)",
+			False,
+		),
+		(
+			"something",
+			False,
+		),
+	),
+)
+def test_is_encapsulated(test_value, expected):
+	assert is_encapsulated(test_value) == expected
+
+def test_is_encapsulated_raises():
+	with pytest.raises(TypeError):
+		is_encapsulated(False)
 
 @pytest.mark.parametrize(
-	"filter_string,filter_add,operator,negate,expected",
+	"filter_string,filter_add,operator,negate,negate_add,expected",
 	(
 		(
 			"objectClass=person",
 			"sAMAccountName=testuser",
 			LDAP_FILTER_AND,
+			False,
 			False,
 			f"({LDAP_FILTER_AND}(objectClass=person)(sAMAccountName=testuser))",
 		),
@@ -35,19 +64,30 @@ from core.ldap.adsi import (
 			"sAMAccountName=testuser",
 			LDAP_FILTER_OR,
 			False,
+			False,
 			f"({LDAP_FILTER_OR}(objectClass=person)(sAMAccountName=testuser))",
 		),
 		(
 			"objectClass=person",
 			"sAMAccountName=testuser",
 			LDAP_FILTER_AND,
+			False,
 			True,
 			f"({LDAP_FILTER_AND}(objectClass=person)(!(sAMAccountName=testuser)))",
+		),
+		(
+			"objectClass=person",
+			"sAMAccountName=testuser",
+			LDAP_FILTER_AND,
+			True,
+			False,
+			f"(!({LDAP_FILTER_AND}(objectClass=person)(sAMAccountName=testuser)))",
 		),
 		(
 			"(objectClass=person)",
 			"sAMAccountName=testuser",
 			LDAP_FILTER_AND,
+			False,
 			False,
 			f"({LDAP_FILTER_AND}(objectClass=person)(sAMAccountName=testuser))",
 		),
@@ -56,6 +96,7 @@ from core.ldap.adsi import (
 			"sAMAccountName=testuser",
 			"and",
 			False,
+			False,
 			f"({LDAP_FILTER_AND}(objectClass=person)(sAMAccountName=testuser))",
 		),
 		(
@@ -63,14 +104,27 @@ from core.ldap.adsi import (
 			"sAMAccountName=testuser",
 			"or",
 			False,
+			False,
 			f"({LDAP_FILTER_OR}(objectClass=person)(sAMAccountName=testuser))",
 		),
-		("", "sAMAccountName=testuser", LDAP_FILTER_AND, False, f"(sAMAccountName=testuser)"),
+		(
+			"",
+			"sAMAccountName=testuser",
+			LDAP_FILTER_AND,
+			False,
+			False, 
+			f"(sAMAccountName=testuser)"
+		),
 	),
 )
-def test_search_filter_add(filter_string, filter_add, operator, negate, expected):
-	assert search_filter_add(filter_string, filter_add, operator, negate) == expected
-
+def test_search_filter_add(filter_string, filter_add, operator, negate, negate_add, expected):
+	assert search_filter_add(
+		filter_string,
+		filter_add,
+		operator,
+		negate,
+		negate_add
+	) == expected
 
 def test_search_filter_add_raises_empty_string():
 	with pytest.raises(ValueError):
