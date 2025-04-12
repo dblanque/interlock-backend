@@ -564,7 +564,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"],
 		]
 		self.get_user_object(username=username, email=email, attributes=ldap_attributes)
-		entry_by_email = self.get_user_entry(email=email)
+		entry_by_email = self.get_user_entry(email=email) if email else None
 
 		# If entries is not falsy, return Exception or True
 		if self.ldap_connection.entries:
