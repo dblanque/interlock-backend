@@ -90,7 +90,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		"""
 		if xor:
 			if (not username and not email) or (username and email):
-				raise ValueError("XOR Fail: Username OR Email required, single value allowed.")
+				raise ValueError("xor: Username OR Email required, single value allowed.")
 			if match_both:
 				raise ValueError("match_both and xor are incompatible options.")
 
@@ -120,6 +120,28 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				expression=id_filter_op
 			)
 		return join_ldap_filter(class_filter, id_filter)
+
+	def get_user_entry(self, username = None, email = None):
+		if not username and not email:
+			raise ValueError("username or email must be specified in get_user_entry call.")
+		if not self.ldap_connection.entries:
+			return
+
+		_username_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
+		_email_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"]
+		for entry in self.ldap_connection.entries:
+			if username and email:
+				if (
+					getattr(entry, _username_field) == username and
+					getattr(entry, _email_field) == email
+				):
+					return entry
+			elif username:
+				if getattr(entry, _username_field) == username:
+					return entry
+			elif email:
+				if getattr(entry, _email_field) == email:
+					return entry
 
 	def get_user_object(
 		self,
@@ -160,28 +182,6 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			attributes=attributes,
 		)
 		return self.get_user_entry(username=username, email=email)
-	
-	def get_user_entry(self, username = None, email = None):
-		if not username and not email:
-			raise ValueError("username or email must be specified in get_user_entry call.")
-		if not self.ldap_connection.entries:
-			return
-
-		_username_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
-		_email_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"]
-		for entry in self.ldap_connection.entries:
-			if username and email:
-				if (
-					getattr(entry, _username_field) == username and
-					getattr(entry, _email_field) == email
-				):
-					return entry
-			elif username:
-				if getattr(entry, _username_field) == username:
-					return entry
-			elif email:
-				if getattr(entry, _email_field) == email:
-					return entry
 
 	def get_group_attributes(self, groupDn, idFilter=None, classFilter=None):
 		attributes = ["objectSid"]
@@ -378,7 +378,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		Returns:
 			ldap3.Connection
 		"""
-		connection_entries = self.ldap_connection.entries
+		ldap_user_entry = self.get_user_entry(username=user_name)
 
 		################# START NON-STANDARD ARGUMENT UPDATES ##################
 		if permissions_list:
@@ -435,7 +435,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		operation = None
 		for key in user_data:
 			try:
-				if key in connection_entries[0].entry_attributes and user_data[key] == "":
+				if key in ldap_user_entry.entry_attributes and user_data[key] == "":
 					operation = MODIFY_DELETE
 					self.ldap_connection.modify(
 						user_dn,
