@@ -481,8 +481,9 @@ def calc_permissions(
 		int
 	"""
 	perm_int = 0
-	if not isinstance(permission_list, list):
-		raise TypeError("permission_list must be a list.")
+	if not isinstance(permission_list, list) and not isinstance(permission_list, set):
+		raise TypeError("permission_list must be a list or set.")
+	permission_list = set(permission_list)
 
 	# Add permissions selected in user creation
 	for perm in permission_list:

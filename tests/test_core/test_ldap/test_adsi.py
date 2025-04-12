@@ -297,6 +297,13 @@ def sum_permissions(perm_list: list[str]) -> int:
 			None,
 			[LDAP_UF_DONT_EXPIRE_PASSWD, LDAP_UF_NORMAL_ACCOUNT],
 		),
+		# Calculate permissions that are repeated
+		(
+			[LDAP_UF_DONT_EXPIRE_PASSWD, LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_NORMAL_ACCOUNT],
+			None,
+			None,
+			[LDAP_UF_DONT_EXPIRE_PASSWD, LDAP_UF_NORMAL_ACCOUNT],
+		),
 		# Add single permission to multiple
 		(
 			[LDAP_UF_DONT_EXPIRE_PASSWD, LDAP_UF_NORMAL_ACCOUNT],
