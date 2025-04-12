@@ -95,8 +95,9 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			}
 		)
 
-	@auth_required()
 	@action(detail=True, methods=["get"])
+	@auth_required
+	@admin_required
 	def fetch(self, request, pk):
 		preset_id = int(pk)
 		code = 0
