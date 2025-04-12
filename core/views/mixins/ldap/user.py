@@ -33,7 +33,12 @@ from core.models.choices.log import (
 )
 from core.ldap.connector import LDAPConnector
 from core.views.mixins.logs import LogMixin
-from ldap3 import Connection, MODIFY_DELETE, MODIFY_REPLACE
+from ldap3 import (
+	Connection,
+	MODIFY_DELETE,
+	MODIFY_REPLACE,
+	Entry as LDAPEntry
+)
 from ldap3.extend import (
 	ExtendedOperationsRoot,
 	StandardExtendedOperations,
@@ -53,7 +58,6 @@ from ldap3.utils.dn import safe_dn
 from core.constants.user import UserViewsetFilterAttributeBuilder
 from django.core.exceptions import ValidationError
 from core.ldap.countries import LDAP_COUNTRIES
-from core.ldap.adsi import LDAP_FILTER_NOT
 ################################################################################
 
 DBLogMixin = LogMixin()
@@ -130,6 +134,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		_username_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
 		_email_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"]
 		for entry in self.ldap_connection.entries:
+			entry: LDAPEntry
 			if username and email:
 				if (
 					getattr(entry, _username_field) == username and
@@ -223,7 +228,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			self.ldap_filter_object,
 			attributes=self.ldap_filter_attr,
 		)
-		user_entry_list = self.ldap_connection.entries
+		user_entry_list: list[LDAPEntry] = self.ldap_connection.entries
 
 		DBLogMixin.log(
 			user=self.request.user.id,
@@ -238,34 +243,36 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		for attr in remove_attributes:
 			if attr in valid_attributes:
 				valid_attributes.remove(attr)
-
 		valid_attributes.append("is_enabled")
 
-		for user in user_entry_list:
-			# Uncomment line below to see all attributes in user object
-			# print(dir(user))
+		for user_entry in user_entry_list:
+			user_dict = {}
+			user_attrs: dict = user_entry.entry_attributes_as_dict
 
 			# For each attribute in user object attributes
-			user_dict = {}
-			for attr_key in dir(user):
-				if attr_key in valid_attributes:
-					str_key = str(attr_key)
-					str_value = str(getattr(user, attr_key))
-					if str_value == "[]":
-						user_dict[str_key] = ""
-					else:
-						user_dict[str_key] = str_value
+			for attr_key, attr_val in user_attrs.items():
+				if attr_key not in valid_attributes:
+					continue
+				if isinstance(attr_val, list) and len(attr_val) == 1:
+					attr_val = attr_val[0]
+
 				if attr_key == RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]:
-					user_dict["username"] = str_value
+					user_dict[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]] = attr_val
+					user_dict["username"] = attr_val
+				else:
+					if not attr_val:
+						user_dict[attr_key] = ""
+					else:
+						user_dict[attr_key] = attr_val
 
 			# Add entry DN to response dictionary
-			user_dict["distinguishedName"] = user.entry_dn
+			user_dict["distinguishedName"] = user_entry.entry_dn
 
 			# Check if user is disabled
 			user_dict["is_enabled"] = True
 			try:
 				if ldap_adsi.list_user_perms(
-					user=user, perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE
+					user=user_entry, perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE
 				):
 					user_dict["is_enabled"] = False
 			except Exception as e:
@@ -371,7 +378,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		return user_dn
 
 	def ldap_user_update(
-		self, user_dn: str, user_name: str, user_data: dict, permissions_list: list = None
+		self, user_name: str, user_data: dict, permissions_list: list = None
 	) -> LDAPConnector:
 		"""Updates LDAP User with provided data
 
@@ -379,6 +386,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			ldap3.Connection
 		"""
 		ldap_user_entry = self.get_user_entry(username=user_name)
+		user_dn = getattr(ldap_user_entry, "distinguishedName")
 
 		################# START NON-STANDARD ARGUMENT UPDATES ##################
 		if permissions_list:
@@ -419,7 +427,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		# Group Add
 		groupsToAdd = user_data.pop("groupsToAdd", None)
 		if groupsToAdd:
-			self.ldap_connection.extend.microsoft.add_members_to_groups(user_dn, groupsToAdd)
+			self.ldap_connection.extend.microsoft.add_members_to_groups(
+				user_dn, groupsToAdd
+			)
 
 		# Group Remove
 		groupsToRemove = user_data.pop("groupsToRemove", None)

@@ -179,11 +179,9 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
-			# Check user exists
+			# Check user exists and fetch it
 			if not self.ldap_user_exists(username=user_to_update, return_exception=False):
 				raise exc_user.UserDoesNotExist
-			user_entry = self.ldap_connection.entries[0]
-			user_dn = str(user_entry.distinguishedName)
 
 			# Check if email overlaps with any other users
 			user_email = data.get("email", None)
@@ -193,7 +191,6 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			self.get_user_object(user_to_update, attributes=ldap3.ALL_ATTRIBUTES)
 
 			self.ldap_user_update(
-				user_dn=user_dn,
 				user_name=user_to_update,
 				user_data=data,
 				permissions_list=permission_list,
@@ -515,11 +512,9 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			for user_to_update in data["users"]:
 				self.ldap_connection = ldc.connection
 
-				# Check that user exists
+				# Check that user exists and fetch it
 				if not self.ldap_user_exists(username=user_to_update, return_exception=False):
 					raise exc_user.UserDoesNotExist
-				user_entry = self.ldap_connection.entries[0]
-				user_dn = str(user_entry.distinguishedName)
 
 				# Check if email overlaps with another user's
 				user_email = data.get("email", None)
@@ -529,7 +524,6 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				self.get_user_object(user_to_update, attributes=ldap3.ALL_ATTRIBUTES)
 
 				self.ldap_user_update(
-					user_dn=user_dn,
 					user_name=user_to_update,
 					user_data=data["values"],
 					permissions_list=permission_list,
@@ -735,10 +729,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		with LDAPConnector(force_admin=True) as ldc:
 			self.ldap_connection = ldc.connection
 			ldap_user_search = user.username
-			ldap_user_entry = self.get_user_object(ldap_user_search, attributes=ldap3.ALL_ATTRIBUTES)
-
-			user_dn = str(ldap_user_entry.distinguishedName)
-			self.ldap_user_update(user_dn=user_dn, user_name=ldap_user_search, user_data=data)
+			self.ldap_user_update(user_name=ldap_user_search, user_data=data)
 
 		logger.debug(self.ldap_connection.result)
 
