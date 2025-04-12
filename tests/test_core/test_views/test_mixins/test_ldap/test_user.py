@@ -2,7 +2,7 @@ import pytest
 from core.views.mixins.ldap.user import UserViewLDAPMixin
 from core.ldap.defaults import LDAP_DOMAIN
 from django.core.exceptions import ValidationError
-from core.ldap import user as ldap_user
+from core.constants import user as ldap_user
 from core.ldap.adsi import (
 	LDAP_FILTER_AND,
 	LDAP_FILTER_OR,
