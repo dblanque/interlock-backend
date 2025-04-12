@@ -253,6 +253,7 @@ def test_dunder_fetch_object_returns_none_on_empty_response(
 ):
 	object_args: LDAPObjectOptions = f_object_args()
 	m_ldap_object = LDAPObject(**object_args)
+	f_connection.entries = []
 	f_connection.search.assert_called_once_with(
 		search_base=m_ldap_object.search_base,
 		search_filter=m_ldap_object.ldap_filter,

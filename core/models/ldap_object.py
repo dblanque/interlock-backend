@@ -146,7 +146,7 @@ class LDAPObject:
 			attributes=self.ldap_attrs,
 		)
 		search_result = self.connection.entries
-		if not isinstance(search_result, Iterable) or len(search_result) <= 0:
+		if not isinstance(search_result, Iterable) or not search_result:
 			return
 		try:
 			self.entry = search_result[0]
