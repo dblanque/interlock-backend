@@ -47,7 +47,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
-			self.ldap_filter_object = search_filter_add("", "objectclass=" + "group")
+			self.ldap_filter_object = search_filter_add("", "objectClass=" + "group")
 			self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings).get_list_filter()
 
 			data, valid_attributes = self.list_groups()
@@ -71,7 +71,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings).get_fetch_filter()
 		self.ldap_filter_object = ""
 		self.ldap_filter_object = search_filter_add(
-			self.ldap_filter_object, f"objectclass={group_object_class}"
+			self.ldap_filter_object, f"objectClass={group_object_class}"
 		)
 		self.ldap_filter_object = search_filter_add(
 			self.ldap_filter_object, f"distinguishedName={group_search}"
@@ -107,7 +107,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 
 			group_data = data["group"]
 			# Make sure Group doesn't exist check with CN and authUserField
-			self.ldap_filter_object = search_filter_add("", "cn=" + group_data["cn"])
+			self.ldap_filter_object = search_filter_add(None, f"cn={group_data['cn']}")
 			self.ldap_filter_object = search_filter_add(
 				self.ldap_filter_object,
 				f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS['username']}={group_data['cn']}",

@@ -71,7 +71,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		with LDAPConnector(force_admin=True) as ldc:
 			connection = ldc.connection
 
-			searchFilter = search_filter_add("", "objectClass=group")
+			searchFilter = search_filter_add(None, "objectClass=group")
 
 			connection.search(
 				RuntimeSettings.LDAP_AUTH_SEARCH_BASE,

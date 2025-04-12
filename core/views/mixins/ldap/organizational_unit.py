@@ -71,7 +71,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 						)
 					else:
 						lookup_type = lookup_value
-						ldap_filter = search_filter_add(ldap_filter, lookup_type + "=" + f)
+						ldap_filter = search_filter_add(ldap_filter, f"{lookup_type}={f}")
 		else:
 			logger.debug("Dirtree fetching with Standard Exclusion Filter")
 			if filterDict is None:
@@ -97,7 +97,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 					for f in data["filter"]["exclude"]:
 						lookup_type = data["filter"]["exclude"][f]
 						ldap_filter = search_filter_add(
-							ldap_filter, f"{lookup_type}={f}", negate=True
+							ldap_filter, f"{lookup_type}={f}", negate_add=True
 						)
 
 		logger.debug("LDAP Filter for Dirtree: ")

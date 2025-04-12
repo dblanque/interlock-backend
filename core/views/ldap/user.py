@@ -135,19 +135,15 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			)
 
 		# TODO - Add Deserializer Validation
-		user_search = data["username"]
-
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
-			# Username check
-			self.ldap_user_exists(user_search=user_search)
-
-			# Email check
-			_email_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"]
-			if data.get(_email_field, False):
-				self.ldap_user_with_email_exists(email_search=data[_email_field])
+			# User Exists check
+			self.ldap_user_exists(
+				username=data.get("username"),
+				email=data.get(RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"], None)
+			)
 
 			user_dn = self.ldap_user_insert(user_data=data)
 			user_pwd = data["password"]
@@ -162,8 +158,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
-		data = request.data
-		data = data["user"]
+		data: dict = request.data
 
 		######################## Set LDAP Attributes ###########################
 		self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings).get_update_attrs()
@@ -171,7 +166,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		EXCLUDE_KEYS = self.filter_attr_builder(RuntimeSettings).get_update_exclude_keys()
 
-		user_to_update = data[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]]
+		user_to_update = data.get(RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"])
 		if "permission_list" in data:
 			permission_list = data["permission_list"]
 		else:
@@ -184,19 +179,17 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
-			if not self.ldap_user_exists(user_search=user_to_update, return_exception=False):
+			# Check user exists
+			if not self.ldap_user_exists(username=user_to_update, return_exception=False):
 				raise exc_user.UserDoesNotExist
 			user_entry = self.ldap_connection.entries[0]
 			user_dn = str(user_entry.distinguishedName)
-			# Check overlapping email
-			if (
-				RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"] in data
-				and len(data[RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"]]) > 0
-			):
-				self.ldap_user_with_email_exists(
-					email_search=data[RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"]],
-					user_check=data,
-				)
+
+			# Check if email overlaps with any other users
+			user_email = data.get("email", None)
+			if user_email:
+				self.ldap_user_exists(email=user_email)
+
 			self.get_user_object(user_to_update, attributes=ldap3.ALL_ATTRIBUTES)
 
 			self.ldap_user_update(
@@ -298,10 +291,9 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			# Else, search for username dn
 			else:
 				logger.debug("Updating with user dn search method")
-				self.get_user_object(ldap_user_search)
+				ldap_user_entry = self.get_user_object(ldap_user_search)
 
-				user = self.ldap_connection.entries
-				dn = str(user[0].distinguishedName)
+				dn = str(ldap_user_entry.distinguishedName)
 				logger.debug(dn)
 
 			if dn is None or dn == "":
@@ -395,6 +387,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			required_fields.append("password")
 
 		mapped_user_key = header_mapping[ldap_user.USERNAME]
+		mapped_email_key = header_mapping[ldap_user.EMAIL]
 		if user_placeholder_password:
 			mapped_pwd_key = ldap_user.PASSWORD
 		else:
@@ -435,22 +428,17 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			for row in user_list:
+				row: dict
 				user_search = row[mapped_user_key]
 				row["path"] = user_path
 
-				if self.ldap_user_exists(user_search=user_search, return_exception=False):
+				if self.ldap_user_exists(
+					username=user_search,
+					email=row.get(mapped_email_key, None),
+					return_exception=False
+				):
 					skipped_users.append(row[mapped_user_key])
 					continue
-
-				# Check overlapping email
-				if (
-					RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"] in data
-					and len(data[RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"]]) > 0
-				):
-					self.ldap_user_with_email_exists(
-						email_search=data[RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"]],
-						user_check=data,
-					)
 
 				user_dn = self.ldap_user_insert(
 					user_data=row,
@@ -527,19 +515,17 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			for user_to_update in data["users"]:
 				self.ldap_connection = ldc.connection
 
-				if not self.ldap_user_exists(user_search=user_to_update, return_exception=False):
+				# Check that user exists
+				if not self.ldap_user_exists(username=user_to_update, return_exception=False):
 					raise exc_user.UserDoesNotExist
 				user_entry = self.ldap_connection.entries[0]
 				user_dn = str(user_entry.distinguishedName)
-				# Check overlapping email
-				if (
-					RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"] in data
-					and len(data[RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"]]) > 0
-				):
-					self.ldap_user_with_email_exists(
-						email_search=data[RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"]],
-						user_check=data["values"],
-					)
+
+				# Check if email overlaps with another user's
+				user_email = data.get("email", None)
+				if user_email:
+					self.ldap_user_exists(email=user_email)
+
 				self.get_user_object(user_to_update, attributes=ldap3.ALL_ATTRIBUTES)
 
 				self.ldap_user_update(
@@ -662,7 +648,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		with LDAPConnector(force_admin=True) as ldc:
 			self.ldap_connection = ldc.connection
 			ldap_user_search = user.username
-			self.get_user_object(
+			ldap_user_entry = self.get_user_object(
 				ldap_user_search,
 				attributes=[
 					RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
@@ -670,7 +656,6 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 					"userAccountControl",
 				],
 			)
-			ldapUser = self.ldap_connection.entries
 
 			if "distinguishedName" in data.keys() and data["distinguishedName"] != "":
 				logger.debug("Updating with distinguishedName obtained from front-end")
@@ -679,11 +664,11 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			else:
 				logger.debug("Updating with user dn search method")
 
-				distinguishedName = str(ldapUser[0].distinguishedName)
+				distinguishedName = str(ldap_user_entry.distinguishedName)
 				logger.debug(distinguishedName)
 
 			if ldap_adsi.list_user_perms(
-				user=ldapUser[0], perm_search="LDAP_UF_PASSWD_CANT_CHANGE"
+				user=ldap_user_entry, perm_search="LDAP_UF_PASSWD_CANT_CHANGE"
 			):
 				raise PermissionDenied
 
@@ -750,11 +735,9 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		with LDAPConnector(force_admin=True) as ldc:
 			self.ldap_connection = ldc.connection
 			ldap_user_search = user.username
-			self.get_user_object(ldap_user_search, attributes=ldap3.ALL_ATTRIBUTES)
+			ldap_user_entry = self.get_user_object(ldap_user_search, attributes=ldap3.ALL_ATTRIBUTES)
 
-			user = self.ldap_connection.entries
-			user_dn = str(user[0].distinguishedName)
-
+			user_dn = str(ldap_user_entry.distinguishedName)
 			self.ldap_user_update(user_dn=user_dn, user_name=ldap_user_search, user_data=data)
 
 		logger.debug(self.ldap_connection.result)

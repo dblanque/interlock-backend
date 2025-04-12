@@ -51,9 +51,9 @@ import logging
 ### Others
 from ldap3.utils.dn import safe_dn
 from core.constants.user import UserViewsetFilterAttributeBuilder
-from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from core.ldap.countries import LDAP_COUNTRIES
+from core.ldap.adsi import LDAP_FILTER_NOT
 ################################################################################
 
 DBLogMixin = LogMixin()
@@ -70,49 +70,118 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 	ldap_filter_attr = None
 	filter_attr_builder = UserViewsetFilterAttributeBuilder
 
-	def get_user_object_filter(self, username: str = None, email: str = None):
-		if (not username and not email) or (username and email):
-			raise ValueError("XOR Fail: Username OR Email required, single value allowed.")
-		filter = "(objectClass=" + RuntimeSettings.LDAP_AUTH_OBJECT_CLASS + ")"
+	def get_user_object_filter(self, username: str = None, email: str = None, xor=True, match_both=False):
+		"""Gets LDAP User Object Filter
 
+		Args:
+			username (str, optional): Username. Defaults to None.
+			email (str, optional): User Email. Defaults to None.
+			xor (bool, optional): Use XOR, disallows searching by username and email at
+				the same time. Defaults to True.
+			match_both (bool, optional): Whether to match username and email in search
+				filter (Uses LDAP_FILTER_AND instead of LDAP_FILTER_OR)
+
+		Raises:
+			ValueError: Raised if XOR is True and both username and email
+				are Truthy or Falsy at the same time.
+
+		Returns:
+			str: LDAP Object Filter String
+		"""
+		if xor:
+			if (not username and not email) or (username and email):
+				raise ValueError("XOR Fail: Username OR Email required, single value allowed.")
+			if match_both:
+				raise ValueError("match_both and xor are incompatible options.")
+
+		if match_both:
+			id_filter_op = ldap_adsi.LDAP_FILTER_AND
+		else:
+			id_filter_op = ldap_adsi.LDAP_FILTER_OR
+
+		# Class Filter Setup
+		class_filter = search_filter_add(None, f"objectClass={RuntimeSettings.LDAP_AUTH_OBJECT_CLASS}")
 		# Exclude Computer Accounts if settings allow it
 		if RuntimeSettings.EXCLUDE_COMPUTER_ACCOUNTS:
-			filter = search_filter_add(filter, f"objectClass=computer", negate=True)
+			class_filter = search_filter_add(class_filter, f"objectClass=computer", negate_add=True)
 
+		# User ID Filter Setup
+		id_filter = None
 		if username:
-			filter_to_use = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"] + "=" + username
-		elif email:
-			filter_to_use = RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"] + "=" + email
-		# Add filter
-		filter = search_filter_add(filter, filter_to_use)
-		return filter
+			id_filter = search_filter_add(
+				id_filter,
+				f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS['username']}={username}",
+				operator=id_filter_op
+			)
+		if email:
+			id_filter = search_filter_add(
+				id_filter,
+				f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS['email']}={email}",
+				operator=id_filter_op
+			)
+		return search_filter_add(class_filter, id_filter)
 
 	def get_user_object(
 		self,
-		username,
-		attributes=[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"], "distinguishedName"],
+		username: str = None,
+		email: str = None,
+		attributes: list =None,
 		object_class_filter=None,
 	) -> Connection:
 		"""Default: Search for the dn from a username string param.
 		Can also be used to fetch entire object from that username string or filtered attributes.
 
 		Args:
-			username (str): User to be searched
-			attributes (str | list): Attributes to return in entry, default are DN and username Identifier
-				(e.g.: sAMAccountName)
-			objectClassFilter (str): Default is obtained from settings
+			username (str, optional): Required if no email is provided. Defaults to None.
+			email (str, optional): Required if no username is provided. Defaults to None.
+			attributes (list, optional): LDAP Attributes. Defaults to None.
+			object_class_filter (str, optional): LDAP Search Filter. Defaults to None.
 
-		Returns:
-			ldap3.Connection
+		Raises:
+			ValidationError: If username and email are Falsy.
+
+		Returns the first matching entry.
 		"""
-		if object_class_filter == None:
-			object_class_filter = self.get_user_object_filter(username=username)
+		if not username and not email:
+			raise ValidationError(
+				"username or email are required for get_user_object call.")
+
+		if not attributes:
+			attributes = [
+				RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
+				"distinguishedName"
+			]
+		if not object_class_filter:
+			object_class_filter = self.get_user_object_filter(username=username, email=email, xor=False)
 
 		self.ldap_connection.search(
-			RuntimeSettings.LDAP_AUTH_SEARCH_BASE, object_class_filter, attributes=attributes
+			search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
+			search_filter=object_class_filter,
+			attributes=attributes,
 		)
+		return self.get_user_entry(username=username, email=email)
+	
+	def get_user_entry(self, username = None, email = None):
+		if not username and not email:
+			raise ValueError("username or email must be specified in get_user_entry call.")
+		if not self.ldap_connection.entries:
+			return
 
-		return self.ldap_connection
+		_username_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
+		_email_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"]
+		for entry in self.ldap_connection.entries:
+			if username and email:
+				if (
+					getattr(entry, _username_field) == username and
+					getattr(entry, _email_field) == email
+				):
+					return entry
+			elif username:
+				if getattr(entry, _username_field) == username:
+					return entry
+			elif email:
+				if getattr(entry, _email_field) == email:
+					return entry
 
 	def get_group_attributes(self, groupDn, idFilter=None, classFilter=None):
 		attributes = ["objectSid"]
@@ -141,12 +210,12 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		# Exclude Computer Accounts if settings allow it
 		if RuntimeSettings.EXCLUDE_COMPUTER_ACCOUNTS:
 			self.ldap_filter_object = ldap_adsi.search_filter_add(
-				self.ldap_filter_object, "!(objectClass=computer)"
+				self.ldap_filter_object, "objectClass=computer", negate_add=True
 			)
 
 		# Exclude Contacts
 		self.ldap_filter_object = ldap_adsi.search_filter_add(
-			self.ldap_filter_object, "!(objectClass=contact)"
+			self.ldap_filter_object, "objectClass=contact", negate_add=True
 		)
 
 		self.ldap_connection.search(
@@ -438,7 +507,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		if not isinstance(user_pwd_new, str):
 			raise TypeError("user_pwd_new must be of type str.")
-		if not isinstance(user_pwd_old, str):
+		if not set_by_admin and not isinstance(user_pwd_old, str):
 			raise TypeError("user_pwd_old must be of type str.")
 
 		# Validation
@@ -463,81 +532,50 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			data = {"ldap_response": self.ldap_connection.result}
 			raise exc_user.UserUpdateError(data=data)
 
-	def ldap_user_exists(self, user_search: str, return_exception: bool = True):
-		"""
-		### Checks if LDAP User Exists on Directory
-		Returns the used LDAP Connection
-		"""
-		# Send LDAP Query for user being created to see if it exists
-		ldap_attributes = [
-			RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
-			"distinguishedName",
-			RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"],
-		]
-		self.get_user_object(user_search, attributes=ldap_attributes)
-		user = self.ldap_connection.entries
+	def ldap_user_exists(
+			self,
+			username: str = None,
+			email: str = None,
+			return_exception: bool = True
+		) -> bool:
+		"""Checks if LDAP User Exists on Directory
 
-		# If user exists, return error
-		if user != [] and return_exception:
-			self.ldap_connection.unbind()
-			exception = exc_ldap.LDAPObjectExists
-			data = {"code": "user_exists", "user": user_search}
-			exception.set_detail(exception, data)
-			raise exception
-		elif user != [] and not return_exception:
-			return True
-		return False
+		Args:
+			username (str, optional): Required if no email is provided. Defaults to None.
+			email (str, optional): Required if no username is provided. Defaults to None.
+			return_exception (bool, optional): Whether to return exception when a user
+				entry is found. Defaults to True.
 
-	def ldap_user_with_email_exists(
-		self, email_search: str, user_check: dict = None, return_exception: bool = True
-	):
-		"""
-		### Checks if LDAP User with email exists on Directory
-		* Optional Argument user allows for conflict checking with distinguishedName and username.
+		Raises:
+			ValidationError: Returned if no email and username are provided.
+			exc_ldap.LDAPObjectExists: Returned if return_exception is True.
 
 		Returns:
-			(User | Exception | bool): If user exists object or exc is returned.
-			Otherwise returns False.
+			bool
 		"""
-		try:
-			validate_email(email_search)
-		except ValidationError as e:
-			logger.warning("An invalid mail has been input into the API.")
-			raise e
+
 		# Send LDAP Query for user being created to see if it exists
+		if not username and not email:
+			raise ValidationError(
+				"username or email args are required for ldap_user_exists call.")
 		ldap_attributes = [
 			RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
 			"distinguishedName",
 			RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"],
 		]
-		self.ldap_connection.search(
-			RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
-			self.get_user_object_filter(email=email_search),
-			attributes=ldap_attributes,
-		)
-		user = self.ldap_connection.entries
+		self.get_user_object(username=username, email=email, attributes=ldap_attributes)
+		entry_by_email = self.get_user_entry(email=email)
 
-		if user != []:
-			if user_check:
-				# If user with same dn and username exists, return error
-				attrs_to_check = [
-					"distinguishedName",
-					RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
-				]
-				if not all(
-					(
-						attr in user_check
-						and hasattr(user, attr)
-						and user_check[attr] == getattr(user, attr)
-					)
-					for attr in attrs_to_check
-				):
-					raise exc_user.UserExists
-			elif return_exception:
-				# If user with email exists, return error
-				raise exc_user.UserWithEmailExists
+		# If entries is not falsy, return Exception or True
+		if self.ldap_connection.entries:
+			if return_exception:
+				if entry_by_email:
+					_code = "user_email_exists"
+				else:
+					_code = "user_exists"
+				raise exc_ldap.LDAPObjectExists(data={"code": _code})
 			else:
-				return user
+				return True
 		return False
 
 	def ldap_user_fetch(self, user_search):
@@ -548,13 +586,13 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		# Exclude Computer Accounts if settings allow it
 		if RuntimeSettings.EXCLUDE_COMPUTER_ACCOUNTS == True:
 			self.ldap_filter_object = ldap_adsi.search_filter_add(
-				self.ldap_filter_object, "!(objectClass=computer)"
+				self.ldap_filter_object, "objectClass=computer", negate_add=True
 			)
 
 		# Add filter for username
 		self.ldap_filter_object = ldap_adsi.search_filter_add(
 			self.ldap_filter_object,
-			RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"] + "=" + user_search,
+			f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS['username']}={user_search}",
 		)
 		ldap_object_options: LDAPObjectOptions = {
 			"connection": self.ldap_connection,
@@ -632,13 +670,13 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		# Exclude Computer Accounts if settings allow it
 		if RuntimeSettings.EXCLUDE_COMPUTER_ACCOUNTS == True:
 			self.ldap_filter_object = ldap_adsi.search_filter_add(
-				self.ldap_filter_object, "!(objectClass=computer)"
+				self.ldap_filter_object, "objectClass=computer", negate_add=True
 			)
 
 		# Add filter for username
 		self.ldap_filter_object = ldap_adsi.search_filter_add(
 			self.ldap_filter_object,
-			RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"] + "=" + affected_user,
+			f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS['username']}={affected_user}",
 		)
 
 		self.ldap_connection.search(
@@ -693,7 +731,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		return self.ldap_connection
 
 	def ldap_user_unlock(self, user_object):
-		user_name = user_object["username"]
+		username = user_object["username"]
 		# If data request for deletion has user DN
 		if "distinguishedName" in user_object.keys() and user_object["distinguishedName"] != "":
 			logger.debug("Updating with distinguishedName obtained from front-end")
@@ -702,10 +740,8 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		# Else, search for username dn
 		else:
 			logger.debug("Updating with user dn search method")
-			self.get_user_object(user_name)
-
-			user = self.ldap_connection.entries
-			user_dn = str(user[0].distinguishedName)
+			user_entry = self.get_user_object(username)
+			user_dn = str(user_entry.distinguishedName)
 			logger.debug(user_dn)
 
 		if not user_dn or user_dn == "":
@@ -717,16 +753,16 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			user=self.request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_USER,
-			log_target=user_name,
+			log_target=username,
 			message=LOG_EXTRA_UNLOCK,
 		)
 		return self.ldap_connection
 
 	def ldap_user_delete(self, user_object):
 		if RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"] in user_object:
-			user_name = user_object[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]]
+			username = user_object[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]]
 		elif "username" in user_object:
-			user_name = user_object["username"]
+			username = user_object["username"]
 		else:
 			raise exc_base.CoreException
 
@@ -748,10 +784,8 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		# Else, search for username dn
 		else:
 			logger.debug("Deleting with user dn search method")
-			self.get_user_object(user_name)
-
-			user_entry = self.ldap_connection.entries
-			user_dn = str(user_entry[0].distinguishedName)
+			user_entry = self.get_user_object(username)
+			user_dn = str(user_entry.distinguishedName)
 			logger.debug(user_dn)
 
 			if not user_dn or user_dn == "":
@@ -769,7 +803,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			user=self.request.user.id,
 			operation_type=LOG_ACTION_DELETE,
 			log_target_class=LOG_CLASS_USER,
-			log_target=user_name,
+			log_target=username,
 		)
 
 		return self.ldap_connection

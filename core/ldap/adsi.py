@@ -225,51 +225,63 @@ LDAP_BUILTIN_OBJECTS = [
 	"Managed Service Accounts",
 ]
 
+def is_encapsulated(v: str) -> bool:
+	"""Check if a string is wrapped in parentheses."""
+	if not isinstance(v, str):
+		raise TypeError("is_encapsulated value must be of type str.")
+	return v.startswith("(") and v.endswith(")")
 
 def search_filter_add(
 	filter_string: str,
 	filter_to_add: str,
 	operator: LDAP_FILTER_OPERATORS_TYPE = LDAP_FILTER_AND,
-	negate=False,
-):
-	"""Adds search filter to LDAP Filter string
+	negate: bool = False,
+	negate_add: bool = False,
+) -> str:
+	"""Combine two LDAP filters with a logical operator (AND/OR) and optionally negate the result.
 
-	ARGUMENTS
-	originalFilter: The filter you wish to modify, if empty the function will create a filter
-	filterToAdd: The filter string to add
-	operator (default is &): The operator (and|or), supports string or literal operator value
-	Example: (&(objectClass=person)(sAMAccountName=testuser))
+	Args:
+		filter_string (str): The base LDAP filter (can be empty).
+		filter_to_add (str): The filter to append (required).
+		operator (str, optional): LDAP operator ("&" or "|"). Defaults to "&".
+		negate (bool, optional): Whether to negate the entire combined filter. Defaults to False.
+		negate_add (bool, optional): Whether to negate the added filter. Defaults to False.
 
-	Returns a string.
+	Raises:
+		ValueError: If `filter_to_add` is empty or operator is invalid.
+
+	Returns:
+		str: The combined LDAP filter.
 	"""
-	if filter_to_add == "":
-		raise ValueError("filter_to_add is required.")
+	if not filter_to_add:
+		raise ValueError("filter_to_add cannot be empty.")
 
-	if operator == "or":
+	if isinstance(operator, str) and operator.lower() == "or":
 		operator = LDAP_FILTER_OR
-	if operator == "and":
+	if isinstance(operator, str) and operator.lower() == "and":
 		operator = LDAP_FILTER_AND
+	if operator not in LDAP_FILTER_OPERATORS:
+		raise ValueError(f"Invalid operator: {operator}. Must be one of {LDAP_FILTER_OPERATORS}")
 
-	if not operator in LDAP_FILTER_OPERATORS:
-		raise ValueError(f"Invalid Filter Operator {operator}")
-
-	if negate == True:
-		prefix = "(!("
-		suffix = "))"
-	else:
-		prefix = "("
-		suffix = ")"
-
-	if not filter_string or filter_string == "":
-		new_filter = f"{prefix}{filter_to_add}{suffix}"
-		return new_filter
-
-	filter_string_encapsulated = filter_string.startswith("(") and filter_string.endswith(")")
-	if not filter_string_encapsulated:
+	# Ensure both filters are properly encapsulated
+	if filter_string and not is_encapsulated(filter_string):
 		filter_string = f"({filter_string})"
+	if not is_encapsulated(filter_to_add):
+		filter_to_add = f"({filter_to_add})"
+	if negate_add:
+		filter_to_add = f"(!{filter_to_add})"
 
-	new_filter = f"({operator}{filter_string}{prefix}{filter_to_add}{suffix})"
-	return new_filter
+	# Combine filters with the operator
+	if not filter_string:
+		combined_filter = filter_to_add
+	else:
+		combined_filter = f"({operator}{filter_string}{filter_to_add})"
+
+	# Apply negation if needed
+	if negate:
+		combined_filter = f"(!{combined_filter})"
+
+	return combined_filter
 
 
 def search_filter_from_dict(
@@ -375,7 +387,7 @@ def list_user_perms(user, perm_search: str = None, user_is_object: bool = True) 
 	### Creates a list of user permissions from raw LDAP Integer Bitmap
 	* user: User dict or object.
 	* perm_search:  Allows for directly returning a boolean when a specified
-	                permission is found.
+					permission is found.
 	* user_is_object: Whether the user passed is an object or dict.
 
 	Returns list.
