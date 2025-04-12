@@ -15,7 +15,7 @@ from core.exceptions import dirtree as exc_dirtree
 
 ### Interlock
 from core.ldap.adsi import (
-	search_filter_add,
+	join_ldap_filter,
 	search_filter_from_dict,
 	LDAP_FILTER_AND,
 	LDAP_FILTER_OR,
@@ -63,7 +63,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 							expr = LDAP_FILTER_OR
 						else:
 							expr = LDAP_FILTER_AND
-						ldap_filter = search_filter_add(
+						ldap_filter = join_ldap_filter(
 							ldap_filter,
 							f"{lookup_type}={f}",
 							expression=expr,
@@ -71,7 +71,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 						)
 					else:
 						lookup_type = lookup_value
-						ldap_filter = search_filter_add(ldap_filter, f"{lookup_type}={f}")
+						ldap_filter = join_ldap_filter(ldap_filter, f"{lookup_type}={f}")
 		else:
 			logger.debug("Dirtree fetching with Standard Exclusion Filter")
 			if filterDict is None:
@@ -96,7 +96,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 				if len(data["filter"]["exclude"]) > 0:
 					for f in data["filter"]["exclude"]:
 						lookup_type = data["filter"]["exclude"][f]
-						ldap_filter = search_filter_add(
+						ldap_filter = join_ldap_filter(
 							ldap_filter, f"{lookup_type}={f}", negate_add=True
 						)
 

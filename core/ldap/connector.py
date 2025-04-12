@@ -17,7 +17,7 @@ from enum import Enum
 # LDAP
 import ldap3
 from django_python3_ldap.utils import import_func
-from core.ldap.adsi import search_filter_add, LDAP_FILTER_OR
+from core.ldap.adsi import join_ldap_filter, LDAP_FILTER_OR
 from core.exceptions import ldap as exc_ldap
 from ldap3.core.exceptions import LDAPException
 
@@ -70,8 +70,8 @@ def recursive_member_search(user_dn: str, connection: ldap3.Connection, group_dn
 
 	# Add filter for username
 	ldap_filter_object = ""
-	ldap_filter_object = search_filter_add(ldap_filter_object, f"distinguishedName={group_dn}")
-	ldap_filter_object = search_filter_add(ldap_filter_object, f"objectClass=group")
+	ldap_filter_object = join_ldap_filter(ldap_filter_object, f"distinguishedName={group_dn}")
+	ldap_filter_object = join_ldap_filter(ldap_filter_object, f"objectClass=group")
 	connection.search(
 		RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
 		ldap_filter_object,
@@ -381,7 +381,7 @@ class LDAPConnector(object):
 		"""
 		searchFilter = ""
 		for field in RuntimeSettings.LDAP_AUTH_USER_LOOKUP_FIELDS:
-			searchFilter = search_filter_add(
+			searchFilter = join_ldap_filter(
 				searchFilter,
 				f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS[field]}={kwargs['username']}",
 				LDAP_FILTER_OR,

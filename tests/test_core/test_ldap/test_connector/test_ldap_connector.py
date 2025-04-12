@@ -2,7 +2,7 @@ import pytest
 from pytest_mock import MockType
 from core.ldap.connector import LDAPConnector, sync_user_relations
 from ldap3.core.exceptions import LDAPException
-from core.ldap.adsi import search_filter_add, LDAP_FILTER_OR
+from core.ldap.adsi import join_ldap_filter, LDAP_FILTER_OR
 from ldap3 import SUBTREE as ldap3_SUBTREE, ALL_ATTRIBUTES as ldap3_ALL_ATTRIBUTES
 from core.exceptions.ldap import CouldNotOpenConnection
 from core.models.choices.log import LOG_ACTION_OPEN, LOG_ACTION_CLOSE, LOG_CLASS_CONN
@@ -354,7 +354,7 @@ def test_get_user_success(
 	m_get_or_create_user: MockType = mocker.patch.object(
 		LDAPConnector, "_get_or_create_user", return_value=f_user
 	)
-	expected_filter = search_filter_add(
+	expected_filter = join_ldap_filter(
 		f"sAMAccountName={f_user.username}",
 		f"mail={f_user.username}",
 		LDAP_FILTER_OR,

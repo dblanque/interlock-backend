@@ -12,7 +12,7 @@ from django.utils.translation import gettext_lazy as _
 
 ### Interlock
 from core.config.runtime import RuntimeSettings
-from core.ldap.adsi import LDAP_BUILTIN_OBJECTS, search_filter_add
+from core.ldap.adsi import LDAP_BUILTIN_OBJECTS, join_ldap_filter
 from core.ldap.security_identifier import SID
 
 ### Others
@@ -104,7 +104,7 @@ class LDAPObject:
 		self.user_types = DEFAULT_USER_TYPES
 		self.ldap_attrs = RuntimeSettings.LDAP_DIRTREE_ATTRIBUTES
 		if "dn" in kwargs:
-			self.ldap_filter = search_filter_add(None, f"distinguishedName={str(kwargs['dn'])}")
+			self.ldap_filter = join_ldap_filter(None, f"distinguishedName={str(kwargs['dn'])}")
 
 		self.__set_kwargs__(kwargs)
 

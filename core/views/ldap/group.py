@@ -24,7 +24,7 @@ from rest_framework.decorators import action
 from core.constants.group import GroupViewsetFilterAttributeBuilder
 from core.decorators.login import auth_required, admin_required
 from core.ldap.connector import LDAPConnector
-from core.ldap.adsi import search_filter_add, LDAP_FILTER_OR
+from core.ldap.adsi import join_ldap_filter, LDAP_FILTER_OR
 from core.config.runtime import RuntimeSettings
 import logging
 ################################################################################
@@ -47,7 +47,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
-			self.ldap_filter_object = search_filter_add("", "objectClass=" + "group")
+			self.ldap_filter_object = join_ldap_filter("", "objectClass=" + "group")
 			self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings).get_list_filter()
 
 			data, valid_attributes = self.list_groups()
@@ -70,10 +70,10 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		group_object_class = "group"
 		self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings).get_fetch_filter()
 		self.ldap_filter_object = ""
-		self.ldap_filter_object = search_filter_add(
+		self.ldap_filter_object = join_ldap_filter(
 			self.ldap_filter_object, f"objectClass={group_object_class}"
 		)
-		self.ldap_filter_object = search_filter_add(
+		self.ldap_filter_object = join_ldap_filter(
 			self.ldap_filter_object, f"distinguishedName={group_search}"
 		)
 		########################################################################
@@ -107,8 +107,8 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 
 			group_data = data["group"]
 			# Make sure Group doesn't exist check with CN and authUserField
-			self.ldap_filter_object = search_filter_add(None, f"cn={group_data['cn']}")
-			self.ldap_filter_object = search_filter_add(
+			self.ldap_filter_object = join_ldap_filter(None, f"cn={group_data['cn']}")
+			self.ldap_filter_object = join_ldap_filter(
 				self.ldap_filter_object,
 				f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS['username']}={group_data['cn']}",
 				LDAP_FILTER_OR,

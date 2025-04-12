@@ -40,7 +40,7 @@ from core.models.validators.ldap_dns_record import domain_validator, ipv4_valida
 from interlock_backend.settings import DEBUG as INTERLOCK_DEBUG
 from core.utils import dnstool
 from core.utils.dnstool import record_to_dict
-from core.ldap.adsi import search_filter_add
+from core.ldap.adsi import join_ldap_filter
 from core.config.runtime import RuntimeSettings
 from core.ldap import defaults
 from core.ldap.connector import LDAPConnector
@@ -119,7 +119,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 				# 'ts',
 			]
 
-			searchFilter = search_filter_add("", "objectClass=dnsNode")
+			searchFilter = join_ldap_filter("", "objectClass=dnsNode")
 			attributes = ["dnsRecord", "dNSTombstoned", "name"]
 
 			dnsList = LDAPDNS(ldapConnection)
@@ -412,7 +412,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 			attributes_forest["dc"] = forest_dc
 
 			search_target = "DC=%s,%s" % (target_zone, dnsList.dns_root)
-			searchFilter = search_filter_add("", "objectClass=dnsNode")
+			searchFilter = join_ldap_filter("", "objectClass=dnsNode")
 			attributes = ["dnsRecord", "dNSTombstoned", "name"]
 			records = ldapConnection.extend.standard.paged_search(
 				search_base=search_target,

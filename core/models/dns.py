@@ -33,7 +33,7 @@ from core.models.structs.ldap_dns_record import (
 from core.models.types.ldap_dns_record import RecordTypes
 
 ### Interlock
-from core.ldap.adsi import search_filter_add
+from core.ldap.adsi import join_ldap_filter
 
 ### Utils
 import traceback
@@ -792,7 +792,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		if self.name.endswith(self.zone) or self.zone in self.name:
 			raise exc_dns.DNSZoneInRecord
 
-		search_filter = search_filter_add(
+		search_filter = join_ldap_filter(
 			"objectClass=dnsNode", f"distinguishedName={self.distinguished_name}"
 		)
 		attributes = ["dnsRecord", "dNSTombstoned", "name"]

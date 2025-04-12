@@ -11,7 +11,7 @@
 from rest_framework import viewsets
 
 ### Interlock
-from core.ldap.adsi import search_filter_add
+from core.ldap.adsi import join_ldap_filter
 from core.ldap.types.group import LDAP_GROUP_TYPES
 from core.ldap.security_identifier import SID
 from core.ldap.connector import LDAPConnector
@@ -71,7 +71,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		with LDAPConnector(force_admin=True) as ldc:
 			connection = ldc.connection
 
-			searchFilter = search_filter_add(None, "objectClass=group")
+			searchFilter = join_ldap_filter(None, "objectClass=group")
 
 			connection.search(
 				RuntimeSettings.LDAP_AUTH_SEARCH_BASE,

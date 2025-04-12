@@ -2,7 +2,7 @@ import pytest
 from pytest_mock import MockType
 from core.ldap.defaults import LDAP_DIRTREE_OU_FILTER, LDAP_AUTH_USER_FIELDS
 from core.ldap.adsi import (
-	search_filter_add,
+	join_ldap_filter,
 	search_filter_from_dict,
 	LDAP_FILTER_AND,
 	LDAP_FILTER_OR,
@@ -117,8 +117,8 @@ def test_is_encapsulated_raises():
 		),
 	),
 )
-def test_search_filter_add(filter_string, filter_add, expression, negate, negate_add, expected):
-	assert search_filter_add(
+def test_join_ldap_filter(filter_string, filter_add, expression, negate, negate_add, expected):
+	assert join_ldap_filter(
 		filter_string,
 		filter_add,
 		expression,
@@ -126,14 +126,14 @@ def test_search_filter_add(filter_string, filter_add, expression, negate, negate
 		negate_add
 	) == expected
 
-def test_search_filter_add_raises_empty_string():
+def test_join_ldap_filter_raises_empty_string():
 	with pytest.raises(ValueError):
-		search_filter_add("", "", LDAP_FILTER_AND)
+		join_ldap_filter("", "", LDAP_FILTER_AND)
 
 
-def test_search_filter_add_raises_invalid_expression():
+def test_join_ldap_filter_raises_invalid_expression():
 	with pytest.raises(ValueError):
-		search_filter_add("", "objectClass=person", "A")
+		join_ldap_filter("", "objectClass=person", "A")
 
 
 @pytest.mark.parametrize(

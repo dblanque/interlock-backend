@@ -231,7 +231,7 @@ def is_encapsulated(v: str) -> bool:
 		raise TypeError("is_encapsulated value must be of type str.")
 	return v.startswith("(") and v.endswith(")")
 
-def search_filter_add(
+def join_ldap_filter(
 	filter_string: str,
 	filter_to_add: str,
 	expression: LDAP_FILTER_EXPRESSION_TYPE = LDAP_FILTER_AND,
@@ -299,11 +299,11 @@ def search_filter_from_dict(
 			_ldap_obj_type = object_key
 		if isinstance(_ldap_obj_key, list):
 			for obj in _ldap_obj_key:
-				search_filter = search_filter_add(
+				search_filter = join_ldap_filter(
 					search_filter, f"{_ldap_obj_type}={obj}", expression
 				)
 		else:
-			search_filter = search_filter_add(
+			search_filter = join_ldap_filter(
 				search_filter, f"{_ldap_obj_type}={_ldap_obj_key}", expression
 			)
 	return search_filter
