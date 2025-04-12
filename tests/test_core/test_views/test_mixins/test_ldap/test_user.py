@@ -93,18 +93,91 @@ def f_group_dn(f_ldap_search_base):
 
 
 class TestUserViewLDAPMixin:
-	# Cases
-	# "With Username Field",
-	# "With Email Field",
-	# "With Username and Email Fields",
-	# "With Username and Email Fields, match both.",
-	# "With Username Field, exclude computers",
-	def test_get_user_object_filter_no_computers(self):
-		pass
-
 	def test_get_user_object_filter_xor_raises(self, f_user_mixin: UserViewLDAPMixin):
-		with pytest.raises(ValueError, match="XOR"):
+		with pytest.raises(ValueError, match="single value"):
 			f_user_mixin.get_user_object_filter(username="a", email="b")
+
+	def test_get_user_object_filter_xor_match_raises(self, f_user_mixin: UserViewLDAPMixin):
+		with pytest.raises(ValueError, match="incompatible"):
+			f_user_mixin.get_user_object_filter(username="a", match_both=True)
+
+	@pytest.mark.parametrize(
+		"username, email, exclude_computers, expected",
+		(
+			(
+				"testuser",
+				None,
+				False,
+				"(&(objectClass=person)(sAMAccountName=testuser))",
+			),
+			(
+				"testuser",
+				None,
+				True,
+				"(&(&(objectClass=person)(!(objectClass=computer)))(sAMAccountName=testuser))",
+			),
+			(
+				None,
+				f"testuser@{LDAP_DOMAIN}",
+				False,
+				f"(&(objectClass=person)(mail=testuser@{LDAP_DOMAIN}))",
+			),
+			(
+				None,
+				f"testuser@{LDAP_DOMAIN}",
+				True,
+				f"(&(&(objectClass=person)(!(objectClass=computer)))(mail=testuser@{LDAP_DOMAIN}))",
+			),
+		),
+	)
+	def test_get_user_object_filter_xor(self, username: str, email: str, exclude_computers: bool, expected: str, f_user_mixin: UserViewLDAPMixin, f_runtime_settings: RuntimeSettingsSingleton):
+		f_runtime_settings.EXCLUDE_COMPUTER_ACCOUNTS = exclude_computers
+		assert f_user_mixin.get_user_object_filter(username=username, email=email) == expected
+
+	@pytest.mark.parametrize(
+		"username, email, exclude_computers, match_both, expected",
+		(
+			(
+				"testuser",
+				f"testuser@{LDAP_DOMAIN}",
+				False,
+				False,
+				f"(&(objectClass=person)(|(sAMAccountName=testuser)(mail=testuser@{LDAP_DOMAIN})))",
+			),
+			(
+				"testuser",
+				f"testuser@{LDAP_DOMAIN}",
+				True,
+				False,
+				f"(&(&(objectClass=person)(!(objectClass=computer)))(|(sAMAccountName=testuser)(mail=testuser@{LDAP_DOMAIN})))",
+			),
+			(
+				"testuser",
+				f"testuser@{LDAP_DOMAIN}",
+				False,
+				True,
+				f"(&(objectClass=person)(&(sAMAccountName=testuser)(mail=testuser@{LDAP_DOMAIN})))",
+			),
+			(
+				"testuser",
+				f"testuser@{LDAP_DOMAIN}",
+				True,
+				True,
+				f"(&(&(objectClass=person)(!(objectClass=computer)))(&(sAMAccountName=testuser)(mail=testuser@{LDAP_DOMAIN})))",
+			),
+		),
+	)
+	def test_get_user_object_filter_no_xor(self, username: str, email: str, exclude_computers: bool, match_both: bool, expected: str, f_user_mixin: UserViewLDAPMixin, f_runtime_settings: RuntimeSettingsSingleton):
+		f_runtime_settings.EXCLUDE_COMPUTER_ACCOUNTS = exclude_computers
+		assert f_user_mixin.get_user_object_filter(username=username, email=email, xor=False, match_both=match_both) == expected
+
+	def test_get_user_entry_raises_value_error(self, f_user_mixin: UserViewLDAPMixin):
+		with pytest.raises(ValueError):
+			f_user_mixin.get_user_entry()
+
+	def test_get_user_entry_no_entries(self, f_user_mixin: UserViewLDAPMixin):
+		f_user_mixin.ldap_connection.entries = []
+		assert f_user_mixin.get_user_entry(username="some_user") is None
 
 	@pytest.mark.parametrize(
 		"test_kwargs",
@@ -121,10 +194,11 @@ class TestUserViewLDAPMixin:
 			},
 		),
 	)
-	def test_get_user_object(self, mocker, test_kwargs, f_user_mixin: UserViewLDAPMixin):
+	def test_get_user_object(self, mocker, test_kwargs, f_user_mixin: UserViewLDAPMixin, f_runtime_settings: RuntimeSettingsSingleton):
 		m_entry = mocker.Mock()
-		m_entry.username = "testuser"
-		m_entry.email = f"testuser@{LDAP_DOMAIN}"
+		setattr(m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"], "testuser")
+		setattr(m_entry,
+		  f_runtime_settings.LDAP_AUTH_USER_FIELDS["email"], f"testuser@{LDAP_DOMAIN}")
 		f_user_mixin.ldap_connection.entries = [ m_entry ]
 		result = f_user_mixin.get_user_object(**test_kwargs)
 		f_user_mixin.ldap_connection.search.assert_called_once()
@@ -336,7 +410,7 @@ class TestUserViewLDAPMixin:
 		with pytest.raises(exc_users.UserDNPathException):
 			f_user_mixin.ldap_user_insert(user_data={})
 
-	def test_ldap_user_insert_raises_add_exc(self, mocker, f_user_mixin: UserViewLDAPMixin):
+	def test_ldap_user_insert_raises_add_exc(self, f_user_mixin: UserViewLDAPMixin):
 		f_user_mixin.ldap_connection.add.side_effect = Exception
 		with pytest.raises(exc_users.UserCreate):
 			f_user_mixin.ldap_user_insert(
