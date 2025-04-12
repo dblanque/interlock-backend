@@ -1,3 +1,3 @@
-from core.models.ldap_settings_runtime import RunningSettingsClass
+from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 
-RuntimeSettings = RunningSettingsClass()
+RuntimeSettings = RuntimeSettingsSingleton()

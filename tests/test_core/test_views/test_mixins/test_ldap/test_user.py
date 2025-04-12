@@ -12,7 +12,7 @@ from core.ldap.adsi import (
 	LDAP_UF_NORMAL_ACCOUNT,
 	calc_permissions,
 )
-from core.models.ldap_settings_runtime import RunningSettingsClass
+from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from core.exceptions import users as exc_users
 
 
@@ -37,22 +37,22 @@ def f_runtime_settings(mocker, g_runtime_settings):
 
 
 @pytest.fixture
-def f_auth_field_username(f_runtime_settings: RunningSettingsClass):
+def f_auth_field_username(f_runtime_settings: RuntimeSettingsSingleton):
 	return f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
 
 
 @pytest.fixture
-def f_auth_field_email(f_runtime_settings: RunningSettingsClass):
+def f_auth_field_email(f_runtime_settings: RuntimeSettingsSingleton):
 	return f_runtime_settings.LDAP_AUTH_USER_FIELDS["email"]
 
 
 @pytest.fixture
-def f_ldap_domain(f_runtime_settings: RunningSettingsClass):
+def f_ldap_domain(f_runtime_settings: RuntimeSettingsSingleton):
 	return f_runtime_settings.LDAP_DOMAIN
 
 
 @pytest.fixture
-def f_ldap_search_base(f_runtime_settings: RunningSettingsClass):
+def f_ldap_search_base(f_runtime_settings: RuntimeSettingsSingleton):
 	return f_runtime_settings.LDAP_AUTH_SEARCH_BASE
 
 
@@ -151,7 +151,7 @@ class TestUserViewLDAPMixin:
 	def test_ldap_user_list(
 		self,
 		f_user_mixin: UserViewLDAPMixin,
-		f_runtime_settings: RunningSettingsClass,
+		f_runtime_settings: RuntimeSettingsSingleton,
 		fc_user_entry: dict,
 		fc_user_permissions: int,
 	):
@@ -242,7 +242,7 @@ class TestUserViewLDAPMixin:
 		expected_permissions: int,
 		f_ldap_search_base: str,
 		f_user_mixin: UserViewLDAPMixin,
-		f_runtime_settings: RunningSettingsClass,
+		f_runtime_settings: RuntimeSettingsSingleton,
 		f_ldap_domain: str,
 		f_auth_field_username,
 	):
@@ -307,7 +307,7 @@ class TestUserViewLDAPMixin:
 		expected_mapped: dict,
 		f_ldap_search_base: str,
 		f_user_mixin: UserViewLDAPMixin,
-		f_runtime_settings: RunningSettingsClass,
+		f_runtime_settings: RuntimeSettingsSingleton,
 		f_ldap_domain: str,
 		f_auth_field_username,
 	):

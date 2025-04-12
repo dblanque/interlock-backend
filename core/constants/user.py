@@ -1,4 +1,4 @@
-from core.models.ldap_settings_runtime import RunningSettingsClass
+from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 
 # FIELDS
 USERNAME = "username"
@@ -41,7 +41,7 @@ PUBLIC_FIELDS = (
 
 
 class UserViewsetFilterAttributeBuilder:
-	def __init__(self, settings: RunningSettingsClass):
+	def __init__(self, settings: RuntimeSettingsSingleton):
 		self.RunningSettings = settings
 
 	def get_list_attrs(self):

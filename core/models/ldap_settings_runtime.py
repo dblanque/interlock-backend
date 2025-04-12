@@ -36,7 +36,7 @@ this_module = sys.modules[__name__]
 # core.models.ldap_settings
 # core.models.ldap_settings_runtime <--- You're Here
 # core.ldap.defaults
-class RunningSettingsClass:
+class RuntimeSettingsSingleton:
 	_instance = None
 	_initialized = False
 	PLAIN_TEXT_BIND_PASSWORD = defaults.PLAIN_TEXT_BIND_PASSWORD
