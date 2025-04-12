@@ -51,14 +51,18 @@ class TestViewSet(BaseViewSet):
 			print(e)
 			raise CouldNotOpenConnection
 
-		with LDAPInfo(force_admin=True) as ldap_info:
-			CONNECTION_OPEN = True if ldap_info.connection.bound else False
-			with open(f"{LOG_FILE_FOLDER}/test.log", "w") as f:
-				print(ldap_info)
-				if hasattr(ldap_info, "schema") and ldap_info.schema:
-					f.write(ldap_info.schema.to_json())
-				f.close()
-		CONNECTION_CLOSED = True if not ldap_info.connection.bound else False
+		try:
+			with LDAPInfo(force_admin=True) as ldap_info:
+				CONNECTION_OPEN = True if ldap_info.connection.bound else False
+				with open(f"{LOG_FILE_FOLDER}/test.log", "w") as f:
+					print(ldap_info)
+					if hasattr(ldap_info, "schema") and ldap_info.schema:
+						f.write(ldap_info.schema.to_json())
+					f.close()
+			CONNECTION_CLOSED = True if not ldap_info.connection.bound else False
+		except:
+			logger.warning("LDAP Connector Debugging could not log schema.")
+			pass
 		return Response(
 			data={
 				"code": code,

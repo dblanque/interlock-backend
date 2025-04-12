@@ -469,10 +469,16 @@ class LDAPConnector(object):
 class LDAPInfo(LDAPConnector):
 	def __init__(self, user: User = None, force_admin=False, get_ldap_info=ldap3.ALL, **kwargs):
 		super().__init__(user=user, force_admin=force_admin, get_ldap_info=get_ldap_info)
+
+	def __enter__(self):
+		r = super().__enter__()
 		self.refresh_server_info()
+		return r
 
 	def refresh_server_info(self):
-		server_pool: ldap3.ServerPool = self.connection.server_pool
+		if not self.connection:
+			raise ValueError("self.connection does not exist.")
+		server_pool: ldap3.ServerPool = self.server_pool
 		current_server: ldap3.Server = server_pool.get_current_server(self.connection)
 		current_server.get_info_from_server(self.connection)
 		self.schema = current_server.schema
