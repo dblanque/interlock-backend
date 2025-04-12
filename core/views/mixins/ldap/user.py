@@ -408,10 +408,6 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			logger.debug("Located in: %s.update", __name__)
 			logger.debug("New Permission Integer (cast to String): %s", str(new_permissions_int))
 			user_data["userAccountControl"] = new_permissions_int
-		else:
-			user_data["userAccountControl"] = ldap_adsi.LDAP_PERMS[
-				ldap_adsi.LDAP_UF_NORMAL_ACCOUNT
-			]["value"]
 
 		user_country = user_data.get(ldap_user.COUNTRY, None)
 		if user_country:
