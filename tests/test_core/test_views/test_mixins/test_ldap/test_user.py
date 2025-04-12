@@ -14,6 +14,7 @@ from core.ldap.adsi import (
 )
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from core.exceptions import users as exc_users
+from ldap3 import Entry as LDAPEntry
 
 
 @pytest.fixture
@@ -55,6 +56,22 @@ def f_ldap_domain(f_runtime_settings: RuntimeSettingsSingleton):
 def f_ldap_search_base(f_runtime_settings: RuntimeSettingsSingleton):
 	return f_runtime_settings.LDAP_AUTH_SEARCH_BASE
 
+@pytest.fixture
+def f_user_entry(mocker, f_auth_field_username, f_auth_field_email, f_ldap_search_base, f_ldap_domain):
+	m_entry = mocker.Mock()
+	attrs = {
+		"distinguishedName": f"CN=testuser,{f_ldap_search_base}",
+		f_auth_field_username: "testuser",
+		f_auth_field_email: f"testuser@{f_ldap_domain}",
+		ldap_user.FIRST_NAME: "Test",
+		ldap_user.LAST_NAME: "User",
+		ldap_user.INITIALS: "TU",
+	}
+	m_entry.entry_attributes_as_dict = {}
+	for k, v in attrs.items():
+		setattr(m_entry, k, v)
+		m_entry.entry_attributes_as_dict[k] = [v]
+	return m_entry
 
 @pytest.fixture
 def fc_user_permissions():
@@ -437,3 +454,42 @@ class TestUserViewLDAPMixin:
 			},
 			return_exception=False
 		) is None
+
+	@pytest.mark.parametrize(
+		"username, user_data, permission_list, exc_match",
+		(
+			(
+				None,
+				None,
+				None,
+				"username must be of type str"
+			),
+			(
+				"username",
+				None,
+				None,
+				"user_data must be of type dict"
+			),
+			(
+				"username",
+				{},
+				None,
+				"permission_list must be of type list"
+			),
+		),
+	)
+	def test_ldap_user_update_raises_type_error(self, username, user_data, permission_list, exc_match, f_user_mixin: UserViewLDAPMixin):
+		with pytest.raises(TypeError, match=exc_match):
+			f_user_mixin.ldap_user_update(
+				username=username,
+				user_data=user_data,
+				permission_list=permission_list
+			)
+
+	def test_ldap_user_update(self, mocker, f_user_mixin: UserViewLDAPMixin, f_user_entry: LDAPEntry, f_auth_field_username):
+		mocker.patch.object(f_user_mixin, "get_user_entry", return_value=f_user_entry)
+		f_user_mixin.ldap_user_update(
+			username=getattr(f_user_entry, f_auth_field_username),
+			user_data={},
+			permission_list=[]
+		)

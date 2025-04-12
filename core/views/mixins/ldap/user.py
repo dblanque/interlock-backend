@@ -378,23 +378,30 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		return user_dn
 
 	def ldap_user_update(
-		self, user_name: str, user_data: dict, permissions_list: list = None
+		self, username: str, user_data: dict, permission_list: list = None
 	) -> LDAPConnector:
 		"""Updates LDAP User with provided data
 
 		Returns:
 			ldap3.Connection
 		"""
-		ldap_user_entry = self.get_user_entry(username=user_name)
+		if not isinstance(username, str):
+			raise TypeError("username must be of type str.")
+		if not isinstance(user_data, dict):
+			raise TypeError("user_data must be of type dict.")
+		if not isinstance(permission_list, list):
+			raise TypeError("permission_list must be of type list.")
+
+		ldap_user_entry = self.get_user_entry(username=username)
 		user_dn = getattr(ldap_user_entry, "distinguishedName")
 
 		################# START NON-STANDARD ARGUMENT UPDATES ##################
-		if permissions_list:
-			if ldap_adsi.LDAP_UF_LOCKOUT in permissions_list:
+		if permission_list:
+			if ldap_adsi.LDAP_UF_LOCKOUT in permission_list:
 				# Default is 30 Minutes
 				user_data["lockoutTime"] = 30
 			try:
-				new_permissions_int = ldap_adsi.calc_permissions(permissions_list)
+				new_permissions_int = ldap_adsi.calc_permissions(permission_list)
 			except:
 				raise exc_user.UserPermissionError
 
@@ -469,7 +476,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			except Exception as e:
 				logger.exception(e)
 				logger.error(
-					"Unable to update user '%s' with attribute '%s'", str(user_name), str(key)
+					"Unable to update user '%s' with attribute '%s'", str(username), str(key)
 				)
 				logger.error("Attribute Value: " + str(user_data[key]))
 				logger.error("Attribute Type: " + str(type(user_data[key])))
@@ -483,11 +490,11 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			user=self.request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_USER,
-			log_target=user_name,
+			log_target=username,
 		)
 
 		try:
-			django_user = User.objects.get(username=user_name)
+			django_user = User.objects.get(username=username)
 		except:
 			django_user = None
 			pass

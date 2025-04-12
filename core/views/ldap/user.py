@@ -191,9 +191,9 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			self.get_user_object(user_to_update, attributes=ldap3.ALL_ATTRIBUTES)
 
 			self.ldap_user_update(
-				user_name=user_to_update,
+				username=user_to_update,
 				user_data=data,
-				permissions_list=permission_list,
+				permission_list=permission_list,
 			)
 
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
@@ -524,9 +524,9 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				self.get_user_object(user_to_update, attributes=ldap3.ALL_ATTRIBUTES)
 
 				self.ldap_user_update(
-					user_name=user_to_update,
+					username=user_to_update,
 					user_data=data["values"],
-					permissions_list=permission_list,
+					permission_list=permission_list,
 				)
 
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
@@ -729,7 +729,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		with LDAPConnector(force_admin=True) as ldc:
 			self.ldap_connection = ldc.connection
 			ldap_user_search = user.username
-			self.ldap_user_update(user_name=ldap_user_search, user_data=data)
+			self.ldap_user_update(username=ldap_user_search, user_data=data)
 
 		logger.debug(self.ldap_connection.result)
 

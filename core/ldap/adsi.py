@@ -398,7 +398,7 @@ def parse_permissions_int(raw_user_permissions: int | str, user_name: str = None
 		raw_user_permissions = str(bin(raw_user_permissions))[2:].zfill(32)
 	else:
 		raw_user_permissions = str(raw_user_permissions).zfill(32)
-	permissions_list = []
+	permission_list = []
 	i = 0
 
 	for n in range(0, 32):  # Loop for each bit in 0-32
@@ -416,13 +416,13 @@ def parse_permissions_int(raw_user_permissions: int | str, user_name: str = None
 					logger.debug(f"Permission Index (From User): {str(n)}")
 					logger.debug(f"Permission Binary Value (From Constant): {perm_binary}")
 					logger.debug(f"Permission Hex Value (From Constant): {bin_as_hex(perm_binary)}")
-					permissions_list.append(perm_name)
+					permission_list.append(perm_name)
 	if user_name and isinstance(user_name, str):  # pragma: no cover
 		logger.debug(f"Permission List ({user_name}): ")
 	else:
 		logger.debug("Permission List:")
-	logger.debug(permissions_list)
-	return permissions_list
+	logger.debug(permission_list)
+	return permission_list
 
 
 # Lists User permissions (LDAP / AD Servers save them as binary)
