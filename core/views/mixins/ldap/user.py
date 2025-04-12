@@ -389,11 +389,11 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			raise TypeError("username must be of type str.")
 		if not isinstance(user_data, dict):
 			raise TypeError("user_data must be of type dict.")
-		if not isinstance(permission_list, list):
+		if permission_list and not isinstance(permission_list, list):
 			raise TypeError("permission_list must be of type list.")
 
 		ldap_user_entry = self.get_user_entry(username=username)
-		user_dn = getattr(ldap_user_entry, "distinguishedName")
+		user_dn = ldap_user_entry.distinguishedName.value
 
 		################# START NON-STANDARD ARGUMENT UPDATES ##################
 		if permission_list:
