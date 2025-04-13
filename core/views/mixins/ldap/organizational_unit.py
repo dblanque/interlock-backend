@@ -67,7 +67,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 							ldap_filter,
 							f"{lookup_type}={f}",
 							expression=expr,
-							negate=lookup_exclude,
+							negate_add=lookup_exclude,
 						)
 					else:
 						lookup_type = lookup_value
