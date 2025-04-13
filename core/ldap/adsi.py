@@ -227,11 +227,13 @@ LDAP_BUILTIN_OBJECTS = [
 	"Managed Service Accounts",
 ]
 
+
 def is_encapsulated(v: str) -> bool:
 	"""Check if a string is wrapped in parentheses."""
 	if not isinstance(v, str):
 		raise TypeError("is_encapsulated value must be of type str.")
 	return v.startswith("(") and v.endswith(")")
+
 
 def join_ldap_filter(
 	filter_string: str,
@@ -263,7 +265,9 @@ def join_ldap_filter(
 	if isinstance(expression, str) and expression.lower() == "and":
 		expression = LDAP_FILTER_AND
 	if expression not in LDAP_FILTER_EXPRESSIONS:
-		raise ValueError(f"Invalid expression: {expression}. Must be one of {LDAP_FILTER_EXPRESSIONS}")
+		raise ValueError(
+			f"Invalid expression: {expression}. Must be one of {LDAP_FILTER_EXPRESSIONS}"
+		)
 
 	# Ensure both filters are properly encapsulated
 	if filter_string and not is_encapsulated(filter_string):
@@ -285,8 +289,9 @@ def join_ldap_filter(
 
 	return combined_filter
 
+
 # This is not used or tested yet
-class LDAPFilter: # pragma: no cover
+class LDAPFilter:  # pragma: no cover
 	def __init__(self, filter_str: str = None):
 		self._filter = filter_str or ""
 
@@ -298,13 +303,15 @@ class LDAPFilter: # pragma: no cover
 		if not isinstance(operator, str):
 			raise TypeError("LDAPFilter operator must be of type str.")
 		if not operator in LDAP_FILTER_OPERATORS:
-			raise ValueError(f"Invalid operator, must be one of [{','.join(LDAP_FILTER_OPERATORS)}]")
+			raise ValueError(
+				f"Invalid operator, must be one of [{','.join(LDAP_FILTER_OPERATORS)}]"
+			)
 
 	def _combine(self, operator: str, attribute: str, value: str, filter_op: str) -> "LDAPFilter":
 		"""Core logic for combining filters."""
 		self._validate_operator(operator)
 		new_part = f"({attribute}{filter_op}{value})"
-		
+
 		if not self._filter:
 			return LDAPFilter(new_part)
 
@@ -327,6 +334,7 @@ class LDAPFilter: # pragma: no cover
 
 	def __str__(self) -> str:
 		return self._filter
+
 
 def search_filter_from_dict(
 	filter_dict: dict, expression: LDAP_FILTER_EXPRESSION_TYPE = LDAP_FILTER_OR, reverse_key=False
@@ -443,7 +451,13 @@ def list_user_perms(user, perm_search: str = None, user_is_object: bool = True) 
 	if user_is_object is True:
 		if not hasattr(user, "userAccountControl"):
 			raise ValueError("User object does not contain a userAccountControl attribute.")
-		uac_value = user.userAccountControl
+		uac_value = getattr(user, "userAccountControl")
+		try:
+			# ldap3 stores attribute values in .values field (which is a list).
+			uac_value = uac_value.values[0]
+		except:
+			# Otherwise try a normal getattr from .value
+			uac_value = uac_value.value
 	else:
 		if not "userAccountControl" in user:
 			raise ValueError("User dictionary does not contain a userAccountControl key.")

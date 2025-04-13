@@ -142,7 +142,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			# User Exists check
 			self.ldap_user_exists(
 				username=data.get("username"),
-				email=data.get(RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"], None)
+				email=data.get(RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"], None),
 			)
 
 			user_dn = self.ldap_user_insert(user_data=data)
@@ -432,7 +432,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				if self.ldap_user_exists(
 					username=user_search,
 					email=row.get(mapped_email_key, None),
-					return_exception=False
+					return_exception=False,
 				):
 					skipped_users.append(row[mapped_user_key])
 					continue

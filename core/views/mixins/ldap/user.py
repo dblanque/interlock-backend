@@ -33,12 +33,7 @@ from core.models.choices.log import (
 )
 from core.ldap.connector import LDAPConnector
 from core.views.mixins.logs import LogMixin
-from ldap3 import (
-	Connection,
-	MODIFY_DELETE,
-	MODIFY_REPLACE,
-	Entry as LDAPEntry
-)
+from ldap3 import Connection, MODIFY_DELETE, MODIFY_REPLACE, Entry as LDAPEntry
 from ldap3.extend import (
 	ExtendedOperationsRoot,
 	StandardExtendedOperations,
@@ -74,7 +69,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 	ldap_filter_attr = None
 	filter_attr_builder = UserViewsetFilterAttributeBuilder
 
-	def get_user_object_filter(self, username: str = None, email: str = None, xor=True, match_both=False):
+	def get_user_object_filter(
+		self, username: str = None, email: str = None, xor=True, match_both=False
+	):
 		"""Gets LDAP User Object Filter
 
 		Args:
@@ -104,7 +101,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			id_filter_op = ldap_adsi.LDAP_FILTER_OR
 
 		# Class Filter Setup
-		class_filter = join_ldap_filter(None, f"objectClass={RuntimeSettings.LDAP_AUTH_OBJECT_CLASS}")
+		class_filter = join_ldap_filter(
+			None, f"objectClass={RuntimeSettings.LDAP_AUTH_OBJECT_CLASS}"
+		)
 		# Exclude Computer Accounts if settings allow it
 		if RuntimeSettings.EXCLUDE_COMPUTER_ACCOUNTS:
 			class_filter = join_ldap_filter(class_filter, f"objectClass=computer", negate_add=True)
@@ -115,17 +114,17 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			id_filter = join_ldap_filter(
 				id_filter,
 				f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS['username']}={username}",
-				expression=id_filter_op
+				expression=id_filter_op,
 			)
 		if email:
 			id_filter = join_ldap_filter(
 				id_filter,
 				f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS['email']}={email}",
-				expression=id_filter_op
+				expression=id_filter_op,
 			)
 		return join_ldap_filter(class_filter, id_filter)
 
-	def get_user_entry(self, username = None, email = None):
+	def get_user_entry(self, username=None, email=None):
 		if not username and not email:
 			raise ValueError("username or email must be specified in get_user_entry call.")
 		if not self.ldap_connection.entries:
@@ -137,8 +136,8 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			entry: LDAPEntry
 			if username and email:
 				if (
-					getattr(entry, _username_field) == username and
-					getattr(entry, _email_field) == email
+					getattr(entry, _username_field) == username
+					and getattr(entry, _email_field) == email
 				):
 					return entry
 			elif username:
@@ -152,7 +151,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		self,
 		username: str = None,
 		email: str = None,
-		attributes: list =None,
+		attributes: list = None,
 		object_class_filter=None,
 	) -> Connection:
 		"""Default: Search for the dn from a username string param.
@@ -170,16 +169,14 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		Returns the first matching entry.
 		"""
 		if not username and not email:
-			raise ValidationError(
-				"username or email are required for get_user_object call.")
+			raise ValidationError("username or email are required for get_user_object call.")
 
 		if not attributes:
-			attributes = [
-				RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
-				"distinguishedName"
-			]
+			attributes = [RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"], "distinguishedName"]
 		if not object_class_filter:
-			object_class_filter = self.get_user_object_filter(username=username, email=email, xor=False)
+			object_class_filter = self.get_user_object_filter(
+				username=username, email=email, xor=False
+			)
 
 		self.ldap_connection.search(
 			search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
@@ -377,6 +374,45 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		return user_dn
 
+	def ldap_user_update_keys(
+			self,
+			user_dn: str,
+			user_data: dict,
+			replace_operation_keys: list = None,
+			delete_operation_keys: list = None
+		):
+		"""Executes LDAP User Updates based on dictionary and requested replace/delete
+		operations.
+
+		Args:
+			user_dn (str): User Distinguished Name.
+			user_data (dict): User Data to Update.
+			replace_operation_keys (list, optional): user_data keys to replace
+				in LDAP Server. Defaults to None.
+			delete_operation_keys (list, optional): user_data keys to delete
+				in LDAP Server. Defaults to None.
+		"""
+		_replace = {}
+		_delete = {}
+		# LDAP Operation Setup
+		for _key in replace_operation_keys:
+			_value = user_data.get(_key, None)
+			if _value is None:
+				continue
+			if not isinstance(_value, list):
+				_value = [_value]
+			_replace[_key] = [(MODIFY_REPLACE, _value)]
+
+		for _key in delete_operation_keys:
+			_delete[_key] = [(MODIFY_DELETE), []]
+
+		# LDAP Operation Execution
+		if replace_operation_keys:
+			self.ldap_connection.modify(user_dn, _replace)
+
+		if delete_operation_keys:
+			self.ldap_connection.modify(user_dn, _delete)
+
 	def ldap_user_update(
 		self, username: str, user_data: dict, permission_list: list = None
 	) -> LDAPConnector:
@@ -392,8 +428,8 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		if permission_list and not isinstance(permission_list, list):
 			raise TypeError("permission_list must be of type list.")
 
-		ldap_user_entry = self.get_user_entry(username=username)
-		user_dn = ldap_user_entry.distinguishedName.value
+		ldap_user_entry: LDAPEntry = self.get_user_entry(username=username)
+		user_dn = ldap_user_entry.entry_dn
 
 		################# START NON-STANDARD ARGUMENT UPDATES ##################
 		if permission_list:
@@ -421,64 +457,64 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				raise exc_user.UserCountryUpdateError
 
 		# Catch rare front-end mutation exception
-		if "groupsToAdd" in user_data and "groupsToRemove" in user_data:
-			if (
-				user_data["groupsToAdd"] == user_data["groupsToRemove"] and user_data["groupsToAdd"]
-			) != []:
+		groupsToAdd = user_data.pop("groupsToAdd", None)
+		groupsToRemove = user_data.pop("groupsToRemove", None)
+		# De-duplicate group ops
+		if groupsToAdd:
+			groupsToAdd = set(groupsToAdd)
+		if groupsToRemove:
+			groupsToRemove = set(groupsToRemove)
+
+		if groupsToAdd and groupsToRemove:
+			if groupsToAdd == groupsToRemove:
 				raise exc_user.BadGroupSelection
 
 		# Group Add
-		groupsToAdd = user_data.pop("groupsToAdd", None)
 		if groupsToAdd:
-			self.ldap_connection.extend.microsoft.add_members_to_groups(
-				user_dn, groupsToAdd
-			)
+			self.ldap_connection.extend.microsoft.add_members_to_groups(user_dn, groupsToAdd)
 
 		# Group Remove
-		groupsToRemove = user_data.pop("groupsToRemove", None)
 		if groupsToRemove:
 			self.ldap_connection.extend.microsoft.remove_members_from_groups(
 				user_dn, groupsToRemove
 			)
 
+		user_data.pop(RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"], None)
 		user_data.pop("memberOfObjects", None)
 		user_data.pop("memberOf", None)
 
 		################### START STANDARD ARGUMENT UPDATES ####################
-		operation = None
+		replace_operation_keys = []
+		delete_operation_keys = []
 		for key in user_data:
+			if key in ldap_user_entry.entry_attributes and user_data[key] == "":
+				delete_operation_keys.append(key)
+			elif user_data[key] != "":
+				replace_operation_keys.append(key)
+			else:
+				logger.info("No suitable operation for attribute %s", key)
+
+		try:
+			self.ldap_user_update_keys(
+				user_dn=user_dn,
+				user_data=user_data,
+				replace_operation_keys=replace_operation_keys,
+				delete_operation_keys=delete_operation_keys,
+			)
+		except Exception as e:
+			logger.exception(e)
+			logger.error("Unable to update LDAP User keys.")
 			try:
-				if key in ldap_user_entry.entry_attributes and user_data[key] == "":
-					operation = MODIFY_DELETE
-					self.ldap_connection.modify(
-						user_dn,
-						{key: [(operation), []]},
-					)
-				elif user_data[key] != "":
-					operation = MODIFY_REPLACE
-					if isinstance(user_data[key], list):
-						self.ldap_connection.modify(
-							user_dn,
-							{key: [(operation, user_data[key])]},
-						)
-					else:
-						self.ldap_connection.modify(
-							user_dn,
-							{key: [(operation, [user_data[key]])]},
-						)
-				else:
-					logger.info("No suitable operation for attribute " + key)
-					pass
+				self.ldap_user_update_keys(
+					user_dn=user_dn,
+					user_data=ldap_user_entry.entry_attributes_as_dict,
+					replace_operation_keys=replace_operation_keys + delete_operation_keys,
+				)
 			except Exception as e:
 				logger.exception(e)
-				logger.error(
-					"Unable to update user '%s' with attribute '%s'", str(username), str(key)
-				)
-				logger.error("Attribute Value: " + str(user_data[key]))
-				logger.error("Attribute Type: " + str(type(user_data[key])))
-				if operation is not None:
-					logger.error("Operation Type: " + str(operation))
-				raise exc_user.UserUpdateError
+				logger.error("LDAP User Update Rollback error.")
+				pass
+			raise exc_user.UserUpdateError
 
 		logger.debug(self.ldap_connection.result)
 
@@ -500,18 +536,24 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				mapped_key = RuntimeSettings.LDAP_AUTH_USER_FIELDS[key]
 				if mapped_key in user_data:
 					setattr(django_user, key, user_data[mapped_key])
-				if "mail" not in user_data:
-					django_user.email = None
 			django_user.save()
 		return self.ldap_connection
 
 	def ldap_set_password(
 		self, user_dn: str, user_pwd_new: str, user_pwd_old: str = None, set_by_admin=False
 	) -> LDAPConnector:
-		"""
-		### Sets the LDAP User's Password with Microsoft Extended LDAP Commands
-		Returns the used LDAP Connection
-		### ! Microsoft AD Servers do not allow password changing without LDAPS
+		"""Sets the LDAP User's Password with Microsoft Extended LDAP Commands
+		- Microsoft ADDS does not allow password changing without LDAPS
+
+		Args:
+			user_dn (str): User's Distinguished Name, required.
+			user_pwd_new (str): User's new password, required.
+			user_pwd_old (str): User's old password, required if not set_by_admin.
+			set_by_admin (bool): Whether the password is being set by an administrator.
+				Defaults to False.
+
+		Returns:
+			ldap3.Connection
 		"""
 		# Type hinting defs
 		extended_operations: ExtendedOperationsRoot = self.ldap_connection.extend
@@ -546,11 +588,8 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			raise exc_user.UserUpdateError(data=data)
 
 	def ldap_user_exists(
-			self,
-			username: str = None,
-			email: str = None,
-			return_exception: bool = True
-		) -> bool:
+		self, username: str = None, email: str = None, return_exception: bool = True
+	) -> bool:
 		"""Checks if LDAP User Exists on Directory
 
 		Args:
@@ -569,8 +608,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		# Send LDAP Query for user being created to see if it exists
 		if not username and not email:
-			raise ValidationError(
-				"username or email args are required for ldap_user_exists call.")
+			raise ValidationError("username or email args are required for ldap_user_exists call.")
 		ldap_attributes = [
 			RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
 			"distinguishedName",
@@ -677,20 +715,8 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		return user_dict
 
 	def ldap_user_change_status(self, user_object, target_state: bool):
-		affected_user = user_object["username"]
-		self.ldap_filter_object = ""
-
-		# Exclude Computer Accounts if settings allow it
-		if RuntimeSettings.EXCLUDE_COMPUTER_ACCOUNTS == True:
-			self.ldap_filter_object = ldap_adsi.join_ldap_filter(
-				self.ldap_filter_object, "objectClass=computer", negate_add=True
-			)
-
-		# Add filter for username
-		self.ldap_filter_object = ldap_adsi.join_ldap_filter(
-			self.ldap_filter_object,
-			f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS['username']}={affected_user}",
-		)
+		username = user_object["username"]
+		self.ldap_filter_object = self.get_user_object_filter(username=username)
 
 		self.ldap_connection.search(
 			RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
@@ -698,9 +724,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			attributes=self.ldap_filter_attr,
 		)
 
-		user = self.ldap_connection.entries
-		dn = str(user[0].distinguishedName)
-		permList = ldap_adsi.list_user_perms(user=user[0], user_is_object=False)
+		user_entry = self.get_user_entry(username=username)
+		dn = str(user_entry.distinguishedName)
+		permList = ldap_adsi.list_user_perms(user=user_entry, user_is_object=False)
 
 		if dn == RuntimeSettings.LDAP_AUTH_CONNECTION_USER_DN:
 			raise exc_user.UserAntiLockout
@@ -722,7 +748,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		self.ldap_connection.modify(dn, {"userAccountControl": [(MODIFY_REPLACE, [newPermINT])]})
 
 		try:
-			django_user = User.objects.get(username=affected_user)
+			django_user = User.objects.get(username=username)
 		except:
 			django_user = None
 			pass
@@ -735,7 +761,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			user=self.request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_USER,
-			log_target=affected_user,
+			log_target=username,
 			message=LOG_EXTRA_ENABLE if target_state else LOG_EXTRA_DISABLE,
 		)
 

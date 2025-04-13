@@ -20,6 +20,7 @@ from core.ldap.adsi import (
 	LengthError,
 )
 
+
 @pytest.mark.parametrize(
 	"test_value, expected",
 	(
@@ -44,9 +45,11 @@ from core.ldap.adsi import (
 def test_is_encapsulated(test_value, expected):
 	assert is_encapsulated(test_value) == expected
 
+
 def test_is_encapsulated_raises():
 	with pytest.raises(TypeError):
 		is_encapsulated(False)
+
 
 @pytest.mark.parametrize(
 	"filter_string,filter_add,expression,negate,negate_add,expected",
@@ -112,19 +115,14 @@ def test_is_encapsulated_raises():
 			"sAMAccountName=testuser",
 			LDAP_FILTER_AND,
 			False,
-			False, 
-			f"(sAMAccountName=testuser)"
+			False,
+			f"(sAMAccountName=testuser)",
 		),
 	),
 )
 def test_join_ldap_filter(filter_string, filter_add, expression, negate, negate_add, expected):
-	assert join_ldap_filter(
-		filter_string,
-		filter_add,
-		expression,
-		negate,
-		negate_add
-	) == expected
+	assert join_ldap_filter(filter_string, filter_add, expression, negate, negate_add) == expected
+
 
 def test_join_ldap_filter_raises_empty_string():
 	with pytest.raises(ValueError):
