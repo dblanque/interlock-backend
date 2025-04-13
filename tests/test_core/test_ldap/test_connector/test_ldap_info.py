@@ -15,6 +15,26 @@ def f_ldap_info(mocker, f_user, f_server_pool, f_server, f_ldap_connection):
 	m_ldap_info._entered = True
 	return m_ldap_info
 
+def fake_enter(self):
+	self._entered = True
+
+def test_init_sets_get_ldap_info(mocker, f_user):
+	m_super_init = mocker.patch("core.ldap.connector.LDAPConnector.__init__")
+	m_super_enter = mocker.patch("core.ldap.connector.LDAPConnector.__enter__", new=fake_enter)
+	mocker.patch("core.ldap.connector.LDAPConnector.__exit__")
+	m_refresh = mocker.patch("core.ldap.connector.LDAPInfo.refresh_server_info")
+
+	with LDAPInfo(user=f_user) as ldap_info:
+		ldap_info._entered = True
+		m_super_init.assert_called_once_with(
+			user=f_user,
+			force_admin=False,
+			get_ldap_info=ALL,  # Make sure this matches your import
+		)
+		m_super_enter.assert_called_once()
+		m_refresh.assert_called_once()
+
+
 def test_refresh_server_info(mocker, f_ldap_info, f_server, f_server_pool):
 	# Setup mocks
 	f_server_pool.get_current_server.return_value = f_server
