@@ -456,8 +456,11 @@ def list_user_perms(user, perm_search: str = None, user_is_object: bool = True) 
 			# ldap3 stores attribute values in .values field (which is a list).
 			uac_value = uac_value.values[0]
 		except:
-			# Otherwise try a normal getattr from .value
-			uac_value = uac_value.value
+			try:
+				# Otherwise try a normal getattr from .value
+				uac_value = uac_value.value
+			except:
+				pass
 	else:
 		if not "userAccountControl" in user:
 			raise ValueError("User dictionary does not contain a userAccountControl key.")
