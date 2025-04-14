@@ -49,6 +49,7 @@ import traceback
 import logging
 
 ### Others
+from core.views.mixins.utils import getldapattr
 from ldap3.utils.dn import safe_dn
 from core.constants.user import UserViewsetFilterAttributeBuilder
 from django.core.exceptions import ValidationError
@@ -136,15 +137,15 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			entry: LDAPEntry
 			if username and email:
 				if (
-					getattr(entry, _username_field) == username
-					and getattr(entry, _email_field) == email
+					getldapattr(entry, _username_field) == username
+					and getldapattr(entry, _email_field) == email
 				):
 					return entry
 			elif username:
-				if getattr(entry, _username_field) == username:
+				if getldapattr(entry, _username_field) == username:
 					return entry
 			elif email:
-				if getattr(entry, _email_field) == email:
+				if getldapattr(entry, _email_field) == email:
 					return entry
 
 	def get_user_object(
@@ -244,14 +245,12 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		for user_entry in user_entry_list:
 			user_dict = {}
-			user_attrs: dict = user_entry.entry_attributes_as_dict
 
 			# For each attribute in user object attributes
-			for attr_key, attr_val in user_attrs.items():
+			for attr_key in user_entry.entry_attributes:
 				if attr_key not in valid_attributes:
 					continue
-				if isinstance(attr_val, list) and len(attr_val) == 1:
-					attr_val = attr_val[0]
+				attr_val = getldapattr(user_entry, attr_key)
 
 				if attr_key == RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]:
 					user_dict[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]] = attr_val
@@ -269,14 +268,16 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			user_dict["is_enabled"] = True
 			try:
 				if ldap_adsi.list_user_perms(
-					user=user_entry, perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE
+					user=user_entry,
+					perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE,
 				):
 					user_dict["is_enabled"] = False
 			except Exception as e:
-				print(e)
-				print(f"Could not get user status for DN: {user_dict['distinguishedName']}")
+				logger.exception(e)
+				logger.error(f"Could not get user status for DN: {user_dict['distinguishedName']}")
 
 			user_list.append(user_dict)
+
 		result = {}
 		result["users"] = user_list
 		result["headers"] = valid_attributes
@@ -377,7 +378,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 	def ldap_user_update_keys(
 			self,
 			user_dn: str,
-			user_data: dict,
+			user_data: dict | LDAPEntry,
 			replace_operation_keys: list = None,
 			delete_operation_keys: list = None
 		):
@@ -392,11 +393,23 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			delete_operation_keys (list, optional): user_data keys to delete
 				in LDAP Server. Defaults to None.
 		"""
+		# Type checks
+		if not isinstance(user_dn, str):
+			raise TypeError("user_dn must be of type str.")
+		if not isinstance(user_data, (dict, LDAPEntry)):
+			raise TypeError("user_data must be any of types [dict, LDAPEntry]")
+		# Value Checks
+		if not user_dn:
+			raise ValueError("user_dn cannot be a falsy value.")
+
 		_replace = {}
 		_delete = {}
 		# LDAP Operation Setup
 		for _key in replace_operation_keys:
-			_value = user_data.get(_key, None)
+			if isinstance(user_data, dict):
+				_value = user_data.get(_key, None)
+			elif isinstance(user_data, LDAPEntry):
+				_value = getldapattr(user_data, _key)
 			if _value is None:
 				continue
 			if not isinstance(_value, list):
@@ -607,7 +620,8 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		Raises:
 			ValidationError: Returned if no email and username are provided.
-			exc_ldap.LDAPObjectExists: Returned if return_exception is True.
+			exc_ldap.LDAPObjectExists: Returned if return_exception is True
+				and user exists.
 
 		Returns:
 			bool
@@ -622,18 +636,20 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"],
 		]
 		self.get_user_object(username=username, email=email, attributes=ldap_attributes)
+		entry_by_username = self.get_user_entry(username=username) if username else None
 		entry_by_email = self.get_user_entry(email=email) if email else None
 
 		# If entries is not falsy, return Exception or True
 		if self.ldap_connection.entries:
-			if return_exception:
-				if entry_by_email:
-					_code = "user_email_exists"
+			if entry_by_email or entry_by_username:
+				if return_exception:
+					if entry_by_email:
+						_code = "user_email_exists"
+					elif entry_by_username:
+						_code = "user_exists"
+					raise exc_ldap.LDAPObjectExists(data={"code": _code})
 				else:
-					_code = "user_exists"
-				raise exc_ldap.LDAPObjectExists(data={"code": _code})
-			else:
-				return True
+					return True
 		return False
 
 	def ldap_user_fetch(self, user_search):

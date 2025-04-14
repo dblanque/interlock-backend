@@ -13,6 +13,8 @@
 # ---------------------------------- IMPORTS -----------------------------------#
 from core.config.runtime import RuntimeSettings
 from typing import Union, Literal, TypedDict, Required
+from ldap3 import Entry as LDAPEntry
+from core.views.mixins.utils import getldapattr
 import logging
 
 logger = logging.getLogger(__name__)
@@ -434,7 +436,7 @@ def parse_permissions_int(raw_user_permissions: int | str, user_name: str = None
 
 
 # Lists User permissions (LDAP / AD Servers save them as binary)
-def list_user_perms(user, perm_search: str = None, user_is_object: bool = True) -> list | bool:
+def list_user_perms(user: Union[dict, LDAPEntry], perm_search: str = None, user_is_object: bool = True) -> list | bool:
 	"""
 	### Creates a list of user permissions from raw LDAP Integer Bitmap
 	* user: User dict or object.
@@ -449,27 +451,20 @@ def list_user_perms(user, perm_search: str = None, user_is_object: bool = True) 
 	# Cast raw integer user permissions as string
 	uac_value = None
 	if user_is_object is True:
+		user: LDAPEntry
 		if not hasattr(user, "userAccountControl"):
 			raise ValueError("User object does not contain a userAccountControl attribute.")
-		uac_value = getattr(user, "userAccountControl")
-		try:
-			# ldap3 stores attribute values in .values field (which is a list).
-			uac_value = uac_value.values[0]
-		except:
-			try:
-				# Otherwise try a normal getattr from .value
-				uac_value = uac_value.value
-			except:
-				pass
+		uac_value = getldapattr(user, "userAccountControl")
 	else:
+		user: dict
 		if not "userAccountControl" in user:
 			raise ValueError("User dictionary does not contain a userAccountControl key.")
 		uac_value = user["userAccountControl"]
 
-	if not uac_value:
+	if uac_value is None:
 		raise ValueError("Unable to process User Account Control value.")
 
-	if uac_value != "[]":
+	if uac_value:
 		raw_user_permissions = bin_as_str(uac_value)
 	else:
 		return None
