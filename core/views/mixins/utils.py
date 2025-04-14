@@ -10,8 +10,33 @@
 from core.ldap.defaults import LDAP_LDIF_IDENTIFIERS
 import socket
 import struct
-from typing import Iterable
+from typing import Iterable, Any, overload
+from ldap3 import Entry as LDAPEntry, Attribute as LDAPAttribute
 
+@overload
+def getldapattr(entry: LDAPEntry, attr: str, /) -> Any: ...
+
+@overload
+def getldapattr(entry: LDAPEntry, attr: str, /, default = None) -> Any: ...
+
+def getldapattr(entry: LDAPEntry, attr: str, /, **kwargs) -> Any:
+	"""Get LDAP Attribute with optional default
+
+	Args:
+		entry (LDAPEntry): LDAP Entry to get the attribute from.
+		attr (str): Attribute key.
+		default: Optional. Returned when entry getitem fails.
+
+	Returns:
+		Any: Attribute value.
+	"""
+	try:
+		_attr: LDAPAttribute = entry.__getattr__(attr)
+		return _attr.value
+	except Exception as e:
+		if "default" in kwargs:
+			return kwargs["default"]
+		raise e
 
 def convert_string_to_bytes(string):
 	if not isinstance(string, str):
