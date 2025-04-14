@@ -653,21 +653,10 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		return False
 
 	def ldap_user_fetch(self, user_search):
-		self.ldap_filter_object = f"(objectClass={RuntimeSettings.LDAP_AUTH_OBJECT_CLASS})"
+		self.ldap_filter_object = self.get_user_object_filter(username=user_search)
 		if not self.ldap_filter_attr:
 			self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings).get_fetch_attrs()
 
-		# Exclude Computer Accounts if settings allow it
-		if RuntimeSettings.EXCLUDE_COMPUTER_ACCOUNTS == True:
-			self.ldap_filter_object = ldap_adsi.join_ldap_filter(
-				self.ldap_filter_object, "objectClass=computer", negate_add=True
-			)
-
-		# Add filter for username
-		self.ldap_filter_object = ldap_adsi.join_ldap_filter(
-			self.ldap_filter_object,
-			f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS['username']}={user_search}",
-		)
 		ldap_object_options: LDAPObjectOptions = {
 			"connection": self.ldap_connection,
 			"ldap_filter": self.ldap_filter_object,
@@ -718,7 +707,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				print(e)
 				print(user_dict["distinguishedName"])
 
-			# Check if user is disabled
+			# Build permissions list
 			try:
 				userPermissions = ldap_adsi.list_user_perms(
 					user=user_entry, perm_search=None, user_is_object=False
