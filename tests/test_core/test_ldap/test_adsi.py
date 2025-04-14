@@ -392,7 +392,7 @@ def test_calc_permission_type_error():
 )
 def test_list_user_perms_user_object(userAccountControl, perm_search, expected, mocker):
 	user: MockType = mocker.MagicMock()
-	user.userAccountControl = sum_permissions(userAccountControl)
+	user.userAccountControl.value = sum_permissions(userAccountControl)
 	if isinstance(expected, bool):
 		assert list_user_perms(user, perm_search) == expected
 	else:
@@ -401,7 +401,8 @@ def test_list_user_perms_user_object(userAccountControl, perm_search, expected, 
 
 def test_list_user_perms_user_object_should_return_none(mocker):
 	user: MockType = mocker.MagicMock()
-	user.userAccountControl = "[]"
+	user.userAccountControl.values = []
+	user.userAccountControl.value = user.userAccountControl.values
 	assert list_user_perms(user, None) is None
 
 
