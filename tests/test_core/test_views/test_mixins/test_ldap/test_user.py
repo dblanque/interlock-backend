@@ -8,6 +8,7 @@ from core.constants import user as ldap_user
 from core.models.user import User
 from typing import Union
 from ldap3 import MODIFY_DELETE, MODIFY_REPLACE
+from core.views.mixins.utils import getldapattr
 from core.models.choices.log import LOG_ACTION_UPDATE, LOG_CLASS_USER
 from core.ldap.adsi import (
 	LDAP_FILTER_AND,
@@ -20,7 +21,10 @@ from core.ldap.adsi import (
 	calc_permissions,
 )
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
-from core.exceptions import users as exc_user
+from core.exceptions import (
+	users as exc_user,
+	ldap as exc_ldap,
+)
 from ldap3 import Entry as LDAPEntry
 from ldap3.extend import (
 	ExtendedOperationsRoot,
@@ -80,13 +84,21 @@ def fc_user_permissions():
 
 	return maker
 
+class FakeUserLDAPEntry(LDAPEntry):
+	givenName: str = None
+	sn: str = None
+	initials: str = None
 
 @pytest.fixture
 def fc_user_entry(
 	mocker, f_ldap_search_base, f_auth_field_email, f_auth_field_username, f_ldap_domain
 ):
 	def maker(username="testuser", **kwargs):
-		mock = mocker.MagicMock()
+		if "spec" in kwargs:
+			mock: LDAPEntry = mocker.MagicMock(spec=kwargs["spec"])
+		else:
+			mock: LDAPEntry = mocker.MagicMock()
+		mock.entry_attributes = []
 		mock.entry_attributes_as_dict = {}
 		attrs = {
 			f_auth_field_username: username,
@@ -99,8 +111,10 @@ def fc_user_entry(
 		for k, v in attrs.items():
 			m_attr = mocker.Mock()
 			m_attr.value = v
+			m_attr.values = [v]
 			setattr(mock, k, m_attr)
 			mock.entry_attributes_as_dict[k] = [v]
+			mock.entry_attributes.append(k)
 		mock.entry_dn = attrs["distinguishedName"]
 		return mock
 
@@ -222,34 +236,41 @@ class TestUserViewLDAPMixin:
 		assert f_user_mixin.get_user_entry(username="some_user") is None
 
 	@pytest.mark.parametrize(
-		"test_kwargs",
+		"username, email",
 		(
-			{"username": "testuser"},
-			{
-				"email": f"testuser@{LDAP_DOMAIN}",
-			},
-			{
-				"username": "testuser",
-				"email": f"testuser@{LDAP_DOMAIN}",
-			},
+			(
+				"testuser",
+				None,
+			),
+			(
+				None,
+				f"testuser@{LDAP_DOMAIN}",
+			),
+			(
+				"testuser",
+				f"testuser@{LDAP_DOMAIN}",
+			),
 		),
 	)
 	def test_get_user_object(
 		self,
 		mocker,
-		test_kwargs,
+		username,
+		email,
 		f_user_mixin: UserViewLDAPMixin,
 		f_runtime_settings: RuntimeSettingsSingleton,
 	):
 		m_entry = mocker.Mock()
-		setattr(m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"], "testuser")
+		setattr(m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"], username)
 		setattr(
-			m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["email"], f"testuser@{LDAP_DOMAIN}"
+			m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["email"], email
 		)
 		f_user_mixin.ldap_connection.entries = [m_entry]
-		result = f_user_mixin.get_user_object(**test_kwargs)
+
+		m_get_user_entry = mocker.patch.object(f_user_mixin, "get_user_entry")
+		f_user_mixin.get_user_object(username=username, email=email)
 		f_user_mixin.ldap_connection.search.assert_called_once()
-		assert result == m_entry
+		m_get_user_entry.assert_called_once_with(username=username, email=email)
 
 	def test_get_user_object_raises(self, f_user_mixin: UserViewLDAPMixin):
 		with pytest.raises(ValidationError):
@@ -488,11 +509,32 @@ class TestUserViewLDAPMixin:
 			is None
 		)
 
+	@pytest.mark.parametrize(
+		"user_dn, user_data, exc_match",
+		(
+			(False, None, "user_dn must be of type str"),
+			("mock_dn", False, "user_data must be any of types"),
+		),
+	)
+	def test_ldap_user_update_keys_raises_type_error(
+		self,
+		user_dn: str,
+		user_data: str,
+		exc_match: str,
+		f_user_mixin: UserViewLDAPMixin,
+	):
+		with pytest.raises(TypeError, match=exc_match):
+			f_user_mixin.ldap_user_update_keys(user_dn=user_dn, user_data=user_data)
 
-	def test_ldap_user_update_keys(self, f_user_mixin: UserViewLDAPMixin, fc_user_entry):
+	def test_ldap_user_update_keys_raises_value_error(self, f_user_mixin: UserViewLDAPMixin):
+		with pytest.raises(ValueError, match="user_dn cannot be a falsy value"):
+			f_user_mixin.ldap_user_update_keys(user_dn="", user_data={})
+
+
+	def test_ldap_user_update_keys_dict(self, f_user_mixin: UserViewLDAPMixin, fc_user_entry):
 		m_modify: MockType = f_user_mixin.ldap_connection.modify
 		m_entry: LDAPEntry = fc_user_entry()
-		m_user_dn = m_entry.distinguishedName.value[0]
+		m_user_dn = m_entry.entry_dn
 		f_user_mixin.ldap_user_update_keys(
 			user_dn=m_user_dn,
 			user_data={
@@ -509,11 +551,29 @@ class TestUserViewLDAPMixin:
 			ldap_user.COUNTRY: [(MODIFY_DELETE), []]
 		})
 
+	def test_ldap_user_update_keys_entry(self, mocker, f_user_mixin: UserViewLDAPMixin, fc_user_entry):
+		mocker.patch("core.views.mixins.ldap.user.LDAPEntry", FakeUserLDAPEntry)
+		m_modify: MockType = f_user_mixin.ldap_connection.modify
+		m_entry: LDAPEntry = fc_user_entry(spec=FakeUserLDAPEntry)
+		m_user_dn = m_entry.entry_dn
+		f_user_mixin.ldap_user_update_keys(
+			user_dn=m_user_dn,
+			user_data=m_entry,
+			replace_operation_keys=[ldap_user.FIRST_NAME],
+			delete_operation_keys=[ldap_user.COUNTRY],
+		)
+		m_modify.assert_any_call(m_user_dn, {
+			ldap_user.FIRST_NAME: [(MODIFY_REPLACE, [getldapattr(m_entry, ldap_user.FIRST_NAME)])]
+		})
+		m_modify.assert_any_call(m_user_dn, {
+			ldap_user.COUNTRY: [(MODIFY_DELETE), []]
+		})
+
 
 	def test_ldap_user_update_with_non_existing_keys(self, f_user_mixin: UserViewLDAPMixin, fc_user_entry):
 		m_modify: MockType = f_user_mixin.ldap_connection.modify
-		m_user_entry = fc_user_entry()
-		m_user_dn = m_user_entry.distinguishedName.value[0]
+		m_user_entry: LDAPEntry = fc_user_entry()
+		m_user_dn = m_user_entry.entry_dn
 		f_user_mixin.ldap_user_update_keys(
 			user_dn=m_user_dn,
 			user_data={
@@ -594,7 +654,7 @@ class TestUserViewLDAPMixin:
 		m_user_cls.objects.get.return_value = m_django_user
 
 		# Test
-		username = getattr(m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]).value[0]
+		username = getldapattr(m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"])
 		result = f_user_mixin.ldap_user_update(username, user_data, permission_list)
 
 		# Verify
@@ -610,24 +670,24 @@ class TestUserViewLDAPMixin:
 		m_django_user.email = user_data.get(f_runtime_settings.LDAP_AUTH_USER_FIELDS["email"], None)
 		m_django_user.save.assert_called_once()
 
-	def test_ldap_user_update_permission_error(self, mocker, f_user_mixin: UserViewLDAPMixin, fc_user_entry, f_runtime_settings):
+	def test_ldap_user_update_permission_error(self, mocker, f_user_mixin: UserViewLDAPMixin, fc_user_entry, f_runtime_settings: RuntimeSettingsSingleton):
 		"""Test permission calculation error"""
 		m_entry: LDAPEntry = fc_user_entry()
 		mocker.patch.object(f_user_mixin, "get_user_entry", return_value=m_entry)
 		mocker.patch("core.ldap.adsi.calc_permissions", side_effect=Exception)
 
-		username = getattr(m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]).value[0]
+		username = getldapattr(m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"])
 		with pytest.raises(exc_user.UserPermissionError):
 			f_user_mixin.ldap_user_update(
 				username, {ldap_user.FIRST_NAME: "new_name"}, ["invalid_permission"]
 			)
 
-	def test_ldap_user_update_country_error(self, mocker, f_user_mixin: UserViewLDAPMixin, fc_user_entry, f_runtime_settings):
+	def test_ldap_user_update_country_error(self, mocker, f_user_mixin: UserViewLDAPMixin, fc_user_entry, f_runtime_settings: RuntimeSettingsSingleton):
 		"""Test invalid country code handling"""
 		m_entry: LDAPEntry = fc_user_entry()
 		mocker.patch.object(f_user_mixin, "get_user_entry", return_value=m_entry)
 
-		username = getattr(m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]).value[0]
+		username = getldapattr(m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"])
 		with pytest.raises(exc_user.UserCountryUpdateError):
 			f_user_mixin.ldap_user_update(
 				username,
@@ -635,12 +695,12 @@ class TestUserViewLDAPMixin:
 				None,
 			)
 
-	def test_ldap_user_update_group_conflict(self, mocker, f_user_mixin: UserViewLDAPMixin, fc_user_entry, f_runtime_settings):
+	def test_ldap_user_update_group_conflict(self, mocker, f_user_mixin: UserViewLDAPMixin, fc_user_entry, f_runtime_settings: RuntimeSettingsSingleton):
 		"""Test conflicting group operations"""
 		m_entry: LDAPEntry = fc_user_entry()
 		mocker.patch.object(f_user_mixin, "get_user_entry", return_value=m_entry)
 
-		username = getattr(m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]).value[0]
+		username = getldapattr(m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"])
 		with pytest.raises(exc_user.BadGroupSelection):
 			f_user_mixin.ldap_user_update(
 				username,
@@ -651,13 +711,13 @@ class TestUserViewLDAPMixin:
 				None,
 			)
 
-	def test_ldap_user_update_attribute_error(self, mocker, f_user_mixin: UserViewLDAPMixin, fc_user_entry, f_runtime_settings):
+	def test_ldap_user_update_attribute_error(self, mocker, f_user_mixin: UserViewLDAPMixin, fc_user_entry, f_runtime_settings: RuntimeSettingsSingleton):
 		"""Test attribute update failure"""
 		m_entry: LDAPEntry = fc_user_entry()
 		mocker.patch.object(f_user_mixin, "get_user_entry", return_value=m_entry)
 		f_user_mixin.ldap_connection.modify.side_effect = Exception("Update failed")
 
-		username = getattr(m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]).value[0]
+		username = getldapattr(m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"])
 		with pytest.raises(exc_user.UserUpdateError):
 			f_user_mixin.ldap_user_update(username, {ldap_user.FIRST_NAME: "new_name"}, None)
 
@@ -842,3 +902,45 @@ class TestUserViewLDAPMixin:
 			new_password="new_pwd",
 			old_password="old_pwd",
 		)
+
+	def test_ldap_user_exists_raises_validation_error(
+			self, f_user_mixin: UserViewLDAPMixin):
+		with pytest.raises(ValidationError):
+			f_user_mixin.ldap_user_exists()
+
+	@pytest.mark.parametrize(
+		"username, email",
+		(
+			(
+				"testuser",
+				f"testuser@{LDAP_DOMAIN}",
+			),
+			(
+				None,
+				f"testuser@{LDAP_DOMAIN}",
+			),
+			(
+				"testuser",
+				None,
+			),
+		),
+	)
+	def test_ldap_user_exists(self, username: str, email: str, f_user_mixin: UserViewLDAPMixin, fc_user_entry):
+		f_user_mixin.ldap_connection.entries = [ fc_user_entry() ]
+
+		# Should return exception
+		with pytest.raises(exc_ldap.LDAPObjectExists):
+			f_user_mixin.ldap_user_exists(username=username, email=email)
+
+		# Should return True
+		assert f_user_mixin.ldap_user_exists(username=username, email=email, return_exception=False) is True
+
+	def test_ldap_user_exists_returns_false(self, f_user_mixin: UserViewLDAPMixin, fc_user_entry):
+		f_user_mixin.ldap_connection.entries = [ fc_user_entry(username="someuser") ]
+
+		# Should return False
+		assert f_user_mixin.ldap_user_exists(
+			username="testuser",
+			email="testuser@{LDAP_DOMAIN}",
+			return_exception=False
+		) is False
