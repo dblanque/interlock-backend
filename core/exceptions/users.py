@@ -15,6 +15,12 @@ class UserPasswordsDontMatch(CoreException):
 	default_code = "user_passwords_dont_match"
 
 
+class UserOldPasswordRequired(CoreException):
+	status_code = status.HTTP_400_BAD_REQUEST
+	default_detail = "User's old password is required"
+	default_code = "user_old_password_required"
+
+
 class UserCreate(CoreException):
 	status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 	default_detail = "User could not be created"
