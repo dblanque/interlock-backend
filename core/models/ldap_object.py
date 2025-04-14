@@ -16,11 +16,15 @@ from core.ldap.adsi import LDAP_BUILTIN_OBJECTS, join_ldap_filter
 from core.ldap.security_identifier import SID
 
 ### Others
-from ldap3 import Connection
+from ldap3 import (
+	Connection,
+	Entry as LDAPEntry,
+	Attribute as LDAPAttribute
+)
 from typing import TypedDict, Iterable
 from typing_extensions import Required, NotRequired
 from logging import getLogger
-from core.views.mixins.utils import is_non_str_iterable
+from core.views.mixins.utils import getldapattr
 
 ################################################################################
 logger = getLogger()
@@ -78,7 +82,7 @@ class LDAPObject:
 	attributes: dict
 	connection: Connection
 	container_types: list[str]
-	entry: object
+	entry: LDAPEntry
 	excluded_ldap_attrs: list[str]
 	ldap_attrs: list[str]
 	ldap_filter: str
@@ -132,7 +136,7 @@ class LDAPObject:
 	def __get_connection__(self):
 		return self.connection
 
-	def __get_entry__(self):
+	def __get_entry__(self) -> LDAPEntry:
 		return self.entry
 
 	def __get_object__(self):
@@ -154,54 +158,47 @@ class LDAPObject:
 			raise ValueError("Error setting LDAP Object Entry Result") from e
 
 		# Set DN from Abstract Entry object (LDAP3)
-		distinguished_name = str(getattr(self.entry, "distinguishedName"))
 		# Set searchResult attributes
+		distinguished_name: str = self.entry.entry_dn
 		self.attributes = {}
-		self.attributes["name"] = str(distinguished_name).split(",")[0].split("=")[1]
+		self.attributes["name"] = distinguished_name.split(",")[0].split("=")[1]
 		self.attributes["distinguishedName"] = distinguished_name
 		self.attributes["type"] = (
-			str(getattr(self.entry, "objectCategory")).split(",")[0].split("=")[1]
+			getldapattr(self.entry, "objectCategory").split(",")[0].split("=")[1]
 		)
-		if self.attributes["name"] in LDAP_BUILTIN_OBJECTS or "builtinDomain" in getattr(
-			self.entry, "objectClass"
+		entry_object_classes: LDAPAttribute = getldapattr(self.entry, "objectClass", [])
+		if (
+			self.attributes["name"] in LDAP_BUILTIN_OBJECTS or
+	  		"builtinDomain" in entry_object_classes
 		):
 			self.attributes["builtin"] = True
 
 		for attr_key in self.ldap_attrs:
 			if not hasattr(self.entry, attr_key):
 				continue
-			attr_value = getattr(self.entry, attr_key)
-			str_key = str(attr_key)
-			str_value = str(attr_value)
+			attr_value = getldapattr(self.entry, attr_key)
+
 			if attr_key == self.username_identifier:
-				self.attributes[attr_key] = str_value
-				self.attributes["username"] = str_value
-			elif attr_key == "cn" and "group" in getattr(self.entry, "objectClass"):
-				value = getattr(self.entry, attr_key)
-				self.attributes[attr_key] = str_value
-				self.attributes["groupname"] = str_value
+				self.attributes[attr_key] = attr_value
+				self.attributes["username"] = attr_value
+			elif attr_key == "cn" and "group" in entry_object_classes:
+				self.attributes[attr_key] = attr_value
+				self.attributes["groupname"] = attr_value
 			elif (
 				attr_key == "objectSid"
 				and self.__get_common_name__(distinguished_name).lower() != "builtin"
 			):
-				value = getattr(self.entry, attr_key)
 				try:
-					sid = SID(value)
+					sid = SID(attr_value)
 					sid = sid.__str__()
 					rid = sid.split("-")[-1]
-					value = sid
 					self.attributes["objectSid"] = sid
 					self.attributes["objectRid"] = rid
 				except Exception as e:
 					print("Could not translate SID Byte Array for " + distinguished_name)
 					print(e)
-			elif str_key not in self.attributes and str_value != "[]":
-				if is_non_str_iterable(attr_value) and len(attr_value) > 1:
-					self.attributes[str_key] = []
-					for k, v in enumerate(attr_value):
-						self.attributes[str_key].append(attr_value[k])
-				else:
-					self.attributes[str_key] = str_value
+			elif attr_key not in self.attributes and attr_value:
+				self.attributes[attr_key] = attr_value
 		return self.attributes
 
 	def __ldap_attrs__(self):
