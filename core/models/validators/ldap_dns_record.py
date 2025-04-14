@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.models.dns.validators
+# Module: core.models.validators.ldap_dns_record
 # Contains the Validators for DNS Records
 #
 # ---------------------------------- IMPORTS -----------------------------------#
@@ -40,12 +40,17 @@ FIELD_VALIDATORS = {
 
 
 def int32_validator(value):
-	if int(value) < 4294967296 and re.match(r"^[0-9]{0,10}$", str(value)):
-		return True
+	try:
+		if int(value) < 4294967296 and re.match(r"^[0-9]{0,10}$", str(value)):
+			return True
+	except:
+		pass
 	return False
 
 
-def natural_validator(value):
+def natural_validator(value: str | int):
+	if not isinstance(value, (str, int)):
+		return False
 	try:
 		if re.match(r"^[0-9]+$", str(value)):
 			return True
@@ -56,39 +61,55 @@ def natural_validator(value):
 	return False
 
 
-def canonicalHostname_validator(value):
-	pattern = r"^(((?:[a-zA-Z0-9-.]){2,63}(?:\.[a-zA-Z.]{2,})+|(?:[a-zA-Z0-9-]){2,64})+.)?$"
-	try:
-		if re.match(pattern, str(value)):
-			return True
-	except Exception as e:
-		print(value)
-		print(type(value))
-		raise e
-	return False
+def canonicalHostname_validator(value: str, trailing_dot=True):
+	if not isinstance(value, str):
+		return False
+	if not value:
+		return False
+	# src: https://stackoverflow.com/questions/2532053/validate-a-hostname-string
+	if len(value) > 253:
+		return False
+	
+	labels = value.split(".")
+
+	# the TLD must be not all-numeric
+	if re.match(r"[0-9]+$", labels[-1]):
+		return False
+
+	allowed = re.compile(r"(?!-)[a-z0-9-]{1,63}(?<!-)$", re.IGNORECASE)
+
+	if trailing_dot:
+		if not value.endswith("."):
+			return False
+		return all(allowed.match(label) for label in labels[:-1])
+	else:
+		return all(allowed.match(label) for label in labels)
 
 
 def domain_validator(value):
-	pattern = r"^(((?:[a-zA-Z0-9-.]){2,63}(?:\.[a-zA-Z]{2,})+|(?:[a-zA-Z0-9-]){2,64}))?$"
-	try:
-		if re.match(pattern, str(value)):
-			return True
-	except Exception as e:
-		print(value)
-		print(type(value))
-		raise e
-	return False
+	return canonicalHostname_validator(value, trailing_dot=False)
 
 
-def ipv4_validator(value):
+def ipv4_validator(value: str):
+	if not isinstance(value, str):
+		return False
+	if not value:
+		return False
 	try:
 		socket.inet_aton(str(value))
+		# Check octet count, disallow incomplete addressing
+		parts = str(value).split('.')
+		return len(parts) == 4 and all(part.isdigit() for part in parts)
 	except socket.error:
 		return False
 	return True
 
 
-def ipv6_validator(value):
+def ipv6_validator(value: str):
+	if not isinstance(value, str):
+		return False
+	if not value:
+		return False
 	try:
 		ipv6_to_integer(value)
 	except socket.error:
@@ -97,6 +118,10 @@ def ipv6_validator(value):
 
 
 def ascii_validator(value):
+	if not isinstance(value, str):
+		return False
+	if not value:
+		return True
 	# https://stackoverflow.com/questions/35889505/check-that-a-string-contains-only-ascii-characters
-	isAscii = lambda s: re.match("^[\x00-\x7f]+$", s) != None
+	isAscii = lambda s: re.match("^[\x00-\x7f]+$", s) is not None
 	return isAscii(value)
