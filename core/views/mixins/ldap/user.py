@@ -560,14 +560,20 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		eo_standard: StandardExtendedOperations = extended_operations.standard
 		eo_microsoft: MicrosoftExtendedOperations = extended_operations.microsoft
 
+		if not isinstance(user_dn, str):
+			raise TypeError("user_dn must be of type str.")
+
 		if not isinstance(user_pwd_new, str):
 			raise TypeError("user_pwd_new must be of type str.")
+
 		if not set_by_admin and not isinstance(user_pwd_old, str):
 			raise TypeError("user_pwd_old must be of type str.")
 
 		# Validation
+		if not user_pwd_new:
+			raise ValueError("user_pwd_new cannot be empty.")
 		if not set_by_admin and not user_pwd_old:
-			raise exc_user.UserPasswordsDontMatch()
+			raise exc_user.UserOldPasswordRequired()
 
 		# Set kwargs
 		pwd_kwargs = {"new_password": user_pwd_new}
@@ -584,8 +590,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		except Exception as e:
 			logger.exception(e)
 			logger.error(f"Could not update password for User DN: {user_dn}")
-			data = {"ldap_response": self.ldap_connection.result}
-			raise exc_user.UserUpdateError(data=data)
+			raise exc_user.UserUpdateError(data={
+				"ldap_response": self.ldap_connection.result
+			})
 
 	def ldap_user_exists(
 		self, username: str = None, email: str = None, return_exception: bool = True
