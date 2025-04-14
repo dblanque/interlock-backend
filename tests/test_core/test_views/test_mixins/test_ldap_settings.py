@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 @pytest.fixture(autouse=True)
 def auto_teardown():
 	yield
-	LDAPPreset.objects.all().delete_permanently()
+	LDAPPreset.objects.all().delete()
 
 
 @pytest.fixture(autouse=True)
