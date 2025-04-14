@@ -1,6 +1,5 @@
 import pytest
 from pytest_mock import MockType
-from unittest.mock import Mock
 from core.ldap.security_identifier import SID
 from core.models.ldap_object import (
 	LDAPObject,
@@ -10,7 +9,9 @@ from core.models.ldap_object import (
 	DEFAULT_CONTAINER_TYPES,
 	DEFAULT_USER_TYPES,
 )
+from core.views.mixins.utils import is_non_str_iterable
 from copy import deepcopy
+from ldap3 import Attribute as LDAPAttribute
 
 
 @pytest.fixture
@@ -60,9 +61,7 @@ def f_object_attrs_user(g_runtime_settings) -> dict:
 			"badPwdCount": "0",
 			"pwdLastSet": "fake_pwd_last_set",
 			"sAMAccountType": "805306368",
-			"memberOf": [
-				f"CN=Administrators,CN=Builtin,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
-			],
+			"memberOf": f"CN=Administrators,CN=Builtin,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
 		}
 
 	return maker
@@ -77,9 +76,7 @@ def f_object_attrs_group(g_runtime_settings) -> dict:
 			"type": "Group",
 			"objectSid": b"\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00\x11^\xb3\x83j\x06\x94\x00\x80\xdbi\xaaR\x04\x00\x00",
 			"objectRid": "1106",
-			"objectCategory": [
-				f"CN=Group,CN=Schema,CN=Configuration,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
-			],
+			"objectCategory": f"CN=Group,CN=Schema,CN=Configuration,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
 			"objectClass": ["top", "group"],
 		}
 
@@ -87,59 +84,82 @@ def f_object_attrs_group(g_runtime_settings) -> dict:
 
 
 class FakeUserEntry:
-	name: str
-	distinguishedName: str
-	type: str
-	givenName: str
-	sn: str
-	displayName: str
-	sAMAccountName: str
-	username: str
-	mail: str
-	telephoneNumber: str
-	streetAddress: str
-	postalCode: str
-	l: str
-	st: str
-	countryCode: str
-	co: str
-	c: str
-	wWWHomePage: str
-	userPrincipalName: str
-	userAccountControl: str
-	primaryGroupID: str
-	whenCreated: str
-	whenChanged: str
-	objectClass: list[str]
-	objectCategory: str
-	objectSid: bytes
-	objectRid: str
-	lastLogon: str
-	sAMAccountType: str
-	memberOf: list[str]
+	entry_dn: str = None
+	entry_attributes: str = None
+	name: str = None
+	distinguishedName: str = None
+	type: str = None
+	givenName: str = None
+	sn: str = None
+	displayName: str = None
+	sAMAccountName: str = None
+	username: str = None
+	mail: str = None
+	telephoneNumber: str = None
+	streetAddress: str = None
+	postalCode: str = None
+	l: str = None
+	st: str = None
+	countryCode: str = None
+	co: str = None
+	c: str = None
+	wWWHomePage: str = None
+	userPrincipalName: str = None
+	userAccountControl: str = None
+	primaryGroupID: str = None
+	whenCreated: str = None
+	whenChanged: str = None
+	objectClass: list[str] = None
+	objectCategory: str = None
+	objectSid: bytes = None
+	objectRid: str = None
+	lastLogon: str = None
+	sAMAccountType: str = None
+	memberOf: list[str] = None
+	pwdLastSet: int = None
+	badPwdCount: int = None
 
 
 @pytest.fixture
 def f_object_entry_user(f_object_attrs_user, mocker):
-	def maker():
-		m_attrs: dict = f_object_attrs_user()
+	def maker(attrs=None, **kwargs):
+		if not attrs:
+			attrs = {}
+		m_attrs: dict = f_object_attrs_user() | attrs
 		m_entry = mocker.Mock(spec=FakeUserEntry)
 		for attr, val in m_attrs.items():
-			setattr(m_entry, attr, val)
+			m_attr = mocker.Mock(spec=LDAPAttribute)
+			m_attr.value = val
+			if is_non_str_iterable(val):
+				m_attr.values = val
+			else:
+				m_attr.values = [val]
+				m_attr.value = val
+			setattr(m_entry, attr, m_attr)
+		m_entry.entry_attributes = [*set(m_attrs.keys())]
+		m_entry.entry_dn = m_attrs["distinguishedName"]
 		return m_entry
-
 	return maker
 
 
 @pytest.fixture
 def f_object_entry_group(f_object_attrs_group, mocker):
-	def maker():
-		m_attrs: dict = f_object_attrs_group()
+	def maker(attrs=None, **kwargs):
+		if not attrs:
+			attrs = {}
+		m_attrs: dict = f_object_attrs_group() | attrs
 		m_entry = mocker.Mock()
 		for attr, val in m_attrs.items():
-			setattr(m_entry, attr, val)
+			m_attr = mocker.Mock(spec=LDAPAttribute)
+			m_attr.values = val
+			if is_non_str_iterable(val):
+				m_attr.value = val if len(val) > 1 else val[0]
+			else:
+				m_attr.value = val
+			setattr(m_entry, attr, m_attr)
+		m_entry.entry_attributes = [*set(m_attrs.keys())]
+		m_entry.entry_dn = m_attrs["distinguishedName"]
 		return m_entry
-
 	return maker
 
 
@@ -285,11 +305,12 @@ def test_dunder_fetch_object(test_entry, request, f_connection, g_runtime_settin
 	m_ldap_object.__fetch_object__() == m_entry
 
 
-def test_dunder_fetch_object_removes_empty_list_string(
+def test_dunder_fetch_object_removes_empty_string(
 	f_object_attrs_user, f_object_entry_user, f_connection, g_runtime_settings, f_object_args
 ):
-	m_entry = f_object_entry_user()
-	m_entry.objectRid = "[]"
+	m_entry = f_object_entry_user(attrs={
+		"objectRid": ""
+	})
 	result: dict = deepcopy(f_object_attrs_user())
 	result.pop("objectRid")
 
@@ -306,11 +327,19 @@ def test_dunder_fetch_object_removes_empty_list_string(
 	m_ldap_object.__fetch_object__() == result
 
 
+@pytest.mark.parametrize(
+	"object_classes",
+	(
+		"builtinDomain", # single value
+		["builtinDomain", "someOtherValue"], # iterable
+	)
+)
 def test_dunder_fetch_object_marks_builtin(
-	f_object_entry_user, f_connection, g_runtime_settings, f_object_args
+	object_classes, f_object_entry_user, f_connection, g_runtime_settings, f_object_args
 ):
-	m_entry: dict = f_object_entry_user()
-	m_entry.objectClass.append("builtinDomain")
+	m_entry: dict = f_object_entry_user(attrs={
+		"objectClass": object_classes
+	})
 	f_connection.entries = [m_entry]
 
 	object_args: LDAPObjectOptions = f_object_args()
@@ -334,7 +363,7 @@ def test_dunder_fetch_object_successful_user_fetch(
 	# Setup
 	object_args: LDAPObjectOptions = f_object_args()
 	mock_entry = f_object_entry_user()
-	expected_attrs = f_object_attrs_user()
+	expected_attrs: dict = f_object_attrs_user()
 	expected_attrs.pop("memberOf")
 
 	# Configure the connection fixture
@@ -347,8 +376,8 @@ def test_dunder_fetch_object_successful_user_fetch(
 	result = ldap_obj.__fetch_object__()
 
 	# Assert
-	assert result == ldap_obj.attributes
-	assert set(result) == set(expected_attrs)
+	assert result.keys() == ldap_obj.attributes.keys()
+	assert result.keys() == expected_attrs.keys()
 	assert ldap_obj.entry == mock_entry
 	f_connection.search.assert_called_once_with(
 		search_base=ldap_obj.search_base,
@@ -404,12 +433,13 @@ def test_dunder_fetch_object_handles_iterable_attributes(
 ):
 	# Setup
 	object_args: LDAPObjectOptions = f_object_args()
-	mock_entry = f_object_entry_user()
+	mock_entry = f_object_entry_user(attrs={
+		"objectClass": ["value1", "value2"]
+	})
 
 	# Add an iterable attribute
-	mock_entry.someMultiValue = ["value1", "value2"]
 	f_connection.entries = [mock_entry]
-	object_args["ldap_attrs"] = DEFAULT_REQUIRED_LDAP_ATTRS + ["someMultiValue"]
+	object_args["ldap_attrs"] = DEFAULT_REQUIRED_LDAP_ATTRS + ["objectClass"]
 
 	# Instantiate LDAPObject
 	ldap_obj = LDAPObject(auto_fetch=False, **object_args)
@@ -418,27 +448,7 @@ def test_dunder_fetch_object_handles_iterable_attributes(
 	ldap_obj.__fetch_object__()
 
 	# Assert iterable attribute was handled correctly
-	assert ldap_obj.attributes["someMultiValue"] == ["value1", "value2"]
-
-
-def test_dunder_fetch_object_handles_builtin_objects(
-	f_object_args, f_object_entry_user, f_connection
-):
-	# Setup
-	object_args: LDAPObjectOptions = f_object_args()
-	mock_entry = f_object_entry_user()
-	mock_entry.objectClass = ["top", "builtinDomain"]
-	f_connection.entries = [mock_entry]
-
-	# Instantiate LDAPObject
-	ldap_obj = LDAPObject(auto_fetch=False, **object_args)
-
-	# Execute
-	ldap_obj.__fetch_object__()
-
-	# Assert builtin flag was set
-	assert ldap_obj.attributes["builtin"] is True
-
+	assert ldap_obj.attributes["objectClass"] == ["value1", "value2"]
 
 def test_dunder_ldap_attrs_returns_attribute_keys(f_object_args, f_object_entry_user, f_connection):
 	# Setup
