@@ -15,7 +15,7 @@ from core.ldap.adsi import join_ldap_filter
 from core.config.runtime import RuntimeSettings
 from core.constants import user as ldap_user
 from core.ldap import adsi as ldap_adsi
-from core.ldap.types.account import LDAP_ACCOUNT_TYPES
+from core.ldap.types.account import LDAPAccountTypes
 
 ### Models
 from core.models import User
@@ -186,19 +186,17 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		)
 		return self.get_user_entry(username=username, email=email)
 
-	def get_group_attributes(self, groupDn, idFilter=None, classFilter=None):
-		attributes = ["objectSid"]
-		if idFilter is None:
-			idFilter = "distinguishedName=" + groupDn
-		if classFilter is None:
-			classFilter = "objectClass=group"
-		object_class_filter = ""
-		object_class_filter = join_ldap_filter(object_class_filter, classFilter)
-		object_class_filter = join_ldap_filter(object_class_filter, idFilter)
+	def get_group_attributes(self, group_dn, filter_id=None, filter_class=None):
+		if filter_id is None:
+			filter_id = "distinguishedName=" + group_dn
+		if filter_class is None:
+			filter_class = "objectClass=group"
+		object_class_filter = join_ldap_filter(None, filter_class)
+		object_class_filter = join_ldap_filter(object_class_filter, filter_id)
 		group = LDAPObject(
 			connection=self.ldap_connection,
 			ldap_filter=object_class_filter,
-			ldap_attrs=attributes,
+			ldap_attrs=["objectSid"],
 		)
 		return group.attributes
 
@@ -265,13 +263,11 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			user_dict["distinguishedName"] = user_entry.entry_dn
 
 			# Check if user is disabled
-			user_dict["is_enabled"] = True
 			try:
-				if ldap_adsi.list_user_perms(
+				user_dict["is_enabled"] = False if ldap_adsi.list_user_perms(
 					user=user_entry,
 					perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE,
-				):
-					user_dict["is_enabled"] = False
+				) else True
 			except Exception as e:
 				logger.exception(e)
 				logger.error(f"Could not get user status for DN: {user_dict['distinguishedName']}")
@@ -376,12 +372,12 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		return user_dn
 
 	def ldap_user_update_keys(
-			self,
-			user_dn: str,
-			user_data: dict | LDAPEntry,
-			replace_operation_keys: list = None,
-			delete_operation_keys: list = None
-		):
+		self,
+		user_dn: str,
+		user_data: dict | LDAPEntry,
+		replace_operation_keys: list = None,
+		delete_operation_keys: list = None,
+	):
 		"""Executes LDAP User Updates based on dictionary and requested replace/delete
 		operations.
 
@@ -603,9 +599,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		except Exception as e:
 			logger.exception(e)
 			logger.error(f"Could not update password for User DN: {user_dn}")
-			raise exc_user.UserUpdateError(data={
-				"ldap_response": self.ldap_connection.result
-			})
+			raise exc_user.UserUpdateError(data={"ldap_response": self.ldap_connection.result})
 
 	def ldap_user_exists(
 		self, username: str = None, email: str = None, return_exception: bool = True
@@ -674,60 +668,67 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			log_target=user_search,
 		)
 
-		memberOfObjects = []
-		if "memberOf" in self.ldap_filter_attr and "memberOf" in user_dict:
-			memberOf = user_dict.pop("memberOf")
-			if isinstance(memberOf, list):
-				for g in memberOf:
-					memberOfObjects.append(self.get_group_attributes(g))
-			else:
-				g = memberOf
-				memberOfObjects.append(self.get_group_attributes(g))
+		# Group Attr Fetching
+		memberOfObjects: list[dict] = []
+		user_dict["memberOfObjects"] = []
+		try:
+			if "memberOf" in self.ldap_filter_attr:
+				memberOf = user_dict.pop("memberOf")
+				if isinstance(memberOf, list):
+					for _group in memberOf:
+						memberOfObjects.append(self.get_group_attributes(_group))
+				else:
+					_group = memberOf
+					memberOfObjects.append(self.get_group_attributes(_group))
 
-		### Also add default Users Group to be available as Selectable PID
-		if "primaryGroupID" in self.ldap_filter_attr:
-			memberOfObjects.append(GroupViewMixin.getGroupByRID(user_dict["primaryGroupID"]))
+			### Also add default Users Group to be available as Selectable PID
+			if "primaryGroupID" in self.ldap_filter_attr:
+				_primary_group_id = user_dict["primaryGroupID"]
+				if not any(
+					_g.get("objectRid", None) == _primary_group_id for _g in memberOfObjects
+				):
+					memberOfObjects.append(GroupViewMixin.get_group_by_rid(_primary_group_id))
 
-		if len(memberOfObjects) > 0:
-			user_dict["memberOfObjects"] = memberOfObjects
-		else:
+			if memberOfObjects:
+				user_dict["memberOfObjects"] = memberOfObjects
+
+			del memberOfObjects
+		except Exception as e:
+			logger.exception(e)
 			raise exc_user.UserGroupsFetchError
-
-		del memberOfObjects
 
 		if "userAccountControl" in self.ldap_filter_attr:
 			# Check if user is disabled
-			user_dict["is_enabled"] = True
 			try:
-				if ldap_adsi.list_user_perms(
-					user=user_entry, perm_search="LDAP_UF_ACCOUNT_DISABLE", user_is_object=False
-				):
-					user_dict["is_enabled"] = False
+				user_dict["is_enabled"] = False if ldap_adsi.list_user_perms(
+					user=user_entry,
+					perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE
+				) else True
 			except Exception as e:
-				print(e)
-				print(user_dict["distinguishedName"])
+				logger.exception(e)
+				logger.error(user_dict.get(
+					"distinguishedName", "No Distinguished Name available."))
 
 			# Build permissions list
 			try:
-				userPermissions = ldap_adsi.list_user_perms(
-					user=user_entry, perm_search=None, user_is_object=False
+				user_permissions = ldap_adsi.list_user_perms(
+					user=user_entry,
+					perm_search=None
 				)
-				user_dict["permission_list"] = userPermissions
+				user_dict["permission_list"] = user_permissions
 			except Exception as e:
-				print(e)
-				print(user_dict["distinguishedName"])
+				logger.exception(e)
+				logger.error(user_dict.get(
+					"distinguishedName", "No Distinguished Name available."))
 
 		if "sAMAccountType" in self.ldap_filter_attr:
-			# Replace sAMAccountType Value with String Corresponding
-			userAccountType = int(user_dict["sAMAccountType"])
-			for accountType in LDAP_ACCOUNT_TYPES:
-				accountTypeValue = LDAP_ACCOUNT_TYPES[accountType]
-				if accountTypeValue == userAccountType:
-					user_dict["sAMAccountType"] = accountType
+			# Replace sAMAccountType Value with String
+			user_account_type = int(user_dict["sAMAccountType"])
+			user_dict["sAMAccountType"] = LDAPAccountTypes(user_account_type).name
 		return user_dict
 
-	def ldap_user_change_status(self, user_object, target_state: bool):
-		username = user_object["username"]
+	def ldap_user_change_status(self, user_data: dict, target_state: bool):
+		username = user_data["username"]
 		self.ldap_filter_object = self.get_user_object_filter(username=username)
 
 		self.ldap_connection.search(
@@ -737,27 +738,30 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		)
 
 		user_entry = self.get_user_entry(username=username)
-		dn = str(user_entry.distinguishedName)
 		permList = ldap_adsi.list_user_perms(user=user_entry, user_is_object=False)
 
-		if dn == RuntimeSettings.LDAP_AUTH_CONNECTION_USER_DN:
+		if user_entry.entry_dn == RuntimeSettings.LDAP_AUTH_CONNECTION_USER_DN:
 			raise exc_user.UserAntiLockout
 
 		try:
 			if target_state is True:
-				newPermINT = ldap_adsi.calc_permissions(
-					permList, perm_remove="LDAP_UF_ACCOUNT_DISABLE"
+				new_permissions = ldap_adsi.calc_permissions(
+					permList, perm_remove=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE
 				)
 			else:
-				newPermINT = ldap_adsi.calc_permissions(
-					permList, perm_add="LDAP_UF_ACCOUNT_DISABLE"
+				new_permissions = ldap_adsi.calc_permissions(
+					permList, perm_add=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE
 				)
-		except:
-			print(traceback.format_exc())
-			self.ldap_connection.unbind()
+		except Exception as e:
+			logger.exception(e)
 			raise exc_user.UserPermissionError
 
-		self.ldap_connection.modify(dn, {"userAccountControl": [(MODIFY_REPLACE, [newPermINT])]})
+		self.ldap_connection.modify(
+			user_entry.entry_dn, 
+			{
+				"userAccountControl": [(MODIFY_REPLACE, [new_permissions])]
+			}
+		)
 
 		try:
 			django_user = User.objects.get(username=username)
