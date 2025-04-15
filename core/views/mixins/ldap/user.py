@@ -183,6 +183,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			username (str, optional): Required if no email is provided. Defaults to None.
 			email (str, optional): Required if no username is provided. Defaults to None.
 			attributes (list, optional): LDAP Attributes. Defaults to None.
+				If None, minimal attributes will be fetched (username field and distinguished name)
 			object_class_filter (str, optional): LDAP Search Filter. Defaults to None.
 
 		Raises:
