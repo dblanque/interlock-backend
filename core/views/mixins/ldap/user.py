@@ -722,8 +722,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			user_dict["sAMAccountType"] = LDAPAccountTypes(user_account_type).name
 		return user_dict
 
-	def ldap_user_change_status(self, user_data: dict, target_state: bool):
-		username = user_data["username"]
+	def ldap_user_change_status(self, username: str, target_state: bool) -> Connection:
 		self.ldap_filter_object = self.get_user_object_filter(username=username)
 
 		self.ldap_connection.search(
@@ -772,12 +771,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			log_target=username,
 			message=LOG_EXTRA_ENABLE if target_state else LOG_EXTRA_DISABLE,
 		)
-
-		logger.debug("Located in: " + __name__ + ".disable")
-		logger.debug(self.ldap_connection.result)
 		return self.ldap_connection
 
-	def ldap_user_unlock(self, user_object):
+	def ldap_user_unlock(self, user_object) -> Connection:
 		username = user_object["username"]
 		# If data request for deletion has user DN
 		if "distinguishedName" in user_object.keys() and user_object["distinguishedName"] != "":
