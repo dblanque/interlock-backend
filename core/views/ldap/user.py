@@ -179,7 +179,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
-			# Check user exists and fetch it
+			# Check user exists and fetch it with minimal attributes
 			if not self.ldap_user_exists(username=user_to_update, return_exception=False):
 				raise exc_user.UserDoesNotExist
 
@@ -188,8 +188,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			if user_email:
 				self.ldap_user_exists(email=user_email)
 
-			self.get_user_object(user_to_update, attributes=ldap3.ALL_ATTRIBUTES)
-
+			# Update
 			self.ldap_user_update(
 				username=user_to_update,
 				user_data=data,
@@ -224,7 +223,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			self.ldap_user_change_status(username=data["username"], target_state=enabled)
+			self.ldap_user_change_status(username=data["username"], enabled=enabled)
 
 		return Response(data={"code": code, "code_msg": code_msg})
 
@@ -335,11 +334,19 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			self.ldap_user_unlock(user_object=data)
-			result = self.ldap_connection.result
-			if result["description"] == "success":
-				response_result = data["username"]
-			else:
+
+			# Check user exists and fetch it with minimal attributes
+			if not self.ldap_user_exists(username=data["username"], return_exception=False):
+				raise exc_user.UserDoesNotExist
+
+			try:
+				self.ldap_user_unlock(username=data["username"])
+				result = self.ldap_connection.result
+				if result["description"] == "success":
+					response_result = data["username"]
+				else:
+					raise exc_user.CouldNotUnlockUser
+			except:
 				raise exc_user.CouldNotUnlockUser
 
 		return Response(data={"code": code, "code_msg": code_msg, "data": response_result})
@@ -558,11 +565,11 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			for user_data in data:
 				if disable_users and user_data["is_enabled"]:
 					self.ldap_user_change_status(
-						username=user_data["username"], target_state=False)
+						username=user_data["username"], enabled=False)
 					success.append(user_data["username"])
 				elif not disable_users and not user_data["is_enabled"]:
 					self.ldap_user_change_status(
-						username=user_data["username"], target_state=True)
+						username=user_data["username"], enabled=True)
 					success.append(user_data["username"])
 				else:
 					continue
@@ -612,7 +619,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			self.ldap_connection = ldc.connection
 			success = []
 			for user_object in data:
-				self.ldap_user_unlock(user_object=user_object)
+				self.ldap_user_unlock(username=user_object)
 				success.append(user_object["username"])
 
 			result = self.ldap_connection.result

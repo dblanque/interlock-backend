@@ -33,7 +33,7 @@ from core.models.choices.log import (
 )
 from core.ldap.connector import LDAPConnector
 from core.views.mixins.logs import LogMixin
-from ldap3 import Connection, MODIFY_DELETE, MODIFY_REPLACE, Entry as LDAPEntry
+from ldap3 import Connection, MODIFY_DELETE, MODIFY_REPLACE, Entry as LDAPEntry, ALL_ATTRIBUTES as ALL_LDAP3_ATTRIBUTES
 from ldap3.extend import (
 	ExtendedOperationsRoot,
 	StandardExtendedOperations,
@@ -125,7 +125,20 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			)
 		return join_ldap_filter(class_filter, id_filter)
 
-	def get_user_entry(self, username=None, email=None):
+	def get_user_entry(self, username=None, email=None, raise_if_not_exists=False):
+		"""Fetch user entry from current ldap connection entries,
+		does not perform an LDAP Search.
+
+		Args:
+			username (str, optional): User username. Defaults to None.
+			email (str, optional): User Email. Defaults to None.
+
+		Raises:
+			ValueError: Raised when both username and email are falsy.
+
+		Returns:
+			ldap3.Entry: User Entry
+		"""
 		if not username and not email:
 			raise ValueError("username or email must be specified in get_user_entry call.")
 		if not self.ldap_connection.entries:
@@ -147,6 +160,8 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			elif email:
 				if getldapattr(entry, _email_field) == email:
 					return entry
+		if raise_if_not_exists:
+			raise exc_user.UserEntryNotFound
 
 	def get_user_object(
 		self,
@@ -154,9 +169,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		email: str = None,
 		attributes: list = None,
 		object_class_filter=None,
-	) -> Connection:
-		"""Default: Search for the dn from a username string param.
-		Can also be used to fetch entire object from that username string or filtered attributes.
+	):
+		"""Default: Do an LDAP Search for the requested object using username, email,
+			or both.
 
 		Args:
 			username (str, optional): Required if no email is provided. Defaults to None.
@@ -167,7 +182,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		Raises:
 			ValidationError: If username and email are Falsy.
 
-		Returns the first matching entry.
+		Returns the matching user entry.
 		"""
 		if not username and not email:
 			raise ValidationError("username or email are required for get_user_object call.")
@@ -437,7 +452,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		if permission_list and not isinstance(permission_list, list):
 			raise TypeError("permission_list must be of type list.")
 
-		ldap_user_entry: LDAPEntry = self.get_user_entry(username=username)
+		ldap_user_entry: LDAPEntry = self.get_user_object(username=username, attributes=ALL_LDAP3_ATTRIBUTES)
 		user_dn = ldap_user_entry.entry_dn
 
 		################# START NON-STANDARD ARGUMENT UPDATES ##################
@@ -722,23 +737,16 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			user_dict["sAMAccountType"] = LDAPAccountTypes(user_account_type).name
 		return user_dict
 
-	def ldap_user_change_status(self, username: str, target_state: bool) -> Connection:
+	def ldap_user_change_status(self, username: str, enabled: bool) -> Connection:
 		self.ldap_filter_object = self.get_user_object_filter(username=username)
-
-		self.ldap_connection.search(
-			RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
-			self.ldap_filter_object,
-			attributes=self.ldap_filter_attr,
-		)
-
-		user_entry = self.get_user_entry(username=username)
+		user_entry = self.get_user_object(username=username, attributes=self.ldap_filter_attr)
 		permission_list = ldap_adsi.list_user_perms(user=user_entry)
 
 		if user_entry.entry_dn == RuntimeSettings.LDAP_AUTH_CONNECTION_USER_DN:
 			raise exc_user.UserAntiLockout
 
 		try:
-			if target_state is True:
+			if enabled is True:
 				new_permissions = ldap_adsi.calc_permissions(
 					permission_list, perm_remove=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE
 				)
@@ -761,7 +769,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			pass
 
 		if django_user:
-			django_user.is_enabled = target_state
+			django_user.is_enabled = enabled
 			django_user.save()
 
 		DBLogMixin.log(
@@ -769,29 +777,14 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_USER,
 			log_target=username,
-			message=LOG_EXTRA_ENABLE if target_state else LOG_EXTRA_DISABLE,
+			message=LOG_EXTRA_ENABLE if enabled else LOG_EXTRA_DISABLE,
 		)
 		return self.ldap_connection
 
-	def ldap_user_unlock(self, user_object) -> Connection:
-		username = user_object["username"]
-		# If data request for deletion has user DN
-		if "distinguishedName" in user_object.keys() and user_object["distinguishedName"] != "":
-			logger.debug("Updating with distinguishedName obtained from front-end")
-			logger.debug(user_object["distinguishedName"])
-			user_dn = user_object["distinguishedName"]
-		# Else, search for username dn
-		else:
-			logger.debug("Updating with user dn search method")
-			user_entry = self.get_user_object(username)
-			user_dn = str(user_entry.distinguishedName)
-			logger.debug(user_dn)
+	def ldap_user_unlock(self, username: str) -> Connection:
+		user_entry = self.get_user_object(username=username)
 
-		if not user_dn or user_dn == "":
-			self.ldap_connection.unbind()
-			raise exc_user.UserDoesNotExist
-
-		self.ldap_connection.extend.microsoft.unlock_account(user_dn)
+		self.ldap_connection.extend.microsoft.unlock_account(user=user_entry.entry_dn)
 		DBLogMixin.log(
 			user=self.request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
