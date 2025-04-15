@@ -234,15 +234,11 @@ def test_resync_with_defaults(mocker):
 	instance = RuntimeSettingsSingleton()
 	instance.__newUuid__()
 
-	m_new_uuid: MockType = mocker.patch.object(
-		RuntimeSettingsSingleton, RuntimeSettingsSingleton.__newUuid__.__name__
-	)
+	m_new_uuid: MockType = mocker.patch.object(RuntimeSettingsSingleton, "__newUuid__")
 	m_get_settings: MockType = mocker.patch(
-		f"core.models.ldap_settings_runtime.{get_settings.__name__}"
+		f"core.models.ldap_settings_runtime.get_settings"
 	)
-	m_postsync: MockType = mocker.patch.object(
-		RuntimeSettingsSingleton, RuntimeSettingsSingleton.postsync.__name__
-	)
+	m_postsync: MockType = mocker.patch.object(RuntimeSettingsSingleton, "postsync")
 	instance.resync()
 	m_new_uuid.assert_called_once()
 	m_get_settings.assert_called_once_with(instance.uuid)
@@ -259,15 +255,11 @@ def test_resync_raises_exception(mocker):
 	mocker.patch.object(RuntimeSettingsSingleton, "__init__", return_value=None)
 	instance = RuntimeSettingsSingleton()
 
-	m_new_uuid: MockType = mocker.patch.object(
-		RuntimeSettingsSingleton, RuntimeSettingsSingleton.__newUuid__.__name__
-	)
+	m_new_uuid: MockType = mocker.patch.object(RuntimeSettingsSingleton, "__newUuid__")
 	m_get_settings: MockType = mocker.patch(
-		f"core.models.ldap_settings_runtime.{get_settings.__name__}", side_effect=Exception
+		f"core.models.ldap_settings_runtime.get_settings", side_effect=Exception
 	)
-	m_postsync: MockType = mocker.patch.object(
-		RuntimeSettingsSingleton, RuntimeSettingsSingleton.postsync.__name__
-	)
+	m_postsync: MockType = mocker.patch.object(RuntimeSettingsSingleton, "postsync")
 	with pytest.raises(Exception):
 		instance.resync(raise_exc=True)
 	m_new_uuid.assert_called_once()
@@ -279,13 +271,11 @@ def test_resync_returns_false_on_exception(mocker):
 	mocker.patch.object(RuntimeSettingsSingleton, "__init__", return_value=None)
 	instance = RuntimeSettingsSingleton()
 
-	mocker.patch.object(RuntimeSettingsSingleton, RuntimeSettingsSingleton.__newUuid__.__name__)
+	mocker.patch.object(RuntimeSettingsSingleton, "__newUuid__")
 	mocker.patch(
-		f"core.models.ldap_settings_runtime.{get_settings.__name__}", side_effect=Exception
+		f"core.models.ldap_settings_runtime.get_settings", side_effect=Exception
 	)
-	m_postsync: MockType = mocker.patch.object(
-		RuntimeSettingsSingleton, RuntimeSettingsSingleton.postsync.__name__
-	)
+	m_postsync: MockType = mocker.patch.object(RuntimeSettingsSingleton, "postsync")
 	assert instance.resync() is False
 	m_postsync.assert_not_called()
 
