@@ -224,7 +224,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			self.ldap_user_change_status(user_object=data, target_state=enabled)
+			self.ldap_user_change_status(user_data=data, target_state=enabled)
 
 		return Response(data={"code": code, "code_msg": code_msg})
 
@@ -555,13 +555,13 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			success = []
-			for user_object in data:
-				if disable_users and user_object["is_enabled"]:
-					self.ldap_user_change_status(user_object=user_object, target_state=False)
-					success.append(user_object["username"])
-				elif not disable_users and not user_object["is_enabled"]:
-					self.ldap_user_change_status(user_object=user_object, target_state=True)
-					success.append(user_object["username"])
+			for user_data in data:
+				if disable_users and user_data["is_enabled"]:
+					self.ldap_user_change_status(user_data=user_data, target_state=False)
+					success.append(user_data["username"])
+				elif not disable_users and not user_data["is_enabled"]:
+					self.ldap_user_change_status(user_data=user_data, target_state=True)
+					success.append(user_data["username"])
 				else:
 					continue
 
