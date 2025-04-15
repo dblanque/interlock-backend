@@ -7,9 +7,6 @@ from core.models.user import User, USER_TYPE_LDAP
 from core.models.ldap_settings import LDAPPreset
 from core.exceptions import ldap as exc_ldap
 from core.views.mixins.ldap_settings import SettingsViewMixin
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(autouse=True)
