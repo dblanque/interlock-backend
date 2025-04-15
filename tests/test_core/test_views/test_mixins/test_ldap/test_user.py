@@ -4,8 +4,7 @@ from core.views.mixins.logs import LogMixin
 from core.views.mixins.ldap.user import UserViewLDAPMixin
 from core.ldap.defaults import LDAP_DOMAIN
 from django.core.exceptions import ValidationError
-from core.constants import user as ldap_user
-from core.models.user import User, USER_TYPE_LDAP
+from core.models.user import User
 from typing import Union
 from ldap3 import MODIFY_DELETE, MODIFY_REPLACE
 from core.views.mixins.utils import getldapattr
@@ -41,7 +40,14 @@ from ldap3.extend import (
 	StandardExtendedOperations,
 	MicrosoftExtendedOperations,
 )
-
+from core.ldap.constants import (
+	LDAP_ATTR_FIRST_NAME,
+	LDAP_ATTR_LAST_NAME,
+	LDAP_ATTR_INITIALS,
+	LDAP_ATTR_COUNTRY,
+	LDAP_ATTR_EMAIL,
+	LDAP_ATTR_UAC
+)
 
 @pytest.fixture
 def f_user_mixin(mocker):
@@ -125,9 +131,9 @@ def fc_user_entry(
 			f_auth_field_username: username,
 			f_auth_field_email: f"{username}@{f_ldap_domain}",
 			"distinguishedName": f"CN={username},CN=Users,{f_ldap_search_base}",
-			ldap_user.FIRST_NAME: "Test",
-			ldap_user.LAST_NAME: "User",
-			ldap_user.INITIALS: "TU",
+			LDAP_ATTR_FIRST_NAME: "Test",
+			LDAP_ATTR_LAST_NAME: "User",
+			LDAP_ATTR_INITIALS: "TU",
 		} | kwargs
 		for k, v in attrs.items():
 			m_attr = mocker.Mock()
@@ -374,8 +380,8 @@ class TestUserViewLDAPMixin:
 					"username": "testuser",
 					"password": "some_password",
 					"passwordConfirm": "some_password",
-					ldap_user.FIRST_NAME: "Test",
-					ldap_user.LAST_NAME: "User",
+					LDAP_ATTR_FIRST_NAME: "Test",
+					LDAP_ATTR_LAST_NAME: "User",
 					"permission_list": [],
 				},
 				calc_permissions([LDAP_UF_NORMAL_ACCOUNT]),
@@ -385,8 +391,8 @@ class TestUserViewLDAPMixin:
 					"username": "testuser2",
 					"password": "some_password",
 					"passwordConfirm": "some_password",
-					ldap_user.FIRST_NAME: "Test",
-					ldap_user.LAST_NAME: "User 2",
+					LDAP_ATTR_FIRST_NAME: "Test",
+					LDAP_ATTR_LAST_NAME: "User 2",
 					"permission_list": [
 						LDAP_UF_ACCOUNT_DISABLE,
 						LDAP_UF_NORMAL_ACCOUNT,
@@ -438,7 +444,7 @@ class TestUserViewLDAPMixin:
 			"objectClass": ["top", "person", "organizationalPerson", "user"],
 			"userPrincipalName": f"{m_user_name}@{f_ldap_domain}",
 		}
-		for k in [ldap_user.FIRST_NAME, ldap_user.LAST_NAME]:
+		for k in [LDAP_ATTR_FIRST_NAME, LDAP_ATTR_LAST_NAME]:
 			if m_user_data.get(k, None):
 				expected_attrs[k] = m_user_data[k]
 
@@ -459,10 +465,10 @@ class TestUserViewLDAPMixin:
 					"first_name": "Test",
 					"last_name": "User",
 				},
-				{ldap_user.FIRST_NAME: "first_name", ldap_user.LAST_NAME: "last_name"},
+				{LDAP_ATTR_FIRST_NAME: "first_name", LDAP_ATTR_LAST_NAME: "last_name"},
 				{
-					ldap_user.FIRST_NAME: "Test",
-					ldap_user.LAST_NAME: "User",
+					LDAP_ATTR_FIRST_NAME: "Test",
+					LDAP_ATTR_LAST_NAME: "User",
 				},
 			),
 			(
@@ -473,9 +479,9 @@ class TestUserViewLDAPMixin:
 					"first_name": "Test",
 					"l_name": "User",
 				},
-				{ldap_user.FIRST_NAME: "first_name", ldap_user.LAST_NAME: "last_name"},
+				{LDAP_ATTR_FIRST_NAME: "first_name", LDAP_ATTR_LAST_NAME: "last_name"},
 				{
-					ldap_user.FIRST_NAME: "Test",
+					LDAP_ATTR_FIRST_NAME: "Test",
 					"l_name": "User",
 				},
 			),
@@ -576,16 +582,16 @@ class TestUserViewLDAPMixin:
 		f_user_mixin.ldap_user_update_keys(
 			user_dn=m_user_dn,
 			user_data={
-				ldap_user.FIRST_NAME: "new_name",
-				ldap_user.COUNTRY: "",
+				LDAP_ATTR_FIRST_NAME: "new_name",
+				LDAP_ATTR_COUNTRY: "",
 			},
-			replace_operation_keys=[ldap_user.FIRST_NAME],
-			delete_operation_keys=[ldap_user.COUNTRY],
+			replace_operation_keys=[LDAP_ATTR_FIRST_NAME],
+			delete_operation_keys=[LDAP_ATTR_COUNTRY],
 		)
 		m_modify.assert_any_call(
-			m_user_dn, {ldap_user.FIRST_NAME: [(MODIFY_REPLACE, ["new_name"])]}
+			m_user_dn, {LDAP_ATTR_FIRST_NAME: [(MODIFY_REPLACE, ["new_name"])]}
 		)
-		m_modify.assert_any_call(m_user_dn, {ldap_user.COUNTRY: [(MODIFY_DELETE), []]})
+		m_modify.assert_any_call(m_user_dn, {LDAP_ATTR_COUNTRY: [(MODIFY_DELETE), []]})
 
 	def test_ldap_user_update_keys_entry(
 		self, mocker, f_user_mixin: UserViewLDAPMixin, fc_user_entry
@@ -597,18 +603,18 @@ class TestUserViewLDAPMixin:
 		f_user_mixin.ldap_user_update_keys(
 			user_dn=m_user_dn,
 			user_data=m_entry,
-			replace_operation_keys=[ldap_user.FIRST_NAME],
-			delete_operation_keys=[ldap_user.COUNTRY],
+			replace_operation_keys=[LDAP_ATTR_FIRST_NAME],
+			delete_operation_keys=[LDAP_ATTR_COUNTRY],
 		)
 		m_modify.assert_any_call(
 			m_user_dn,
 			{
-				ldap_user.FIRST_NAME: [
-					(MODIFY_REPLACE, [getldapattr(m_entry, ldap_user.FIRST_NAME)])
+				LDAP_ATTR_FIRST_NAME: [
+					(MODIFY_REPLACE, [getldapattr(m_entry, LDAP_ATTR_FIRST_NAME)])
 				]
 			},
 		)
-		m_modify.assert_any_call(m_user_dn, {ldap_user.COUNTRY: [(MODIFY_DELETE), []]})
+		m_modify.assert_any_call(m_user_dn, {LDAP_ATTR_COUNTRY: [(MODIFY_DELETE), []]})
 
 	def test_ldap_user_update_with_non_existing_keys(
 		self, f_user_mixin: UserViewLDAPMixin, fc_user_entry
@@ -619,19 +625,19 @@ class TestUserViewLDAPMixin:
 		f_user_mixin.ldap_user_update_keys(
 			user_dn=m_user_dn,
 			user_data={
-				ldap_user.FIRST_NAME: "new_name",
-				ldap_user.COUNTRY: "",
+				LDAP_ATTR_FIRST_NAME: "new_name",
+				LDAP_ATTR_COUNTRY: "",
 			},
-			replace_operation_keys=[ldap_user.FIRST_NAME, "some_key"],
-			delete_operation_keys=[ldap_user.COUNTRY, "another_key"],
+			replace_operation_keys=[LDAP_ATTR_FIRST_NAME, "some_key"],
+			delete_operation_keys=[LDAP_ATTR_COUNTRY, "another_key"],
 		)
 		m_modify.assert_any_call(
-			m_user_dn, {ldap_user.FIRST_NAME: [(MODIFY_REPLACE, ["new_name"])]}
+			m_user_dn, {LDAP_ATTR_FIRST_NAME: [(MODIFY_REPLACE, ["new_name"])]}
 		)
 		m_modify.assert_any_call(
 			m_user_dn,
 			{
-				ldap_user.COUNTRY: [(MODIFY_DELETE), []],
+				LDAP_ATTR_COUNTRY: [(MODIFY_DELETE), []],
 				"another_key": [(MODIFY_DELETE), []],
 			},
 		)
@@ -661,10 +667,10 @@ class TestUserViewLDAPMixin:
 	@pytest.mark.parametrize(
 		"user_data, permission_list",
 		[
-			({ldap_user.EMAIL: f"newemail@{LDAP_DOMAIN}"}, None),  # Auth Field Update
-			({ldap_user.FIRST_NAME: "new_name"}, None),  # Simple attribute update
-			({ldap_user.FIRST_NAME: "new_name"}, [LDAP_UF_NORMAL_ACCOUNT]),  # With permissions
-			({ldap_user.COUNTRY: "United States"}, None),  # Country code update
+			({LDAP_ATTR_EMAIL: f"newemail@{LDAP_DOMAIN}"}, None),  # Auth Field Update
+			({LDAP_ATTR_FIRST_NAME: "new_name"}, None),  # Simple attribute update
+			({LDAP_ATTR_FIRST_NAME: "new_name"}, [LDAP_UF_NORMAL_ACCOUNT]),  # With permissions
+			({LDAP_ATTR_COUNTRY: "United States"}, None),  # Country code update
 			(
 				{"groupsToAdd": ["CN=Group1"], "groupsToRemove": ["CN=Group2"]},
 				None,
@@ -727,7 +733,7 @@ class TestUserViewLDAPMixin:
 		username = getldapattr(m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"])
 		with pytest.raises(exc_user.UserPermissionError):
 			f_user_mixin.ldap_user_update(
-				username, {ldap_user.FIRST_NAME: "new_name"}, ["invalid_permission"]
+				username, {LDAP_ATTR_FIRST_NAME: "new_name"}, ["invalid_permission"]
 			)
 
 	def test_ldap_user_update_country_error(
@@ -745,7 +751,7 @@ class TestUserViewLDAPMixin:
 		with pytest.raises(exc_user.UserCountryUpdateError):
 			f_user_mixin.ldap_user_update(
 				username,
-				{ldap_user.COUNTRY: "invalid_country"},
+				{LDAP_ATTR_COUNTRY: "invalid_country"},
 				None,
 			)
 
@@ -785,7 +791,7 @@ class TestUserViewLDAPMixin:
 
 		username = getldapattr(m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"])
 		with pytest.raises(exc_user.UserUpdateError):
-			f_user_mixin.ldap_user_update(username, {ldap_user.FIRST_NAME: "new_name"}, None)
+			f_user_mixin.ldap_user_update(username, {LDAP_ATTR_FIRST_NAME: "new_name"}, None)
 
 	def test_ldap_user_update_lockout(
 		self, mocker, f_user_mixin: UserViewLDAPMixin, fc_user_entry, f_runtime_settings
@@ -794,7 +800,7 @@ class TestUserViewLDAPMixin:
 		m_entry: LDAPEntry = fc_user_entry()
 		mocker.patch.object(f_user_mixin, "get_user_object", return_value=m_entry)
 		mocker.patch.object(f_user_mixin, "ldap_user_update_keys", return_value=None)
-		m_data = {ldap_user.FIRST_NAME: "new_name"}
+		m_data = {LDAP_ATTR_FIRST_NAME: "new_name"}
 		username = m_entry.entry_attributes_as_dict[
 			f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
 		][0]
@@ -804,12 +810,12 @@ class TestUserViewLDAPMixin:
 			user_data=m_data
 			| {
 				"lockoutTime": 30,
-				ldap_user.USER_ACCOUNT_CONTROL: calc_permissions([LDAP_UF_LOCKOUT]),
+				LDAP_ATTR_UAC: calc_permissions([LDAP_UF_LOCKOUT]),
 			},
 			replace_operation_keys=[
-				ldap_user.FIRST_NAME,
+				LDAP_ATTR_FIRST_NAME,
 				"lockoutTime",
-				ldap_user.USER_ACCOUNT_CONTROL,
+				LDAP_ATTR_UAC,
 			],
 			delete_operation_keys=[],
 		)

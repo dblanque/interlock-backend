@@ -51,13 +51,17 @@ from core.views.mixins.ldap.group import GroupViewMixin
 
 ### Exception Handling
 from core.exceptions import base as exc_base, users as exc_user, ldap as exc_ldap
-import traceback
 import logging
 
 ### Others
 from core.views.mixins.utils import getldapattr
 from ldap3.utils.dn import safe_dn
 from core.constants.user import UserViewsetFilterAttributeBuilder
+from core.ldap.constants import (
+	LDAP_ATTR_COUNTRY,
+	LDAP_ATTR_COUNTRY_DCC,
+	LDAP_ATTR_COUNTRY_ISO,
+)
 from django.core.exceptions import ValidationError
 from core.ldap.countries import LDAP_COUNTRIES
 ################################################################################
@@ -478,13 +482,13 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			logger.debug("New Permission Integer (cast to String): %s", str(new_permissions_int))
 			user_data["userAccountControl"] = new_permissions_int
 
-		user_country = user_data.get(ldap_user.COUNTRY, None)
+		user_country = user_data.get(LDAP_ATTR_COUNTRY, None)
 		if user_country:
 			try:
 				# Set numeric country code (DCC Standard)
-				user_data[ldap_user.COUNTRY_DCC] = LDAP_COUNTRIES[user_country]["dccCode"]
+				user_data[LDAP_ATTR_COUNTRY_DCC] = LDAP_COUNTRIES[user_country]["dccCode"]
 				# Set ISO Country Code
-				user_data[ldap_user.COUNTRY_ISO] = LDAP_COUNTRIES[user_country]["isoCode"]
+				user_data[LDAP_ATTR_COUNTRY_ISO] = LDAP_COUNTRIES[user_country]["isoCode"]
 			except Exception as e:
 				logger.exception(e)
 				raise exc_user.UserCountryUpdateError

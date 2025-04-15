@@ -1,25 +1,5 @@
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
-
-# FIELDS
-USERNAME = "username"
-PASSWORD = "password"
-EMAIL = "mail"
-FIRST_NAME = "givenName"
-LAST_NAME = "sn"
-INITIALS = "initials"
-PHONE_NUMBER = "telephoneNumber"
-WEBPAGE = "wWWHomePage"
-STREET_ADDRESS = "streetAddress"
-POSTAL_CODE = "postalCode"
-TOWN = "l"
-STATE_PROVINCE = "st"
-COUNTRY = "co"
-COUNTRY_DCC = "countryCode"
-COUNTRY_ISO = "c"
-
-ACCOUNT_NAME = "sAMAccountName"
-ACCOUNT_TYPE = "sAMAccountType"
-USER_ACCOUNT_CONTROL = "userAccountControl"
+from core.ldap.constants import *
 
 PUBLIC_FIELDS_SHORT = (
 	"id",
@@ -46,60 +26,60 @@ class UserViewsetFilterAttributeBuilder:
 
 	def get_list_attrs(self):
 		return [
-			"givenName",
-			"sn",
-			"displayName",
+			LDAP_ATTR_FIRST_NAME,
+			LDAP_ATTR_LAST_NAME,
+			LDAP_ATTR_FULL_NAME,
 			self.RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
-			"mail",
-			"distinguishedName",
-			"userAccountControl",
+			LDAP_ATTR_EMAIL,
+			LDAP_ATTR_DN,
+			LDAP_ATTR_UAC,
 		]
 
 	def get_fetch_attrs(self):
 		return [
-			"givenName",
-			"sn",
-			"displayName",
+			LDAP_ATTR_FIRST_NAME,
+			LDAP_ATTR_LAST_NAME,
+			LDAP_ATTR_FULL_NAME,
 			self.RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
 			"mail",
-			"telephoneNumber",
-			"streetAddress",
-			"postalCode",
-			"l",  # Local / City
-			"st",  # State/Province
-			"countryCode",  # INT
-			"co",  # 2 Letter Code for Country
-			"c",  # Full Country Name
-			"wWWHomePage",
-			"distinguishedName",
-			"userPrincipalName",
-			"userAccountControl",  # Permission ACLs
-			"whenCreated",
-			"whenChanged",
-			"lastLogon",
-			"badPwdCount",
-			"pwdLastSet",
-			"primaryGroupID",
-			"objectClass",
-			"objectCategory",
-			"objectSid",
-			"sAMAccountType",
-			"memberOf",
+			LDAP_ATTR_PHONE,
+			LDAP_ATTR_ADDRESS,
+			LDAP_ATTR_POSTAL_CODE,
+			LDAP_ATTR_CITY,  # Local / City
+			LDAP_ATTR_STATE,  # State/Province
+			LDAP_ATTR_COUNTRY,  # 2 Letter Code for Country
+			LDAP_ATTR_COUNTRY_DCC,  # INT
+			LDAP_ATTR_COUNTRY_ISO,  # Full Country Name
+			LDAP_ATTR_WEBSITE,
+			LDAP_ATTR_DN,
+			LDAP_ATTR_UPN,
+			LDAP_ATTR_UAC,  # Permission ACLs
+			LDAP_ATTR_CREATED,
+			LDAP_ATTR_MODIFIED,
+			LDAP_ATTR_LAST_LOGIN,
+			LDAP_ATTR_BAD_PWD_COUNT,
+			LDAP_ATTR_PWD_SET_AT,
+			LDAP_ATTR_PRIMARY_GROUP_ID,
+			LDAP_ATTR_OBJECT_CLASS,
+			LDAP_ATTR_OBJECT_CATEGORY,
+			LDAP_ATTR_OBJECT_SECURITY_IDENTIFIER,
+			LDAP_ATTR_ACCOUNT_TYPE,
+			LDAP_ATTR_USER_GROUPS,
 		]
 
 	def get_update_attrs(self):
 		return [
 			self.RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
-			"distinguishedName",
-			"userPrincipalName",
-			"userAccountControl",
+			LDAP_ATTR_DN,
+			LDAP_ATTR_UPN,
+			LDAP_ATTR_UAC,
 		]
 
 	def get_bulk_insert_attrs(self):
 		return [
 			self.RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
-			"distinguishedName",
-			"userPrincipalName",
+			LDAP_ATTR_DN,
+			LDAP_ATTR_UPN,
 		]
 
 	def get_update_exclude_keys(self):
@@ -112,18 +92,18 @@ class UserViewsetFilterAttributeBuilder:
 			"passwordConfirm",
 			"path",
 			"permission_list",  # This array is parsed and calculated later
-			"distinguishedName",  # We don't want the front-end generated DN
+			LDAP_ATTR_DN,  # We don't want the front-end generated DN
 			"username",  # LDAP Uses sAMAccountName
-			"whenChanged",
-			"whenCreated",
-			"lastLogon",
-			"badPwdCount",
-			"pwdLastSet",
+			LDAP_ATTR_CREATED,
+			LDAP_ATTR_MODIFIED,
+			LDAP_ATTR_LAST_LOGIN,
+			LDAP_ATTR_BAD_PWD_COUNT,
+			LDAP_ATTR_PWD_SET_AT,
 			"is_enabled",
-			"sAMAccountType",
-			"objectCategory",
-			"objectSid",
-			"objectRid",
+			LDAP_ATTR_ACCOUNT_TYPE,
+			LDAP_ATTR_OBJECT_CATEGORY,
+			LDAP_ATTR_OBJECT_SECURITY_IDENTIFIER,
+			LDAP_ATTR_OBJECT_RELATIVE_IDENTIFIER,
 		]
 
 	def get_update_self_exclude_keys(self):
@@ -133,29 +113,29 @@ class UserViewsetFilterAttributeBuilder:
 			"passwordConfirm",
 			"path",
 			"permission_list",  # This array is parsed and calculated later
-			"distinguishedName",  # We don't want the front-end generated DN
+			LDAP_ATTR_DN,  # We don't want the front-end generated DN
 			"username",  # LDAP Uses sAMAccountName
-			"whenChanged",
-			"whenCreated",
-			"lastLogon",
-			"badPwdCount",
-			"pwdLastSet",
+			LDAP_ATTR_CREATED,
+			LDAP_ATTR_MODIFIED,
+			LDAP_ATTR_LAST_LOGIN,
+			LDAP_ATTR_BAD_PWD_COUNT,
+			LDAP_ATTR_PWD_SET_AT,
 			"is_enabled",
-			"sAMAccountType",
-			"objectCategory",
-			"userAccountControl",
-			"objectClass",
-			"primaryGroupID",
+			LDAP_ATTR_ACCOUNT_TYPE,
+			LDAP_ATTR_OBJECT_CATEGORY,
+			LDAP_ATTR_UAC,
+			LDAP_ATTR_OBJECT_CLASS,
+			LDAP_ATTR_PRIMARY_GROUP_ID,
 		]
 
 	def get_fetch_me_attrs(self):
 		_REMOVE = [
-			"primaryGroupID",
-			"objectClass",
-			"objectCategory",
-			"objectSid",
-			"sAMAccountType",
-			"memberOf",
+			LDAP_ATTR_PRIMARY_GROUP_ID,
+			LDAP_ATTR_OBJECT_CLASS,
+			LDAP_ATTR_OBJECT_CATEGORY,
+			LDAP_ATTR_OBJECT_SECURITY_IDENTIFIER,
+			LDAP_ATTR_ACCOUNT_TYPE,
+			LDAP_ATTR_USER_GROUPS,
 		]
 		_RESULT = self.get_fetch_attrs()
 		for value in _REMOVE:

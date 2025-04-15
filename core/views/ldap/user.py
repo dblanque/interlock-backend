@@ -45,7 +45,11 @@ from rest_framework.decorators import action
 ### Auth
 from core.decorators.login import auth_required, admin_required
 from core.ldap import adsi as ldap_adsi
-from core.constants import user as ldap_user
+from core.ldap.constants import (
+	LDAP_ATTR_USERNAME_SAMBA_ADDS,
+	LOCAL_ATTR_PASSWORD,
+	LDAP_ATTR_EMAIL
+)
 from core.ldap.connector import LDAPConnector
 import ldap3
 
@@ -240,10 +244,12 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		if not isinstance(data, dict):
 			raise exc_base.CoreException
 
-		# Open LDAP Connection
+		# Get username from data
 		username = data.get("username", None)
 		if not username:
 			username = data.get(RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"], None)
+
+		# Open LDAP Connection
 		if not username:
 			raise exc_base.BadRequest
 
@@ -276,33 +282,26 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		data = request.data
 		ldap_user_search = None
 
+		# Get username from data
+		username = data.get("username", None)
+		if not username:
+			username = data.get(RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"], None)
+
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			if RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"] in data:
-				ldap_user_search = data[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]]
-			elif "username" in data:
-				ldap_user_search = data["username"]
+			ldap_user_entry = self.get_user_object(username=username)
 
-			# If data request for deletion has user DN
-			if "distinguishedName" in data.keys() and data["distinguishedName"] != "":
-				logger.debug("Updating with distinguishedName obtained from front-end")
-				logger.debug(data["distinguishedName"])
-				dn = data["distinguishedName"]
-			# Else, search for username dn
-			else:
-				logger.debug("Updating with user dn search method")
-				ldap_user_entry = self.get_user_object(ldap_user_search)
-
-				dn = str(ldap_user_entry.distinguishedName)
-				logger.debug(dn)
-
-			if dn is None or dn == "":
+			if not ldap_user_entry.entry_dn:
 				raise exc_user.UserDoesNotExist
 
 			if data["password"] != data["passwordConfirm"]:
 				raise exc_user.UserPasswordsDontMatch
-			self.ldap_set_password(user_dn=dn, user_pwd_new=data["password"], set_by_admin=True)
+			self.ldap_set_password(
+				user_dn=ldap_user_entry.entry_dn,
+				user_pwd_new=data["password"],
+				set_by_admin=True
+			)
 
 		django_user = None
 		try:
@@ -395,12 +394,12 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		if not user_placeholder_password:
 			required_fields.append("password")
 
-		mapped_user_key = header_mapping[ldap_user.USERNAME]
-		mapped_email_key = header_mapping[ldap_user.EMAIL]
+		mapped_user_key = header_mapping[LDAP_ATTR_USERNAME_SAMBA_ADDS]
+		mapped_email_key = header_mapping[LDAP_ATTR_EMAIL]
 		if user_placeholder_password:
-			mapped_pwd_key = ldap_user.PASSWORD
+			mapped_pwd_key = LOCAL_ATTR_PASSWORD
 		else:
-			mapped_pwd_key = header_mapping[ldap_user.PASSWORD]
+			mapped_pwd_key = header_mapping[LOCAL_ATTR_PASSWORD]
 		EXCLUDE_KEYS = [
 			mapped_user_key,  # LDAP Uses sAMAccountName
 			mapped_pwd_key,
