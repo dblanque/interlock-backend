@@ -107,9 +107,12 @@ class BadGroupSelection(CoreException):
 
 class UserEntryNotFound(CoreException):
 	status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-	default_detail = "User LDAP Entry was not found in connection entries. "+\
-		"Please perform an LDAP Search before fetching the entry."
+	default_detail = (
+		"User LDAP Entry was not found in connection entries. "
+		+ "Please perform an LDAP Search before fetching the entry."
+	)
 	default_code = "user_entry_not_found"
+
 
 class UserWithEmailExists(CoreException):
 	status_code = status.HTTP_409_CONFLICT

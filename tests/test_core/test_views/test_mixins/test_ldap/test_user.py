@@ -16,7 +16,7 @@ from core.models.choices.log import (
 	LOG_CLASS_USER,
 	LOG_EXTRA_ENABLE,
 	LOG_EXTRA_DISABLE,
-	LOG_EXTRA_UNLOCK
+	LOG_EXTRA_UNLOCK,
 )
 from core.ldap.types.account import LDAPAccountTypes
 from core.ldap.adsi import (
@@ -95,10 +95,12 @@ def fc_user_permissions():
 
 	return maker
 
+
 @pytest.fixture
 def f_default_user_filter():
 	def maker(username):
 		return f"(&(&(objectClass=person)(!(objectClass=computer)))(sAMAccountName={username}))"
+
 	return maker
 
 
@@ -1070,10 +1072,7 @@ class TestUserViewLDAPMixin:
 
 		# Execution
 		result = f_user_mixin.ldap_user_fetch(user_search="testuser")
-		assert (
-			f_user_mixin.ldap_filter_object
-			== f_default_user_filter("testuser")
-		)
+		assert f_user_mixin.ldap_filter_object == f_default_user_filter("testuser")
 
 		# Assertions
 		f_log_mixin.log.assert_called_once_with(
@@ -1224,7 +1223,7 @@ class TestUserViewLDAPMixin:
 			"Disable enabled user with local django instance",
 			"Enable disabled user with local django instance",
 			"Disable disabled user with local django instance",
-		]
+		],
 	)
 	@pytest.mark.django_db
 	def test_ldap_user_change_status(
@@ -1238,7 +1237,7 @@ class TestUserViewLDAPMixin:
 		f_log_mixin: LogMixin,
 		fc_user_entry,
 		f_runtime_settings: RuntimeSettingsSingleton,
-		f_default_user_filter
+		f_default_user_filter,
 	):
 		f_user_mixin.request.user.id = 1
 		m_django_user: Union[User, MockType] = None
@@ -1246,17 +1245,14 @@ class TestUserViewLDAPMixin:
 			m_django_user = mocker.Mock()
 			mocker.patch("core.views.mixins.ldap.user.User.objects.get", return_value=m_django_user)
 
-		m_user_entry: LDAPEntry = fc_user_entry(**{
-			"userAccountControl": calc_permissions(permissions)
-		})
+		m_user_entry: LDAPEntry = fc_user_entry(
+			**{"userAccountControl": calc_permissions(permissions)}
+		)
 		mocker.patch.object(f_user_mixin, "get_user_object", return_value=m_user_entry)
 		f_user_mixin.ldap_user_change_status(username="testuser", enabled=enabled)
 		f_user_mixin.ldap_connection.modify.assert_called_once_with(
-			m_user_entry.entry_dn, {
-				"userAccountControl": [(MODIFY_REPLACE, [
-					calc_permissions(expected_permissions)
-				])]
-			}
+			m_user_entry.entry_dn,
+			{"userAccountControl": [(MODIFY_REPLACE, [calc_permissions(expected_permissions)])]},
 		)
 		f_log_mixin.log.assert_called_once_with(
 			user=1,
@@ -1269,32 +1265,34 @@ class TestUserViewLDAPMixin:
 			assert m_django_user.is_enabled == enabled
 			m_django_user.save.assert_called_once()
 
-	def test_ldap_user_change_status_raises_anti_lockout(	
+	def test_ldap_user_change_status_raises_anti_lockout(
 		self,
 		mocker,
 		fc_user_entry,
 		f_user_mixin: UserViewLDAPMixin,
-		f_runtime_settings: RuntimeSettingsSingleton
+		f_runtime_settings: RuntimeSettingsSingleton,
 	):
-		m_user_entry: LDAPEntry = fc_user_entry(**{
-			"userAccountControl": calc_permissions([LDAP_UF_NORMAL_ACCOUNT])
-		})
+		m_user_entry: LDAPEntry = fc_user_entry(
+			**{"userAccountControl": calc_permissions([LDAP_UF_NORMAL_ACCOUNT])}
+		)
 		mocker.patch.object(f_user_mixin, "get_user_object", return_value=m_user_entry)
 		f_runtime_settings.LDAP_AUTH_CONNECTION_USER_DN = m_user_entry.entry_dn
 		with pytest.raises(exc_user.UserAntiLockout):
 			f_user_mixin.ldap_user_change_status(username="testuser", enabled=False)
 
-	def test_ldap_user_change_status_raises_permission_error(	
+	def test_ldap_user_change_status_raises_permission_error(
 		self,
 		mocker,
 		fc_user_entry,
 		f_user_mixin: UserViewLDAPMixin,
-		f_runtime_settings: RuntimeSettingsSingleton
+		f_runtime_settings: RuntimeSettingsSingleton,
 	):
-		mocker.patch("core.views.mixins.ldap.user.ldap_adsi.calc_permissions", side_effect=Exception)
-		m_user_entry: LDAPEntry = fc_user_entry(**{
-			"userAccountControl": calc_permissions([LDAP_UF_NORMAL_ACCOUNT])
-		})
+		mocker.patch(
+			"core.views.mixins.ldap.user.ldap_adsi.calc_permissions", side_effect=Exception
+		)
+		m_user_entry: LDAPEntry = fc_user_entry(
+			**{"userAccountControl": calc_permissions([LDAP_UF_NORMAL_ACCOUNT])}
+		)
 		mocker.patch.object(f_user_mixin, "get_user_object", return_value=m_user_entry)
 
 		with pytest.raises(exc_user.UserPermissionError):

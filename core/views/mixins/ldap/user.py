@@ -33,7 +33,13 @@ from core.models.choices.log import (
 )
 from core.ldap.connector import LDAPConnector
 from core.views.mixins.logs import LogMixin
-from ldap3 import Connection, MODIFY_DELETE, MODIFY_REPLACE, Entry as LDAPEntry, ALL_ATTRIBUTES as ALL_LDAP3_ATTRIBUTES
+from ldap3 import (
+	Connection,
+	MODIFY_DELETE,
+	MODIFY_REPLACE,
+	Entry as LDAPEntry,
+	ALL_ATTRIBUTES as ALL_LDAP3_ATTRIBUTES,
+)
 from ldap3.extend import (
 	ExtendedOperationsRoot,
 	StandardExtendedOperations,
@@ -452,7 +458,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		if permission_list and not isinstance(permission_list, list):
 			raise TypeError("permission_list must be of type list.")
 
-		ldap_user_entry: LDAPEntry = self.get_user_object(username=username, attributes=ALL_LDAP3_ATTRIBUTES)
+		ldap_user_entry: LDAPEntry = self.get_user_object(
+			username=username, attributes=ALL_LDAP3_ATTRIBUTES
+		)
 		user_dn = ldap_user_entry.entry_dn
 
 		################# START NON-STANDARD ARGUMENT UPDATES ##################
@@ -716,8 +724,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			# Check if user is disabled
 			try:
 				user_dict["is_enabled"] = not ldap_adsi.list_user_perms(
-					user=user_entry,
-					perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE
+					user=user_entry, perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE
 				)
 			except Exception as e:
 				logger.exception(e)

@@ -243,7 +243,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		# Open LDAP Connection
 		username = data.get("username", None)
 		if not username:
-			username = data.get(RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"], None) 
+			username = data.get(RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"], None)
 		if not username:
 			raise exc_base.BadRequest
 
@@ -569,12 +569,10 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			success = []
 			for user_data in data:
 				if disable_users and user_data["is_enabled"]:
-					self.ldap_user_change_status(
-						username=user_data["username"], enabled=False)
+					self.ldap_user_change_status(username=user_data["username"], enabled=False)
 					success.append(user_data["username"])
 				elif not disable_users and not user_data["is_enabled"]:
-					self.ldap_user_change_status(
-						username=user_data["username"], enabled=True)
+					self.ldap_user_change_status(username=user_data["username"], enabled=True)
 					success.append(user_data["username"])
 				else:
 					continue
@@ -676,8 +674,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				logger.debug(distinguishedName)
 
 			if ldap_adsi.list_user_perms(
-				user=ldap_user_entry,
-				perm_search=ldap_adsi.LDAP_UF_PASSWD_CANT_CHANGE
+				user=ldap_user_entry, perm_search=ldap_adsi.LDAP_UF_PASSWD_CANT_CHANGE
 			):
 				raise PermissionDenied
 
@@ -845,8 +842,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 					# Check if user can change password based on perms
 					user_data["can_change_pwd"] = not ldap_adsi.list_user_perms(
-						user=user_entry[0],
-						perm_search=ldap_adsi.LDAP_UF_PASSWD_CANT_CHANGE
+						user=user_entry[0], perm_search=ldap_adsi.LDAP_UF_PASSWD_CANT_CHANGE
 					)
 
 		return Response(data={"code": code, "code_msg": code_msg, "data": user_data})
