@@ -241,22 +241,27 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			raise exc_base.CoreException
 
 		# Open LDAP Connection
+		username = data.get("username", None)
+		if not username:
+			username = data.get(RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"], None) 
+		if not username:
+			raise exc_base.BadRequest
+
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			self.ldap_user_delete(user_object=data)
-			username = data["username"]
-			if RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"] in data:
-				username = data[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]]
 
 			if username == user.username:
 				raise exc_user.UserAntiLockout
-			userToDelete = None
+
+			# Check user exists and delete in LDAP Server
+			if self.ldap_user_exists(username=username, return_exception=False):
+				self.ldap_user_delete(username=data)
+
 			try:
-				userToDelete = User.objects.get(username=username)
+				django_user = User.objects.get(username=username, user_type=USER_TYPE_LDAP)
+				django_user.delete_permanently()
 			except ObjectDoesNotExist:
 				pass
-			if userToDelete:
-				userToDelete.delete_permanently()
 
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
 
@@ -597,7 +602,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			for user in data:
-				self.ldap_user_delete(user_object=user)
+				self.ldap_user_delete(username=user)
 
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
 
