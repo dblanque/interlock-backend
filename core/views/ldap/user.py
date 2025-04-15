@@ -662,7 +662,8 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				logger.debug(distinguishedName)
 
 			if ldap_adsi.list_user_perms(
-				user=ldap_user_entry, perm_search="LDAP_UF_PASSWD_CANT_CHANGE"
+				user=ldap_user_entry,
+				perm_search=ldap_adsi.LDAP_UF_PASSWD_CANT_CHANGE
 			):
 				raise PermissionDenied
 
@@ -829,10 +830,9 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 						user_data["username"] = str_value
 
 					# Check if user can change password based on perms
-					user_data["can_change_pwd"] = False
-					if not ldap_adsi.list_user_perms(
-						user=user_entry[0], perm_search="LDAP_UF_PASSWD_CANT_CHANGE"
-					):
-						user_data["can_change_pwd"] = True
+					user_data["can_change_pwd"] = not ldap_adsi.list_user_perms(
+						user=user_entry[0],
+						perm_search=ldap_adsi.LDAP_UF_PASSWD_CANT_CHANGE
+					)
 
 		return Response(data={"code": code, "code_msg": code_msg, "data": user_data})

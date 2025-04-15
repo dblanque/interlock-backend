@@ -264,13 +264,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 			# Check if user is disabled
 			try:
-				user_dict["is_enabled"] = (
-					False
-					if ldap_adsi.list_user_perms(
-						user=user_entry,
-						perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE,
-					)
-					else True
+				user_dict["is_enabled"] = not ldap_adsi.list_user_perms(
+					user=user_entry,
+					perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE,
 				)
 			except Exception as e:
 				logger.exception(e)
@@ -704,12 +700,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		if "userAccountControl" in self.ldap_filter_attr:
 			# Check if user is disabled
 			try:
-				user_dict["is_enabled"] = (
-					False
-					if ldap_adsi.list_user_perms(
-						user=user_entry, perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE
-					)
-					else True
+				user_dict["is_enabled"] = not ldap_adsi.list_user_perms(
+					user=user_entry,
+					perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE
 				)
 			except Exception as e:
 				logger.exception(e)
@@ -717,7 +710,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 			# Build permissions list
 			try:
-				user_permissions = ldap_adsi.list_user_perms(user=user_entry, perm_search=None)
+				user_permissions = ldap_adsi.list_user_perms(user=user_entry)
 				user_dict["permission_list"] = user_permissions
 			except Exception as e:
 				logger.exception(e)
@@ -740,7 +733,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		)
 
 		user_entry = self.get_user_entry(username=username)
-		permList = ldap_adsi.list_user_perms(user=user_entry, user_is_object=False)
+		permission_list = ldap_adsi.list_user_perms(user=user_entry)
 
 		if user_entry.entry_dn == RuntimeSettings.LDAP_AUTH_CONNECTION_USER_DN:
 			raise exc_user.UserAntiLockout
@@ -748,11 +741,11 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		try:
 			if target_state is True:
 				new_permissions = ldap_adsi.calc_permissions(
-					permList, perm_remove=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE
+					permission_list, perm_remove=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE
 				)
 			else:
 				new_permissions = ldap_adsi.calc_permissions(
-					permList, perm_add=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE
+					permission_list, perm_add=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE
 				)
 		except Exception as e:
 			logger.exception(e)
