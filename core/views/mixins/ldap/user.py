@@ -794,46 +794,13 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		)
 		return self.ldap_connection
 
-	def ldap_user_delete(self, user_object):
-		if RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"] in user_object:
-			username = user_object[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]]
-		elif "username" in user_object:
-			username = user_object["username"]
-		else:
-			raise exc_base.CoreException
+	def ldap_user_delete(self, username: str):
+		user_entry = self.get_user_object(username=username)
 
-		# If data request for deletion has user DN
-		if "distinguishedName" in user_object.keys() and user_object["distinguishedName"] != "":
-			logger.debug("Deleting with distinguishedName obtained from front-end")
-			logger.debug(user_object["distinguishedName"])
-			user_dn = user_object["distinguishedName"]
-			if not user_dn or user_dn == "":
-				self.ldap_connection.unbind()
-				raise exc_user.UserDoesNotExist
-			try:
-				self.ldap_connection.delete(user_dn)
-			except Exception as e:
-				self.ldap_connection.unbind()
-				print(e)
-				data = {"ldap_response": self.ldap_connection.result}
-				raise exc_base.CoreException(data=data)
-		# Else, search for username dn
-		else:
-			logger.debug("Deleting with user dn search method")
-			user_entry = self.get_user_object(username)
-			user_dn = str(user_entry.distinguishedName)
-			logger.debug(user_dn)
-
-			if not user_dn or user_dn == "":
-				self.ldap_connection.unbind()
-				raise exc_user.UserDoesNotExist
-			try:
-				self.ldap_connection.delete(user_dn)
-			except Exception as e:
-				self.ldap_connection.unbind()
-				print(e)
-				data = {"ldap_response": self.ldap_connection.result}
-				raise exc_base.CoreException(data=data)
+		try:
+			self.ldap_connection.delete(user_entry.entry_dn)
+		except Exception as e:
+			raise exc_base.CoreException(data={"ldap_response": self.ldap_connection.result})
 
 		DBLogMixin.log(
 			user=self.request.user.id,
