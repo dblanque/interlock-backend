@@ -9,7 +9,15 @@ from core.models.user import User, USER_TYPE_LDAP
 from typing import Union
 from ldap3 import MODIFY_DELETE, MODIFY_REPLACE
 from core.views.mixins.utils import getldapattr
-from core.models.choices.log import LOG_ACTION_READ, LOG_ACTION_UPDATE, LOG_CLASS_USER, LOG_EXTRA_ENABLE, LOG_EXTRA_DISABLE, LOG_EXTRA_UNLOCK
+from core.models.choices.log import (
+	LOG_ACTION_DELETE,
+	LOG_ACTION_READ,
+	LOG_ACTION_UPDATE,
+	LOG_CLASS_USER,
+	LOG_EXTRA_ENABLE,
+	LOG_EXTRA_DISABLE,
+	LOG_EXTRA_UNLOCK
+)
 from core.ldap.types.account import LDAPAccountTypes
 from core.ldap.adsi import (
 	LDAP_FILTER_AND,
@@ -1313,4 +1321,24 @@ class TestUserViewLDAPMixin:
 			log_target_class=LOG_CLASS_USER,
 			log_target="testuser",
 			message=LOG_EXTRA_UNLOCK,
+		)
+
+	def test_ldap_user_delete(
+		self,
+		mocker,
+		fc_user_entry,
+		f_user_mixin: UserViewLDAPMixin,
+		f_log_mixin: LogMixin,
+	):
+		f_user_mixin.request.user.id = 1
+		m_user_entry: LDAPEntry = fc_user_entry()
+		mocker.patch.object(f_user_mixin, "get_user_object", return_value=m_user_entry)
+
+		f_user_mixin.ldap_user_delete(username="testuser")
+		f_user_mixin.ldap_connection.delete.assert_called_once_with(m_user_entry.entry_dn)
+		f_log_mixin.log.assert_called_once_with(
+			user=1,
+			operation_type=LOG_ACTION_DELETE,
+			log_target_class=LOG_CLASS_USER,
+			log_target="testuser",
 		)
