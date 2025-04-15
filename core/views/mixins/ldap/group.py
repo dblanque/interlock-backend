@@ -55,7 +55,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 	ldap_filter_object = None
 	ldap_filter_attr = None
 
-	def get_group_by_rid(rid: int=None, attributes=None):
+	def get_group_by_rid(rid: int = None, attributes=None):
 		if not attributes:
 			attributes = ["objectSid", "distinguishedName"]
 		if isinstance(rid, list):
@@ -97,7 +97,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 					connection.unbind()
 					return result.attributes
 
-	def get_group_type(self, group_type: int=None, debug=False) -> list[str]:
+	def get_group_type(self, group_type: int = None, debug=False) -> list[str]:
 		sum = 0
 		result = []
 		group_type_last_int = int(str(group_type)[-1])

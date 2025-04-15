@@ -264,10 +264,14 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 			# Check if user is disabled
 			try:
-				user_dict["is_enabled"] = False if ldap_adsi.list_user_perms(
-					user=user_entry,
-					perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE,
-				) else True
+				user_dict["is_enabled"] = (
+					False
+					if ldap_adsi.list_user_perms(
+						user=user_entry,
+						perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE,
+					)
+					else True
+				)
 			except Exception as e:
 				logger.exception(e)
 				logger.error(f"Could not get user status for DN: {user_dict['distinguishedName']}")
@@ -700,26 +704,24 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		if "userAccountControl" in self.ldap_filter_attr:
 			# Check if user is disabled
 			try:
-				user_dict["is_enabled"] = False if ldap_adsi.list_user_perms(
-					user=user_entry,
-					perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE
-				) else True
+				user_dict["is_enabled"] = (
+					False
+					if ldap_adsi.list_user_perms(
+						user=user_entry, perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE
+					)
+					else True
+				)
 			except Exception as e:
 				logger.exception(e)
-				logger.error(user_dict.get(
-					"distinguishedName", "No Distinguished Name available."))
+				logger.error(user_dict.get("distinguishedName", "No Distinguished Name available."))
 
 			# Build permissions list
 			try:
-				user_permissions = ldap_adsi.list_user_perms(
-					user=user_entry,
-					perm_search=None
-				)
+				user_permissions = ldap_adsi.list_user_perms(user=user_entry, perm_search=None)
 				user_dict["permission_list"] = user_permissions
 			except Exception as e:
 				logger.exception(e)
-				logger.error(user_dict.get(
-					"distinguishedName", "No Distinguished Name available."))
+				logger.error(user_dict.get("distinguishedName", "No Distinguished Name available."))
 
 		if "sAMAccountType" in self.ldap_filter_attr:
 			# Replace sAMAccountType Value with String
@@ -757,10 +759,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			raise exc_user.UserPermissionError
 
 		self.ldap_connection.modify(
-			user_entry.entry_dn, 
-			{
-				"userAccountControl": [(MODIFY_REPLACE, [new_permissions])]
-			}
+			user_entry.entry_dn, {"userAccountControl": [(MODIFY_REPLACE, [new_permissions])]}
 		)
 
 		try:
