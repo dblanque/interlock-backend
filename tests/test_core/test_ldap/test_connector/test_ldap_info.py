@@ -15,8 +15,10 @@ def f_ldap_info(mocker, f_user, f_server_pool, f_server, f_ldap_connection):
 	m_ldap_info._entered = True
 	return m_ldap_info
 
+
 def fake_enter(self):
 	self._entered = True
+
 
 def test_init_sets_get_ldap_info(mocker, f_user):
 	m_super_init = mocker.patch("core.ldap.connector.LDAPConnector.__init__")
