@@ -5,11 +5,11 @@ from core.views.mixins.ldap.user import UserViewLDAPMixin
 from core.ldap.defaults import LDAP_DOMAIN
 from django.core.exceptions import ValidationError
 from core.constants import user as ldap_user
-from core.models.user import User
+from core.models.user import User, USER_TYPE_LDAP
 from typing import Union
 from ldap3 import MODIFY_DELETE, MODIFY_REPLACE
 from core.views.mixins.utils import getldapattr
-from core.models.choices.log import LOG_ACTION_READ, LOG_ACTION_UPDATE, LOG_CLASS_USER
+from core.models.choices.log import LOG_ACTION_READ, LOG_ACTION_UPDATE, LOG_CLASS_USER, LOG_EXTRA_ENABLE, LOG_EXTRA_DISABLE
 from core.ldap.types.account import LDAPAccountTypes
 from core.ldap.adsi import (
 	LDAP_FILTER_AND,
@@ -49,7 +49,7 @@ def f_log_mixin(mocker):
 	return mock
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def f_runtime_settings(mocker, g_runtime_settings):
 	mocker.patch("core.views.mixins.ldap.user.RuntimeSettings", g_runtime_settings)
 	return g_runtime_settings
@@ -85,6 +85,12 @@ def fc_user_permissions():
 			i = i + LDAP_PERMS[p]["value"]
 		return i
 
+	return maker
+
+@pytest.fixture
+def f_default_user_filter():
+	def maker(username):
+		return f"(&(&(objectClass=person)(!(objectClass=computer)))(sAMAccountName={username}))"
 	return maker
 
 
@@ -1014,6 +1020,7 @@ class TestUserViewLDAPMixin:
 		f_log_mixin: LogMixin,
 		f_runtime_settings: RuntimeSettingsSingleton,
 		f_ldap_object,
+		f_default_user_filter,
 	):
 		# Setup
 		f_user_mixin.request.user.id = 1
@@ -1050,7 +1057,7 @@ class TestUserViewLDAPMixin:
 		result = f_user_mixin.ldap_user_fetch(user_search="testuser")
 		assert (
 			f_user_mixin.ldap_filter_object
-			== "(&(&(objectClass=person)(!(objectClass=computer)))(sAMAccountName=testuser))"
+			== f_default_user_filter("testuser")
 		)
 
 		# Assertions
@@ -1076,8 +1083,6 @@ class TestUserViewLDAPMixin:
 		mocker,
 		f_user_mixin: UserViewLDAPMixin,
 		fc_user_entry,
-		f_log_mixin: LogMixin,
-		f_runtime_settings: RuntimeSettingsSingleton,
 		f_ldap_object,
 	):
 		m_user_entry: LDAPEntry = fc_user_entry(
@@ -1108,8 +1113,6 @@ class TestUserViewLDAPMixin:
 		mocker,
 		f_user_mixin: UserViewLDAPMixin,
 		fc_user_entry,
-		f_log_mixin: LogMixin,
-		f_runtime_settings: RuntimeSettingsSingleton,
 		f_ldap_object,
 	):
 		m_logger = mocker.patch("core.views.mixins.ldap.user.logger")
@@ -1136,3 +1139,153 @@ class TestUserViewLDAPMixin:
 		f_user_mixin.ldap_user_fetch(user_search="testuser")
 		m_logger.error.call_count == expected_log_count
 		m_logger.exception.call_count == expected_log_count
+
+	@pytest.mark.parametrize(
+		"target_state, permissions, expected_permissions, with_django_user",
+		(
+			# Enable enabled user
+			(
+				True,
+				[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
+				[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
+				False,
+			),
+			# Disable enabled user
+			(
+				False,
+				[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
+				[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD, LDAP_UF_ACCOUNT_DISABLE],
+				False,
+			),
+			# Enable disabled user
+			(
+				True,
+				[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD, LDAP_UF_ACCOUNT_DISABLE],
+				[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
+				False,
+			),
+			# Disable disabled user
+			(
+				False,
+				[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD, LDAP_UF_ACCOUNT_DISABLE],
+				[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD, LDAP_UF_ACCOUNT_DISABLE],
+				False,
+			),
+			# Enable enabled user with local django instance
+			(
+				True,
+				[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
+				[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
+				True,
+			),
+			# Disable enabled user with local django instance
+			(
+				False,
+				[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
+				[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD, LDAP_UF_ACCOUNT_DISABLE],
+				True,
+			),
+			# Enable disabled user with local django instance
+			(
+				True,
+				[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD, LDAP_UF_ACCOUNT_DISABLE],
+				[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
+				True,
+			),
+			# Disable disabled user with local django instance
+			(
+				False,
+				[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD, LDAP_UF_ACCOUNT_DISABLE],
+				[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD, LDAP_UF_ACCOUNT_DISABLE],
+				True,
+			),
+		),
+		ids=[
+			"Enable enabled user",
+			"Disable enabled user",
+			"Enable disabled user",
+			"Disable disabled user",
+			"Enable enabled user with local django instance",
+			"Disable enabled user with local django instance",
+			"Enable disabled user with local django instance",
+			"Disable disabled user with local django instance",
+		]
+	)
+	@pytest.mark.django_db
+	def test_ldap_user_change_status(
+		self,
+		target_state: bool,
+		permissions: list[str],
+		expected_permissions: list[str],
+		with_django_user: bool,
+		mocker,
+		f_user_mixin: UserViewLDAPMixin,
+		f_log_mixin: LogMixin,
+		fc_user_entry,
+		f_runtime_settings: RuntimeSettingsSingleton,
+		f_default_user_filter
+	):
+		f_user_mixin.request.user.id = 1
+		m_django_user: Union[User, MockType] = None
+		if with_django_user:
+			m_django_user = mocker.Mock()
+			mocker.patch("core.views.mixins.ldap.user.User.objects.get", return_value=m_django_user)
+
+		m_user_entry: LDAPEntry = fc_user_entry(**{
+			"userAccountControl": calc_permissions(permissions)
+		})
+		mocker.patch.object(f_user_mixin, "get_user_entry", return_value=m_user_entry)
+		f_user_mixin.ldap_user_change_status(username="testuser", target_state=target_state)
+		f_user_mixin.ldap_connection.search.assert_called_once_with(
+			f_runtime_settings.LDAP_AUTH_SEARCH_BASE,
+			f_default_user_filter("testuser"),
+			attributes=f_user_mixin.ldap_filter_attr,
+		)
+		f_user_mixin.ldap_connection.modify.assert_called_once_with(
+			m_user_entry.entry_dn, {
+				"userAccountControl": [(MODIFY_REPLACE, [
+					calc_permissions(expected_permissions)
+				])]
+			}
+		)
+		f_log_mixin.log.assert_called_once_with(
+			user=1,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target="testuser",
+			message=LOG_EXTRA_ENABLE if target_state else LOG_EXTRA_DISABLE,
+		)
+		if m_django_user:
+			assert m_django_user.is_enabled == target_state
+			m_django_user.save.assert_called_once()
+
+	def test_ldap_user_change_status_raises_anti_lockout(	
+		self,
+		mocker,
+		fc_user_entry,
+		f_user_mixin: UserViewLDAPMixin,
+		f_runtime_settings: RuntimeSettingsSingleton
+	):
+		m_user_entry: LDAPEntry = fc_user_entry(**{
+			"userAccountControl": calc_permissions([LDAP_UF_NORMAL_ACCOUNT])
+		})
+		mocker.patch.object(f_user_mixin, "get_user_entry", return_value=m_user_entry)
+		f_runtime_settings.LDAP_AUTH_CONNECTION_USER_DN = m_user_entry.entry_dn
+		with pytest.raises(exc_user.UserAntiLockout):
+			f_user_mixin.ldap_user_change_status(username="testuser", target_state=False)
+
+	def test_ldap_user_change_status_raises_permission_error(	
+		self,
+		mocker,
+		fc_user_entry,
+		f_user_mixin: UserViewLDAPMixin,
+		f_runtime_settings: RuntimeSettingsSingleton
+	):
+		mocker.patch("core.views.mixins.ldap.user.ldap_adsi.calc_permissions", side_effect=Exception)
+		m_user_entry: LDAPEntry = fc_user_entry(**{
+			"userAccountControl": calc_permissions([LDAP_UF_NORMAL_ACCOUNT])
+		})
+		mocker.patch.object(f_user_mixin, "get_user_entry", return_value=m_user_entry)
+
+		with pytest.raises(exc_user.UserPermissionError):
+			f_user_mixin.ldap_user_change_status(username="testuser", target_state=False)
