@@ -69,7 +69,7 @@ def canonicalHostname_validator(value: str, trailing_dot=True):
 	# src: https://stackoverflow.com/questions/2532053/validate-a-hostname-string
 	if len(value) > 253:
 		return False
-	
+
 	labels = value.split(".")
 
 	# the TLD must be not all-numeric
@@ -98,7 +98,7 @@ def ipv4_validator(value: str):
 	try:
 		socket.inet_aton(str(value))
 		# Check octet count, disallow incomplete addressing
-		parts = str(value).split('.')
+		parts = str(value).split(".")
 		return len(parts) == 4 and all(part.isdigit() for part in parts)
 	except socket.error:
 		return False

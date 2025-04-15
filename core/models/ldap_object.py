@@ -16,11 +16,7 @@ from core.ldap.adsi import LDAP_BUILTIN_OBJECTS, join_ldap_filter
 from core.ldap.security_identifier import SID
 
 ### Others
-from ldap3 import (
-	Connection,
-	Entry as LDAPEntry,
-	Attribute as LDAPAttribute
-)
+from ldap3 import Connection, Entry as LDAPEntry, Attribute as LDAPAttribute
 from typing import TypedDict, Iterable
 from typing_extensions import Required, NotRequired
 from logging import getLogger
@@ -168,8 +164,8 @@ class LDAPObject:
 		)
 		entry_object_classes: LDAPAttribute = getldapattr(self.entry, "objectClass", [])
 		if (
-			self.attributes["name"] in LDAP_BUILTIN_OBJECTS or
-	  		"builtinDomain" in entry_object_classes
+			self.attributes["name"] in LDAP_BUILTIN_OBJECTS
+			or "builtinDomain" in entry_object_classes
 		):
 			self.attributes["builtin"] = True
 

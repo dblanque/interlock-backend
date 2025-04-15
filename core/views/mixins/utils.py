@@ -13,11 +13,14 @@ import struct
 from typing import Iterable, Any, overload
 from ldap3 import Entry as LDAPEntry, Attribute as LDAPAttribute
 
+
 @overload
 def getldapattr(entry: LDAPEntry, attr: str, /) -> str | Iterable | Any: ...
 
+
 @overload
-def getldapattr(entry: LDAPEntry, attr: str, /, default = None) -> str | Iterable | Any: ...
+def getldapattr(entry: LDAPEntry, attr: str, /, default=None) -> str | Iterable | Any: ...
+
 
 def getldapattr(entry: LDAPEntry, attr: str, /, *args, **kwargs) -> str | Iterable | Any:
 	"""Get LDAP Attribute with optional default
@@ -39,6 +42,7 @@ def getldapattr(entry: LDAPEntry, attr: str, /, *args, **kwargs) -> str | Iterab
 		if len(args) > 0:
 			return args[0]
 		raise e
+
 
 def convert_string_to_bytes(string):
 	if not isinstance(string, str):
