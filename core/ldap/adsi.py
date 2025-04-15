@@ -452,7 +452,7 @@ def list_user_perms(
 	"""
 	# Cast raw integer user permissions as string
 	uac_value = None
-	if user_is_object is True:
+	if user_is_object is True or isinstance(user, LDAPEntry):
 		user: LDAPEntry
 		if not hasattr(user, "userAccountControl"):
 			raise ValueError("User object does not contain a userAccountControl attribute.")
