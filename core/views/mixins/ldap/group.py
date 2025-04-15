@@ -38,6 +38,7 @@ import traceback
 from core.exceptions import ldap as exc_ldap, groups as exc_groups, dirtree as exc_dirtree
 
 ### Others
+from core.views.mixins.utils import getldapattr
 from django.db import transaction
 from copy import deepcopy
 import ldap3
@@ -54,98 +55,98 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 	ldap_filter_object = None
 	ldap_filter_attr = None
 
-	def getGroupByRID(ridToSearch=None, attributes=["objectSid", "distinguishedName"]):
-		if isinstance(ridToSearch, list):
-			ridToSearch = ridToSearch[0]
-		if ridToSearch is None:
+	def get_group_by_rid(rid: int=None, attributes=None):
+		if not attributes:
+			attributes = ["objectSid", "distinguishedName"]
+		if isinstance(rid, list):
+			rid = rid[0]
+		if rid is None:
 			raise ValueError("RID To Search cannot be None")
 
 		# Cast to Integer just in case
 		try:
-			ridToSearch = int(ridToSearch)
+			rid = int(rid)
 		except Exception as e:
-			logger.error(ridToSearch)
+			logger.error(rid)
 			logger.exception(e)
 			raise ValueError("RID To Search must be an Integer") from e
 
 		with LDAPConnector(force_admin=True) as ldc:
 			connection = ldc.connection
 
-			searchFilter = join_ldap_filter(None, "objectClass=group")
+			search_filter = join_ldap_filter(None, "objectClass=group")
 
 			connection.search(
 				RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
-				search_filter=searchFilter,
+				search_filter=search_filter,
 				search_scope=ldap3.SUBTREE,
 				attributes=attributes,
 			)
 
 			for g in connection.entries:
-				sid = SID(g.objectSid)
+				sid = SID(getldapattr(g, "objectSid"))
 				sid = sid.__str__()
 				rid = int(sid.split("-")[-1])
-				value = sid
-				if rid == ridToSearch:
+				if rid == rid:
 					args = {
 						"connection": connection,
-						"dn": g.distinguishedName,
+						"dn": getldapattr(g, "distinguishedName"),
 						"ldap_attrs": attributes,
 					}
 					result = LDAPObject(**args)
 					connection.unbind()
 					return result.attributes
 
-	def getGroupType(self, groupTypeInt=None, debug=False):
+	def get_group_type(self, group_type: int=None, debug=False) -> list[str]:
 		sum = 0
-		groupTypes = []
-		groupTypeLastInt = int(str(groupTypeInt)[-1])
-		if groupTypeInt != 0 and groupTypeInt is None:
-			self.ldap_connection.unbind()
+		result = []
+		group_type_last_int = int(str(group_type)[-1])
+		if group_type != 0 and group_type is None:
 			raise ValueError("Invalid Group Type Integer")
-		if groupTypeInt < -1:
+		if group_type < -1:
 			sum -= LDAP_GROUP_TYPES["GROUP_SECURITY"]
-			groupTypes.append("GROUP_SECURITY")
+			result.append("GROUP_SECURITY")
 
-			if (groupTypeLastInt % 2) != 0:
+			if (group_type_last_int % 2) != 0:
 				sum += LDAP_GROUP_TYPES["GROUP_SYSTEM"]
-				groupTypes.append("GROUP_SYSTEM")
-			if groupTypeInt == (sum + 2):
+				result.append("GROUP_SYSTEM")
+			if group_type == (sum + 2):
 				sum += LDAP_GROUP_TYPES["GROUP_GLOBAL"]
-				groupTypes.append("GROUP_GLOBAL")
-			if groupTypeInt == (sum + 4):
+				result.append("GROUP_GLOBAL")
+			if group_type == (sum + 4):
 				sum += LDAP_GROUP_TYPES["GROUP_DOMAIN_LOCAL"]
-				groupTypes.append("GROUP_DOMAIN_LOCAL")
-			if groupTypeInt == (sum + 8):
+				result.append("GROUP_DOMAIN_LOCAL")
+			if group_type == (sum + 8):
 				sum += LDAP_GROUP_TYPES["GROUP_UNIVERSAL"]
-				groupTypes.append("GROUP_UNIVERSAL")
+				result.append("GROUP_UNIVERSAL")
 		else:
-			groupTypes.append("GROUP_DISTRIBUTION")
+			result.append("GROUP_DISTRIBUTION")
 
-			if (groupTypeLastInt % 2) != 0:
+			if (group_type_last_int % 2) != 0:
 				sum += LDAP_GROUP_TYPES["GROUP_SYSTEM"]
-				groupTypes.append("GROUP_SYSTEM")
-			if groupTypeInt == (sum + 2):
+				result.append("GROUP_SYSTEM")
+			if group_type == (sum + 2):
 				sum += LDAP_GROUP_TYPES["GROUP_GLOBAL"]
-				groupTypes.append("GROUP_GLOBAL")
-			if groupTypeInt == (sum + 4):
+				result.append("GROUP_GLOBAL")
+			if group_type == (sum + 4):
 				sum += LDAP_GROUP_TYPES["GROUP_DOMAIN_LOCAL"]
-				groupTypes.append("GROUP_DOMAIN_LOCAL")
-			if groupTypeInt == (sum + 8):
+				result.append("GROUP_DOMAIN_LOCAL")
+			if group_type == (sum + 8):
 				sum += LDAP_GROUP_TYPES["GROUP_UNIVERSAL"]
-				groupTypes.append("GROUP_UNIVERSAL")
+				result.append("GROUP_UNIVERSAL")
 
-		if sum != groupTypeInt:
+		if sum != group_type:
 			return Exception
 
-		for k, v in enumerate(groupTypes):
+		for k, v in enumerate(result):
 			if v == "GROUP_SYSTEM":
-				groupTypes.pop(k)
-				groupTypes.append(v)
+				result.pop(k)
+				result.append(v)
 
 		if debug == True:
-			return [groupTypes, groupTypeInt]
+			return [result, group_type]
 		else:
-			return groupTypes
+			return result
 
 	def list_groups(self):
 		data = []
@@ -171,7 +172,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				# Parse Group Type
 				if attr_key == "groupType":
 					groupVal = int(str(getattr(group, attr_key)))
-					group_dict[attr_key] = self.getGroupType(groupTypeInt=groupVal)
+					group_dict[attr_key] = self.get_group_type(group_type=groupVal)
 				# Do the standard for every other key
 				elif attr_key in valid_attributes:
 					str_key = str(attr_key)
@@ -233,7 +234,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				# Parse Group Type
 				elif str_key == "groupType":
 					groupVal = int(str(getattr(group[0], str_key)))
-					group_dict[str_key] = self.getGroupType(groupTypeInt=groupVal)
+					group_dict[str_key] = self.get_group_type(group_type=groupVal)
 				elif str_key == "member":
 					memberArray = []
 					memberAttributes = [
@@ -479,8 +480,8 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				elif group_dict[key] != "":
 					operation = MODIFY_REPLACE
 					if key == "groupType":
-						previousGroupTypes = self.getGroupType(
-							groupTypeInt=int(fetched_group_entry[key])
+						previousGroupTypes = self.get_group_type(
+							group_type=int(fetched_group_entry[key])
 						)
 						# If we're trying to go from Group Global to Domain Local Scope or viceversa
 						# We need to make it universal first, otherwise the LDAP server denies the update request
