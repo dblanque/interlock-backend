@@ -29,6 +29,7 @@ import logging
 
 ### Others
 from core.utils import dnstool
+from collections.abc import Callable
 import traceback
 ################################################################################
 
@@ -39,13 +40,63 @@ logger = logging.getLogger(__name__)
 class DNSRecordMixin(DomainViewMixin):
 	ldap_connection = None
 
-	def validate_record_data(self, record_data, required_values=None):
-		if required_values is None:
-			required_values = []
+	def validate_record_data(self, record_data: dict, required_values: list=None):
+		"""Validates Request LDAP DNS Record Data Dictionary
+
+		name, type, zone, ttl are always required in data dictionary.
+
+		For other fields check the RECORD_MAPPINGS constant in
+		core.models.structs.ldap_dns_record
+
+		Args:
+			record_data (dict): DNS	Data Dictionary
+			required_values (list, optional): Additional values to require.
+				Defaults to None.
+
+		Raises:
+			exc_dns.DNSRecordTypeMissing: When record type int is not in record data or
+				not a supported type.
+			exc_dns.DNSRootServersOnlyCLI: When Root DNS Server data modification is
+				attempted, deny.
+			exc_dns.SOARecordRootOnly: When a SOA Record with a non root (@) zone is used.
+			exc_dns.DNSStringDataLimit: When stringData is over 255 char. length
+			exc_dns.DNSZoneNotInRequest: When DNS Zone is not in requested record.
+			exc_dns.DNSRecordDataMissing: When an attribute for the record type
+				is missing from the data dict.
+
+		Returns:
+			bool: If the record data is valid
+		"""
+		_required_values = ["name", "type", "zone", "ttl"]
+		if required_values:
+			required_values.extend(_required_values)
+			required_values = list(set(required_values))
+		else:
+			required_values = _required_values
+
+		# Type checking
 		if "type" not in record_data:
 			raise exc_dns.DNSRecordTypeMissing
+		try:
+			RecordTypes(record_data["type"])
+		except:
+			raise exc_dns.DNSRecordTypeUnsupported
 
-		if record_data["zone"] == "Root DNS Servers":
+		# Add the necessary fields for this Record Type to Required Fields
+		if required_values:
+			required_values.extend(RECORD_MAPPINGS[record_data["type"]]["fields"])
+		else:
+			required_values = RECORD_MAPPINGS[record_data["type"]]["fields"]
+
+		for a in required_values:
+			if a not in record_data:
+				logger.error(f"Record Attribute Failed Validation ({a})")
+				raise exc_dns.DNSRecordDataMissing(
+					data={"detail": f"A required attribute is missing ({a})"}
+				)
+
+		# Check that it's not modifying Root DNS Server data
+		if "root dns servers" in record_data["zone"].lower():
 			raise exc_dns.DNSRootServersOnlyCLI
 
 		if (
@@ -54,97 +105,83 @@ class DNSRecordMixin(DomainViewMixin):
 		):
 			raise exc_dns.SOARecordRootOnly
 
+		# Explicit Exceptions
 		if "stringData" in record_data:
 			if len(record_data["stringData"]) >= 255:
 				raise exc_dns.DNSStringDataLimit
 
 		if "nameNode" in record_data:
+			_name = record_data["name"]
+			_zone = record_data["zone"]
 			label = str(record_data["nameNode"])
-			split_labels = label.split(".")
-			if len(split_labels[-1]) > 1:
-				raise exc_dns.DNSRecordTypeConflict
-			# Validate Zone in Record
-			if not dnsValidators.canonicalHostname_validator(label):
-				logger.error("Canonical Zone not in Request or invalid: " + label)
-				raise exc_dns.DNSZoneNotInRequest
 
-		if len(required_values) > 1:
-			# Add the necessary fields for this Record Type to Required Fields
-			required_values.extend(RECORD_MAPPINGS[record_data["type"]]["fields"])
+			# Check that cname does not reference itself
+			if _zone in label:
+				_check_self_ref = f"{_name}.{_zone}"
+				if label == _check_self_ref or label == f"{_check_self_ref}.":
+					logger.error("Record Self-reference error detected.")
+					raise exc_dns.DNSRecordTypeConflict
 
-			for a in required_values:
-				if a not in record_data:
-					logger.error(f"Record Attribute Failed Validation ({a})")
-					raise exc_dns.DNSRecordDataMissing(
-						data={
-							"detail": f"A required attribute is missing ({a})",
-						}
-					)
-
-		valid = False
+		# Generic Validation Exceptions
 		# For each field in the Record Value Dictionary
 		for f_key in record_data.keys():
 			if f_key in DNS_FIELD_VALIDATORS:
 				validator = DNS_FIELD_VALIDATORS[f_key]
 				f_value = record_data[f_key]
 				if validator is not None:
-					# If a list of validators is used, validate with OR
+					# If a list of validators is used, check all conditions
 					if isinstance(validator, list):
-						for v_type in validator:
-							v_func = v_type + "_validator"
-							if valid:
-								break
-							try:
-								valid = self.validate_field(
-									validator=v_func,
-									field_name=f_key,
-									field_value=f_value,
-									except_on_fail=False,
-								)
-							except Exception as e:
-								logger.error(f"Validator: '{v_type}' ({type(v_type)})")
-								logger.error(f"Field Name: '{f_key}' ({type(f_key)})")
-								logger.error(f"Field Value: '{f_value}' ({type(f_value)})")
-								logger.error(e)
-								raise exc_dns.DNSFieldValidatorException
-					elif isinstance(validator, str):
-						validator = validator + "_validator"
-						try:
-							valid = self.validate_field(
-								validator=validator, field_name=f_key, field_value=f_value
+						for v_func in validator:
+							self.validate_field(
+								validator=v_func,
+								field_name=f_key,
+								field_value=f_value,
 							)
-						except Exception as e:
-							logger.error(f"Validator: '{validator}' ({type(validator)})")
-							logger.error(f"Field Name: '{f_key}' ({type(f_key)})")
-							logger.error(f"Field Value: '{f_value}' ({type(f_value)})")
-							logger.error(e)
-							raise exc_dns.DNSFieldValidatorException
-
-					if not valid:
-						data = {"field": f_key, "value": f_value}
-						raise exc_dns.DNSFieldValidatorFailed(data)
+					else:
+						self.validate_field(
+							validator=validator, field_name=f_key, field_value=f_value
+						)
 		return True
 
 	def validate_field(
 		self,
-		validator: str,
+		validator: str | Callable,
 		field_name: str,
 		field_value,
-		except_on_fail=True,
+		raise_exception=True,
 	):
-		"""DNS Validator Function
-		* self
-		* validator: Validator Type for Value
-		* field_name: DNS Record Field Name (e.g.: address, ttl, etc.)
-		* field_value: DNS Record Field Value
-		* except_on_fail: Raise exception on failure
+		"""DNS Field Validation Function
+
+		Args:
+			validator (str): Validator function to use
+			field_name (str): Field to validate
+			field_value (_type_): Value to validate
+			raise_exception (bool, optional): Whether to raise exception on False return.
+				Defaults to True.
+
+		Raises:
+			exc_dns.DNSFieldValidatorFailed: Raised when raise_exception is True
+
+		Returns:
+			bool: Validation result.
 		"""
-		valid = getattr(dnsValidators, validator)(field_value)
-		if not valid and except_on_fail:
-			data = {"field": field_name, "value": field_value}
-			raise exc_dns.DNSFieldValidatorFailed(data=data)
-		elif not valid:
-			return False
+		if not isinstance(validator, (str, Callable)):
+			raise TypeError("validator must be str or callable function.")
+
+		is_valid = False
+		if isinstance(validator, str):
+			is_valid = getattr(dnsValidators, validator)(field_value)
+		elif callable(validator):
+			is_valid = validator(field_value)
+
+		if not is_valid:
+			if raise_exception:
+				raise exc_dns.DNSFieldValidatorFailed(data={
+					"field": field_name,
+					"value": field_value,
+				})
+			else:
+				return False
 		return True
 
 	def create_record(self, record_data):
