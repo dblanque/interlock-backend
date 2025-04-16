@@ -270,54 +270,80 @@ class TestDNSRecordMixin:
 	
 
 	@pytest.mark.parametrize(
-		"field_name, field_value",
+		"field_name, field_type",
 		(
+			# Int fields
 			(
 				"dwSerialNo",
-				"string_should_fail"
+				"int",
 			),
 			(
 				"dwRefresh",
-				"string_should_fail"
+				"int",
 			),
 			(
 				"dwRetry",
-				"string_should_fail"
+				"int",
 			),
 			(
 				"dwExpire",
-				"string_should_fail"
+				"int",
 			),
 			(
 				"dwMinimumTtl",
-				"string_should_fail"
+				"int",
 			),
+			# Canonical Hostname Fields
 			(
 				"namePrimaryServer",
-				1
+				"canonical"
 			),
 			(
 				"zoneAdminEmail",
-				1
+				"canonical"
 			),
 		),
 	)
 	def test_validate_soa_record_error(
 		self,
 		field_name,
-		field_value,
+		field_type,
 		f_record_mixin: DNSRecordMixin,
 		f_record_data_soa: dict,
 		f_required_values
 	):
-		f_record_data_soa[field_name] = field_value
-		with pytest.raises(exc_dns.DNSFieldValidatorFailed) as e:
-			f_record_mixin.validate_record_data(
-				record_data=f_record_data_soa,
-				required_values=f_required_values
-			)
-		assert e.value.detail["field"] == field_name
-		assert e.value.detail["value"] == field_value
+		test_bad_values_int = [
+			None,
+			False,
+			"",
+			"string_should_fail",
+			b"bytes_should_fail",
+			["list_should_fail"],
+			{"dict":"should_fail"},
+		]
+		test_bad_values_canonical = [
+			None,
+			False,
+			"",
+			"string_should_fail",
+			b"bytes_should_fail",
+			["list_should_fail"],
+			{"dict":"should_fail"},
+			1,
+			"example.com",
+		]
+		test_values = test_bad_values_int if field_type == "int" else test_bad_values_canonical
+
+		for v in test_values:
+			_data = f_record_data_soa.copy()
+			_data[field_name] = v
+			with pytest.raises(exc_dns.DNSFieldValidatorFailed) as e:
+				f_record_mixin.validate_record_data(
+					record_data=_data,
+					required_values=f_required_values
+				)
+			assert e.value.detail["field"] == field_name
+			assert e.value.detail["value"] == v
 
 	def test_validate_srv_record_success():
 		pass
