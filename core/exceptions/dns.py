@@ -69,6 +69,11 @@ class DNSRecordTypeConflict(CoreException):
 	default_detail = "Requested Record Type Insertion or Update has a conflict"
 	default_code = "dns_record_type_conflict"
 
+class DNSRecordOperationConflict(CoreException):
+	status_code = status.HTTP_409_CONFLICT
+	default_detail = "Requested Record Operation has conflicting tasks."
+	default_code = "dns_record_operation_conflict"
+
 
 class DNSRecordExistsConflict(CoreException):
 	status_code = status.HTTP_409_CONFLICT
