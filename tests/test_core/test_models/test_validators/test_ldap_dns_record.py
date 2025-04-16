@@ -80,7 +80,7 @@ def test_canonicalHostname_validator(value, expected):
 		("sub.example.com", True),  # Subdomain with hyphen
 		("example.com.", False),  # With Trailing Dot
 		("exa-mple.com", True),  # Hyphen
-		("exa_mple.com", False),  # Underscore not allowed
+		("exa_mple.com", True),  # Underscore allowed
 		("example..com", False),  # Double dot
 		(".example.com", False),  # Leading dot
 		("example", True),  # Single label domain
