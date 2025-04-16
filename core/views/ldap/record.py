@@ -46,18 +46,16 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 	@admin_required
 	def insert(self, request):
 		user: User = request.user
-		data = {}
+		data: dict = request.data
 		code = 0
-		required_values = ["name", "type", "zone", "ttl"]
-
-		if "record" not in request.data:
+		record_data = data.get("record", None)
+		if not record_data:
 			raise exc_dns.DNSRecordNotInRequest
 
-		record_data = request.data["record"]
 		self.record_serializer(data=record_data).is_valid(raise_exception=True)
 
 		# ! Test record validation with the Mix-in
-		self.validate_record_data(record_data=record_data, required_values=required_values)
+		self.validate_record_data(record_data=record_data)
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
@@ -76,24 +74,26 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 	@admin_required
 	def update(self, request, pk=None):
 		user: User = request.user
-		data = {}
+		data: dict = request.data
 		code = 0
-		required_values = ["name", "serial", "type", "zone", "ttl", "index"]
 
-		if "record" not in request.data or "oldRecord" not in request.data:
+		old_record_data: dict = data.get("oldRecord", None)
+		record_data: dict = data.get("record", None)
+		if not old_record_data or not record_data:
 			raise exc_dns.DNSRecordNotInRequest
-
-		old_record_data = request.data["oldRecord"]
-		record_data = request.data["record"]
+		if "index" in old_record_data:
+			old_record_data.pop("index")
+		if "index" in record_data:
+			record_data.pop("index")
 
 		# Basic Serializer Validation
 		self.record_serializer(data=old_record_data).is_valid(raise_exception=True)
 		self.record_serializer(data=record_data).is_valid(raise_exception=True)
 
 		# Regex Validate Old Record Data
-		self.validate_record_data(record_data=old_record_data, required_values=required_values)
+		self.validate_record_data(record_data=old_record_data, add_required_keys=["serial"])
 		# Regex Validate New Record Data
-		self.validate_record_data(record_data=record_data, required_values=required_values)
+		self.validate_record_data(record_data=record_data, add_required_keys=["serial"])
 
 		# TODO - Maybe implement crosschecking with server-side Old Record Bytes Data?
 
@@ -117,43 +117,45 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 	@admin_required
 	def delete(self, request):
 		user: User = request.user
-		data = {}
+		data: dict = request.data
 		code = 0
-		required_values = ["name", "type", "zone", "ttl", "index"]
+		record_delete = data.get("record", None)
+		multi_record_delete = data.get("records", None)
 
-		key = "record"
-		if "records" in request.data:
-			key = f"{key}s"
-		elif "record" not in request.data:
+		if not record_delete and not multi_record_delete:
 			raise exc_dns.DNSRecordNotInRequest
+		elif record_delete and multi_record_delete:
+			raise exc_dns.DNSRecordOperationConflict
 
-		record_data = request.data[key]
-		if key == "record":
-			if not isinstance(request.data[key], dict):
-				data = {"data": request.data[key]}
-				raise exc_dns.DNSRecordDataMalformed(data=data)
-			self.record_serializer(data=record_data).is_valid(raise_exception=True)
-			self.validate_record_data(
-				record_data=record_data, required_values=required_values.copy()
-			)
-		elif key == "records":
-			if not isinstance(request.data[key], list):
-				data = {"data": request.data[key]}
+		# Data Validation
+		# Single Record Delete
+		if record_delete:
+			if not isinstance(record_delete, dict):
 				raise exc_dns.DNSRecordDataMalformed
-			for r in record_data:
-				self.record_serializer(data=r).is_valid(raise_exception=True)
-				self.validate_record_data(record_data=r, required_values=required_values.copy())
+			self.record_serializer(data=record_delete).is_valid(raise_exception=True)
+			self.validate_record_data(record_data=record_delete)
+		# Multi Record Delete
+		if multi_record_delete:
+			if not isinstance(multi_record_delete, list):
+				raise exc_dns.DNSRecordDataMalformed
+			for _record in multi_record_delete:
+				if not isinstance(_record, dict):
+					raise exc_dns.DNSRecordDataMalformed
+				self.record_serializer(data=_record).is_valid(raise_exception=True)
+				self.validate_record_data(record_data=_record)
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			if isinstance(record_data, dict):
-				logger.debug(record_data)
-				result = self.delete_record(record_data)
-			elif isinstance(record_data, list):
+			# Single Record Delete
+			if record_delete:
+				logger.debug(record_delete)
+				result = self.delete_record(record_delete)
+			# Multi Record Delete
+			if multi_record_delete:
 				result = []
-				for r in record_data:
-					logger.debug(r)
-					result.append(self.delete_record(r))
+				for _record in multi_record_delete:
+					logger.debug(_record)
+					result.append(self.delete_record(_record))
 
 		return Response(data={"code": code, "code_msg": "ok", "data": result})
