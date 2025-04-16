@@ -164,3 +164,9 @@ class DNSListEmpty(CoreException):
 	status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 	default_detail = "DNS List in LDAP Response is empty, is this Legacy or Standard DNS Mode?"
 	default_code = "dns_list_response_empty"
+
+
+class DNSValueNotCanonicalHostname(CoreException):
+	status_code = status.HTTP_400_BAD_REQUEST
+	default_detail = "The value provided is not a canonical hostname (requires trailing dot)"
+	default_code = "dns_value_not_canonical"
