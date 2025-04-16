@@ -81,10 +81,6 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 		record_data: dict = data.get("record", None)
 		if not old_record_data or not record_data:
 			raise exc_dns.DNSRecordNotInRequest
-		if "index" in old_record_data:
-			old_record_data.pop("index")
-		if "index" in record_data:
-			record_data.pop("index")
 
 		# Basic Serializer Validation
 		self.record_serializer(data=old_record_data).is_valid(raise_exception=True)
