@@ -25,6 +25,14 @@ def int32_validator(value):
 	return False
 
 
+def port_validator(value: int):
+	try:
+		value = int(value)
+		return 0 < value <= 65535
+	except:
+		return False
+
+
 def natural_validator(value: str | int):
 	if not isinstance(value, (str, int)):
 		return False
@@ -38,7 +46,7 @@ def natural_validator(value: str | int):
 	return False
 
 
-def canonical_hostname_validator(value: str, trailing_dot=True):
+def canonical_hostname_validator(value: str, trailing_dot=True, allow_underscores=True):
 	if not isinstance(value, str):
 		return False
 	if not value:
@@ -53,7 +61,11 @@ def canonical_hostname_validator(value: str, trailing_dot=True):
 	if re.match(r"[0-9]+$", labels[-1]):
 		return False
 
-	allowed = re.compile(r"(?!-)[a-z0-9-]{1,63}(?<!-)$", re.IGNORECASE)
+	if allow_underscores:
+		re_pattern = r"(?!-)[a-z0-9-_]{1,63}(?<!-)$"
+	else:
+		re_pattern = r"(?!-)[a-z0-9-]{1,63}(?<!-)$"
+	allowed = re.compile(re_pattern, re.IGNORECASE)
 
 	if trailing_dot:
 		if not value.endswith("."):
@@ -61,6 +73,9 @@ def canonical_hostname_validator(value: str, trailing_dot=True):
 		return all(allowed.match(label) for label in labels[:-1])
 	else:
 		return all(allowed.match(label) for label in labels)
+
+def srv_target_validator(value: str):
+	return canonical_hostname_validator(value, trailing_dot=True, allow_underscores=True)
 
 
 def domain_validator(value):
@@ -100,7 +115,7 @@ def ascii_validator(value):
 	if not value:
 		return True
 	# https://stackoverflow.com/questions/35889505/check-that-a-string-contains-only-ascii-characters
-	isAscii = lambda s: re.match("^[\x00-\x7f]+$", s) is not None
+	isAscii = lambda s: re.match(r"^[\x00-\x7f]+$", s) is not None
 	return isAscii(value)
 
 def length255_validator(value: str):
@@ -131,6 +146,6 @@ FIELD_VALIDATORS = {
 	"nameExchange": canonical_hostname_validator,
 	"wPriority": natural_validator,
 	"wWeight": natural_validator,
-	"wPort": natural_validator,
-	"nameTarget": canonical_hostname_validator,
+	"wPort": port_validator,
+	"nameTarget": srv_target_validator,
 }
