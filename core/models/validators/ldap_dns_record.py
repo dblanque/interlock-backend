@@ -16,29 +16,6 @@ from core.utils.ipv6 import ipv6_to_integer
 thismodule = sys.modules[__name__]
 logger = logging.getLogger(__name__)
 
-FIELD_VALIDATORS = {
-	"tstime": None,
-	"serial": "int32",
-	"address": "ipv4",
-	"ipv6Address": "ipv6",
-	"nameNode": "canonicalHostname",
-	"dwSerialNo": "natural",
-	"dwRefresh": "natural",
-	"dwRetry": "natural",
-	"dwExpire": "natural",
-	"dwMinimumTtl": "natural",
-	"namePrimaryServer": "canonicalHostname",
-	"zoneAdminEmail": "canonicalHostname",
-	"stringData": "ascii",
-	"wPreference": "natural",
-	"nameExchange": "canonicalHostname",
-	"wPriority": "natural",
-	"wWeight": "natural",
-	"wPort": "natural",
-	"nameTarget": "canonicalHostname",
-}
-
-
 def int32_validator(value):
 	try:
 		if int(value) < 4294967296 and re.match(r"^[0-9]{0,10}$", str(value)):
@@ -61,7 +38,7 @@ def natural_validator(value: str | int):
 	return False
 
 
-def canonicalHostname_validator(value: str, trailing_dot=True):
+def canonical_hostname_validator(value: str, trailing_dot=True):
 	if not isinstance(value, str):
 		return False
 	if not value:
@@ -87,7 +64,7 @@ def canonicalHostname_validator(value: str, trailing_dot=True):
 
 
 def domain_validator(value):
-	return canonicalHostname_validator(value, trailing_dot=False)
+	return canonical_hostname_validator(value, trailing_dot=False)
 
 
 def ipv4_validator(value: str):
@@ -125,3 +102,35 @@ def ascii_validator(value):
 	# https://stackoverflow.com/questions/35889505/check-that-a-string-contains-only-ascii-characters
 	isAscii = lambda s: re.match("^[\x00-\x7f]+$", s) is not None
 	return isAscii(value)
+
+def length255_validator(value: str):
+	try:
+		return len(value) < 255
+	except:
+		return False
+
+
+FIELD_VALIDATORS = {
+	"tstime": None,
+	"serial": int32_validator,
+	"address": ipv4_validator,
+	"ipv6Address": ipv6_validator,
+	"nameNode": canonical_hostname_validator,
+	"dwSerialNo": natural_validator,
+	"dwRefresh": natural_validator,
+	"dwRetry": natural_validator,
+	"dwExpire": natural_validator,
+	"dwMinimumTtl": natural_validator,
+	"namePrimaryServer": canonical_hostname_validator,
+	"zoneAdminEmail": canonical_hostname_validator,
+	"stringData": [
+		ascii_validator,
+		length255_validator,
+	],
+	"wPreference": natural_validator,
+	"nameExchange": canonical_hostname_validator,
+	"wPriority": natural_validator,
+	"wWeight": natural_validator,
+	"wPort": natural_validator,
+	"nameTarget": canonical_hostname_validator,
+}
