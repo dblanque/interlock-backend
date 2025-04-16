@@ -2,7 +2,7 @@ import pytest
 from core.models.validators.ldap_dns_record import (
 	int32_validator,
 	natural_validator,
-	canonicalHostname_validator,
+	canonical_hostname_validator,
 	domain_validator,
 	ipv4_validator,
 	ipv6_validator,
@@ -68,7 +68,7 @@ def test_natural_validator(value, expected):
 	],
 )
 def test_canonicalHostname_validator(value, expected):
-	assert canonicalHostname_validator(value) == expected
+	assert canonical_hostname_validator(value) == expected
 
 
 # domain_validator tests
@@ -153,7 +153,7 @@ def test_ascii_validator(value, expected):
 	"validator, value",
 	[
 		(natural_validator, object()),  # Unconvertible object
-		(canonicalHostname_validator, object()),
+		(canonical_hostname_validator, object()),
 		(domain_validator, object()),
 	],
 )
