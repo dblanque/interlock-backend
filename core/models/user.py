@@ -94,7 +94,7 @@ class BaseUser(BaseModel, PermissionsMixin):
 	password = models.CharField(_("password"), max_length=128)
 	last_login = models.DateTimeField(_("last login"), blank=True, null=True)
 	email = models.EmailField(
-		_("email address"), unique=True, db_index=True, null=True, validators=[validate_email]
+		_("email address"), unique=True, db_index=True, null=True, validators=[validate_email], blank=True
 	)
 	is_staff = models.BooleanField(
 		_("staff status"),
