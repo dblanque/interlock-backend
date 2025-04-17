@@ -31,9 +31,7 @@ def f_valid_sid_str() -> str:
 def f_list_wrapper() -> list:
 	"""Fixture providing a list containing a SID bytearray."""
 	return [
-		bytearray(
-			b"\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00\x11^\xb3\x83j\x06\x94\x00\x80\xdbi\xaa\x87\x04\x00\x00"
-		)
+		b"\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00\x11^\xb3\x83j\x06\x94\x00\x80\xdbi\xaa\x87\x04\x00\x00"
 	]
 
 
@@ -42,9 +40,7 @@ def f_object_wrapper(mocker: MockType) -> Any:
 	"""Fixture providing an object with raw_values containing a SID bytearray."""
 	mock_obj = mocker.MagicMock()
 	mock_obj.raw_values = [
-		bytearray(
-			b"\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00\x11^\xb3\x83j\x06\x94\x00\x80\xdbi\xaa\x87\x04\x00\x00"
-		)
+		b"\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00\x11^\xb3\x83j\x06\x94\x00\x80\xdbi\xaa\x87\x04\x00\x00"
 	]
 	return mock_obj
 
@@ -85,7 +81,7 @@ def test_init_with_object(f_object_wrapper: Any, f_valid_sid_str: str):
 
 def test_init_invalid_type():
 	"""Test initialization with invalid type raises assertion."""
-	with pytest.raises(AssertionError, match="sid_byte_array must be a byte array."):
+	with pytest.raises(ValueError, match="sid_byte_array must be a byte array."):
 		SID("invalid_type")
 
 

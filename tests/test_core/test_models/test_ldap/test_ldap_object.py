@@ -44,23 +44,23 @@ def f_object_attrs_user(g_runtime_settings) -> dict:
 			"postalCode": "POSTALCODE",
 			"l": "Some Town",
 			"st": "Buenos Aires",
-			"countryCode": "32",
+			"countryCode": 32,
 			"co": "Argentina",
 			"c": "AR",
 			"wWWHomePage": f"https://{g_runtime_settings.LDAP_DOMAIN}",
 			"userPrincipalName": f"testuser@{g_runtime_settings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN}",
-			"userAccountControl": "66048",
-			"primaryGroupID": "513",
+			"userAccountControl": 66048,
+			"primaryGroupID": 513,
 			"whenCreated": "fake_creation_date",
 			"whenChanged": "fake_changed_date",
 			"objectClass": ["top", "person", "organizationalPerson", "user"],
 			"objectCategory": f"CN=Person,CN=Schema,CN=Configuration,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
 			"objectSid": b"\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00\x11^\xb3\x83j\x06\x94\x00\x80\xdbi\xaaQ\x04\x00\x00",
-			"objectRid": "1105",
+			"objectRid": 1105,
 			"lastLogon": "fake_logon_date",
-			"badPwdCount": "0",
+			"badPwdCount": 0,
 			"pwdLastSet": "fake_pwd_last_set",
-			"sAMAccountType": "805306368",
+			"sAMAccountType": 805306368,
 			"memberOf": f"CN=Administrators,CN=Builtin,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
 		}
 
@@ -75,7 +75,7 @@ def f_object_attrs_group(g_runtime_settings) -> dict:
 			"distinguishedName": f"cn=Test Group,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
 			"type": "Group",
 			"objectSid": b"\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00\x11^\xb3\x83j\x06\x94\x00\x80\xdbi\xaaR\x04\x00\x00",
-			"objectRid": "1106",
+			"objectRid": 1106,
 			"objectCategory": f"CN=Group,CN=Schema,CN=Configuration,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
 			"objectClass": ["top", "group"],
 		}
@@ -132,6 +132,8 @@ def f_object_entry_user(f_object_attrs_user, mocker):
 			m_attr.value = val
 			if is_non_str_iterable(val):
 				m_attr.values = val
+			elif isinstance(val, (bytes, bytearray)):
+				m_attr.raw_values = [val]
 			else:
 				m_attr.values = [val]
 				m_attr.value = val
@@ -369,13 +371,19 @@ def test_dunder_fetch_object_successful_user_fetch(
 
 	# Instantiate LDAPObject
 	ldap_obj = LDAPObject(auto_fetch=False, **object_args)
+	ldap_obj.excluded_ldap_attrs = []
+	ldap_obj.ldap_attrs.extend([
+		"badPwdCount",
+		"objectSid",
+		"objectRid",
+	])
 
 	# Execute
 	result = ldap_obj.__fetch_object__()
 
 	# Assert
-	assert result.keys() == ldap_obj.attributes.keys()
-	assert result.keys() == expected_attrs.keys()
+	assert set(result.keys()) == set(ldap_obj.attributes.keys())
+	assert set(result.keys()) == set(expected_attrs.keys())
 	assert ldap_obj.entry == mock_entry
 	f_connection.search.assert_called_once_with(
 		search_base=ldap_obj.search_base,
@@ -423,7 +431,7 @@ def test_dunder_fetch_object_handles_sid_conversion(
 
 	# Assert SID was processed
 	assert ldap_obj.attributes["objectSid"] == "S-1-5-21-123456789-1234567890-123456789-1105"
-	assert ldap_obj.attributes["objectRid"] == "1105"
+	assert ldap_obj.attributes["objectRid"] == 1105
 
 
 def test_dunder_fetch_object_handles_iterable_attributes(
