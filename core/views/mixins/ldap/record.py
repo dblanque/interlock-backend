@@ -98,9 +98,16 @@ class DNSRecordMixin(DomainViewMixin):
 				"Unknown keys in serialized data for LDAP DNS Record: %s.", unknown_keys)
 
 		# Check that it's not modifying Root DNS Server data
-		if "root dns servers" in record_data["zone"].lower():
+		if record_data["zone"].lower() in [
+			"root dns servers",
+			"root",
+			"root.",
+			".",
+			"@",
+		]:
 			raise exc_dns.DNSRootServersOnlyCLI
 
+		# Check that SOA record is at top level of zone
 		if (
 			record_data["type"] == RecordTypes.DNS_RECORD_TYPE_SOA.value
 			and record_data["name"] != "@"
@@ -117,12 +124,12 @@ class DNSRecordMixin(DomainViewMixin):
 				_check_self_ref = f"{_name}.{_zone}"
 				if label == _check_self_ref or label == f"{_check_self_ref}.":
 					logger.error("Record Self-reference error detected.")
-					raise exc_dns.DNSRecordTypeConflict
+					raise exc_dns.DNSRecordSelfReference
 		return self.record_serializer.validated_data
 
 	def create_record(self, record_data: dict):
 		record_name: str = record_data["name"].lower()
-		record_type: int = record_data["type"]
+		record_type: RecordTypes = record_data["type"]
 		record_zone: str = record_data["zone"].lower()
 
 		if "serial" in record_data and isinstance(record_data["serial"], str):
@@ -160,12 +167,12 @@ class DNSRecordMixin(DomainViewMixin):
 
 	def update_record(self, record_data: dict, old_record_data: dict):
 		old_record_name = old_record_data["name"].lower()
-		record_name = record_data["name"].lower()
-		record_type = record_data["type"]
-		record_zone = record_data["zone"].lower()
-		old_record_name = old_record_data["name"].lower()
-		old_record_type = old_record_data["type"]
-		old_record_zone = old_record_data["zone"].lower()
+		record_name: str = record_data["name"].lower()
+		record_type: RecordTypes = record_data["type"]
+		record_zone: str = record_data["zone"].lower()
+		old_record_name: str = old_record_data["name"].lower()
+		old_record_type: RecordTypes = old_record_data["type"]
+		old_record_zone: str = old_record_data["zone"].lower()
 		assert record_type == old_record_type
 		assert record_zone == old_record_zone
 
