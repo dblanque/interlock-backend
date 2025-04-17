@@ -8,6 +8,8 @@ from core.models.user import User
 from typing import Union
 from ldap3 import MODIFY_DELETE, MODIFY_REPLACE
 from core.views.mixins.utils import getldapattr
+from core.serializers.user import LDAP_DATE_FORMAT
+from datetime import datetime
 from core.models.choices.log import (
 	LOG_ACTION_DELETE,
 	LOG_ACTION_READ,
@@ -1058,6 +1060,7 @@ class TestUserViewLDAPMixin:
 		m_group_mixin = mocker.patch("core.views.mixins.ldap.user.GroupViewMixin")
 		m_group_mixin.get_group_by_rid.return_value = m_primary_group
 		m_group_objects = [m_primary_group] + m_member_of_objects
+		m_when_created = datetime.today().strftime(LDAP_DATE_FORMAT)
 
 		## UAC
 		expected_enabled = not (LDAP_UF_ACCOUNT_DISABLE in user_account_control)
@@ -1067,6 +1070,7 @@ class TestUserViewLDAPMixin:
 				"memberOf": [_g["distinguishedName"] for _g in m_member_of_objects],
 				"userAccountControl": calc_permissions(user_account_control),
 				"sAMAccountType": sam_account_type,
+				"whenCreated": m_when_created
 			}
 		)
 		m_get_group_attributes: MockType = mocker.patch.object(
@@ -1097,6 +1101,7 @@ class TestUserViewLDAPMixin:
 			assert _g in result["memberOfObjects"]
 		assert result["permission_list"] == user_account_control
 		assert result["is_enabled"] == expected_enabled
+		assert result["whenCreated"] == m_when_created
 
 	def test_ldap_user_fetch_raises_group_fetch_error(
 		self,
