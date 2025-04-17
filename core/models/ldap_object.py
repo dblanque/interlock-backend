@@ -163,6 +163,9 @@ class LDAPObject:
 		search_result = self.connection.entries
 		if not isinstance(search_result, Iterable) or not search_result:
 			return
+		if len(search_result) > 1:
+			logger.warning("Search result for LDAP Object has more than one entries.")
+			logger.warning("Search filter used: %s", self.ldap_filter)
 		try:
 			self.entry = search_result[0]
 		except Exception as e:
