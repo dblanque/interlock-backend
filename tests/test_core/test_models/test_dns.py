@@ -1351,7 +1351,7 @@ class TestLDAPRecord:
 			"dwExpire": 86400,
 			"dwMinimumTtl": 900,
 			"namePrimaryServer": f"ns.{LDAP_DOMAIN}.",
-			"zoneAdminEmail": f"hostmaster.{LDAP_DOMAIN}",
+			"zoneAdminEmail": f"hostmaster.{LDAP_DOMAIN}.",
 		}
 		m_serial = get_mock_serial()
 		m_record: LDAPRecord = f_record(RecordTypes.DNS_RECORD_TYPE_SOA.value, test_values)
