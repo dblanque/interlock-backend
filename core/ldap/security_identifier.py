@@ -40,22 +40,25 @@ class SID(object):
 			return None
 
 		sid_byte_array = None
-		if isinstance(security_identifier, LDAPAttribute):
-			sid_byte_array = bytearray(security_identifier.raw_values[0])
-		elif isinstance(security_identifier, list):
-			sid_byte_array = bytearray(security_identifier[0])
-		elif isinstance(security_identifier, bytes):
+		# Raw Values List
+		if isinstance(security_identifier, list):
+			sid_byte_array = security_identifier[0]
+		# Object
+		elif hasattr(security_identifier, "raw_values"):
+			sid_byte_array = security_identifier.raw_values[0]
+
+		if isinstance(security_identifier, bytes):
 			sid_byte_array = bytearray(security_identifier)
-		else:
+		elif isinstance(security_identifier, bytearray):
+			sid_byte_array = security_identifier
+
+		if not isinstance(sid_byte_array, (bytes, bytearray)):
 			if sid_byte_array is None:
-				raise ValueError("sid_byte_array is None.")
+				raise ValueError("sid_byte_array must be a byte array or bytes.")
 			else:
 				_msg = f"Unhandled type for SID Object Initialization ({type(sid_byte_array).__name__})."
 				logger.error(_msg)
 				raise TypeError(_msg)
-
-		if not isinstance(sid_byte_array, bytearray):
-			raise ValueError("sid_byte_array must be a byte array.")
 		logger.debug("Class SID() in: " + __name__)
 		logger.debug("SID Byte Array")
 		logger.debug(type(sid_byte_array))
