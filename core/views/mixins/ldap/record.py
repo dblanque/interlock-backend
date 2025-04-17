@@ -34,7 +34,6 @@ from core.serializers.record import DNSRecordSerializer, DNS_RECORD_SERIALIZERS
 
 ### Others
 from core.models.validators.ldap import record_type_validator
-from core.utils import dnstool
 import traceback
 ################################################################################
 
@@ -127,15 +126,26 @@ class DNSRecordMixin(DomainViewMixin):
 					raise exc_dns.DNSRecordSelfReference
 		return self.record_serializer.validated_data
 
-	def create_record(self, record_data: dict):
+	def create_record(self, record_data: dict) -> dict:
+		"""Creates LDAP DNS Record in corresponding entry or new entry if it does not
+		exist.
+
+		Args:
+			record_data (dict): Record Data Dictionary
+
+		Raises:
+			exc_dns.DNSCouldNotIncrementSOA: Raised if the SOA Serial could not
+				be increased.
+
+		Returns:
+			dict: Resulting DNS Record as dict.
+		"""
 		record_name: str = record_data["name"].lower()
 		record_type: RecordTypes = record_data["type"]
 		record_zone: str = record_data["zone"].lower()
+		record_data.pop("serial", None)
 
-		if "serial" in record_data and isinstance(record_data["serial"], str):
-			record_data.pop("serial")
-
-		dnsRecord = LDAPRecord(
+		dns_record = LDAPRecord(
 			connection=self.ldap_connection,
 			record_name=record_name,
 			record_zone=record_zone,
@@ -143,29 +153,40 @@ class DNSRecordMixin(DomainViewMixin):
 			record_main_value=record_data[record_type_main_field(record_type)],
 		)
 
-		dnsRecord.create(values=record_data)
+		dns_record.create(values=record_data)
 
 		#########################################
 		# Update Start of Authority Record Serial
 		if record_type != RecordTypes.DNS_RECORD_TYPE_SOA.value:
 			try:
-				self.increment_soa_serial(dnsRecord.soa_object, dnsRecord.serial)
+				self.increment_soa_serial(dns_record.soa_object, dns_record.serial)
 			except:
 				logger.error(traceback.format_exc())
 				raise exc_dns.DNSCouldNotIncrementSOA
-
-		result = dnsRecord.structure.getData()
-		dr = dnstool.DNS_RECORD(result)
 
 		DBLogMixin.log(
 			user=self.request.user.id,
 			operation_type=LOG_ACTION_CREATE,
 			log_target_class=LOG_CLASS_DNSR,
-			log_target=dnsRecord.__fullname__(),
+			log_target=dns_record.__fullname__(),
 		)
-		return dr
+		return dns_record.as_dict
 
-	def update_record(self, record_data: dict, old_record_data: dict):
+	def update_record(self, record_data: dict, old_record_data: dict) -> dict:
+		"""Updates LDAP DNS Record in its corresponding entry.
+
+		Args:
+			record_data (dict): Record Data Dictionary
+			old_record_data (dict): Old Record Data Dictionary
+
+		Raises:
+			exc_base.CoreException: Raised if record could not be creating when name has
+				changed from it's previous instance.
+			exc_dns.DNSCouldNotIncrementSOA: Raised if SOA Serial could not be increased.
+
+		Returns:
+			dict: Resulting DNS Record as dict.
+		"""
 		old_record_name = old_record_data["name"].lower()
 		record_name: str = record_data["name"].lower()
 		record_type: RecordTypes = record_data["type"]
@@ -182,7 +203,7 @@ class DNSRecordMixin(DomainViewMixin):
 		):
 			record_data.pop("serial")
 
-		dnsRecord = LDAPRecord(
+		dns_record = LDAPRecord(
 			connection=self.ldap_connection,
 			record_name=record_name,
 			record_zone=record_zone,
@@ -199,36 +220,44 @@ class DNSRecordMixin(DomainViewMixin):
 				record_type=old_record_type,
 				record_main_value=old_record_data[record_type_main_field(old_record_type)],
 			)
-			# Create new Record
-			result = dnsRecord.create(values=record_data)
-			if result["result"] == 0:
-				old_record.delete()
-			else:
+			# Create new record with different name
+			result = dns_record.create(values=record_data)
+			if result["result"] != 0:
 				raise exc_base.CoreException
+			# If creation was successful delete old record
+			old_record.delete()
 		else:
-			result = dnsRecord.update(new_values=record_data, old_values=old_record_data)
+			result = dns_record.update(new_values=record_data, old_values=old_record_data)
 
 		#########################################
 		# Update Start of Authority Record Serial
 		if record_type != RecordTypes.DNS_RECORD_TYPE_SOA.value:
 			try:
-				self.increment_soa_serial(dnsRecord.soa_object, dnsRecord.serial)
-			except:
-				logger.error(traceback.format_exc())
+				self.increment_soa_serial(dns_record.soa_object, dns_record.serial)
+			except Exception as e:
+				logger.exception(e)
 				raise exc_dns.DNSCouldNotIncrementSOA
-
-		result = dnsRecord.structure.getData()
-		dr = dnstool.DNS_RECORD(result)
 
 		DBLogMixin.log(
 			user=self.request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_DNSR,
-			log_target=dnsRecord.__fullname__(),
+			log_target=dns_record.__fullname__(),
 		)
-		return dr
+		return dns_record.as_dict
 
 	def delete_record(self, record_data: dict):
+		"""Deletes LDAP DNS Record from its corresponding entry
+
+		Args:
+			record_data (dict): Record Data Dictionary
+
+		Raises:
+			exc_ldap.LDAPConnectionNotOpen: Raised if no ldap connection is available.
+
+		Returns:
+			LDAP Operation Result.
+		"""
 		if not self.ldap_connection:
 			raise exc_ldap.LDAPConnectionNotOpen
 
@@ -236,7 +265,7 @@ class DNSRecordMixin(DomainViewMixin):
 		record_type = record_data["type"]
 		record_zone = record_data["zone"]
 
-		dnsRecord = LDAPRecord(
+		dns_record = LDAPRecord(
 			connection=self.ldap_connection,
 			record_name=record_name,
 			record_zone=record_zone,
@@ -244,16 +273,13 @@ class DNSRecordMixin(DomainViewMixin):
 			record_main_value=record_data[record_type_main_field(record_type)],
 		)
 
-		try:
-			result = dnsRecord.delete()
-		except Exception as e:
-			raise e
+		result = dns_record.delete()
 
 		DBLogMixin.log(
 			user=self.request.user.id,
 			operation_type=LOG_ACTION_DELETE,
 			log_target_class=LOG_CLASS_DNSR,
-			log_target=dnsRecord.__fullname__(),
+			log_target=dns_record.__fullname__(),
 		)
 
 		return result

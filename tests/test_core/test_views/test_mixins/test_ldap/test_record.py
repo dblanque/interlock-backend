@@ -299,3 +299,12 @@ def test_validate_record_does_not_raise_self_reference(
 	f_record_data_name_node["name"] = f"subdomain"
 	f_record_data_name_node["nameNode"] = f"subdomain.sub2.{LDAP_DOMAIN}."
 	f_record_mixin.validate_record(record_data=f_record_data_name_node)
+
+def test_create_record():
+	pass
+
+def test_update_record():
+	pass
+
+def test_delete_record():
+	pass

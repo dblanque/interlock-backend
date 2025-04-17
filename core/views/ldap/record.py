@@ -60,7 +60,7 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 			data={
 				"code": code,
 				"code_msg": "ok",
-				"data": record_to_dict(record_result_data, ts=False),
+				"data": record_result_data,
 			}
 		)
 
@@ -93,7 +93,7 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 			data={
 				"code": code,
 				"code_msg": "ok",
-				"data": record_to_dict(record_result_data, ts=False),
+				"data": record_result_data,
 			}
 		)
 
