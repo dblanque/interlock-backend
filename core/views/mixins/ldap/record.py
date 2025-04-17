@@ -62,11 +62,10 @@ class DNSRecordMixin(DomainViewMixin):
 		"""
 		if not record_type:
 			raise exc_dns.DNSRecordTypeMissing
-		if not record_type_validator(record_type):
-			raise exc_dns.DNSRecordTypeUnsupported
+		record_type_validator(record_type)
 		return DNS_RECORD_SERIALIZERS[record_type]
 
-	def validate_record(self, record_data: dict) -> DNSRecordSerializer:
+	def validate_record(self, record_data: dict) -> dict:
 		"""Validates LDAP DNS Record data dictionary.
 
 		Args:
@@ -85,7 +84,9 @@ class DNSRecordMixin(DomainViewMixin):
 		# Record Data Validation
 		record_type = record_data.get("type", None)
 		self.record_serializer = self.get_serializer(record_type)
-		self.record_serializer(data=record_data)
+		self.record_serializer: DNSRecordSerializer = self.record_serializer(
+			data=record_data
+		)
 		self.record_serializer.is_valid(raise_exception=True)
 
 		# Check that it's not modifying Root DNS Server data
@@ -109,7 +110,7 @@ class DNSRecordMixin(DomainViewMixin):
 				if label == _check_self_ref or label == f"{_check_self_ref}.":
 					logger.error("Record Self-reference error detected.")
 					raise exc_dns.DNSRecordTypeConflict
-		return self.record_serializer
+		return self.record_serializer.validated_data
 
 	def create_record(self, record_data: dict):
 		record_name: str = record_data["name"].lower()
