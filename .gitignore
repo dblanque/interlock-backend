@@ -16,3 +16,4 @@ interlock_backend/*_key.py
 pyvenv.cfg
 private/**
 !private/.gitkeep
+.coverage
