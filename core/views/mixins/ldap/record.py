@@ -88,6 +88,14 @@ class DNSRecordMixin(DomainViewMixin):
 			data=record_data
 		)
 		self.record_serializer.is_valid(raise_exception=True)
+		unknown_keys = (
+			set(self.record_serializer.initial_data.keys())
+			-
+			set(self.record_serializer.fields.keys())
+		)
+		if unknown_keys:
+			logger.info(
+				"Unknown keys in serialized data for LDAP DNS Record: %s.", unknown_keys)
 
 		# Check that it's not modifying Root DNS Server data
 		if "root dns servers" in record_data["zone"].lower():
