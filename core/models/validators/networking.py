@@ -34,7 +34,7 @@ def port_validator(value: int):
 	_exc = ValidationError("invalid_field_port")
 	try:
 		value = int(value)
-		if 0 > value > 65535:
+		if value < 0 or value > 65536:
 			raise _exc
 	except:
 		raise _exc
