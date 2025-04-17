@@ -42,7 +42,7 @@ from core.views.mixins.utils import getldapattr
 from django.db import transaction
 from copy import deepcopy
 import ldap3
-from ldap3 import MODIFY_DELETE, MODIFY_REPLACE
+from ldap3 import MODIFY_DELETE, MODIFY_REPLACE, Entry as LDAPEntry
 import logging
 ################################################################################
 
@@ -84,18 +84,23 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			)
 
 			for g in connection.entries:
-				sid = SID(getldapattr(g, "objectSid"))
-				sid = sid.__str__()
-				rid = int(sid.split("-")[-1])
-				if rid == rid:
-					args = {
-						"connection": connection,
-						"dn": getldapattr(g, "distinguishedName"),
-						"ldap_attrs": attributes,
-					}
-					result = LDAPObject(**args)
-					connection.unbind()
-					return result.attributes
+				g: LDAPEntry
+				# Do not use getldapattr here, we want raw_values
+				_sid_attr = getattr(g, "objectSid", None)
+				if not _sid_attr:
+					continue
+				_sid = SID(_sid_attr)
+				_sid = _sid.__str__()
+				_rid = int(_sid.split("-")[-1])
+				if rid != _rid:
+					continue
+
+				result = LDAPObject(
+					connection=connection,
+					dn=g.entry_dn,
+					ldap_attrs=attributes,
+				)
+				return result.attributes
 
 	def get_group_type(self, group_type: int = None, debug=False) -> list[str]:
 		sum = 0

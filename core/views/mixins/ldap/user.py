@@ -14,6 +14,7 @@ from rest_framework import viewsets
 from core.ldap.adsi import join_ldap_filter
 from core.config.runtime import RuntimeSettings
 from core.constants import user as ldap_user
+from core.serializers.user import LDAPUserSerializer
 from core.ldap import adsi as ldap_adsi
 from core.ldap.types.account import LDAPAccountTypes
 
@@ -54,6 +55,8 @@ from core.exceptions import base as exc_base, users as exc_user, ldap as exc_lda
 import logging
 
 ### Others
+from core.serializers.user import LDAP_DATE_FORMAT
+from datetime import datetime
 from core.views.mixins.utils import getldapattr
 from ldap3.utils.dn import safe_dn
 from core.constants.user import UserViewsetFilterAttributeBuilder
@@ -701,13 +704,13 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		user_dict["memberOfObjects"] = []
 		try:
 			if "memberOf" in self.ldap_filter_attr:
-				memberOf = user_dict.pop("memberOf")
-				if isinstance(memberOf, list):
-					for _group in memberOf:
-						memberOfObjects.append(self.get_group_attributes(_group))
-				else:
-					_group = memberOf
-					memberOfObjects.append(self.get_group_attributes(_group))
+				memberOf = user_dict.pop("memberOf", None)
+				if memberOf:
+					if isinstance(memberOf, (list, tuple, set)):
+						for _group in memberOf:
+							memberOfObjects.append(self.get_group_attributes(_group))
+					else:
+						memberOfObjects.append(self.get_group_attributes(memberOf))
 
 			### Also add default Users Group to be available as Selectable PID
 			if "primaryGroupID" in self.ldap_filter_attr:
@@ -747,7 +750,17 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			# Replace sAMAccountType Value with String
 			user_account_type = int(user_dict["sAMAccountType"])
 			user_dict["sAMAccountType"] = LDAPAccountTypes(user_account_type).name
-		return user_dict
+		
+		# Validate data
+		serializer = LDAPUserSerializer(data=user_dict)
+		serializer.is_valid(raise_exception=True)
+
+		# Parse dates to LDAP Format (Front-end requirement)
+		_result = serializer.validated_data.copy()
+		for fld in ["whenCreated", "whenChanged", "lastLogonTimestamp", "accountExpires"]:
+			if fld in _result:
+				_result[fld] = _result[fld].strftime(LDAP_DATE_FORMAT)
+		return _result
 
 	def ldap_user_change_status(self, username: str, enabled: bool) -> Connection:
 		self.ldap_filter_object = self.get_user_object_filter(username=username)

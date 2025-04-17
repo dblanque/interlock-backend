@@ -185,9 +185,10 @@ class LDAPObject:
 				and self.__get_common_name__(distinguished_name).lower() != "builtin"
 			):
 				try:
-					sid = SID(attr_value)
+					# Do not use getldapattr here, we want raw_values
+					sid = SID(getattr(self.entry, attr_key))
 					sid = sid.__str__()
-					rid = sid.split("-")[-1]
+					rid = int(sid.split("-")[-1])
 					self.attributes["objectSid"] = sid
 					self.attributes["objectRid"] = rid
 				except Exception as e:

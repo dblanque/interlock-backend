@@ -54,3 +54,59 @@ class UserSerializer(serializers.ModelSerializer):
 			else:
 				return False
 		return True
+
+LDAP_DATE_FORMAT = '%Y%m%d%H%M%S.%fZ'
+class LDAPUserSerializer(serializers.Serializer):
+	name = serializers.CharField(required=False)
+	distinguishedName = serializers.CharField(required=False)
+	type = serializers.CharField(required=False)
+	# First Name
+	givenName = serializers.CharField(required=False)
+	# Last Name
+	sn = serializers.CharField(required=False)
+	sAMAccountName = serializers.CharField(required=False)
+	username = serializers.CharField(required=False)
+	mail = serializers.CharField(required=False)
+	postalCode = serializers.CharField(required=False)
+	# City
+	l = serializers.CharField(required=False)
+	# Country Name
+	co = serializers.CharField(required=False)
+	# Number Code for Country
+	countryCode = serializers.IntegerField(required=False)
+	# Two letter Country Code
+	c = serializers.CharField(max_length=2)
+	userPrincipalName = serializers.CharField()
+	userAccountControl = serializers.IntegerField()
+	whenCreated = serializers.DateTimeField(
+		format=LDAP_DATE_FORMAT,
+		input_formats=[LDAP_DATE_FORMAT, 'iso-8601'],
+		required=False
+	)
+	whenChanged = serializers.DateTimeField(
+		format=LDAP_DATE_FORMAT,
+		input_formats=[LDAP_DATE_FORMAT, 'iso-8601'],
+		required=False
+	)
+	lastLogonTimestamp = serializers.DateTimeField(
+		format=LDAP_DATE_FORMAT,
+		input_formats=[LDAP_DATE_FORMAT, 'iso-8601'],
+		required=False
+	)
+	accountExpires = serializers.DateTimeField(
+		format=LDAP_DATE_FORMAT,
+		input_formats=[LDAP_DATE_FORMAT, 'iso-8601'],
+		required=False
+	)
+	lastLogon = serializers.IntegerField(required=False)
+	badPwdCount = serializers.IntegerField(required=False)
+	pwdLastSet = serializers.IntegerField(required=False)
+	primaryGroupID = serializers.IntegerField(required=False)
+	objectClass = serializers.ListField(required=False)
+	objectCategory = serializers.CharField(required=False)
+	objectSid = serializers.CharField(required=False)
+	objectRid = serializers.IntegerField(required=False)
+	sAMAccountType = serializers.CharField(required=False)
+	memberOfObjects = serializers.ListField(required=False)
+	is_enabled = serializers.BooleanField(required=False)
+	permission_list = serializers.ListField(required=False)
