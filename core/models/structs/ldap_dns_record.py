@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.models.dns.record
+# Module: core.models.structs.ldap_dns_record
 # Contains the Models for DNS Record Types
 #
 # ---------------------------------- IMPORTS -----------------------------------#

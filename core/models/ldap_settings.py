@@ -8,7 +8,7 @@
 #
 # ---------------------------------- IMPORTS -----------------------------------#
 from django.db import models
-from .validators.ldap_uri import validate_ldap_uri
+from core.models.validators.ldap import ldap_uri_validator
 from django.utils.translation import gettext_lazy as _
 from core.models.setting.base import BaseSetting, BaseSettingsPreset, add_fields_from_dict
 from core.models.types.settings import (
@@ -70,7 +70,7 @@ LDAP_SETTING_MAP = {
 	"LDAP_AUTH_RECEIVE_TIMEOUT": TYPE_INTEGER,
 	"ADMIN_GROUP_TO_SEARCH": TYPE_STRING,
 }
-VALIDATORS = {TYPE_LDAP_URI: [validate_ldap_uri]}
+VALIDATORS = {TYPE_LDAP_URI: [ldap_uri_validator]}
 FIELD_ARGS = {TYPE_LDAP_URI: [models.CharField(max_length=255)]}
 
 LDAP_SETTINGS_CHOICES_MAP = {

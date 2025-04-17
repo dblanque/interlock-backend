@@ -36,7 +36,7 @@ from rest_framework.decorators import action
 
 ### Others
 from core.decorators.login import auth_required, admin_required
-from core.models.validators.ldap_dns_record import domain_validator, ipv4_validator, ipv6_validator
+from core.models.validators.ldap import domain_validator, ipv4_validator, ipv6_validator
 from interlock_backend.settings import DEBUG as INTERLOCK_DEBUG
 from core.utils import dnstool
 from core.utils.dnstool import record_to_dict
@@ -119,7 +119,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 				# 'ts',
 			]
 
-			searchFilter = join_ldap_filter("", "objectClass=dnsNode")
+			search_filter = join_ldap_filter("", "objectClass=dnsNode")
 			attributes = ["dnsRecord", "dNSTombstoned", "name"]
 
 			dnsList = LDAPDNS(ldapConnection)
@@ -133,12 +133,12 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 			search_target = "DC=%s,%s" % (target_zone, dnsList.dns_root)
 			try:
 				ldapConnection.search(
-					search_base=search_target, search_filter=searchFilter, attributes=attributes
+					search_base=search_target, search_filter=search_filter, attributes=attributes
 				)
 			except Exception as e:
-				print(search_target)
-				print(searchFilter)
-				print(e)
+				logger.exception(e)
+				logger.error(search_target)
+				logger.error(search_filter)
 
 			result = []
 

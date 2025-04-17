@@ -3,7 +3,7 @@ from pytest_mock import MockType
 from core.views.mixins.logs import LogMixin
 from core.views.mixins.ldap.user import UserViewLDAPMixin
 from core.ldap.defaults import LDAP_DOMAIN
-from django.core.exceptions import ValidationError
+from rest_framework.serializers import ValidationError
 from core.models.user import User
 from typing import Union
 from ldap3 import MODIFY_DELETE, MODIFY_REPLACE

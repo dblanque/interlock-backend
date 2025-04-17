@@ -62,7 +62,7 @@ from core.ldap.constants import (
 	LDAP_ATTR_COUNTRY_DCC,
 	LDAP_ATTR_COUNTRY_ISO,
 )
-from django.core.exceptions import ValidationError
+from rest_framework.serializers import ValidationError
 from core.ldap.countries import LDAP_COUNTRIES
 ################################################################################
 

@@ -9,7 +9,7 @@ from core.models.types.settings import (
 )
 from typing import Iterable
 from copy import deepcopy
-from django.core.exceptions import ValidationError
+from rest_framework.serializers import ValidationError
 
 
 def add_fields_from_dict(
