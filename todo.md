@@ -56,22 +56,10 @@
 * Add Local User Import/Export
 * Add LDAP User Export
 
-## TESTS
-* Users
-	* Local CRUD
-	* LDAP CRUD
-* Application CRUD
-* Application Groups CRUD
-* LDAP Security Group CRUD
-* Organizational Unit CRUD
-* LDAP Directory Tree Operations Tests
-* DNS Record CRUD for each type
-* LDAP Connector Tests
-* Token View Tests
-* OIDC Tests
-* TOTP Tests
-
 ## Other Tasks
+* Implement (ldap3.utils.dn) safe_rdn, safe_dn, parse_dn, etc. usage where required.
+* Add browser fingerprint model
+* Add browser fingerprint claim to simplejwt tokens
 * Remove redundant translations for card titles, use action + class with TC
 * Add "Enforce 2FA for Administrators on Interlock" option
 	* This option should disable any critical action if 2FA is not enabled.
