@@ -4,7 +4,6 @@ from core.ldap.security_identifier import SID
 from core.models.ldap_object import (
 	LDAPObject,
 	LDAPObjectOptions,
-	DEFAULT_EXCLUDED_LDAP_ATTRS,
 	DEFAULT_REQUIRED_LDAP_ATTRS,
 	DEFAULT_CONTAINER_TYPES,
 	DEFAULT_USER_TYPES,
