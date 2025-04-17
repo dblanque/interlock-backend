@@ -88,6 +88,15 @@ class LDAPObject:
 	user_types: list[str]
 	username_identifier: str
 
+	INT_FIELDS = [
+		"countryCode",
+		"userAccountControl",
+		"lastLogon",
+		"badPwdCount",
+		"pwdLastSet",
+		"primaryGroupID",
+		"objectRid",
+	]
 	def __init__(self, auto_fetch=True, **kwargs: LDAPObjectOptions) -> None:
 		self.__validate_kwargs__(kwargs=kwargs)
 
@@ -124,10 +133,16 @@ class LDAPObject:
 		for kw in kwargs:
 			setattr(self, kw, kwargs[kw])
 
+		# Remove excluded attributes
+		for attr in self.excluded_ldap_attrs:
+			if attr in self.ldap_attrs:
+				self.ldap_attrs.remove(attr)
+
 		# Set required attributes, these are unremovable from the tree searches
 		for attr in self.required_ldap_attrs:
 			if attr not in self.ldap_attrs:
 				self.ldap_attrs.append(attr)
+
 
 	def __get_connection__(self):
 		return self.connection
@@ -192,10 +207,20 @@ class LDAPObject:
 					self.attributes["objectSid"] = sid
 					self.attributes["objectRid"] = rid
 				except Exception as e:
-					print("Could not translate SID Byte Array for " + distinguished_name)
-					print(e)
-			elif attr_key not in self.attributes and attr_value:
+					logger.error("Could not translate SID Byte Array for " + distinguished_name)
+					logger.exception(e)
+			elif attr_key not in self.attributes and attr_value is not None:
 				self.attributes[attr_key] = attr_value
+		
+		for fld in self.INT_FIELDS:
+			if not fld in self.attributes:
+				continue
+			try:
+				_v = int(self.attributes[fld])
+				self.attributes[fld] = _v
+			except:
+				logger.error(f"Could not cast LDAP Object field to int ({fld}).")
+				pass
 		return self.attributes
 
 	def __ldap_attrs__(self):
