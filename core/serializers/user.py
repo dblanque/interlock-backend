@@ -35,19 +35,16 @@ class UserSerializer(serializers.ModelSerializer):
 		model = User
 		fields = ("username", "first_name", "last_name", "email", "password", "passwordConfirm")
 
-	def validate_password_confirm(self, data=None, raise_exc=True):
-		if data is None and not hasattr(self, "data"):
-			return False
-		elif data is None:
-			data = self.data
-		for field in ("password", "passwordConfirm"):
-			if not field in data:
-				if raise_exc is True:
-					raise serializers.ValidationError(f"{field} is required.")
-				else:
-					return False
-		_pwd: str = data["password"]
-		_pwd_confirm: str = data.pop("passwordConfirm")
+	def validate_password_confirm(self, data: dict = None, raise_exc=True):
+		if not data:
+			if not hasattr(self, "data"):
+				return False
+			else:
+				data = self.data
+		_pwd: str = data.pop("password", None)
+		_pwd_confirm: str = data.pop("passwordConfirm", None)
+		if not _pwd:
+			raise serializers.ValidationError(f"Missing password field.")
 		if _pwd != _pwd_confirm:
 			if raise_exc is True:
 				raise serializers.ValidationError("Passwords do not match.")
