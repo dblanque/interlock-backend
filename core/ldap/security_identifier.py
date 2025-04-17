@@ -7,6 +7,7 @@
 
 # ---------------------------------- IMPORTS -----------------------------------#
 import logging
+from ldap3 import Attribute as LDAPAttribute
 ################################################################################
 
 logger = logging.getLogger(__name__)
@@ -34,14 +35,27 @@ class SID(object):
 	    print(sid) # S-1-0-21-2209570321-9700970-2859064192-1159
 	"""
 
-	def __init__(self, sid_byte_array: list | bytearray | object):
-		if hasattr(sid_byte_array, "raw_values"):
-			sid_byte_array = sid_byte_array.raw_values[0]
-		if isinstance(sid_byte_array, list):
-			sid_byte_array = bytearray(sid_byte_array[0])
-		if isinstance(sid_byte_array, bytes):
-			sid_byte_array = bytearray(sid_byte_array)
-		assert isinstance(sid_byte_array, bytearray), "sid_byte_array must be a byte array."
+	def __init__(self, security_identifier: list | bytearray | LDAPAttribute):
+		if not security_identifier:
+			return None
+
+		sid_byte_array = None
+		if isinstance(security_identifier, LDAPAttribute):
+			sid_byte_array = bytearray(security_identifier.raw_values[0])
+		elif isinstance(security_identifier, list):
+			sid_byte_array = bytearray(security_identifier[0])
+		elif isinstance(security_identifier, bytes):
+			sid_byte_array = bytearray(security_identifier)
+		else:
+			if sid_byte_array is None:
+				raise ValueError("sid_byte_array is None.")
+			else:
+				_msg = f"Unhandled type for SID Object Initialization ({type(sid_byte_array).__name__})."
+				logger.error(_msg)
+				raise TypeError(_msg)
+
+		if not isinstance(sid_byte_array, bytearray):
+			raise ValueError("sid_byte_array must be a byte array.")
 		logger.debug("Class SID() in: " + __name__)
 		logger.debug("SID Byte Array")
 		logger.debug(type(sid_byte_array))
