@@ -102,6 +102,14 @@ def __get_relative_dn__(dn):
 
 
 def is_non_str_iterable(v):
+	"""Checks if value is within types (tuple, list, set, dict)
+
+	Args:
+		v (tuple or list or set or dict): Some value to check.
+
+	Returns:
+		bool
+	"""
 	if isinstance(v, str):
 		return False
-	return isinstance(v, Iterable)
+	return isinstance(v, (tuple, list, set, dict))
