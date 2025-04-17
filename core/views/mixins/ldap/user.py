@@ -13,7 +13,6 @@ from rest_framework import viewsets
 ### Interlock
 from core.ldap.adsi import join_ldap_filter
 from core.config.runtime import RuntimeSettings
-from core.constants import user as ldap_user
 from core.serializers.user import LDAPUserSerializer
 from core.ldap import adsi as ldap_adsi
 from core.ldap.types.account import LDAPAccountTypes
