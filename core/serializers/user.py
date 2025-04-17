@@ -75,9 +75,9 @@ class LDAPUserSerializer(serializers.Serializer):
 	# Number Code for Country
 	countryCode = serializers.IntegerField(required=False)
 	# Two letter Country Code
-	c = serializers.CharField(max_length=2)
-	userPrincipalName = serializers.CharField()
-	userAccountControl = serializers.IntegerField()
+	c = serializers.CharField(max_length=2, required=False)
+	userPrincipalName = serializers.CharField(required=False)
+	userAccountControl = serializers.IntegerField(required=False)
 	whenCreated = serializers.DateTimeField(
 		format=LDAP_DATE_FORMAT,
 		input_formats=[LDAP_DATE_FORMAT, 'iso-8601'],
