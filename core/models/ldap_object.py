@@ -39,7 +39,7 @@ class LDAPObjectOptions(TypedDict):
 	ldap_filter: NotRequired[str]
 
 
-DEFAULT_EXCLUDED_LDAP_ATTRS = ["objectGUID", "objectSid"]
+# DEFAULT_EXCLUDED_LDAP_ATTRS = ["objectGUID", "objectSid"]
 DEFAULT_REQUIRED_LDAP_ATTRS = [
 	"distinguishedName",
 	"objectCategory",
@@ -107,7 +107,7 @@ class LDAPObject:
 		self.search_base = RuntimeSettings.LDAP_AUTH_SEARCH_BASE
 		self.connection = kwargs.pop("connection")
 		self.username_identifier = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
-		self.excluded_ldap_attrs = DEFAULT_EXCLUDED_LDAP_ATTRS
+		self.excluded_ldap_attrs = []
 		self.required_ldap_attrs = DEFAULT_REQUIRED_LDAP_ATTRS
 		self.container_types = DEFAULT_CONTAINER_TYPES
 		self.user_types = DEFAULT_USER_TYPES
