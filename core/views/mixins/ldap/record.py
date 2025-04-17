@@ -69,7 +69,7 @@ class DNSRecordMixin(DomainViewMixin):
 		"""Validates LDAP DNS Record data dictionary.
 
 		Args:
-			record_data (dict): _description_
+			record_data (dict): The record data dictionary
 
 		Raises:
 			exc_dns.DNSRootServersOnlyCLI: Raised when zone is related to root dns servers.
