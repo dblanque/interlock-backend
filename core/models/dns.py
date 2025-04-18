@@ -36,7 +36,6 @@ from core.models.types.ldap_dns_record import RecordTypes
 from core.ldap.adsi import join_ldap_filter
 
 ### Utils
-import traceback
 from core.utils.dns import *
 from core.utils import dnstool
 from core.utils.dnstool import new_record, record_to_dict
@@ -152,8 +151,8 @@ class LDAPRecordMixin:
 
 		try:
 			self.soa_object = self.get_soa_entry()
-		except:
-			logger.error(traceback.format_exc())
+		except Exception as e:
+			logger.exception(e)
 			raise exc_dns.DNSCouldNotGetSOA
 		for index, record in enumerate(self.soa_object.entry):
 			if record["type"] == RecordTypes.DNS_RECORD_TYPE_SOA.value:
@@ -435,6 +434,8 @@ def get_record_mapping_from_type(t: RecordTypes | int) -> RecordMapping:
 	Returns:
 		RecordMapping: A typed dictionary.
 	"""
+	if isinstance(t, RecordTypes):
+		t = t.value
 	if t is None:
 		raise ValueError("Record Type cannot be none (LDAPRecord Object Class)")
 	elif not isinstance(t, int):
@@ -463,8 +464,6 @@ def record_type_main_field(t: RecordTypes | int | str) -> str:
 			t = RecordTypes[t_str].value
 		except:
 			raise ValueError("Could not fetch RecordTypes value from string identifier.")
-	elif isinstance(t, RecordTypes):
-		t = t.value
 	mapping = get_record_mapping_from_type(t)
 	if "main_field" in mapping:
 		return mapping["main_field"]
@@ -850,8 +849,8 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		self.serial = None
 		try:
 			self.serial = self.get_serial(record_values=new_values, old_serial=old_values["serial"])
-		except:
-			logger.error(traceback.format_exc())
+		except Exception as e:
+			logger.exception(e)
 			raise exc_dns.DNSCouldNotGetSerial
 
 		# Make new record struct
