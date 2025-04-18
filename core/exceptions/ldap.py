@@ -50,3 +50,14 @@ class ConnectionTestFailed(CoreException):
 	status_code = status.HTTP_400_BAD_REQUEST
 	default_detail = "Bind Connection Failed"
 	default_code = "ldap_bind_test_failed"
+
+
+class DistinguishedNameValidationError(CoreException):
+	status_code = status.HTTP_400_BAD_REQUEST
+	default_detail = "LDAP Distinguished Name Validation Error"
+	default_code = "ldap_dn_validation_error"
+
+class LDIFBadField(CoreException):
+	status_code = status.HTTP_400_BAD_REQUEST
+	default_detail = "LDIF Field Validation Error"
+	default_code = "ldif_bad_field"
