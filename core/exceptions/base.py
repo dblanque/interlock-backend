@@ -31,6 +31,11 @@ class RefreshTokenExpired(CoreException):
 	default_code = "refresh_token_expired"
 
 
+class InternalServerError(CoreException):
+	status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+	default_detail = "Internal Server Error"
+	default_code = "internal_server_error"
+
 class BadRequest(CoreException):
 	status_code = status.HTTP_400_BAD_REQUEST
 	default_detail = "Bad Request"
@@ -71,3 +76,8 @@ class LDAPBackendDisabled(CoreException):
 	status_code = status.HTTP_418_IM_A_TEAPOT
 	default_detail = "LDAP Backend is Disabled"
 	default_code = "ldap_backend_disabled"
+
+class LDAPBackendException(CoreException):
+	status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+	default_detail = "LDAP Backend Exception"
+	default_code = "ldap_backend_exception"
