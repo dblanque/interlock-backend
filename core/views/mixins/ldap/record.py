@@ -33,6 +33,7 @@ import logging
 from core.serializers.record import DNSRecordSerializer, DNS_RECORD_SERIALIZERS
 
 ### Others
+from ldap3 import Connection
 from core.models.validators.ldap import record_type_validator
 ################################################################################
 
@@ -41,8 +42,12 @@ logger = logging.getLogger(__name__)
 
 
 class DNSRecordMixin(DomainViewMixin):
-	ldap_connection = None
+	ldap_connection: Connection = None
 	record_serializer = DNSRecordSerializer
+
+	def check_if_connection_is_bound(self):
+		if not getattr(self.ldap_connection, "bound", False):
+			raise exc_ldap.LDAPConnectionNotOpen
 
 	def get_serializer(self, record_type: RecordTypes) -> DNSRecordSerializer:
 		"""Fetches LDAP DNS Record Serializer based on type int
@@ -139,6 +144,8 @@ class DNSRecordMixin(DomainViewMixin):
 		Returns:
 			dict: Resulting DNS Record as dict.
 		"""
+		self.check_if_connection_is_bound()
+
 		record_name: str = record_data["name"].lower()
 		record_type: RecordTypes = record_data["type"]
 		record_zone: str = record_data["zone"].lower()
@@ -175,8 +182,8 @@ class DNSRecordMixin(DomainViewMixin):
 		"""Updates LDAP DNS Record in its corresponding entry.
 
 		Args:
-			record_data (dict): Record Data Dictionary
-			old_record_data (dict): Old Record Data Dictionary
+			record_data (dict): Validated Record Data Dictionary
+			old_record_data (dict): Validated Old Record Data Dictionary
 
 		Raises:
 			exc_base.CoreException: Raised if record could not be creating when name has
@@ -186,19 +193,25 @@ class DNSRecordMixin(DomainViewMixin):
 		Returns:
 			dict: Resulting DNS Record as dict.
 		"""
-		record_name: str = record_data["name"].lower()
-		record_type: RecordTypes = record_data["type"]
-		record_zone: str = record_data["zone"].lower()
-		old_record_name: str = old_record_data["name"].lower()
-		old_record_type: RecordTypes = old_record_data["type"]
-		old_record_zone: str = old_record_data["zone"].lower()
-		assert record_type == old_record_type
-		assert record_zone == old_record_zone
+		self.check_if_connection_is_bound()
 
-		if (
-			isinstance(record_data["serial"], str)
-			or record_data["serial"] == old_record_data["serial"]
-		):
+		# Type Consistency Check
+		record_type: RecordTypes = record_data.get("type")
+		old_record_type: RecordTypes = old_record_data.get("type")
+		if not record_type == old_record_type:
+			raise exc_dns.DNSRecordTypeMismatch
+
+		# Zone Consistency Check
+		record_zone: str = record_data.get("zone").lower()
+		old_record_zone: str = old_record_data.get("zone").lower()
+		if not record_zone == old_record_zone:
+			raise exc_dns.DNSRecordZoneMismatch
+
+		# Name can differ
+		record_name: str = record_data.get("name").lower()
+		old_record_name: str = old_record_data.get("name").lower()
+
+		if record_data["serial"] == old_record_data["serial"]:
 			record_data.pop("serial")
 
 		dns_record = LDAPRecord(
@@ -221,7 +234,7 @@ class DNSRecordMixin(DomainViewMixin):
 			# Create new record with different name
 			result = dns_record.create(values=record_data)
 			if result["result"] != 0:
-				raise exc_base.CoreException
+				raise exc_base.LDAPBackendException
 			# If creation was successful delete old record
 			old_record.delete()
 		else:
@@ -256,12 +269,11 @@ class DNSRecordMixin(DomainViewMixin):
 		Returns:
 			LDAP Operation Result.
 		"""
-		if not self.ldap_connection:
-			raise exc_ldap.LDAPConnectionNotOpen
+		self.check_if_connection_is_bound()
 
-		record_name = record_data["name"]
-		record_type = record_data["type"]
-		record_zone = record_data["zone"]
+		record_name = record_data.get("name")
+		record_type = record_data.get("type")
+		record_zone = record_data.get("zone")
 
 		dns_record = LDAPRecord(
 			connection=self.ldap_connection,
