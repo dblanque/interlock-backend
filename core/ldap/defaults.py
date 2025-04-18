@@ -153,7 +153,7 @@ LDAP_DIRTREE_CN_FILTER = {
 }
 
 # TODO Implement this
-LDAP_DIRTREE_OU_FILTER = {
+LDAP_DIRTREE_OU_FILTER_DICT = {
 	"or":{
 		"objectCategory": {
 			"or":[
@@ -167,7 +167,7 @@ LDAP_DIRTREE_OU_FILTER = {
 		}
 	},
 }
-LDAP_DIRTREE_CN_FILTER = {
+LDAP_DIRTREE_CN_FILTER_DICT = {
 	"objectClass": {
 		"or":[
 			"user",
