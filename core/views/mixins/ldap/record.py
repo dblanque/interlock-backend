@@ -186,7 +186,6 @@ class DNSRecordMixin(DomainViewMixin):
 		Returns:
 			dict: Resulting DNS Record as dict.
 		"""
-		old_record_name = old_record_data["name"].lower()
 		record_name: str = record_data["name"].lower()
 		record_type: RecordTypes = record_data["type"]
 		record_zone: str = record_data["zone"].lower()
