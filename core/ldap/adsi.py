@@ -341,8 +341,26 @@ class LDAPFilter:  # pragma: no cover
 def search_filter_from_dict(
 	filter_dict: dict, expression: LDAP_FILTER_EXPRESSION_TYPE = LDAP_FILTER_OR, reverse_key=False
 ):
-	"""
-	Valid Operators: | &
+	"""Generates LDAP Filter String from dictionary with LDAP Attribute value as
+	key and LDAP Attribute key as value (non-unique attribute definitions).
+
+
+	Can be reversed to use unique values per attribute.
+
+	Args:
+		filter_dict (dict): Filter Dictionary with aforementioned structure.
+			
+			* Non-reversed Example -> { "user": "objectClass", }
+		expression (LDAP_FILTER_EXPRESSION_TYPE, optional): Whether to use an OR
+			or AND conditional expression. Defaults to LDAP_FILTER_OR.
+		reverse_key (bool, optional): If True dict keys will be the LDAP
+			Attribute Keys and values will be their corresponding values,
+			making each unique.
+			
+			Defaults to False.
+
+	Returns:
+		str: LDAP Filter String
 	"""
 	search_filter = ""
 	for object_key, object_type in filter_dict.items():
