@@ -11,9 +11,18 @@ from core.serializers.record import (
 	DNSRecordSRVSerializer,
 	DNSRecordStringDataSerializer,
 )
+from core.views.mixins.logs import LogMixin
 from core.exceptions import dns as exc_dns
 from core.models.structs.ldap_dns_record import RecordTypes
 from core.ldap.defaults import LDAP_DOMAIN
+from core.models.choices.log import (
+	LOG_ACTION_CREATE,
+	LOG_ACTION_UPDATE,
+	LOG_ACTION_DELETE,
+	LOG_CLASS_DNSR
+)
+from datetime import datetime
+from core.models.dns import record_type_main_field
 
 MODULE_PATH = "core.views.mixins.ldap.record"
 @pytest.fixture
@@ -24,12 +33,23 @@ def f_record_mixin():
 def f_logger(mocker):
 	return mocker.patch(f"{MODULE_PATH}.logger")
 
+@pytest.fixture(autouse=True)
+def f_log_mixin(mocker):
+	return mocker.patch(f"{MODULE_PATH}.DBLogMixin")
+
 @pytest.fixture
-def f_record_data():
+def fc_record_serial_epoch():
+	def maker(sequence: int = 1):
+		return int(datetime.today().strftime("%Y%m%d") + str(sequence).rjust(2, "0"))
+	return maker
+
+@pytest.fixture
+def f_record_data(fc_record_serial_epoch):
 	return {
 		"name": "@",
 		"zone": LDAP_DOMAIN,
 		"ttl": 180,
+		"serial": fc_record_serial_epoch(1),
 	}
 
 @pytest.fixture
@@ -90,7 +110,6 @@ def f_record_data_srv(f_record_data):
 		"wPort": 22,
 		"nameTarget": f"_ssh._tcp.{LDAP_DOMAIN}.",
 	}
-
 
 @pytest.mark.parametrize(
 	"record_types, expected_serializer_cls",
@@ -174,9 +193,8 @@ def test_get_serializer_raises_validation_error(
 	with pytest.raises(ValidationError):
 		f_record_mixin.get_serializer(bad_record_type)
 
-@pytest.mark.parametrize(
-	"record_types, record_fixture",
-	(
+def get_record_fixtures_non_soa_list():
+	return [
 		# A Struct
 		(
 			(RecordTypes.DNS_RECORD_TYPE_A,),
@@ -213,21 +231,33 @@ def test_get_serializer_raises_validation_error(
 			(RecordTypes.DNS_RECORD_TYPE_MX,),
 			"f_record_data_mx",
 		),
-		# SOA Struct
-		(
-			(RecordTypes.DNS_RECORD_TYPE_SOA,),
-			"f_record_data_soa",
-		),
 		# SRV Struct
 		(
 			(RecordTypes.DNS_RECORD_TYPE_SRV,),
 			"f_record_data_srv",
 		),
-	),
+	]
+
+def get_record_fixtures_non_soa():
+	return tuple(get_record_fixtures_non_soa_list())
+
+def get_record_fixtures():
+	_r = get_record_fixtures_non_soa_list() + [
+		# SOA Struct
+		(
+			(RecordTypes.DNS_RECORD_TYPE_SOA,),
+			"f_record_data_soa",
+		),
+	]
+	return tuple(_r)
+
+@pytest.mark.parametrize(
+	"record_types, record_fixture_name",
+	get_record_fixtures()
 )
-def test_validate_record(f_logger, record_types: list[RecordTypes], record_fixture: str, request, f_record_mixin: DNSRecordMixin):
+def test_validate_record(f_logger, record_types: list[RecordTypes], record_fixture_name: str, request, f_record_mixin: DNSRecordMixin):
 	for _type in record_types:
-		m_record_data = request.getfixturevalue(record_fixture)
+		m_record_data = request.getfixturevalue(record_fixture_name)
 		m_record_data["type"] = _type.value
 		m_record_data["unknown_key"] = "some_weird_value"
 		f_record_mixin.validate_record(record_data=m_record_data)
@@ -300,11 +330,59 @@ def test_validate_record_does_not_raise_self_reference(
 	f_record_data_name_node["nameNode"] = f"subdomain.sub2.{LDAP_DOMAIN}."
 	f_record_mixin.validate_record(record_data=f_record_data_name_node)
 
-def test_create_record():
-	pass
+@pytest.mark.parametrize(
+	"record_types, record_fixture_name",
+	get_record_fixtures_non_soa(),
+)
+def test_create_record_non_soa(
+	mocker,
+	record_types: list[RecordTypes],
+	record_fixture_name: str,
+	request,
+	f_record_mixin: DNSRecordMixin,
+	f_log_mixin: LogMixin,
+):
+	for _type in record_types:
+		record_fixture = request.getfixturevalue(record_fixture_name)
+		record_fixture["type"] = _type
+		m_request = mocker.MagicMock()
+		m_request.user.id = 1
+		f_record_mixin.request = m_request
+		m_increment_serial: MockType = mocker.patch.object(
+			f_record_mixin,
+			"increment_soa_serial"
+		)
+		m_record_instance = mocker.MagicMock()
+		m_record_instance.create
+		m_soa_object = mocker.MagicMock()
+		m_record_instance.soa_object = m_soa_object
+		m_record_instance.__fullname__ = mocker.Mock(return_value="mock_fullname")
+		m_record_instance.as_dict = record_fixture
+		m_ldap_record = mocker.patch(f"{MODULE_PATH}.LDAPRecord", return_value=m_record_instance)
 
-def test_update_record():
-	pass
+		result = f_record_mixin.create_record(record_data=record_fixture)
+		m_ldap_record.assert_called_once_with(
+			connection=f_record_mixin.ldap_connection,
+			record_name=record_fixture["name"],
+			record_zone=record_fixture["zone"],
+			record_type=record_fixture["type"],
+			record_main_value=record_fixture[record_type_main_field(record_fixture["type"])],
+		)
+		m_record_instance.create.assert_called_once_with(values=record_fixture)
+		m_increment_serial.assert_called_once_with(
+			m_record_instance.soa_object,
+			m_record_instance.serial
+		)
+		f_log_mixin.log.assert_any_call(
+			user=1,
+			operation_type=LOG_ACTION_CREATE,
+			log_target_class=LOG_CLASS_DNSR,
+			log_target="mock_fullname",
+		)
+		assert isinstance(result, dict)
 
-def test_delete_record():
-	pass
+# def test_update_record():
+# 	pass
+
+# def test_delete_record():
+# 	pass
