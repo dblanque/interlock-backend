@@ -34,7 +34,6 @@ from core.serializers.record import DNSRecordSerializer, DNS_RECORD_SERIALIZERS
 
 ### Others
 from core.models.validators.ldap import record_type_validator
-import traceback
 ################################################################################
 
 DBLogMixin = LogMixin()
