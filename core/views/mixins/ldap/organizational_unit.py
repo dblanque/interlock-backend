@@ -32,6 +32,8 @@ from core.models.choices.log import (
 )
 
 ### Others
+from django.http.request import HttpRequest
+from ldap3 import Connection
 import logging
 ################################################################################
 
@@ -40,6 +42,8 @@ logger = logging.getLogger(__name__)
 
 
 class OrganizationalUnitMixin(viewsets.ViewSetMixin):
+	ldap_connection: Connection
+	request: HttpRequest
 	def process_filter(self, data, filterDict=None):
 		ldap_filter = ""
 
