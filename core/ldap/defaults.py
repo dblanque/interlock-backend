@@ -152,6 +152,33 @@ LDAP_DIRTREE_CN_FILTER = {
 	"computer": "objectClass",
 }
 
+# TODO Implement this
+LDAP_DIRTREE_OU_FILTER = {
+	"or":{
+		"objectCategory": {
+			"or":[
+				"organizationalUnit",
+				"top",
+				"container",
+			]
+		},
+		"objectClass":{
+			"value": "builtinDomain"
+		}
+	},
+}
+LDAP_DIRTREE_CN_FILTER = {
+	"objectClass": {
+		"or":[
+			"user",
+			"person",
+			"group",
+			"organizationalPerson",
+			"computer",
+		]
+	}
+}
+
 LDAP_DIRTREE_ATTRIBUTES = list(
 	{
 		# User Attrs

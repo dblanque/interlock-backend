@@ -46,6 +46,9 @@ logger = logging.getLogger(__name__)
 class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 	ldap_connection: Connection
 	request: HttpRequest
+
+	# TODO - This should probably be reversed, each key should be a tuple
+	# to fix non-uniqueness availability instead of reversing the k-v pairs.
 	def process_filter(self, data: dict, filter_dict: dict = None):
 		"""Process LDAP Directory Tree Request Filter
 
@@ -77,17 +80,17 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 		# Exact Filter
 		if filter_data_iexact:
 			logger.debug("Dirtree fetching with Filter iexact")
-			for f in filter_data_iexact:
-				lookup_value = filter_data_iexact[f]
-				if isinstance(lookup_value, dict):
-					lookup_type = lookup_value.pop("attr")
+			for lookup_value, lookup_params in filter_data_iexact.items():
+				# If lookup_params is a dict, fetch and use params.
+				if isinstance(lookup_params, dict):
+					lookup_type = lookup_params.pop("attr")
 					lookup_exclude = False
 					lookup_or = False
 
-					if "exclude" in lookup_value:
-						lookup_exclude = lookup_value.pop("exclude")
-					if "or" in lookup_value:
-						lookup_or = lookup_value.pop("or")
+					if "exclude" in lookup_params:
+						lookup_exclude = lookup_params.pop("exclude")
+					if "or" in lookup_params:
+						lookup_or = lookup_params.pop("or")
 
 					if lookup_or:
 						expr = LDAP_FILTER_OR
@@ -95,13 +98,15 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 						expr = LDAP_FILTER_AND
 					ldap_filter = join_ldap_filter(
 						ldap_filter,
-						f"{lookup_type}={f}",
+						f"{lookup_type}={lookup_value}",
 						expression=expr,
 						negate_add=lookup_exclude,
 					)
 				else:
-					lookup_type = lookup_value
-					ldap_filter = join_ldap_filter(ldap_filter, f"{lookup_type}={f}")
+					# If lookup_params isn't a dict, it's the type.
+					lookup_type = lookup_params
+					ldap_filter = join_ldap_filter(
+						ldap_filter, f"{lookup_type}={lookup_value}")
 		# Standard exclusion filter
 		else:
 			logger.debug("Dirtree fetching with Standard Exclusion Filter")
@@ -112,18 +117,18 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 				}
 			# Remove excluded field/value pairs from filter dict.
 			if filter_data_exclude:
-				for f in filter_data_exclude:
-					if f in filter_dict:
-						del filter_dict[f]
+				for lookup_value in filter_data_exclude:
+					if lookup_value in filter_dict:
+						del filter_dict[lookup_value]
 
 			ldap_filter = search_filter_from_dict(filter_dict)
 
 			# Add excluded field/value pairs as negated filters to dict.
 			if filter_data_exclude:
-				for f in filter_data_exclude:
-					lookup_type = filter_data_exclude[f]
+				for lookup_value in filter_data_exclude:
+					lookup_type = filter_data_exclude[lookup_value]
 					ldap_filter = join_ldap_filter(
-						ldap_filter, f"{lookup_type}={f}", negate_add=True
+						ldap_filter, f"{lookup_type}={lookup_value}", negate_add=True
 					)
 
 		logger.debug("LDAP Filter for Dirtree: %s", ldap_filter)
