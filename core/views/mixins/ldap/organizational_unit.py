@@ -154,7 +154,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 				new_path = ",".join(new_path)
 				new_dn = f"{new_relative_dn},{new_path}"
 		except Exception as e:
-			print(e)
+			logger.exception(e)
 			data = {
 				"ldap_response": self.ldap_connection.result,
 				"ldapObject": new_relative_dn,
