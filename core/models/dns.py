@@ -190,15 +190,12 @@ class LDAPRecordMixin:
 			logger.exception(e)
 			raise exc_dns.DNSCouldNotGetSOA from e
 
-	def get_serial(self: "LDAPRecord", record_values, old_serial=None) -> int:
+	def get_serial(self: "LDAPRecord", record_values: dict, old_serial: int=None) -> int:
 		if self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
 			return int(record_values["dwSerialNo"])
 
-		if not "serial" in record_values:
-			return self.get_soa_serial()
-
-		serial = record_values["serial"]
-		if serial == old_serial:
+		serial = record_values.get("serial", None)
+		if not serial or serial == old_serial:
 			return self.get_soa_serial()
 		else:
 			return serial
