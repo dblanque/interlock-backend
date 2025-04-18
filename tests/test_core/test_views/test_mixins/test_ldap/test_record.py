@@ -385,6 +385,33 @@ def test_create_record_non_soa(
 	)
 	assert isinstance(result, dict)
 
+def test_create_record_raises_could_not_increment_soa(
+	mocker: MockerFixture,
+	f_record_data_a,
+	f_record_mixin: DNSRecordMixin,
+	f_log_mixin: LogMixin,
+):
+	record_fixture = f_record_data_a
+	record_fixture["type"] = RecordTypes.DNS_RECORD_TYPE_A.value
+	m_request = mocker.MagicMock()
+	m_request.user.id = 1
+	f_record_mixin.request = m_request
+	mocker.patch.object(f_record_mixin, "increment_soa_serial", side_effect = Exception)
+	m_ldap_record_instance = mocker.MagicMock()
+	mocker.patch(
+		f"core.views.mixins.ldap.record.LDAPRecord",
+		return_value=m_ldap_record_instance
+	)
+	m_soa_object = mocker.MagicMock()
+	m_create: MockType = mocker.MagicMock()
+	m_ldap_record_instance.create = m_create
+	m_ldap_record_instance.soa_object = m_soa_object
+	m_ldap_record_instance.as_dict = record_fixture
+	m_ldap_record_instance.__fullname__ = mocker.Mock(return_value="mock_fullname")
+
+	with pytest.raises(exc_dns.DNSCouldNotIncrementSOA):
+		f_record_mixin.create_record(record_data=record_fixture)
+
 # def test_update_record():
 # 	pass
 
