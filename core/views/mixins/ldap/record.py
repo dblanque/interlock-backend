@@ -160,8 +160,8 @@ class DNSRecordMixin(DomainViewMixin):
 		if record_type != RecordTypes.DNS_RECORD_TYPE_SOA.value:
 			try:
 				self.increment_soa_serial(dns_record.soa_object, dns_record.serial)
-			except:
-				logger.error(traceback.format_exc())
+			except Exception as e:
+				logger.exception(e)
 				raise exc_dns.DNSCouldNotIncrementSOA
 
 		DBLogMixin.log(
