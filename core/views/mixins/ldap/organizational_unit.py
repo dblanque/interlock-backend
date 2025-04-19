@@ -49,7 +49,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 
 	# TODO - This should probably be reversed, each key should be a tuple
 	# to fix non-uniqueness availability instead of reversing the k-v pairs.
-	def process_filter(self, data: dict, filter_dict: dict = None):
+	def process_filter(self, data: dict = None, filter_dict: dict = None):
 		"""Process LDAP Directory Tree Request Filter
 
 		Args:
@@ -63,11 +63,13 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 		Returns:
 			str: LDAP Filter String
 		"""
-		ldap_filter = ""
+		if not isinstance(data, dict) and not data is None:
+			raise TypeError("data must be of type dict or None.")
 
-		if not isinstance(data, dict):
-			raise TypeError("data must be of type dict.")
-		filter_data: dict = data.get("filter", None)
+		ldap_filter: str = None
+		filter_data: dict = {}
+		if data:
+			filter_data = data.get("filter", {})
 
 		filter_data_iexact = filter_data.get("iexact", None)
 		if filter_data_iexact and not isinstance(filter_data_iexact, dict):

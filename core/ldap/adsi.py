@@ -236,6 +236,15 @@ def is_encapsulated(v: str) -> bool:
 		raise TypeError("is_encapsulated value must be of type str.")
 	return v.startswith("(") and v.endswith(")")
 
+def encapsulate(v: str) -> str:
+	"""Properly encapsulate ldap filter string"""
+	if is_encapsulated(v):
+		return v
+	if not v.startswith("("):
+		v = f"({v}"
+	if not v.endswith(")"):
+		v = f"{v})"
+	return v
 
 def join_ldap_filter(
 	filter_string: str,
@@ -271,25 +280,39 @@ def join_ldap_filter(
 			f"Invalid expression: {expression}. Must be one of {LDAP_FILTER_EXPRESSIONS}"
 		)
 
-	# Ensure both filters are properly encapsulated
-	if filter_string and not is_encapsulated(filter_string):
-		filter_string = f"({filter_string})"
-	if not is_encapsulated(filter_to_add):
-		filter_to_add = f"({filter_to_add})"
+	# Ensure original filter is encapsulated
+	if filter_string:
+		filter_string = encapsulate(filter_string)
+
+	# Ensure new filter is properly encapsulated
+	filter_to_add = encapsulate(filter_to_add)
+
+	# Negate new filter if necessary
 	if negate_add:
 		filter_to_add = f"(!{filter_to_add})"
+
+	# Check if filter_string has a matching expression
+	pre_existing_expr = None
+	if any(filter_string.startswith(f"({e}") for e in LDAP_FILTER_EXPRESSIONS):
+		# Remove encapsulation and get expression
+		pre_existing_expr = filter_string.strip("()")[0]
 
 	# Combine filters with the expression
 	if not filter_string:
 		combined_filter = filter_to_add
+	elif pre_existing_expr == expression:
+		# Remove trailing parenthesis
+		filter_string = filter_string[:-1]
+		# Concatenate without adding expression and initial parenthesis
+		combined_filter = f"{filter_string}{filter_to_add})"
 	else:
 		combined_filter = f"({expression}{filter_string}{filter_to_add})"
 
 	# Apply negation if needed
 	if negate:
-		combined_filter = f"(!{combined_filter})"
-
-	return combined_filter
+		return f"(!{combined_filter})"
+	else:
+		return combined_filter
 
 
 # This is not used or tested yet

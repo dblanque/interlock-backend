@@ -17,6 +17,7 @@ from core.ldap.adsi import (
 	parse_permissions_int,
 	list_user_perms,
 	is_encapsulated,
+	encapsulate,
 	LengthError,
 )
 
@@ -50,10 +51,22 @@ def test_is_encapsulated_raises():
 	with pytest.raises(TypeError):
 		is_encapsulated(False)
 
+@pytest.mark.parametrize(
+	"value",
+	(
+		"something",
+		"something)",
+		"(something",
+		"(something)",
+	),
+)
+def test_encapsulate(value):
+	assert encapsulate(value) == "(something)"
 
 @pytest.mark.parametrize(
 	"filter_string,filter_add,expression,negate,negate_add,expected",
 	(
+		# Simple AND expression
 		(
 			"objectClass=person",
 			"sAMAccountName=testuser",
@@ -62,6 +75,7 @@ def test_is_encapsulated_raises():
 			False,
 			f"({LDAP_FILTER_AND}(objectClass=person)(sAMAccountName=testuser))",
 		),
+		# Simple OR expression
 		(
 			"objectClass=person",
 			"sAMAccountName=testuser",
@@ -70,6 +84,7 @@ def test_is_encapsulated_raises():
 			False,
 			f"({LDAP_FILTER_OR}(objectClass=person)(sAMAccountName=testuser))",
 		),
+		# AND expression with negate add
 		(
 			"objectClass=person",
 			"sAMAccountName=testuser",
@@ -78,6 +93,7 @@ def test_is_encapsulated_raises():
 			True,
 			f"({LDAP_FILTER_AND}(objectClass=person)(!(sAMAccountName=testuser)))",
 		),
+		# AND expression with full negate
 		(
 			"objectClass=person",
 			"sAMAccountName=testuser",
@@ -86,6 +102,7 @@ def test_is_encapsulated_raises():
 			False,
 			f"(!({LDAP_FILTER_AND}(objectClass=person)(sAMAccountName=testuser)))",
 		),
+		# AND expression with uneven encapsulation
 		(
 			"(objectClass=person)",
 			"sAMAccountName=testuser",
@@ -94,6 +111,7 @@ def test_is_encapsulated_raises():
 			False,
 			f"({LDAP_FILTER_AND}(objectClass=person)(sAMAccountName=testuser))",
 		),
+		# AND with word expression
 		(
 			"(objectClass=person)",
 			"sAMAccountName=testuser",
@@ -102,6 +120,7 @@ def test_is_encapsulated_raises():
 			False,
 			f"({LDAP_FILTER_AND}(objectClass=person)(sAMAccountName=testuser))",
 		),
+		# OR with word expression
 		(
 			"(objectClass=person)",
 			"sAMAccountName=testuser",
@@ -110,6 +129,7 @@ def test_is_encapsulated_raises():
 			False,
 			f"({LDAP_FILTER_OR}(objectClass=person)(sAMAccountName=testuser))",
 		),
+		# Single Attribute filter
 		(
 			"",
 			"sAMAccountName=testuser",
@@ -117,6 +137,51 @@ def test_is_encapsulated_raises():
 			False,
 			False,
 			f"(sAMAccountName=testuser)",
+		),
+		# OR expression merging
+		(
+			f"({LDAP_FILTER_OR}(sAMAccountName=user1)(sAMAccountName=user2))",
+			"sAMAccountName=user3",
+			LDAP_FILTER_OR,
+			False,
+			False,
+			f"({LDAP_FILTER_OR}(sAMAccountName=user1)(sAMAccountName=user2)(sAMAccountName=user3))",
+		),
+		# OR expression merging with negate add
+		(
+			f"({LDAP_FILTER_OR}(sAMAccountName=user1)(sAMAccountName=user2))",
+			"sAMAccountName=user3",
+			LDAP_FILTER_OR,
+			False,
+			True,
+			f"({LDAP_FILTER_OR}(sAMAccountName=user1)(sAMAccountName=user2)(!(sAMAccountName=user3)))",
+		),
+		# OR expression merging with full negate
+		(
+			f"({LDAP_FILTER_OR}(sAMAccountName=user1)(sAMAccountName=user2))",
+			"sAMAccountName=user3",
+			LDAP_FILTER_OR,
+			True,
+			False,
+			f"(!({LDAP_FILTER_OR}(sAMAccountName=user1)(sAMAccountName=user2)(sAMAccountName=user3)))",
+		),
+		# AND expression merging
+		(
+			f"({LDAP_FILTER_AND}(sAMAccountName=user1)(sAMAccountName=user2))",
+			"sAMAccountName=user3",
+			LDAP_FILTER_AND,
+			False,
+			False,
+			f"({LDAP_FILTER_AND}(sAMAccountName=user1)(sAMAccountName=user2)(sAMAccountName=user3))",
+		),
+		# AND with OR merging
+		(
+			f"({LDAP_FILTER_AND}(sAMAccountName=user1)(sAMAccountName=user2))",
+			"sAMAccountName=user3",
+			LDAP_FILTER_OR,
+			False,
+			False,
+			f"({LDAP_FILTER_OR}({LDAP_FILTER_AND}(sAMAccountName=user1)(sAMAccountName=user2))(sAMAccountName=user3))",
 		),
 	),
 )
@@ -141,13 +206,13 @@ def test_join_ldap_filter_raises_invalid_expression():
 			LDAP_DIRTREE_OU_FILTER,
 			LDAP_FILTER_OR,
 			False,
-			f"({LDAP_FILTER_OR}({LDAP_FILTER_OR}({LDAP_FILTER_OR}(objectCategory=organizationalUnit)(objectCategory=top))(objectCategory=container))(objectClass=builtinDomain))",
+			f"({LDAP_FILTER_OR}(objectCategory=organizationalUnit)(objectCategory=top)(objectCategory=container)(objectClass=builtinDomain))",
 		),
 		(
 			{"objectClass": ["person", "user"], "sAMAccountName": "testuser"},
 			LDAP_FILTER_OR,
 			True,
-			f"(|(|(objectClass=person)(objectClass=user))(sAMAccountName=testuser))",
+			f"({LDAP_FILTER_OR}(objectClass=person)(objectClass=user)(sAMAccountName=testuser))",
 		),
 		(
 			{"objectClass": "person", "sAMAccountName": "testuser"},
