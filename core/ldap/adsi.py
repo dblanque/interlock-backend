@@ -380,6 +380,11 @@ def search_filter_from_dict(
 			)
 	return search_filter
 
+# TODO
+# create ldap filter from dict[expressions|attrs]
+# parse attrs
+# parse expressions
+# parse dict
 
 def bin_as_str(value: str | int):
 	if isinstance(value, int) and value < 0:
