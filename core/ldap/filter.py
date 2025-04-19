@@ -26,19 +26,6 @@ class LDAPFilterType(Enum):
 	LESS_OR_EQUAL = "<="
 	APPROXIMATE = "~="
 
-#
-# Example usage:
-# 	LDAPFilter.and_(
-# 		LDAPFilter.eq("givenName", "John"),
-# 		LDAPFilter.or_(
-# 			LDAPFilter.has("manager"),
-# 			LDAPFilter.substr("title", ["ab", "cd"])
-# 		)
-# 	)
-
-# Output:
-# 	(&(givenName=John)(|(manager=*)(title=ab*cd)))
-#
 class LDAPFilter:
 	"""LDAP Filter Constructor class"""
 	def __init__(
@@ -174,30 +161,89 @@ class LDAPFilter:
 	# Factory methods
 	@classmethod
 	def and_(cls, *filters: "LDAPFilter") -> "LDAPFilter":
+		"""LDAPFilter Expression AND, requires children instances (expressions
+		or attribute filtering).
+
+		Raises:
+			ValueError: Raised if no filter children are passed.
+
+		Returns:
+			LDAPFilter: LDAP Filter with AND Expression applied to children.
+		"""
 		if not filters:
 			raise ValueError("AND filter requires children")
 		return cls(LDAPFilterType.AND, children=list(filters))
 
 	@classmethod
 	def or_(cls, *filters: "LDAPFilter") -> "LDAPFilter":
+		"""LDAPFilter Expression OR, requires children LDAPFilter expressions or
+		attribute filtering.
+
+		Raises:
+			ValueError: Raised if no filter children are passed.
+
+		Returns:
+			LDAPFilter: LDAP Filter with OR Expression applied to children.
+		"""
 		if not filters:
 			raise ValueError("OR filter requires children")
 		return cls(LDAPFilterType.OR, children=list(filters))
 
 	@classmethod
 	def not_(cls, filter: "LDAPFilter") -> "LDAPFilter":
+		"""LDAPFilter Expression NOT, requires single LDAPFilter child
+		expression or attribute filtering.
+
+		Returns:
+			LDAPFilter: LDAP Filter with NOT Expression applied to child.
+		"""
 		return cls(LDAPFilterType.NOT, children=[filter])
 
 	@classmethod
 	def eq(cls, attribute: str, value: str) -> "LDAPFilter":
+		"""LDAP Filter Equality Comparison, requires attribute and value.
+
+		Checks for LDAP Attribute exact value match in object attribute field.
+
+		Args:
+			attribute (str): LDAP Attribute Field
+			value (str): LDAP Attribute Value
+
+		Returns:
+			LDAPFilter: Corresponding LDAP Filter.
+		"""
 		return cls(LDAPFilterType.EQUALITY, attribute=attribute, value=value)
 
 	@classmethod
 	def has(cls, attribute: str) -> "LDAPFilter":
+		"""LDAP Filter Presence Comparison, requires attribute field.
+
+		Checks for LDAP Attribute existence in object.
+
+		Args:
+			attribute (str): LDAP Attribute Field
+
+		Returns:
+			LDAPFilter: Corresponding LDAP Filter.
+		"""
 		return cls(LDAPFilterType.PRESENCE, attribute=attribute)
 
 	@classmethod
 	def substr(cls, attribute: str, parts: List[str]) -> "LDAPFilter":
+		"""LDAP Filter Substring Comparison, requires attribute and parts.
+
+		Checks for LDAP Attribute substring match in object attribute field.
+
+		Use empty string to manually insert wildcard at start or end of filter,
+		otherwise will only add wildcard between parts.
+
+		Args:
+			attribute (str): LDAP Attribute Field
+			parts (list[str]): LDAP Attribute Value
+
+		Returns:
+			LDAPFilter: Corresponding LDAP Filter with substring match.
+		"""
 		return cls(LDAPFilterType.SUBSTRING, attribute=attribute, parts=parts)
 
 	def __str__(self) -> str:
