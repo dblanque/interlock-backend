@@ -32,6 +32,8 @@ from core.models.choices.log import (
 )
 
 ### Others
+from rest_framework.exceptions import ValidationError
+from deprecated import deprecated
 from rest_framework import status
 from django.http.request import HttpRequest
 from core.ldap.filter import LDAPFilter
@@ -46,7 +48,11 @@ logger = logging.getLogger(__name__)
 
 LDAP_DEFAULT_DIRTREE_FILTER = {
 	"include": {
-		"objectCategory": ["organizationalUnit", "top", "container"],
+		"objectCategory": [
+			"organizationalUnit",
+			"top",
+			"container"
+		],
 		"objectClass": [
 			"builtinDomain",
 			"user",
@@ -61,14 +67,35 @@ LDAP_DEFAULT_DIRTREE_FILTER = {
 class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 	ldap_connection: Connection
 	request: HttpRequest
+	VALID_FILTER_ITERABLES = (list, tuple, set)
+	VALID_FILTERS = [
+		"exclude",
+		"include",
+		"iexact",
+		"contains",
+		"startswith",
+		"endswith",
+		"gte",
+		"lte",
+		"approx",
+	]
+
+	def validate_filter_dict(self, filter_dict: dict, allowed_keys: list = None):
+		if not allowed_keys:
+			allowed_keys = self.VALID_FILTERS
+		for filter_type, conditions in filter_dict.items():
+			if filter_type not in allowed_keys:
+				raise ValidationError(f"Unknown LDAP Filter Type {filter_type}.")
+			if not isinstance(conditions, dict):
+				raise ValidationError(f"Filter Type value must be of type dict ({filter_type}).")
 
 	def process_ldap_filter(
-			self, data: dict = None, local_filter: dict = None) -> LDAPFilter:
+			self, data_filter: dict = None, local_filter: dict = None) -> LDAPFilter:
 		"""
 		Process and merge LDAP filters from request data with default directory tree filters.
 
 		Args:
-			data: Request data containing user-specified filters
+			data: Request data filter dictionary containing user filters.
 			local_filter: Custom filter definition (defaults to
 				LDAP_DEFAULT_DIRTREE_FILTER) to apply along the request's
 				data filter.
@@ -77,35 +104,88 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 			LDAPFilter: Combined filter object ready for LDAP queries
 		"""
 		# Initialize filter dictionary with default values
-		local_filter = local_filter.copy() if local_filter else LDAP_DEFAULT_DIRTREE_FILTER.copy()
-		user_filters = data.get("filter", {}) if data else {}
+		if local_filter:
+			local_filter = local_filter.copy()
+		elif local_filter is None:
+			local_filter = LDAP_DEFAULT_DIRTREE_FILTER.copy()
 
-		# Build base filter from included attributes
+		if data_filter:
+			self.validate_filter_dict(filter_dict=data_filter)
+
 		default_filters = []
-		for attr, values in local_filter.get("include", {}).items():
-			# Create OR filter for each attribute's allowed values
-			attr_filter = LDAPFilter.or_(
-				*[LDAPFilter.eq(attr, v) for v in values]
-			)
-			default_filters.append(attr_filter)
+		if local_filter:
+			self.validate_filter_dict(filter_dict=local_filter, allowed_keys=["include"])
+
+			# Build base filter from included attributes
+			for attr, values in local_filter.get("include", {}).items():
+				# Create OR filter for each attribute's allowed values
+				attr_filter = LDAPFilter.or_(
+					*[LDAPFilter.eq(attr, v) for v in values]
+				)
+				default_filters.append(attr_filter)
 
 		# Combine include filters with AND expr
 		combined_filter = LDAPFilter.and_(*default_filters) if default_filters else None
 
-		for filter_type, conditions in user_filters.items():
+		for filter_type, conditions in data_filter.items():
 			for attr, value in conditions.items():
 				# Filter type handling
 				if filter_type == "exclude":
-					new_filter = LDAPFilter.not_(LDAPFilter.eq(attr, value))
+					if isinstance(value, self.VALID_FILTER_ITERABLES):
+						# Create OR filter for each attribute's allowed values
+						new_filter = LDAPFilter.and_(
+							*[LDAPFilter.not_(LDAPFilter.eq(attr, v)) for v in value]
+						)
+					else:
+						new_filter = LDAPFilter.not_(LDAPFilter.eq(attr, value))
+				elif filter_type == "include":
+					if isinstance(value, self.VALID_FILTER_ITERABLES):
+						# Create OR filter for each attribute's allowed values
+						new_filter = LDAPFilter.or_(
+							*[LDAPFilter.eq(attr, v) for v in value]
+						)
+					else:
+						# Create filter for single attribute's value
+						new_filter = LDAPFilter.eq(attr, value)
 				elif filter_type == "iexact":
-					new_filter = LDAPFilter.eq(attr, value)
+					if isinstance(value, self.VALID_FILTER_ITERABLES):
+						# Create OR filter for each attribute's allowed values
+						new_filter = LDAPFilter.and_(
+							*[LDAPFilter.eq(attr, v) for v in value]
+						)
+					else:
+						# Create filter for single attribute's value
+						new_filter = LDAPFilter.eq(attr, value)
 				elif filter_type == "contains":
-					new_filter = LDAPFilter.substr(attr, ["", value, ""])
+					if isinstance(value, self.VALID_FILTER_ITERABLES):
+						# Create OR filter for each attribute's allowed values
+						new_filter = LDAPFilter.or_(
+							*[LDAPFilter.eq(attr, ["", v, ""]) for v in value]
+						)
+					else:
+						# Create filter for single attribute's value
+						new_filter = LDAPFilter.eq(attr, ["", value, ""])
 				elif filter_type == "startswith":
-					new_filter = LDAPFilter.substr(attr, [value, ""])
+					if isinstance(value, self.VALID_FILTER_ITERABLES):
+						# Create OR filter for each attribute's allowed values
+						new_filter = LDAPFilter.or_(
+							*[LDAPFilter.eq(attr, [v, ""]) for v in value]
+						)
+					else:
+						# Create filter for single attribute's value
+						new_filter = LDAPFilter.eq(attr, [value, ""])
 				elif filter_type == "endswith":
-					new_filter = LDAPFilter.substr(attr, ["", value])
+					if isinstance(value, self.VALID_FILTER_ITERABLES):
+						# Create OR filter for each attribute's allowed values
+						new_filter = LDAPFilter.or_(
+							*[LDAPFilter.eq(attr, ["", v]) for v in value]
+						)
+					else:
+						# Create filter for single attribute's value
+						new_filter = LDAPFilter.eq(attr, ["", value])
 				elif filter_type in ["gte", "lte", "approx"]:
+					if isinstance(value, self.VALID_FILTER_ITERABLES):
+						raise ValidationError(f"Filter value for '{filter_type}' cannot be an iterable.")
 					op_map = {
 						"gte": ">=",
 						"lte": "<=",
@@ -129,6 +209,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 
 	# TODO - This should probably be reversed, each key should be a tuple
 	# to fix non-uniqueness availability instead of reversing the k-v pairs.
+	@deprecated
 	def process_filter(self, data: dict = None, filter_dict: dict = None):
 		"""Process LDAP Directory Tree Request Filter
 
