@@ -32,8 +32,9 @@ from core.models.choices.log import (
 )
 
 ### Others
-from django.http.request import HttpRequest
 from rest_framework import status
+from django.http.request import HttpRequest
+from core.ldap.filter import LDAPFilter
 from ldap3 import Connection
 from ldap3.utils.dn import safe_dn, safe_rdn
 import logging
@@ -43,9 +44,88 @@ DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
 
+LDAP_DEFAULT_DIRTREE_FILTER = {
+	"include": {
+		"objectCategory": ["organizationalUnit", "top", "container"],
+		"objectClass": [
+			"builtinDomain",
+			"user",
+			"person",
+			"group",
+			"organizationalPerson",
+			"computer",
+		]
+	}
+}
+
 class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 	ldap_connection: Connection
 	request: HttpRequest
+
+	def process_ldap_filter(
+			self, data: dict = None, local_filter: dict = None) -> LDAPFilter:
+		"""
+		Process and merge LDAP filters from request data with default directory tree filters.
+
+		Args:
+			data: Request data containing user-specified filters
+			local_filter: Custom filter definition (defaults to
+				LDAP_DEFAULT_DIRTREE_FILTER) to apply along the request's
+				data filter.
+
+		Returns:
+			LDAPFilter: Combined filter object ready for LDAP queries
+		"""
+		# Initialize filter dictionary with default values
+		local_filter = local_filter.copy() if local_filter else LDAP_DEFAULT_DIRTREE_FILTER.copy()
+		user_filters = data.get("filter", {}) if data else {}
+
+		# Build base filter from included attributes
+		default_filters = []
+		for attr, values in local_filter.get("include", {}).items():
+			# Create OR filter for each attribute's allowed values
+			attr_filter = LDAPFilter.or_(
+				*[LDAPFilter.eq(attr, v) for v in values]
+			)
+			default_filters.append(attr_filter)
+
+		# Combine include filters with AND expr
+		combined_filter = LDAPFilter.and_(*default_filters) if default_filters else None
+
+		for filter_type, conditions in user_filters.items():
+			for attr, value in conditions.items():
+				# Filter type handling
+				if filter_type == "exclude":
+					new_filter = LDAPFilter.not_(LDAPFilter.eq(attr, value))
+				elif filter_type == "iexact":
+					new_filter = LDAPFilter.eq(attr, value)
+				elif filter_type == "contains":
+					new_filter = LDAPFilter.substr(attr, ["", value, ""])
+				elif filter_type == "startswith":
+					new_filter = LDAPFilter.substr(attr, [value, ""])
+				elif filter_type == "endswith":
+					new_filter = LDAPFilter.substr(attr, ["", value])
+				elif filter_type in ["gte", "lte", "approx"]:
+					op_map = {
+						"gte": ">=",
+						"lte": "<=",
+						"approx": "~="
+					}
+					new_filter = LDAPFilter(
+						type=op_map[filter_type],
+						attribute=attr,
+						value=value
+					)
+				else:
+					raise ValueError(f"Unsupported filter type: {filter_type}")
+
+				# Combine with existing filters using AND
+				if combined_filter:
+					combined_filter = LDAPFilter.and_(combined_filter, new_filter)
+				else:
+					combined_filter = new_filter
+
+		return combined_filter
 
 	# TODO - This should probably be reversed, each key should be a tuple
 	# to fix non-uniqueness availability instead of reversing the k-v pairs.
