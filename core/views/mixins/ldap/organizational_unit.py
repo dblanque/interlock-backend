@@ -89,8 +89,23 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 			if not isinstance(conditions, dict):
 				raise ValidationError(f"Filter Type value must be of type dict ({filter_type}).")
 
+	@staticmethod
+	def replace_filter_defaults(d: dict, o: dict):
+		"""Replace filter dictionary defaults."""
+		defaults_dict = d.copy()
+		overrides_dict = o.copy()
+		for filter_type, conditions in overrides_dict.items():
+			conditions: dict
+			if not filter_type in defaults_dict:
+				defaults_dict[filter_type] = conditions
+			else:
+				defaults_conditions = defaults_dict[filter_type]
+				for attr, value in conditions.items():
+					defaults_conditions[attr] = value
+		return defaults_dict
+
 	def process_ldap_filter(
-			self, data_filter: dict = None, local_filter: dict = None) -> LDAPFilter:
+			self, data_filter: dict = None, local_filter: dict = None, override_defaults = False) -> LDAPFilter:
 		"""
 		Process and merge LDAP filters from request data with default directory tree filters.
 
@@ -99,6 +114,8 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 			local_filter: Custom filter definition (defaults to
 				LDAP_DEFAULT_DIRTREE_FILTER) to apply along the request's
 				data filter.
+			override_defaults: Whether to override local_filter defaults with
+				data_filter filters.
 
 		Returns:
 			LDAPFilter: Combined filter object ready for LDAP queries
@@ -113,7 +130,9 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 			self.validate_filter_dict(filter_dict=data_filter)
 
 		default_filters = []
-		if local_filter:
+		if override_defaults:
+			data_filter = self.replace_filter_defaults(local_filter, data_filter)
+		elif local_filter:
 			self.validate_filter_dict(filter_dict=local_filter, allowed_keys=["include"])
 
 			# Build base filter from included attributes
