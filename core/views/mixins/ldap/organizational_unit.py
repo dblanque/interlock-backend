@@ -6,7 +6,7 @@
 # Module: core.views.mixins.ldap.organizational_unit
 # Contains the Mixin for Organizational Unit related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# --------------------------------- IMPORTS -----------------------------------#
 ### ViewSets
 from rest_framework import viewsets
 
