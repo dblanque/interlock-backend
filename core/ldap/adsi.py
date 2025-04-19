@@ -281,8 +281,14 @@ def join_ldap_filter(
 		)
 
 	# Ensure original filter is encapsulated
+	pre_existing_expr = None
 	if filter_string:
 		filter_string = encapsulate(filter_string)
+
+		# Check if filter_string has a matching expression
+		if any(filter_string.startswith(f"({e}") for e in LDAP_FILTER_EXPRESSIONS):
+			# Remove encapsulation and get expression
+			pre_existing_expr = filter_string.strip("()")[0]
 
 	# Ensure new filter is properly encapsulated
 	filter_to_add = encapsulate(filter_to_add)
@@ -290,12 +296,6 @@ def join_ldap_filter(
 	# Negate new filter if necessary
 	if negate_add:
 		filter_to_add = f"(!{filter_to_add})"
-
-	# Check if filter_string has a matching expression
-	pre_existing_expr = None
-	if any(filter_string.startswith(f"({e}") for e in LDAP_FILTER_EXPRESSIONS):
-		# Remove encapsulation and get expression
-		pre_existing_expr = filter_string.strip("()")[0]
 
 	# Combine filters with the expression
 	if not filter_string:

@@ -107,7 +107,7 @@ def fc_user_permissions():
 @pytest.fixture
 def f_default_user_filter():
 	def maker(username):
-		return f"(&(&(objectClass=person)(!(objectClass=computer)))(sAMAccountName={username}))"
+		return f"(&(objectClass=person)(!(objectClass=computer))(sAMAccountName={username}))"
 
 	return maker
 
@@ -190,7 +190,7 @@ class TestUserViewLDAPMixin:
 				"testuser",
 				None,
 				True,
-				"(&(&(objectClass=person)(!(objectClass=computer)))(sAMAccountName=testuser))",
+				"(&(objectClass=person)(!(objectClass=computer))(sAMAccountName=testuser))",
 			),
 			(
 				None,
@@ -202,7 +202,7 @@ class TestUserViewLDAPMixin:
 				None,
 				f"testuser@{LDAP_DOMAIN}",
 				True,
-				f"(&(&(objectClass=person)(!(objectClass=computer)))(mail=testuser@{LDAP_DOMAIN}))",
+				f"(&(objectClass=person)(!(objectClass=computer))(mail=testuser@{LDAP_DOMAIN}))",
 			),
 		),
 	)
@@ -233,7 +233,7 @@ class TestUserViewLDAPMixin:
 				f"testuser@{LDAP_DOMAIN}",
 				True,
 				False,
-				f"(&(&(objectClass=person)(!(objectClass=computer)))(|(sAMAccountName=testuser)(mail=testuser@{LDAP_DOMAIN})))",
+				f"(&(objectClass=person)(!(objectClass=computer))(|(sAMAccountName=testuser)(mail=testuser@{LDAP_DOMAIN})))",
 			),
 			(
 				"testuser",
@@ -247,7 +247,7 @@ class TestUserViewLDAPMixin:
 				f"testuser@{LDAP_DOMAIN}",
 				True,
 				True,
-				f"(&(&(objectClass=person)(!(objectClass=computer)))(&(sAMAccountName=testuser)(mail=testuser@{LDAP_DOMAIN})))",
+				f"(&(objectClass=person)(!(objectClass=computer))(&(sAMAccountName=testuser)(mail=testuser@{LDAP_DOMAIN})))",
 			),
 		),
 	)
