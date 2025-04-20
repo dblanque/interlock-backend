@@ -105,7 +105,11 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 		return defaults_dict
 
 	def process_ldap_filter(
-			self, data_filter: dict = None, local_filter: dict = None, override_defaults = False) -> LDAPFilter:
+			self,
+			data_filter: dict = None,
+			local_filter: dict = None,
+			override_defaults = False
+		) -> LDAPFilter:
 		"""
 		Process and merge LDAP filters from request data with default directory tree filters.
 
@@ -229,7 +233,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 	# TODO - This should probably be reversed, each key should be a tuple
 	# to fix non-uniqueness availability instead of reversing the k-v pairs.
 	@deprecated
-	def process_filter(self, data: dict = None, filter_dict: dict = None):
+	def process_filter(self, data: dict = None, filter_dict: dict = None): # pragma: no cover
 		"""Process LDAP Directory Tree Request Filter
 
 		Args:
