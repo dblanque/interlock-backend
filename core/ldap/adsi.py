@@ -15,6 +15,7 @@ from core.config.runtime import RuntimeSettings
 from typing import Union, Literal, TypedDict, Required
 from ldap3 import Entry as LDAPEntry
 from core.views.mixins.utils import getldapattr
+from core.ldap.filter import encapsulate
 import logging
 
 logger = logging.getLogger(__name__)
@@ -228,23 +229,6 @@ LDAP_BUILTIN_OBJECTS = [
 	"Users",
 	"Managed Service Accounts",
 ]
-
-
-def is_encapsulated(v: str) -> bool:
-	"""Check if a string is wrapped in parentheses."""
-	if not isinstance(v, str):
-		raise TypeError("is_encapsulated value must be of type str.")
-	return v.startswith("(") and v.endswith(")")
-
-def encapsulate(v: str) -> str:
-	"""Properly encapsulate ldap filter string"""
-	if is_encapsulated(v):
-		return v
-	if not v.startswith("("):
-		v = f"({v}"
-	if not v.endswith(")"):
-		v = f"{v})"
-	return v
 
 def join_ldap_filter(
 	filter_string: str,

@@ -16,52 +16,9 @@ from core.ldap.adsi import (
 	merge_val_bin,
 	parse_permissions_int,
 	list_user_perms,
-	is_encapsulated,
-	encapsulate,
 	LengthError,
 )
 
-
-@pytest.mark.parametrize(
-	"test_value, expected",
-	(
-		(
-			"(something)",
-			True,
-		),
-		(
-			"(something",
-			False,
-		),
-		(
-			"something)",
-			False,
-		),
-		(
-			"something",
-			False,
-		),
-	),
-)
-def test_is_encapsulated(test_value, expected):
-	assert is_encapsulated(test_value) == expected
-
-
-def test_is_encapsulated_raises():
-	with pytest.raises(TypeError):
-		is_encapsulated(False)
-
-@pytest.mark.parametrize(
-	"value",
-	(
-		"something",
-		"something)",
-		"(something",
-		"(something)",
-	),
-)
-def test_encapsulate(value):
-	assert encapsulate(value) == "(something)"
 
 @pytest.mark.parametrize(
 	"filter_string,filter_add,expression,negate,negate_add,expected",

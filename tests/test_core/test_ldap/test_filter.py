@@ -3,7 +3,52 @@ import pytest
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
 ################################################################################
-from core.ldap.filter import LDAPFilter, LDAPFilterType
+from core.ldap.filter import (
+	LDAPFilter,
+	LDAPFilterType,
+	encapsulate,
+	is_encapsulated
+)
+
+@pytest.mark.parametrize(
+	"test_value, expected",
+	(
+		(
+			"(something)",
+			True,
+		),
+		(
+			"(something",
+			False,
+		),
+		(
+			"something)",
+			False,
+		),
+		(
+			"something",
+			False,
+		),
+	),
+)
+def test_is_encapsulated(test_value, expected):
+	assert is_encapsulated(test_value) == expected
+
+def test_is_encapsulated_raises():
+	with pytest.raises(TypeError):
+		is_encapsulated(False)
+
+@pytest.mark.parametrize(
+	"value",
+	(
+		"something",
+		"something)",
+		"(something",
+		"(something)",
+	),
+)
+def test_encapsulate(value):
+	assert encapsulate(value) == "(something)"
 
 def test_ldap_filter_equality():
 	assert LDAPFilter.eq(

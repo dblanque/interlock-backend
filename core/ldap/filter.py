@@ -9,10 +9,14 @@ def is_encapsulated(v: str) -> bool:
 	return v.startswith("(") and v.endswith(")")
 
 def encapsulate(v: str) -> str:
-	"""Properly encapsulate LDAP filter string"""
+	"""Properly encapsulate ldap filter string"""
 	if is_encapsulated(v):
 		return v
-	return f"({v})" if not v.startswith("(") else f"({v})" if not v.endswith(")") else f"({v}"
+	if not v.startswith("("):
+		v = f"({v}"
+	if not v.endswith(")"):
+		v = f"{v})"
+	return v
 
 class LDAPFilterType(Enum):
 	"""Enum representing all valid LDAP filter types"""
