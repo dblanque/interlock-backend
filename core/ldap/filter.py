@@ -26,6 +26,8 @@ class LDAPFilterType(Enum):
 	LESS_OR_EQUAL = "<="
 	APPROXIMATE = "~="
 
+LDAPFilterRE = re.compile(r'^([\w$]+)(>=|<=|~=|:=|=)(.*)$')
+
 class LDAPFilter:
 	"""LDAP Filter Constructor class"""
 	def __init__(
@@ -83,17 +85,21 @@ class LDAPFilter:
 		first_char = content[0]
 		remaining = content[1:].lstrip()
 
+		# NOT filter
 		if first_char == LDAPFilterType.NOT.value:
 			if not remaining:
-				raise ValueError("NOT filter missing child")
+				raise ValueError("NOT filter requires a child")
 			child_str, remaining = cls._parse_next_filter(remaining)
 			if remaining:
 				raise ValueError("Unexpected characters after NOT filter")
 			return cls.not_(cls.from_string(child_str))
 
-		filter_type = LDAPFilterType.OR
+		# AND / OR filters
+		filter_type = None
 		if first_char == LDAPFilterType.AND.value:
 			filter_type = LDAPFilterType.AND
+		else:
+			filter_type = LDAPFilterType.OR
 
 		children = []
 		while remaining:
@@ -117,13 +123,13 @@ class LDAPFilter:
 				end = i + 1
 				break
 		if end is None:
-			raise ValueError("Unmatched parentheses")
+			raise ValueError("Unmatched parentheses in LDAP Filter string")
 		return s[:end], s[end:].lstrip()
 
 	@classmethod
 	def _parse_simple_filter(cls, content: str) -> "LDAPFilter":
 		"""Handle simple attribute-based filters"""
-		match = re.match(r'^([\w$]+)(>=|<=|~=|:=|=)(.*)$', content)
+		match = LDAPFilterRE.match(content)
 		if not match:
 			raise ValueError(f"Invalid filter format: {content}")
 
@@ -245,10 +251,60 @@ class LDAPFilter:
 			LDAPFilter: Corresponding LDAP Filter with substring match.
 		"""
 		return cls(LDAPFilterType.SUBSTRING, attribute=attribute, parts=parts)
+	
+	@classmethod
+	def ge(cls, attribute: str, value: str | int) -> "LDAPFilter":
+		"""LDAP Filter Greater or Equal Comparison, requires attribute field and
+		attribute value.
+
+		Checks for LDAP Attribute existence in object.
+
+		Args:
+			attribute (str): LDAP Attribute Field
+			value (str or int): LDAP Attribute Value
+
+		Returns:
+			LDAPFilter: Corresponding LDAP Filter.
+		"""
+		return cls(LDAPFilterType.GREATER_OR_EQUAL, attribute=attribute, value=value)
+	
+	@classmethod
+	def le(cls, attribute: str, value: str | int) -> "LDAPFilter":
+		"""LDAP Filter Less or Equal Comparison, requires attribute field and
+		attribute value.
+
+		Checks for LDAP Attribute existence in object.
+
+		Args:
+			attribute (str): LDAP Attribute Field
+			value (str or int): LDAP Attribute Value
+
+		Returns:
+			LDAPFilter: Corresponding LDAP Filter.
+		"""
+		return cls(LDAPFilterType.LESS_OR_EQUAL, attribute=attribute, value=value)
+	
+	@classmethod
+	def approximate(cls, attribute: str, value: str | int) -> "LDAPFilter":
+		"""LDAP Filter Approximate Comparison, requires attribute field and
+		attribute value.
+
+		Checks for LDAP Attribute existence in object.
+
+		Args:
+			attribute (str): LDAP Attribute Field
+			value (str or int): LDAP Attribute Value
+
+		Returns:
+			LDAPFilter: Corresponding LDAP Filter.
+		"""
+		return cls(LDAPFilterType.APPROXIMATE, attribute=attribute, value=value)
 
 	def __str__(self) -> str:
+		"""Returns stringified LDAP Filter"""
 		return self.to_string()
 
 	def __repr__(self) -> str:
+		"""String representation of LDAP Filter"""
 		return (f"LDAPFilter(type={self.type.name}, attribute={self.attribute}, "
 				f"value={self.value}, parts={self.parts}, children={self.children})")
