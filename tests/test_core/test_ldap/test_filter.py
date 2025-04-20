@@ -34,16 +34,25 @@ from core.ldap.filter import (
 def test_is_encapsulated(test_value, expected):
 	assert is_encapsulated(test_value) == expected
 
-def test_is_encapsulated_raises():
+def test_is_encapsulated_raises_type_error():
 	with pytest.raises(TypeError):
 		is_encapsulated(False)
 
 @pytest.mark.parametrize(
 	"value",
 	(
-		"something",
 		"something)",
 		"(something",
+	),
+)
+def test_is_encapsulated_raises_value_error(value):
+	with pytest.raises(ValueError):
+		is_encapsulated(value, True)
+
+@pytest.mark.parametrize(
+	"value",
+	(
+		"something",
 		"(something)",
 	),
 )
