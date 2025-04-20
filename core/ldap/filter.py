@@ -2,21 +2,36 @@ from enum import Enum
 from typing import List, Optional
 import re
 
-def is_encapsulated(v: str) -> bool:
-	"""Check if a string is wrapped in parentheses."""
+def is_encapsulated(v: str, raise_exception=False) -> bool:
+	"""Validate LDAP filter string encapsulation and parenthesis balance.
+	
+	Args:
+		v: String to validate
+
+	Returns:
+		True if properly wrapped in parentheses with balanced delimiters
+
+	Raises:
+		TypeError: For non-string inputs
+		ValueError: If parentheses are unbalanced
+	"""
 	if not isinstance(v, str):
-		raise TypeError("is_encapsulated value must be of type str.")
-	return v.startswith("(") and v.endswith(")")
+		raise TypeError("Input must be a string")
+
+	has_start = v.startswith("(")
+	has_end = v.endswith(")")
+
+	if raise_exception:
+		if (has_start and not has_end) or (not has_start and has_end):
+			raise ValueError(f"Unbalanced parentheses in filter string: {v}")
+
+	return has_start and has_end
 
 def encapsulate(v: str) -> str:
-	"""Properly encapsulate ldap filter string"""
+	"""Properly encapsulate LDAP filter string"""
 	if is_encapsulated(v):
 		return v
-	if not v.startswith("("):
-		v = f"({v}"
-	if not v.endswith(")"):
-		v = f"{v})"
-	return v
+	return f"({v})"
 
 class LDAPFilterType(Enum):
 	"""Enum representing all valid LDAP filter types"""
