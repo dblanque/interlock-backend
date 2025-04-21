@@ -110,11 +110,12 @@ def test_ldap_filter_approximate():
 	),
 )
 def test_ldap_filter_and(count: int):
-	r = range(1, count)
+	r = range(1, count + 1)
 	expected = "".join([f"(mockAttribute{str(i)}=mockValue{str(i)})" for i in r])
+	expected = f"(&{expected})"
 	assert LDAPFilter.and_(
 		*[LDAPFilter.eq(f"mockAttribute{str(i)}",f"mockValue{str(i)}") for i in r]
-	).to_string() == f"(&{expected})"
+	).to_string() == expected
 
 @pytest.mark.parametrize(
 	"count",
@@ -125,11 +126,12 @@ def test_ldap_filter_and(count: int):
 	),
 )
 def test_ldap_filter_or(count: int):
-	r = range(1, count)
+	r = range(1, count + 1)
 	expected = "".join([f"(mockAttribute{str(i)}=mockValue{str(i)})" for i in r])
+	expected = f"(|{expected})"
 	assert LDAPFilter.or_(
 		*[LDAPFilter.eq(f"mockAttribute{str(i)}",f"mockValue{str(i)}") for i in r]
-	).to_string() == f"(|{expected})"
+	).to_string() == expected
 
 def test_ldap_filter_not():
 	assert LDAPFilter.not_(

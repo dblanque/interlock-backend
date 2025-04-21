@@ -69,7 +69,7 @@ def test_process_ldap_filter_no_defaults(f_ou_mixin: OrganizationalUnitMixin):
 				"user",
 			]
 		}
-	}, local_filter=False).to_string() == expected
+	}, default_filter=False).to_string() == expected
 
 def test_process_ldap_filter_overriding_defaults(
 		f_ou_mixin: OrganizationalUnitMixin,
