@@ -22,11 +22,13 @@ from core.models.structs.ldap_dns_record import RecordTypes
 thismodule = sys.modules[__name__]
 logger = logging.getLogger(__name__)
 
+
 def record_type_validator(value: int):
 	try:
 		RecordTypes(value)
 	except:
 		raise ValidationError("dns_record_type_unsupported")
+
 
 def ldap_uri_validator(uri_list: list[str]):
 	for uri in uri_list:

@@ -5,6 +5,7 @@ from core.models.validators.dns import (
 )
 from rest_framework.serializers import ValidationError
 
+
 # canonicalHostname_validator tests
 @pytest.mark.parametrize(
 	"value, expected",
@@ -58,6 +59,7 @@ def test_domain_validator(value, expected):
 			domain_validator(value)
 	else:
 		domain_validator(value)
+
 
 # Test error cases that should raise exceptions
 @pytest.mark.parametrize(

@@ -2,9 +2,10 @@ from enum import Enum
 from typing import List, Optional
 import re
 
+
 def is_encapsulated(v: str, raise_exception=False) -> bool:
 	"""Validate LDAP filter string encapsulation and parenthesis balance.
-	
+
 	Args:
 		v: String to validate
 
@@ -27,14 +28,17 @@ def is_encapsulated(v: str, raise_exception=False) -> bool:
 
 	return has_start and has_end
 
+
 def encapsulate(v: str) -> str:
 	"""Properly encapsulate LDAP filter string"""
 	if is_encapsulated(v):
 		return v
 	return f"({v})"
 
+
 class LDAPFilterType(Enum):
 	"""Enum representing all valid LDAP filter types"""
+
 	AND = "&"
 	OR = "|"
 	NOT = "!"
@@ -45,17 +49,20 @@ class LDAPFilterType(Enum):
 	LESS_OR_EQUAL = "<="
 	APPROXIMATE = "~="
 
-LDAPFilterRE = re.compile(r'^([\w$]+)(>=|<=|~=|:=|=)(.*)$')
+
+LDAPFilterRE = re.compile(r"^([\w$]+)(>=|<=|~=|:=|=)(.*)$")
+
 
 class LDAPFilter:
 	"""LDAP Filter Constructor class"""
+
 	def __init__(
 		self,
 		type: LDAPFilterType,
 		children: Optional[List["LDAPFilter"]] = None,
 		attribute: Optional[str] = None,
 		value: Optional[str] = None,
-		parts: Optional[List[str]] = None
+		parts: Optional[List[str]] = None,
 	):
 		self.type = type
 		self.children = children if children is not None else []
@@ -66,7 +73,7 @@ class LDAPFilter:
 	def to_string(self) -> str:
 		"""Convert filter to LDAP filter string"""
 		if self.type in (LDAPFilterType.AND, LDAPFilterType.OR):
-			children_str = ''.join(child.to_string() for child in self.children)
+			children_str = "".join(child.to_string() for child in self.children)
 			return encapsulate(f"{self.type.value}{children_str}")
 		elif self.type == LDAPFilterType.NOT:
 			return encapsulate(f"{self.type.value}{self.children[0].to_string()}")
@@ -75,11 +82,13 @@ class LDAPFilter:
 		elif self.type == LDAPFilterType.PRESENCE:
 			return encapsulate(f"{self.attribute}=*")
 		elif self.type == LDAPFilterType.SUBSTRING:
-			value = '*'.join(self.parts or [])
+			value = "*".join(self.parts or [])
 			return encapsulate(f"{self.attribute}={value}")
-		elif self.type in (LDAPFilterType.GREATER_OR_EQUAL, 
-						  LDAPFilterType.LESS_OR_EQUAL,
-						  LDAPFilterType.APPROXIMATE):
+		elif self.type in (
+			LDAPFilterType.GREATER_OR_EQUAL,
+			LDAPFilterType.LESS_OR_EQUAL,
+			LDAPFilterType.APPROXIMATE,
+		):
 			return encapsulate(f"{self.attribute}{self.type.value}{self.value}")
 		else:
 			raise ValueError(f"Unsupported filter type: {self.type}")
@@ -94,7 +103,9 @@ class LDAPFilter:
 		if not content:
 			raise ValueError("Empty filter content")
 
-		if content[0] in (t.value for t in (LDAPFilterType.AND, LDAPFilterType.OR, LDAPFilterType.NOT)):
+		if content[0] in (
+			t.value for t in (LDAPFilterType.AND, LDAPFilterType.OR, LDAPFilterType.NOT)
+		):
 			return cls._parse_complex_filter(content)
 		return cls._parse_simple_filter(content)
 
@@ -132,12 +143,14 @@ class LDAPFilter:
 	def _parse_next_filter(cls, s: str) -> tuple[str, str]:
 		"""Extract next filter component from string"""
 		s = s.lstrip()
-		if not s.startswith('('):
+		if not s.startswith("("):
 			raise ValueError("Filter component must start with '('")
 		depth, end = 1, None
 		for i, c in enumerate(s[1:], 1):
-			if c == '(': depth += 1
-			elif c == ')': depth -= 1
+			if c == "(":
+				depth += 1
+			elif c == ")":
+				depth -= 1
 			if depth == 0:
 				end = i + 1
 				break
@@ -153,8 +166,8 @@ class LDAPFilter:
 			raise ValueError(f"Invalid filter format: {content}")
 
 		attr, op, value = match.groups()
-		if op == '=':
-			if value == '*':
+		if op == "=":
+			if value == "*":
 				return cls(LDAPFilterType.PRESENCE, attribute=attr)
 			return cls._parse_equality_or_substring(attr, value)
 		return cls._parse_operator_filter(attr, op, value)
@@ -162,22 +175,18 @@ class LDAPFilter:
 	@classmethod
 	def _parse_equality_or_substring(cls, attr: str, value: str) -> "LDAPFilter":
 		"""Handle equality or substring filters"""
-		if '*' in value:
-			return cls(LDAPFilterType.SUBSTRING, 
-					  attribute=attr, 
-					  parts=value.split('*'))
-		return cls(LDAPFilterType.EQUALITY, 
-				 attribute=attr, 
-				 value=value)
+		if "*" in value:
+			return cls(LDAPFilterType.SUBSTRING, attribute=attr, parts=value.split("*"))
+		return cls(LDAPFilterType.EQUALITY, attribute=attr, value=value)
 
 	@classmethod
 	def _parse_operator_filter(cls, attr: str, op: str, value: str) -> "LDAPFilter":
 		"""Handle comparison operators"""
 		try:
 			filter_type = {
-				'>=': LDAPFilterType.GREATER_OR_EQUAL,
-				'<=': LDAPFilterType.LESS_OR_EQUAL,
-				'~=': LDAPFilterType.APPROXIMATE
+				">=": LDAPFilterType.GREATER_OR_EQUAL,
+				"<=": LDAPFilterType.LESS_OR_EQUAL,
+				"~=": LDAPFilterType.APPROXIMATE,
 			}[op]
 		except KeyError:
 			raise ValueError(f"Unsupported operator: {op}")
@@ -274,7 +283,7 @@ class LDAPFilter:
 			LDAPFilter: Corresponding LDAP Filter with substring match.
 		"""
 		return cls(LDAPFilterType.SUBSTRING, attribute=attribute, parts=parts)
-	
+
 	@classmethod
 	def ge(cls, attribute: str, value: str | int) -> "LDAPFilter":
 		"""LDAP Filter Greater or Equal Comparison, requires attribute field and
@@ -290,7 +299,7 @@ class LDAPFilter:
 			LDAPFilter: Corresponding LDAP Filter.
 		"""
 		return cls(LDAPFilterType.GREATER_OR_EQUAL, attribute=attribute, value=value)
-	
+
 	@classmethod
 	def le(cls, attribute: str, value: str | int) -> "LDAPFilter":
 		"""LDAP Filter Less or Equal Comparison, requires attribute field and
@@ -306,7 +315,7 @@ class LDAPFilter:
 			LDAPFilter: Corresponding LDAP Filter.
 		"""
 		return cls(LDAPFilterType.LESS_OR_EQUAL, attribute=attribute, value=value)
-	
+
 	@classmethod
 	def approximate(cls, attribute: str, value: str | int) -> "LDAPFilter":
 		"""LDAP Filter Approximate Comparison, requires attribute field and
@@ -329,5 +338,7 @@ class LDAPFilter:
 
 	def __repr__(self) -> str:
 		"""String representation of LDAP Filter"""
-		return (f"LDAPFilter(type={self.type.name}, attribute={self.attribute}, "
-				f"value={self.value}, parts={self.parts}, children={self.children})")
+		return (
+			f"LDAPFilter(type={self.type.name}, attribute={self.attribute}, "
+			f"value={self.value}, parts={self.parts}, children={self.children})"
+		)

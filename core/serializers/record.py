@@ -10,6 +10,8 @@ from core.models.validators.common import ascii_validator, int32_validator
 
 MAX_16_BIT = 65535
 MAX_TTL_RFC_2181 = 2147483647
+
+
 class DNSRecordSerializer(serializers.Serializer):
 	name = serializers.CharField()
 	ttl = serializers.IntegerField(max_value=MAX_TTL_RFC_2181)
@@ -34,6 +36,7 @@ class DNSRecordMXSerializer(DNSRecordSerializer):
 	nameExchange = serializers.CharField(validators=[canonical_hostname_validator])
 	wPreference = serializers.IntegerField(max_value=MAX_16_BIT)
 
+
 class DNSRecordStringDataSerializer(DNSRecordSerializer):
 	stringData = serializers.CharField(max_length=255, validators=[ascii_validator])
 
@@ -53,6 +56,7 @@ class DNSRecordSRVSerializer(DNSRecordSerializer):
 	wPriority = serializers.IntegerField(min_value=0, max_value=MAX_16_BIT)
 	wWeight = serializers.IntegerField(min_value=0, max_value=MAX_16_BIT)
 	wPort = serializers.IntegerField(min_value=0, max_value=MAX_16_BIT)
+
 
 DNS_RECORD_SERIALIZERS: dict = {}
 for record_type, record_mapping in RECORD_MAPPINGS.items():

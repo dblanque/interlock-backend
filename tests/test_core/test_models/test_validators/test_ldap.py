@@ -7,6 +7,7 @@ from core.models.structs.ldap_dns_record import RecordTypes
 from rest_framework.serializers import ValidationError
 from core.ldap.defaults import LDAP_DOMAIN
 
+
 @pytest.mark.parametrize(
 	"value",
 	(
@@ -18,6 +19,7 @@ from core.ldap.defaults import LDAP_DOMAIN
 )
 def test_ldap_uri_validator(value: str):
 	ldap_uri_validator([value])
+
 
 @pytest.mark.parametrize(
 	"value",
@@ -32,6 +34,7 @@ def test_ldap_uri_validator(value: str):
 def test_ldap_uri_validator_raises_exc(value: str):
 	with pytest.raises(ValidationError):
 		ldap_uri_validator([value])
+
 
 @pytest.mark.parametrize(
 	"value",
@@ -60,19 +63,15 @@ def test_ldap_uri_validator_raises_exc(value: str):
 		RecordTypes.DNS_RECORD_TYPE_PTR.value,
 		RecordTypes.DNS_RECORD_TYPE_WINS.value,
 	),
-	ids=lambda x: RecordTypes(x).name
+	ids=lambda x: RecordTypes(x).name,
 )
 def test_record_type(value: int):
 	record_type_validator(value)
 
+
 @pytest.mark.parametrize(
 	"value",
-	(
-		343,
-		117,
-		1701,
-		65535
-	),
+	(343, 117, 1701, 65535),
 )
 def test_record_type_raises(value: int):
 	with pytest.raises(ValidationError):

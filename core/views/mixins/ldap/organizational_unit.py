@@ -48,11 +48,7 @@ logger = logging.getLogger(__name__)
 
 LDAP_DEFAULT_DIRTREE_FILTER = {
 	"include": {
-		"objectCategory": [
-			"organizationalUnit",
-			"top",
-			"container"
-		],
+		"objectCategory": ["organizationalUnit", "top", "container"],
 		"objectClass": [
 			"builtinDomain",
 			"user",
@@ -60,9 +56,10 @@ LDAP_DEFAULT_DIRTREE_FILTER = {
 			"group",
 			"organizationalPerson",
 			"computer",
-		]
+		],
 	}
 }
+
 
 class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 	ldap_connection: Connection
@@ -91,7 +88,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 				raise ValidationError(f"Filter Type value must be of type dict ({filter_type}).")
 
 	def cleanup_attr_value(self, value):
-		"""Cleans up a filter dictionary value, returning the first if its a 
+		"""Cleans up a filter dictionary value, returning the first if its a
 		1 element length iterable."""
 		if not value:
 			return None
@@ -107,13 +104,13 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 		if isinstance(value_or_values, self.VALID_FILTER_ITERABLES):
 			return True
 		elif not isinstance(value_or_values, self.VALID_FILTER_NON_ITERABLES):
-			_types = ', '.join(t.__name__ for t in self.VALID_FILTER_NON_ITERABLES)
+			_types = ", ".join(t.__name__ for t in self.VALID_FILTER_NON_ITERABLES)
 			raise ValidationError(
-				f"{attr} has an invalid type (must be any of {_types},"+
-				"can be multiple within a list, set or tuple)"
+				f"{attr} has an invalid type (must be any of {_types},"
+				+ "can be multiple within a list, set or tuple)"
 			)
 		return False
-	
+
 	def process_ldap_filter_type(self, filter_type: str, conditions: dict) -> LDAPFilter:
 		"""Function that processes each LDAP Filter Dictionary Type and it's
 		conditions.
@@ -135,7 +132,10 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 		top_expr = LDAPFilter.and_
 		multi_expr = LDAPFilter.and_
 		val_expr = LDAPFilter.eq
-		_exprs = (LDAPFilterType.AND, LDAPFilterType.OR,)
+		_exprs = (
+			LDAPFilterType.AND,
+			LDAPFilterType.OR,
+		)
 		if filter_type in ("include",):
 			# Include/Exclude filters will evaluate all attrs with an OR expression.
 			top_expr = LDAPFilter.or_
@@ -188,7 +188,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 							value = ["", value]
 						# Create filter for single attribute's value
 						new_filter = val_expr(attr, value)
-		
+
 				# Combine with existing filters using AND/OR depending on type
 				# And expression matching.
 				if result:
@@ -198,9 +198,9 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 					if (
 						# A is expr, B is not
 						(
-							top_expr == multi_expr and 
-	   						result_is_expr and
-							new_filter.type not in _exprs
+							top_expr == multi_expr
+							and result_is_expr
+							and new_filter.type not in _exprs
 						)
 						# Both are same expr
 						or (both_are_exprs and result.type == new_filter.type)
@@ -220,32 +220,25 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 		else:
 			for attr, value in conditions.items():
 				if isinstance(value, self.VALID_FILTER_ITERABLES):
-					raise ValidationError(f"Filter value for '{filter_type}' cannot be an iterable.")
-				op_map = {
-					"gte": ">=",
-					"lte": "<=",
-					"approx": "~="
-				}
+					raise ValidationError(
+						f"Filter value for '{filter_type}' cannot be an iterable."
+					)
+				op_map = {"gte": ">=", "lte": "<=", "approx": "~="}
 				new_filter = LDAPFilter(
-					type=LDAPFilterType(op_map[filter_type]),
-					attribute=attr,
-					value=value
+					type=LDAPFilterType(op_map[filter_type]), attribute=attr, value=value
 				)
 				# Combine with existing filters using AND
 				if result:
-					result = LDAPFilter.and_(
-						result,
-						new_filter
-					)
+					result = LDAPFilter.and_(result, new_filter)
 				else:
 					result = new_filter
 		return result
 
 	def process_ldap_filter(
-			self,
-			data_filter: dict = None,
-			default_filter: dict = None,
-		) -> LDAPFilter:
+		self,
+		data_filter: dict = None,
+		default_filter: dict = None,
+	) -> LDAPFilter:
 		"""
 		Process and merge LDAP filters from request data with default directory tree filters.
 
@@ -271,10 +264,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 			self.validate_filter_dict(filter_dict=data_filter)
 
 		data_filter_exclude: dict = data_filter.get("exclude", {})
-		default_filter_include = LDAPFilter(
-			type=LDAPFilterType.OR,
-			children=None
-		)
+		default_filter_include = LDAPFilter(type=LDAPFilterType.OR, children=None)
 		if default_filter:
 			self.validate_filter_dict(filter_dict=default_filter, allowed_keys=["include"])
 
@@ -285,13 +275,11 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 				for v in values:
 					data_filter_exclude_values = data_filter_exclude.get(attr, [])
 					if not data_filter_exclude or (
-						data_filter_exclude and
-						not v == data_filter_exclude_values and
-						not v in data_filter_exclude_values
+						data_filter_exclude
+						and not v == data_filter_exclude_values
+						and not v in data_filter_exclude_values
 					):
-						default_filter_include.children.append(
-							LDAPFilter.eq(attr, v)
-						)
+						default_filter_include.children.append(LDAPFilter.eq(attr, v))
 
 		# Combine default include filters
 		if default_filter_include.children:
@@ -305,10 +293,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 			# Combine with existing filters using AND
 			if new_filter:
 				if result_filter:
-					result_filter = LDAPFilter.and_(
-						result_filter,
-						new_filter
-					)
+					result_filter = LDAPFilter.and_(result_filter, new_filter)
 				else:
 					result_filter = new_filter
 
@@ -327,8 +312,8 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 				is in distinguished_name. Defaults to None.
 
 		* DN = Distinguished Name
-		* RDN = Relative Distinguished Name		
-		
+		* RDN = Relative Distinguished Name
+
 		Raises:
 			exc_dirtree.DirtreeDistinguishedNameConflict: Raised when RDN
 				identifier is invalid.
@@ -362,9 +347,8 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 			# Original Relative DN
 			original_rdn: str = safe_rdn(dn=distinguished_name)[0]
 			original_rdn_field = original_rdn.split("=")[0]
-			if (original_rdn_field.lower() not in
-	   				RuntimeSettings.LDAP_LDIF_IDENTIFIERS):
-				raise exc_ldap.LDIFBadField(data={"field":"original_rdn"})
+			if original_rdn_field.lower() not in RuntimeSettings.LDAP_LDIF_IDENTIFIERS:
+				raise exc_ldap.LDIFBadField(data={"field": "original_rdn"})
 
 			# New Relative DN
 			new_rdn = target_rdn
@@ -373,10 +357,10 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 			if 1 < len(new_rdn_field) < 3:
 				new_rdn_field = new_rdn_field[0]
 				if (
-					new_rdn_field.lower() != original_rdn_field.lower() or
-					new_rdn_field.lower() not in RuntimeSettings.LDAP_LDIF_IDENTIFIERS
+					new_rdn_field.lower() != original_rdn_field.lower()
+					or new_rdn_field.lower() not in RuntimeSettings.LDAP_LDIF_IDENTIFIERS
 				):
-					raise exc_ldap.LDIFBadField(data={"field":"new_rdn"})
+					raise exc_ldap.LDIFBadField(data={"field": "new_rdn"})
 			elif len(new_rdn_field) > 2:
 				raise exc_ldap.DistinguishedNameValidationError
 			else:
@@ -393,9 +377,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 				# Validate would-be new DN before operation
 				new_dn = f"{new_rdn},{target_path}"
 				self.ldap_connection.modify_dn(
-					dn=distinguished_name,
-					relative_dn=new_rdn,
-					new_superior=target_path
+					dn=distinguished_name, relative_dn=new_rdn, new_superior=target_path
 				)
 			else:
 				# Validate would-be new DN before operation
@@ -404,24 +386,21 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 				old_path = ",".join(old_path)
 				new_dn = f"{new_rdn},{old_path}"
 
-				self.ldap_connection.modify_dn(
-					dn=distinguished_name,
-					relative_dn=new_rdn
-				)
+				self.ldap_connection.modify_dn(dn=distinguished_name, relative_dn=new_rdn)
 		except Exception as e:
 			logger.exception(e)
 			_code = None
-			result_description: str = getattr(
-				self.ldap_connection.result, "description", None)
+			result_description: str = getattr(self.ldap_connection.result, "description", None)
 			if result_description and isinstance(result_description, str):
 				if result_description == "entryAlreadyExists":
 					_code = 409
-			raise exc_dirtree.DirtreeMove(data={
-				"ldap_response": self.ldap_connection.result,
-				"ldapObject": new_rdn,
-				"code": status.HTTP_500_INTERNAL_SERVER_ERROR if not _code \
-						else _code
-			})
+			raise exc_dirtree.DirtreeMove(
+				data={
+					"ldap_response": self.ldap_connection.result,
+					"ldapObject": new_rdn,
+					"code": status.HTTP_500_INTERNAL_SERVER_ERROR if not _code else _code,
+				}
+			)
 
 		DBLogMixin.log(
 			user=self.request.user.id,
@@ -433,9 +412,9 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 		return new_dn
 
 	@deprecated
-	def process_filter(self, data: dict = None, filter_dict: dict = None): # pragma: no cover
+	def process_filter(self, data: dict = None, filter_dict: dict = None):  # pragma: no cover
 		"""## DEPRECATED
-	
+
 		Process LDAP Directory Tree Request Filter
 
 		Args:
@@ -493,8 +472,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 				else:
 					# If lookup_params isn't a dict, it's the type.
 					lookup_type = lookup_params
-					ldap_filter = join_ldap_filter(
-						ldap_filter, f"{lookup_type}={lookup_value}")
+					ldap_filter = join_ldap_filter(ldap_filter, f"{lookup_type}={lookup_value}")
 		# Standard exclusion filter
 		else:
 			logger.debug("Dirtree fetching with Standard Exclusion Filter")

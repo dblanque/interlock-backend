@@ -48,8 +48,9 @@ from core.ldap.constants import (
 	LDAP_ATTR_INITIALS,
 	LDAP_ATTR_COUNTRY,
 	LDAP_ATTR_EMAIL,
-	LDAP_ATTR_UAC
+	LDAP_ATTR_UAC,
 )
+
 
 @pytest.fixture
 def f_user_mixin(mocker):
@@ -1070,7 +1071,7 @@ class TestUserViewLDAPMixin:
 				"memberOf": [_g["distinguishedName"] for _g in m_member_of_objects],
 				"userAccountControl": calc_permissions(user_account_control),
 				"sAMAccountType": sam_account_type,
-				"whenCreated": m_when_created
+				"whenCreated": m_when_created,
 			}
 		)
 		m_get_group_attributes: MockType = mocker.patch.object(

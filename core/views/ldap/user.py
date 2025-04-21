@@ -45,11 +45,7 @@ from rest_framework.decorators import action
 ### Auth
 from core.decorators.login import auth_required, admin_required
 from core.ldap import adsi as ldap_adsi
-from core.ldap.constants import (
-	LDAP_ATTR_USERNAME_SAMBA_ADDS,
-	LOCAL_ATTR_PASSWORD,
-	LDAP_ATTR_EMAIL
-)
+from core.ldap.constants import LDAP_ATTR_USERNAME_SAMBA_ADDS, LOCAL_ATTR_PASSWORD, LDAP_ATTR_EMAIL
 from core.ldap.connector import LDAPConnector
 import ldap3
 
@@ -298,9 +294,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			if data["password"] != data["passwordConfirm"]:
 				raise exc_user.UserPasswordsDontMatch
 			self.ldap_set_password(
-				user_dn=ldap_user_entry.entry_dn,
-				user_pwd_new=data["password"],
-				set_by_admin=True
+				user_dn=ldap_user_entry.entry_dn, user_pwd_new=data["password"], set_by_admin=True
 			)
 
 		django_user = None

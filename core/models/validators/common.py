@@ -1,6 +1,7 @@
 import re
 from rest_framework.serializers import ValidationError
 
+
 def int32_validator(value) -> None:
 	_exc = ValidationError("invalid_field_int32")
 	try:

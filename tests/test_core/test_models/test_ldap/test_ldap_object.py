@@ -371,11 +371,13 @@ def test_dunder_fetch_object_successful_user_fetch(
 	# Instantiate LDAPObject
 	ldap_obj = LDAPObject(auto_fetch=False, **object_args)
 	ldap_obj.excluded_ldap_attrs = []
-	ldap_obj.ldap_attrs.extend([
-		"badPwdCount",
-		"objectSid",
-		"objectRid",
-	])
+	ldap_obj.ldap_attrs.extend(
+		[
+			"badPwdCount",
+			"objectSid",
+			"objectRid",
+		]
+	)
 
 	# Execute
 	result = ldap_obj.__fetch_object__()

@@ -36,7 +36,6 @@ logger = logging.getLogger(__name__)
 
 
 class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
-
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
@@ -47,7 +46,7 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 		record_data: dict = data.get("record", None)
 		if not record_data:
 			raise exc_dns.DNSRecordNotInRequest
-		
+
 		# Serialize Data
 		validated_data = self.validate_record(record_data=record_data)
 
@@ -115,7 +114,7 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			
+
 			# Data Validation
 			# Single Record Delete
 			if record_delete:
@@ -133,7 +132,7 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 					if not isinstance(_record, dict):
 						raise exc_dns.DNSRecordDataMalformed
 					validated_record_data = self.validate_record(record_data=_record)
-					
+
 					result.append(self.delete_record(validated_record_data))
 
 		return Response(data={"code": code, "code_msg": "ok", "data": result})

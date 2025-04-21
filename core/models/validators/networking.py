@@ -2,6 +2,7 @@ from core.utils.ipv6 import ipv6_to_integer
 import socket
 from rest_framework.serializers import ValidationError
 
+
 def ipv4_validator(value: str):
 	_exc = ValidationError("invalid_field_ipv4")
 	if not isinstance(value, str):

@@ -57,6 +57,7 @@ class DistinguishedNameValidationError(CoreException):
 	default_detail = "LDAP Distinguished Name Validation Error"
 	default_code = "ldap_dn_validation_error"
 
+
 class LDIFBadField(CoreException):
 	status_code = status.HTTP_400_BAD_REQUEST
 	default_detail = "LDIF Field Validation Error"

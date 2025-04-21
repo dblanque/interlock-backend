@@ -8,11 +8,7 @@
 
 # ---------------------------------- IMPORTS -----------------------------------#
 ### Exceptions
-from core.exceptions import (
-	base as exc_base,
-	ldap as exc_ldap,
-	dns as exc_dns
-)
+from core.exceptions import base as exc_base, ldap as exc_ldap, dns as exc_dns
 
 ### Models
 from core.views.mixins.logs import LogMixin
@@ -57,7 +53,7 @@ class DNSRecordMixin(DomainViewMixin):
 
 		Raises:
 			exc_dns.DNSRecordTypeMissing: Raised when record_type is falsy
-			exc_dns.DNSRecordTypeUnsupported: Raised when record_type is invalid 
+			exc_dns.DNSRecordTypeUnsupported: Raised when record_type is invalid
 				or unsupported.
 
 		Returns:
@@ -87,18 +83,13 @@ class DNSRecordMixin(DomainViewMixin):
 		# Record Data Validation
 		record_type = record_data.get("type", None)
 		self.record_serializer = self.get_serializer(record_type)
-		self.record_serializer: DNSRecordSerializer = self.record_serializer(
-			data=record_data
-		)
+		self.record_serializer: DNSRecordSerializer = self.record_serializer(data=record_data)
 		self.record_serializer.is_valid(raise_exception=True)
-		unknown_keys = (
-			set(self.record_serializer.initial_data.keys())
-			-
-			set(self.record_serializer.fields.keys())
+		unknown_keys = set(self.record_serializer.initial_data.keys()) - set(
+			self.record_serializer.fields.keys()
 		)
 		if unknown_keys:
-			logger.info(
-				"Unknown keys in serialized data for LDAP DNS Record: %s.", unknown_keys)
+			logger.info("Unknown keys in serialized data for LDAP DNS Record: %s.", unknown_keys)
 
 		# Check that it's not modifying Root DNS Server data
 		if record_data["zone"].lower() in [

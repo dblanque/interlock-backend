@@ -5,22 +5,22 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    dependencies = [
-        ("core", "0001_initial"),
-    ]
+	dependencies = [
+		("core", "0001_initial"),
+	]
 
-    operations = [
-        migrations.AlterField(
-            model_name="user",
-            name="email",
-            field=models.EmailField(
-                blank=True,
-                db_index=True,
-                max_length=254,
-                null=True,
-                unique=True,
-                validators=[django.core.validators.EmailValidator()],
-                verbose_name="email address",
-            ),
-        ),
-    ]
+	operations = [
+		migrations.AlterField(
+			model_name="user",
+			name="email",
+			field=models.EmailField(
+				blank=True,
+				db_index=True,
+				max_length=254,
+				null=True,
+				unique=True,
+				validators=[django.core.validators.EmailValidator()],
+				verbose_name="email address",
+			),
+		),
+	]

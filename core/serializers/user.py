@@ -52,7 +52,10 @@ class UserSerializer(serializers.ModelSerializer):
 				return False
 		return True
 
-LDAP_DATE_FORMAT = '%Y%m%d%H%M%S.%fZ'
+
+LDAP_DATE_FORMAT = "%Y%m%d%H%M%S.%fZ"
+
+
 class LDAPUserSerializer(serializers.Serializer):
 	name = serializers.CharField(required=False)
 	distinguishedName = serializers.CharField(required=False)
@@ -76,24 +79,16 @@ class LDAPUserSerializer(serializers.Serializer):
 	userPrincipalName = serializers.CharField(required=False)
 	userAccountControl = serializers.IntegerField(required=False)
 	whenCreated = serializers.DateTimeField(
-		format=LDAP_DATE_FORMAT,
-		input_formats=[LDAP_DATE_FORMAT, 'iso-8601'],
-		required=False
+		format=LDAP_DATE_FORMAT, input_formats=[LDAP_DATE_FORMAT, "iso-8601"], required=False
 	)
 	whenChanged = serializers.DateTimeField(
-		format=LDAP_DATE_FORMAT,
-		input_formats=[LDAP_DATE_FORMAT, 'iso-8601'],
-		required=False
+		format=LDAP_DATE_FORMAT, input_formats=[LDAP_DATE_FORMAT, "iso-8601"], required=False
 	)
 	lastLogonTimestamp = serializers.DateTimeField(
-		format=LDAP_DATE_FORMAT,
-		input_formats=[LDAP_DATE_FORMAT, 'iso-8601'],
-		required=False
+		format=LDAP_DATE_FORMAT, input_formats=[LDAP_DATE_FORMAT, "iso-8601"], required=False
 	)
 	accountExpires = serializers.DateTimeField(
-		format=LDAP_DATE_FORMAT,
-		input_formats=[LDAP_DATE_FORMAT, 'iso-8601'],
-		required=False
+		format=LDAP_DATE_FORMAT, input_formats=[LDAP_DATE_FORMAT, "iso-8601"], required=False
 	)
 	lastLogon = serializers.IntegerField(required=False)
 	badPwdCount = serializers.IntegerField(required=False)

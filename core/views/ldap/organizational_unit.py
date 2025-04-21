@@ -130,7 +130,9 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		data_filter: dict = data.get("filter", None)
 		data_filter_use_defaults = data_filter.pop("use_defaults", None) if data_filter else None
 		try:
-			ldap_filter_object = self.process_ldap_filter(data_filter, default_filter=data_filter_use_defaults).to_string()
+			ldap_filter_object = self.process_ldap_filter(
+				data_filter, default_filter=data_filter_use_defaults
+			).to_string()
 		except Exception as e:
 			logger.exception(e)
 			raise exc_dirtree.DirtreeFilterBad

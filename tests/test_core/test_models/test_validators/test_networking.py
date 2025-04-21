@@ -1,10 +1,7 @@
 import pytest
-from core.models.validators.networking import (
-	ipv4_validator,
-	ipv6_validator,
-	port_validator
-)
+from core.models.validators.networking import ipv4_validator, ipv6_validator, port_validator
 from rest_framework.serializers import ValidationError
+
 
 # ipv4_validator tests
 @pytest.mark.parametrize(
@@ -50,6 +47,7 @@ def test_ipv6_validator(value, expected):
 	else:
 		ipv6_validator(value)
 
+
 @pytest.mark.parametrize(
 	"value",
 	(
@@ -61,6 +59,7 @@ def test_ipv6_validator(value, expected):
 )
 def test_port_validator(value):
 	port_validator(value)
+
 
 @pytest.mark.parametrize(
 	"value",

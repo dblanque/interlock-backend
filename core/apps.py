@@ -21,5 +21,6 @@ class CoreConfig(AppConfig):
 		create_default_oidc_rsa_key()
 
 		from logging import getLogger
+
 		logger = getLogger()
 		logger.info("Core startup complete.")

@@ -230,6 +230,7 @@ LDAP_BUILTIN_OBJECTS = [
 	"Managed Service Accounts",
 ]
 
+
 def join_ldap_filter(
 	filter_string: str,
 	filter_to_add: str,
@@ -298,6 +299,7 @@ def join_ldap_filter(
 	else:
 		return combined_filter
 
+
 def search_filter_from_dict(
 	filter_dict: dict, expression: LDAP_FILTER_EXPRESSION_TYPE = LDAP_FILTER_OR, reverse_key=False
 ):
@@ -309,14 +311,14 @@ def search_filter_from_dict(
 
 	Args:
 		filter_dict (dict): Filter Dictionary with aforementioned structure.
-			
+
 			* Non-reversed Example -> { "user": "objectClass", }
 		expression (LDAP_FILTER_EXPRESSION_TYPE, optional): Whether to use an OR
 			or AND conditional expression. Defaults to LDAP_FILTER_OR.
 		reverse_key (bool, optional): If True dict keys will be the LDAP
 			Attribute Keys and values will be their corresponding values,
 			making each unique.
-			
+
 			Defaults to False.
 
 	Returns:
@@ -339,6 +341,7 @@ def search_filter_from_dict(
 				search_filter, f"{_ldap_obj_type}={_ldap_obj_key}", expression
 			)
 	return search_filter
+
 
 def bin_as_str(value: str | int):
 	if isinstance(value, int) and value < 0:

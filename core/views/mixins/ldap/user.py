@@ -749,7 +749,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			# Replace sAMAccountType Value with String
 			user_account_type = int(user_dict["sAMAccountType"])
 			user_dict["sAMAccountType"] = LDAPAccountTypes(user_account_type).name
-		
+
 		# Validate data
 		serializer = LDAPUserSerializer(data=user_dict)
 		serializer.is_valid(raise_exception=True)

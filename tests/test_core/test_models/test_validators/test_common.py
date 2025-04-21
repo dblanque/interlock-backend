@@ -1,10 +1,7 @@
 import pytest
-from core.models.validators.common import (
-	ascii_validator,
-	int32_validator,
-	natural_validator
-)
+from core.models.validators.common import ascii_validator, int32_validator, natural_validator
 from rest_framework.serializers import ValidationError
+
 
 @pytest.mark.parametrize(
 	"value",
@@ -17,15 +14,16 @@ from rest_framework.serializers import ValidationError
 def test_int32_validator(value):
 	int32_validator(value)
 
+
 @pytest.mark.parametrize(
 	"value",
 	[
-		"4294967296" , # Too large
+		"4294967296",  # Too large
 		"-1",  # Negative
 		"abc",  # Non-numeric
 		"123.45",  # Float
 		"",  # Empty
-		None, # None
+		None,  # None
 	],
 )
 def test_int32_validator_raises(value):
@@ -44,6 +42,7 @@ def test_int32_validator_raises(value):
 def test_natural_validator(value):
 	natural_validator(value)
 
+
 @pytest.mark.parametrize(
 	"value",
 	[
@@ -58,6 +57,7 @@ def test_natural_validator_raises(value):
 	with pytest.raises(ValidationError):
 		natural_validator(value)
 
+
 @pytest.mark.parametrize(
 	"value",
 	[
@@ -69,6 +69,7 @@ def test_natural_validator_raises(value):
 )
 def test_ascii_validator(value):
 	ascii_validator(value)
+
 
 @pytest.mark.parametrize(
 	"value",
