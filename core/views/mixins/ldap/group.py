@@ -59,9 +59,15 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 	def get_group_types(self, group_type: int = None, debug=False) -> List[str]:
 		sum = 0
 		result = []
+		if not isinstance(group_type, (int, str)) or group_type is False:
+			raise TypeError("group_type must be of type int.")
+
+		if isinstance(group_type, str):
+			try:
+				group_type = int(group_type)
+			except:
+				raise ValueError("group_type could not be cast to int.")
 		group_type_last_int = int(str(group_type)[-1])
-		if group_type != 0 and group_type is None:
-			raise ValueError("Invalid Group Type Integer")
 		if group_type < -1:
 			sum -= LDAPGroupTypes.GROUP_SECURITY.value
 			result.append(LDAPGroupTypes.GROUP_SECURITY.name)
@@ -95,15 +101,10 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				result.append(LDAPGroupTypes.GROUP_UNIVERSAL.name)
 
 		if sum != group_type:
-			return Exception
-
-		for k, v in enumerate(result):
-			if v == "GROUP_SYSTEM":
-				result.pop(k)
-				result.append(v)
+			raise ValueError("Invalid group type integer")
 
 		if debug:
-			return [result, group_type]
+			return (result, group_type,)
 		else:
 			return result
 
