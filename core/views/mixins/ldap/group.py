@@ -39,6 +39,7 @@ from core.exceptions import ldap as exc_ldap, groups as exc_groups, dirtree as e
 
 ### Others
 from core.views.mixins.utils import getldapattr
+from typing import List
 from django.db import transaction
 from copy import deepcopy
 import ldap3
@@ -55,7 +56,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 	ldap_filter_object = None
 	ldap_filter_attr = None
 
-	def get_group_type(self, group_type: int = None, debug=False) -> list[str]:
+	def get_group_types(self, group_type: int = None, debug=False) -> List[str]:
 		sum = 0
 		result = []
 		group_type_last_int = int(str(group_type)[-1])
@@ -177,7 +178,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				# Parse Group Type
 				if attr_key == "groupType":
 					groupVal = int(str(getattr(group, attr_key)))
-					group_dict[attr_key] = self.get_group_type(group_type=groupVal)
+					group_dict[attr_key] = self.get_group_types(group_type=groupVal)
 				# Do the standard for every other key
 				elif attr_key in valid_attributes:
 					str_key = str(attr_key)
@@ -239,7 +240,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				# Parse Group Type
 				elif str_key == "groupType":
 					groupVal = int(str(getattr(group[0], str_key)))
-					group_dict[str_key] = self.get_group_type(group_type=groupVal)
+					group_dict[str_key] = self.get_group_types(group_type=groupVal)
 				elif str_key == "member":
 					memberArray = []
 					memberAttributes = [
@@ -485,7 +486,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				elif group_dict[key] != "":
 					operation = MODIFY_REPLACE
 					if key == "groupType":
-						previousGroupTypes = self.get_group_type(
+						previousGroupTypes = self.get_group_types(
 							group_type=int(fetched_group_entry[key])
 						)
 						# If we're trying to go from Group Global to Domain Local Scope or viceversa
