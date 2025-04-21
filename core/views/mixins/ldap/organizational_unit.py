@@ -434,7 +434,9 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 
 	@deprecated
 	def process_filter(self, data: dict = None, filter_dict: dict = None): # pragma: no cover
-		"""Process LDAP Directory Tree Request Filter
+		"""## DEPRECATED
+	
+		Process LDAP Directory Tree Request Filter
 
 		Args:
 			data (dict): Request data dictionary
