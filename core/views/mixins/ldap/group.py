@@ -12,7 +12,7 @@ from rest_framework import viewsets
 
 ### Interlock
 from core.ldap.adsi import join_ldap_filter
-from core.ldap.types.group import LDAP_GROUP_TYPES
+from core.ldap.types.group import LDAPGroupTypes
 from core.ldap.security_identifier import SID
 from core.ldap.connector import LDAPConnector
 from core.config.runtime import RuntimeSettings
@@ -54,6 +54,57 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 	ldap_connection = None
 	ldap_filter_object = None
 	ldap_filter_attr = None
+
+	def get_group_type(self, group_type: int = None, debug=False) -> list[str]:
+		sum = 0
+		result = []
+		group_type_last_int = int(str(group_type)[-1])
+		if group_type != 0 and group_type is None:
+			raise ValueError("Invalid Group Type Integer")
+		if group_type < -1:
+			sum -= LDAPGroupTypes.GROUP_SECURITY.value
+			result.append(LDAPGroupTypes.GROUP_SECURITY.name)
+
+			if (group_type_last_int % 2) != 0:
+				sum += LDAPGroupTypes.GROUP_SYSTEM.value
+				result.append(LDAPGroupTypes.GROUP_SYSTEM.name)
+			if group_type == (sum + 2):
+				sum += LDAPGroupTypes.GROUP_GLOBAL.value
+				result.append(LDAPGroupTypes.GROUP_GLOBAL.name)
+			if group_type == (sum + 4):
+				sum += LDAPGroupTypes.GROUP_DOMAIN_LOCAL.value
+				result.append(LDAPGroupTypes.GROUP_DOMAIN_LOCAL.name)
+			if group_type == (sum + 8):
+				sum += LDAPGroupTypes.GROUP_UNIVERSAL.value
+				result.append(LDAPGroupTypes.GROUP_UNIVERSAL.name)
+		else:
+			result.append(LDAPGroupTypes.GROUP_DISTRIBUTION.name)
+
+			if (group_type_last_int % 2) != 0:
+				sum += LDAPGroupTypes.GROUP_SYSTEM.value
+				result.append(LDAPGroupTypes.GROUP_SYSTEM.name)
+			if group_type == (sum + 2):
+				sum += LDAPGroupTypes.GROUP_GLOBAL.value
+				result.append(LDAPGroupTypes.GROUP_GLOBAL.name)
+			if group_type == (sum + 4):
+				sum += LDAPGroupTypes.GROUP_DOMAIN_LOCAL.value
+				result.append(LDAPGroupTypes.GROUP_DOMAIN_LOCAL.name)
+			if group_type == (sum + 8):
+				sum += LDAPGroupTypes.GROUP_UNIVERSAL.value
+				result.append(LDAPGroupTypes.GROUP_UNIVERSAL.name)
+
+		if sum != group_type:
+			return Exception
+
+		for k, v in enumerate(result):
+			if v == "GROUP_SYSTEM":
+				result.pop(k)
+				result.append(v)
+
+		if debug:
+			return [result, group_type]
+		else:
+			return result
 
 	def get_group_by_rid(rid: int = None, attributes=None):
 		if not attributes:
@@ -101,57 +152,6 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 					ldap_attrs=attributes,
 				)
 				return result.attributes
-
-	def get_group_type(self, group_type: int = None, debug=False) -> list[str]:
-		sum = 0
-		result = []
-		group_type_last_int = int(str(group_type)[-1])
-		if group_type != 0 and group_type is None:
-			raise ValueError("Invalid Group Type Integer")
-		if group_type < -1:
-			sum -= LDAP_GROUP_TYPES["GROUP_SECURITY"]
-			result.append("GROUP_SECURITY")
-
-			if (group_type_last_int % 2) != 0:
-				sum += LDAP_GROUP_TYPES["GROUP_SYSTEM"]
-				result.append("GROUP_SYSTEM")
-			if group_type == (sum + 2):
-				sum += LDAP_GROUP_TYPES["GROUP_GLOBAL"]
-				result.append("GROUP_GLOBAL")
-			if group_type == (sum + 4):
-				sum += LDAP_GROUP_TYPES["GROUP_DOMAIN_LOCAL"]
-				result.append("GROUP_DOMAIN_LOCAL")
-			if group_type == (sum + 8):
-				sum += LDAP_GROUP_TYPES["GROUP_UNIVERSAL"]
-				result.append("GROUP_UNIVERSAL")
-		else:
-			result.append("GROUP_DISTRIBUTION")
-
-			if (group_type_last_int % 2) != 0:
-				sum += LDAP_GROUP_TYPES["GROUP_SYSTEM"]
-				result.append("GROUP_SYSTEM")
-			if group_type == (sum + 2):
-				sum += LDAP_GROUP_TYPES["GROUP_GLOBAL"]
-				result.append("GROUP_GLOBAL")
-			if group_type == (sum + 4):
-				sum += LDAP_GROUP_TYPES["GROUP_DOMAIN_LOCAL"]
-				result.append("GROUP_DOMAIN_LOCAL")
-			if group_type == (sum + 8):
-				sum += LDAP_GROUP_TYPES["GROUP_UNIVERSAL"]
-				result.append("GROUP_UNIVERSAL")
-
-		if sum != group_type:
-			return Exception
-
-		for k, v in enumerate(result):
-			if v == "GROUP_SYSTEM":
-				result.pop(k)
-				result.append(v)
-
-		if debug:
-			return [result, group_type]
-		else:
-			return result
 
 	def list_groups(self):
 		data = []
