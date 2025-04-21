@@ -38,7 +38,7 @@ from rest_framework import status
 from django.http.request import HttpRequest
 from core.ldap.filter import LDAPFilter, LDAPFilterType
 from ldap3 import Connection
-from ldap3.utils.dn import safe_dn, safe_rdn
+from ldap3.utils.dn import safe_dn, safe_rdn, parse_dn
 import logging
 ################################################################################
 
@@ -315,15 +315,15 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 		return result_filter
 
 	def move_or_rename_object(
-		self, distinguished_name: str, relative_dn: str = None, ldap_path: str = None
+		self, distinguished_name: str, target_rdn: str = None, target_path: str = None
 	) -> str:
 		"""Performs Move/Rename on LDAP Entry / Object with specified DN.
 
 		Args:
 			distinguished_name (str): LDAP Entry / Object Distinguished Name.
-			relative_dn (str, optional): Will rename the object if changed from
+			target_rdn (str, optional): Will rename the object if changed from
 				what is in distinguished_name. Defaults to None.
-			ldap_path (str, optional): Will relocate object if changed from what
+			target_path (str, optional): Will relocate object if changed from what
 				is in distinguished_name. Defaults to None.
 
 		* DN = Distinguished Name
@@ -334,32 +334,52 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 				identifier is invalid.
 			exc_dirtree.DirtreeNewNameIsOld: Raised if new RDN is same as the
 				old RDN.
-			exc_dirtree.DirtreeDistinguishedNameConflict: _description_
-			exc_dirtree.DirtreeMove: _description_
+			exc_dirtree.DirtreeDistinguishedNameConflict: Raised when both
+				target_rdn and target_path are None.
+			exc_dirtree.DirtreeMove: Raised when Move operation returned an
+				error result on the LDAP Server.
 
 		Returns:
 			str: New Distinguished Name for LDAP Entry / Object
 		"""
 		try:
-			distinguished_name = safe_dn(dn=distinguished_name)
+			parse_dn(dn=distinguished_name)
 		except Exception as e:
 			logger.exception(e)
 			raise exc_ldap.DistinguishedNameValidationError
 
-		operation = LOG_ACTION_RENAME
+		if not target_rdn and not target_path:
+			raise exc_dirtree.DirtreeDistinguishedNameConflict
+
 		new_dn = None
+		operation = LOG_ACTION_RENAME
+		if target_path:
+			operation = LOG_ACTION_MOVE
 
 		# If relative_dn is passed, namechange will be executed.
-		if relative_dn:
-			new_rdn = relative_dn
-			original_rdn = safe_rdn(dn=distinguished_name)[0]
-			original_rdn_field = original_rdn.split("=")[0]
-
+		if target_rdn:
 			# Validations
-			if original_rdn_field.lower() not in RuntimeSettings.LDAP_LDIF_IDENTIFIERS:
-				raise exc_ldap.LDIFBadField
+			# Original Relative DN
+			original_rdn: str = safe_rdn(dn=distinguished_name)[0]
+			original_rdn_field = original_rdn.split("=")[0]
+			if (original_rdn_field.lower() not in
+	   				RuntimeSettings.LDAP_LDIF_IDENTIFIERS):
+				raise exc_ldap.LDIFBadField(data={"field":"original_rdn"})
 
-			if not new_rdn.startswith(original_rdn_field):
+			# New Relative DN
+			new_rdn = target_rdn
+			new_rdn_field = target_rdn.split("=")
+			# If field is in RDN, validate it
+			if 1 < len(new_rdn_field) < 3:
+				new_rdn_field = new_rdn_field[0]
+				if (
+					new_rdn_field.lower() != original_rdn_field.lower() or
+					new_rdn_field.lower() not in RuntimeSettings.LDAP_LDIF_IDENTIFIERS
+				):
+					raise exc_ldap.LDIFBadField(data={"field":"new_rdn"})
+			elif len(new_rdn_field) > 2:
+				raise exc_ldap.DistinguishedNameValidationError
+			else:
 				new_rdn = f"{original_rdn_field}={new_rdn}"
 
 			new_rdn = safe_rdn(dn=new_rdn)[0]
@@ -368,25 +388,26 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 		else:
 			new_rdn = safe_rdn(dn=distinguished_name)[0]
 
-		if new_rdn == distinguished_name:
-			raise exc_dirtree.DirtreeDistinguishedNameConflict
-
-		if ldap_path:
-			operation = LOG_ACTION_MOVE
 		try:
-			if ldap_path:
+			if target_path:
+				# Validate would-be new DN before operation
+				new_dn = f"{new_rdn},{target_path}"
 				self.ldap_connection.modify_dn(
 					dn=distinguished_name,
 					relative_dn=new_rdn,
-					new_superior=ldap_path
+					new_superior=target_path
 				)
-				new_dn = f"{new_rdn},{ldap_path}"
 			else:
-				self.ldap_connection.modify_dn(distinguished_name, new_rdn)
-				new_path = distinguished_name.split(",")
-				del new_path[0]
-				new_path = ",".join(new_path)
-				new_dn = f"{new_rdn},{new_path}"
+				# Validate would-be new DN before operation
+				old_path = distinguished_name.split(",")
+				del old_path[0]
+				old_path = ",".join(old_path)
+				new_dn = f"{new_rdn},{old_path}"
+
+				self.ldap_connection.modify_dn(
+					dn=distinguished_name,
+					relative_dn=new_rdn
+				)
 		except Exception as e:
 			logger.exception(e)
 			_code = None
@@ -406,7 +427,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 			user=self.request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_LDAP,
-			log_target=new_rdn,
+			log_target=f"{distinguished_name} to {new_dn}",
 			message=operation,
 		)
 		return new_dn

@@ -207,7 +207,7 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			self.move_or_rename_object(distinguished_name=distinguished_name, ldap_path=ldap_path)
+			self.move_or_rename_object(distinguished_name=distinguished_name, target_path=ldap_path)
 
 		return Response(
 			data={
@@ -233,7 +233,7 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			self.move_or_rename_object(distinguished_name=distinguished_name, relative_dn=new_rdn)
+			self.move_or_rename_object(distinguished_name=distinguished_name, target_rdn=new_rdn)
 
 		return Response(
 			data={

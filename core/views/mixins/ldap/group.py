@@ -395,7 +395,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				raise exc_dirtree.DirtreeDistinguishedNameConflict
 			try:
 				distinguished_name = OrganizationalUnitMixin.move_or_rename_object(
-					self, distinguished_name=distinguished_name, relative_dn=group_cn
+					self, distinguished_name=distinguished_name, target_rdn=group_cn
 				)
 			except:
 				exc_dirtree.DirtreeRename()
