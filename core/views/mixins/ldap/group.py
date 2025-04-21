@@ -148,7 +148,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				result.pop(k)
 				result.append(v)
 
-		if debug == True:
+		if debug:
 			return [result, group_type]
 		else:
 			return result
