@@ -197,6 +197,8 @@ class LDAPFilter:
 		"""
 		if not filters:
 			raise ValueError("AND filter requires children")
+		if len(filters) <= 1:
+			raise ValueError("AND node should have two or more subnodes.")
 		return cls(LDAPFilterType.AND, children=list(filters))
 
 	@classmethod
@@ -212,6 +214,8 @@ class LDAPFilter:
 		"""
 		if not filters:
 			raise ValueError("OR filter requires children")
+		if len(filters) <= 1:
+			raise ValueError("OR node should have two or more subnodes.")
 		return cls(LDAPFilterType.OR, children=list(filters))
 
 	@classmethod
