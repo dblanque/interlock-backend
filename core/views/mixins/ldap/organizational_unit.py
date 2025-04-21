@@ -97,15 +97,17 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 			return None
 		if isinstance(value, self.VALID_FILTER_ITERABLES):
 			if len(value) == 1:
+				if isinstance(value, set):
+					return tuple(value)[0]
 				return value[0]
 		return value
 
-	def multi_value_attribute(self, attr: str, value_or_values):
+	def is_multi_value_attribute(self, attr: str, value_or_values):
 		"""Checks if a filter dictionary value is an iterable"""
 		if isinstance(value_or_values, self.VALID_FILTER_ITERABLES):
 			return True
 		elif not isinstance(value_or_values, self.VALID_FILTER_NON_ITERABLES):
-			_types = ', '.join(self.VALID_FILTER_NON_ITERABLES)
+			_types = ', '.join(t.__name__ for t in self.VALID_FILTER_NON_ITERABLES)
 			raise ValidationError(
 				f"{attr} has an invalid type (must be any of {_types},"+
 				"can be multiple within a list, set or tuple)"
@@ -132,14 +134,18 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 		# Use AND expression by default.
 		top_expr = LDAPFilter.and_
 		multi_expr = LDAPFilter.and_
-		if filter_type == "include":
-			# Include filters will evaluate all attrs with an OR expression.
+		val_expr = LDAPFilter.eq
+		_exprs = (LDAPFilterType.AND, LDAPFilterType.OR,)
+		if filter_type in ("include",):
+			# Include/Exclude filters will evaluate all attrs with an OR expression.
 			top_expr = LDAPFilter.or_
 			multi_expr = LDAPFilter.or_
 		if filter_type in ("contains", "startswith", "endswith"):
 			# These filters will evaluate only values within
 			# each attr with an OR expression.
 			multi_expr = LDAPFilter.or_
+			if filter_type in ("contains", "startswith", "endswith"):
+				val_expr = LDAPFilter.substr
 
 		if filter_type in (
 			"exclude",
@@ -155,20 +161,62 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 				if not value:
 					continue
 
-				if self.multi_value_attribute(attr, value):
-					new_filter = multi_expr(
-						*[LDAPFilter.eq(attr, v) for v in value]
-					)
+				if self.is_multi_value_attribute(attr, value):
+					if filter_type == "exclude":
+						filters = [LDAPFilter.not_(val_expr(attr, v)) for v in value]
+					else:
+						filters = []
+						for v in value:
+							if filter_type == "contains":
+								v = ["", v, ""]
+							elif filter_type == "startswith":
+								v = [v, ""]
+							elif filter_type == "endswith":
+								v = ["", v]
+							filters.append(val_expr(attr, v))
+					new_filter = multi_expr(*filters)
 				else:
-					# Create filter for single attribute's value
-					new_filter = LDAPFilter.eq(attr, value)
+					if filter_type == "exclude":
+						# Create filter for single attribute's value
+						new_filter = LDAPFilter.not_(val_expr(attr, value))
+					else:
+						if filter_type == "contains":
+							value = ["", value, ""]
+						elif filter_type == "startswith":
+							value = [value, ""]
+						elif filter_type == "endswith":
+							value = ["", value]
+						# Create filter for single attribute's value
+						new_filter = val_expr(attr, value)
 		
 				# Combine with existing filters using AND/OR depending on type
+				# And expression matching.
 				if result:
-					result = top_expr(result, new_filter)
+					result_is_expr = result.type in _exprs and result.children
+					new_filter_is_expr = new_filter.type in _exprs and new_filter.children
+					both_are_exprs = result_is_expr and new_filter_is_expr
+					if (
+						# A is expr, B is not
+						(
+							top_expr == multi_expr and 
+	   						result_is_expr and
+							new_filter.type not in _exprs
+						)
+						# Both are same expr
+						or (both_are_exprs and result.type == new_filter.type)
+					):
+						result.children.append(new_filter)
+
+					# A is not expr, B is expr
+					elif result.type not in _exprs and new_filter_is_expr:
+						new_filter.children.insert(0, result)
+						result = new_filter
+
+					# Different exprs
+					else:
+						result = top_expr(result, new_filter)
 				else:
 					result = new_filter
-			return result
 		else:
 			for attr, value in conditions.items():
 				if isinstance(value, self.VALID_FILTER_ITERABLES):
@@ -179,7 +227,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 					"approx": "~="
 				}
 				new_filter = LDAPFilter(
-					type=op_map[filter_type],
+					type=LDAPFilterType(op_map[filter_type]),
 					attribute=attr,
 					value=value
 				)
@@ -191,6 +239,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 					)
 				else:
 					result = new_filter
+		return result
 
 	def process_ldap_filter(
 			self,
@@ -204,7 +253,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 			data: Request data filter dictionary containing user filters.
 			default_filter: Custom filter definition (defaults to
 				LDAP_DEFAULT_DIRTREE_FILTER) to apply along the request's
-				data filter. Can be set to False.
+				data filter. Can be set to True/False or be a dict value.
 
 		Returns:
 			LDAPFilter: Combined resulting filter object ready for LDAP queries
@@ -213,10 +262,10 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 		result_filter: str = None
 
 		# Initialize filter dictionary with default values
-		if default_filter:
-			default_filter = default_filter.copy()
-		elif default_filter is None:
+		if default_filter is None or default_filter is True:
 			default_filter = LDAP_DEFAULT_DIRTREE_FILTER.copy()
+		elif default_filter:
+			default_filter = default_filter.copy()
 
 		if data_filter:
 			self.validate_filter_dict(filter_dict=data_filter)
@@ -264,94 +313,6 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 					result_filter = new_filter
 
 		return result_filter
-
-	@deprecated
-	def process_filter(self, data: dict = None, filter_dict: dict = None): # pragma: no cover
-		"""Process LDAP Directory Tree Request Filter
-
-		Args:
-			data (dict): Request data dictionary
-			filter_dict (dict, optional): LDAP Filter dictionary to use when
-			iexact is not used. Defaults to None.
-
-		Raises:
-			TypeError: When data is not of type dict.
-
-		Returns:
-			str: LDAP Filter String
-		"""
-		if not isinstance(data, dict) and not data is None:
-			raise TypeError("data must be of type dict or None.")
-
-		ldap_filter: str = None
-		filter_data: dict = {}
-		if data:
-			filter_data = data.get("filter", {})
-
-		filter_data_iexact = filter_data.get("iexact", None)
-		if filter_data_iexact and not isinstance(filter_data_iexact, dict):
-			raise TypeError("filter_data_iexact must be of type dict.")
-
-		filter_data_exclude = filter_data.get("exclude", None)
-		if filter_data_exclude and not isinstance(filter_data_exclude, dict):
-			raise TypeError("filter_data_exclude must be of type dict.")
-
-		# Exact Filter
-		if filter_data_iexact:
-			logger.debug("Dirtree fetching with Filter iexact")
-			for lookup_value, lookup_params in filter_data_iexact.items():
-				# If lookup_params is a dict, fetch and use params.
-				if isinstance(lookup_params, dict):
-					lookup_type = lookup_params.pop("attr")
-					lookup_exclude = False
-					lookup_or = False
-
-					if "exclude" in lookup_params:
-						lookup_exclude = lookup_params.pop("exclude")
-					if "or" in lookup_params:
-						lookup_or = lookup_params.pop("or")
-
-					if lookup_or:
-						expr = LDAP_FILTER_OR
-					else:
-						expr = LDAP_FILTER_AND
-					ldap_filter = join_ldap_filter(
-						ldap_filter,
-						f"{lookup_type}={lookup_value}",
-						expression=expr,
-						negate_add=lookup_exclude,
-					)
-				else:
-					# If lookup_params isn't a dict, it's the type.
-					lookup_type = lookup_params
-					ldap_filter = join_ldap_filter(
-						ldap_filter, f"{lookup_type}={lookup_value}")
-		# Standard exclusion filter
-		else:
-			logger.debug("Dirtree fetching with Standard Exclusion Filter")
-			if filter_dict is None:
-				filter_dict = {
-					**RuntimeSettings.LDAP_DIRTREE_CN_FILTER,
-					**RuntimeSettings.LDAP_DIRTREE_OU_FILTER,
-				}
-			# Remove excluded field/value pairs from filter dict.
-			if filter_data_exclude:
-				for lookup_value in filter_data_exclude:
-					if lookup_value in filter_dict:
-						del filter_dict[lookup_value]
-
-			ldap_filter = search_filter_from_dict(filter_dict)
-
-			# Add excluded field/value pairs as negated filters to dict.
-			if filter_data_exclude:
-				for lookup_value in filter_data_exclude:
-					lookup_type = filter_data_exclude[lookup_value]
-					ldap_filter = join_ldap_filter(
-						ldap_filter, f"{lookup_type}={lookup_value}", negate_add=True
-					)
-
-		logger.debug("LDAP Filter for Dirtree: %s", ldap_filter)
-		return ldap_filter
 
 	def move_or_rename_object(
 		self, distinguished_name: str, relative_dn: str = None, ldap_path: str = None
@@ -449,3 +410,91 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 			message=operation,
 		)
 		return new_dn
+
+	@deprecated
+	def process_filter(self, data: dict = None, filter_dict: dict = None): # pragma: no cover
+		"""Process LDAP Directory Tree Request Filter
+
+		Args:
+			data (dict): Request data dictionary
+			filter_dict (dict, optional): LDAP Filter dictionary to use when
+			iexact is not used. Defaults to None.
+
+		Raises:
+			TypeError: When data is not of type dict.
+
+		Returns:
+			str: LDAP Filter String
+		"""
+		if not isinstance(data, dict) and not data is None:
+			raise TypeError("data must be of type dict or None.")
+
+		ldap_filter: str = None
+		filter_data: dict = {}
+		if data:
+			filter_data = data.get("filter", {})
+
+		filter_data_iexact = filter_data.get("iexact", None)
+		if filter_data_iexact and not isinstance(filter_data_iexact, dict):
+			raise TypeError("filter_data_iexact must be of type dict.")
+
+		filter_data_exclude = filter_data.get("exclude", None)
+		if filter_data_exclude and not isinstance(filter_data_exclude, dict):
+			raise TypeError("filter_data_exclude must be of type dict.")
+
+		# Exact Filter
+		if filter_data_iexact:
+			logger.debug("Dirtree fetching with Filter iexact")
+			for lookup_value, lookup_params in filter_data_iexact.items():
+				# If lookup_params is a dict, fetch and use params.
+				if isinstance(lookup_params, dict):
+					lookup_type = lookup_params.pop("attr")
+					lookup_exclude = False
+					lookup_or = False
+
+					if "exclude" in lookup_params:
+						lookup_exclude = lookup_params.pop("exclude")
+					if "or" in lookup_params:
+						lookup_or = lookup_params.pop("or")
+
+					if lookup_or:
+						expr = LDAP_FILTER_OR
+					else:
+						expr = LDAP_FILTER_AND
+					ldap_filter = join_ldap_filter(
+						ldap_filter,
+						f"{lookup_type}={lookup_value}",
+						expression=expr,
+						negate_add=lookup_exclude,
+					)
+				else:
+					# If lookup_params isn't a dict, it's the type.
+					lookup_type = lookup_params
+					ldap_filter = join_ldap_filter(
+						ldap_filter, f"{lookup_type}={lookup_value}")
+		# Standard exclusion filter
+		else:
+			logger.debug("Dirtree fetching with Standard Exclusion Filter")
+			if filter_dict is None:
+				filter_dict = {
+					**RuntimeSettings.LDAP_DIRTREE_CN_FILTER,
+					**RuntimeSettings.LDAP_DIRTREE_OU_FILTER,
+				}
+			# Remove excluded field/value pairs from filter dict.
+			if filter_data_exclude:
+				for lookup_value in filter_data_exclude:
+					if lookup_value in filter_dict:
+						del filter_dict[lookup_value]
+
+			ldap_filter = search_filter_from_dict(filter_dict)
+
+			# Add excluded field/value pairs as negated filters to dict.
+			if filter_data_exclude:
+				for lookup_value in filter_data_exclude:
+					lookup_type = filter_data_exclude[lookup_value]
+					ldap_filter = join_ldap_filter(
+						ldap_filter, f"{lookup_type}={lookup_value}", negate_add=True
+					)
+
+		logger.debug("LDAP Filter for Dirtree: %s", ldap_filter)
+		return ldap_filter
