@@ -73,6 +73,13 @@ def test_from_bytes_valid_conversion(guid_bytes: bytes, expected_str: str):
 	assert isinstance(guid.data, dict)
 	assert len(guid.data) == 5  # 5 GUID components
 
+def test_from_bytes_uuid_raises(mocker):
+	"""Test exception raise when UUID is invalid"""
+	mocker.patch("core.ldap.guid.uuid.UUID", side_effect=ValueError("Generated invalid UUID string"))
+	m_logger: MockType = mocker.patch("core.ldap.guid.logger")
+	with pytest.raises(ValueError, match="invalid UUID string"):
+		GUID(b"\xb4c\xb7\xf3\xc3\xe2L@\xa5\xea7\x81[\xdd\xea\x08")
+	m_logger.error.assert_called_once_with("Generated invalid UUID string: f3b763b4-e2c3-404c-a5ea-37815bddea08")
 
 def test_from_bytes_with_list_input(f_sample_guids):
 	"""Test initializing GUID with a list containing bytearray."""
@@ -80,6 +87,9 @@ def test_from_bytes_with_list_input(f_sample_guids):
 	guid = GUID([sample_bytes])  # Wrap in list
 	assert str(guid) == expected_str
 
+def test_dunder_dict():
+	m_guid = GUID(b"\xb4c\xb7\xf3\xc3\xe2L@\xa5\xea7\x81[\xdd\xea\x08")
+	assert m_guid.__dict__() == m_guid.data
 
 ######################################## FROM STR ########################################
 @pytest.mark.parametrize(
