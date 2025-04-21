@@ -123,16 +123,19 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 	@admin_required
 	def dirtree(self, request):
 		user: User = request.user
-		data = request.data
+		data: dict = request.data
 		code = 0
 		code_msg = "ok"
 
+		data_filter: dict = data.get("filter", None)
+		data_filter_use_defaults = data_filter.pop("use_defaults", None) if data_filter else None
 		try:
-			ldap_filter_object = self.process_filter(data)
+			ldap_filter_object = self.process_ldap_filter(data_filter, default_filter=data_filter_use_defaults).to_string()
 		except Exception as e:
-			print(e)
+			logger.exception(e)
 			raise exc_dirtree.DirtreeFilterBad
 
+		logger.debug("LDAP Filter constructed.")
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
@@ -147,7 +150,7 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				"member",
 				"distinguishedName",
 				"groupType",
-				"objectSid",
+				# "objectSid",
 			]
 			ldap_tree_options: LDAPTreeOptions = {
 				"connection": self.ldap_connection,
