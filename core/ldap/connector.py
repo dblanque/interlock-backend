@@ -17,7 +17,7 @@ from enum import Enum
 # LDAP
 import ldap3
 from django_python3_ldap.utils import import_func
-from core.ldap.adsi import join_ldap_filter, LDAP_FILTER_OR
+from core.ldap.filter import LDAPFilter
 from core.exceptions import ldap as exc_ldap
 from ldap3.core.exceptions import LDAPException
 
@@ -69,9 +69,10 @@ def recursive_member_search(user_dn: str, connection: ldap3.Connection, group_dn
 		raise ValueError("user_dn cannot be empty.")
 
 	# Add filter for username
-	ldap_filter_object = ""
-	ldap_filter_object = join_ldap_filter(ldap_filter_object, f"distinguishedName={group_dn}")
-	ldap_filter_object = join_ldap_filter(ldap_filter_object, f"objectClass=group")
+	ldap_filter_object = LDAPFilter.and_(
+		LDAPFilter.eq("distinguishedName", group_dn),
+		LDAPFilter.eq("objectClass", "group")
+	).to_string()
 	connection.search(
 		RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
 		ldap_filter_object,
@@ -379,17 +380,21 @@ class LDAPConnector(object):
 		The user identifier should be keyword arguments matching the fields
 		in settings.LDAP_AUTH_USER_LOOKUP_FIELDS.
 		"""
-		searchFilter = ""
+		lookup_filters = []
 		for field in RuntimeSettings.LDAP_AUTH_USER_LOOKUP_FIELDS:
-			searchFilter = join_ldap_filter(
-				searchFilter,
-				f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS[field]}={kwargs['username']}",
-				LDAP_FILTER_OR,
+			lookup_filters.append(
+				LDAPFilter.eq(
+					RuntimeSettings.LDAP_AUTH_USER_FIELDS[field],
+					kwargs['username'],
+				)
 			)
+		search_filter = LDAPFilter.or_(
+			*lookup_filters
+		).to_string()
 		# Search the LDAP database.
 		if self.connection.search(
 			search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
-			search_filter=searchFilter,
+			search_filter=search_filter,
 			search_scope=ldap3.SUBTREE,
 			attributes=ldap3.ALL_ATTRIBUTES,
 			get_operational_attributes=True,
