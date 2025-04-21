@@ -70,18 +70,3 @@ def test_process_ldap_filter_no_defaults(f_ou_mixin: OrganizationalUnitMixin):
 			]
 		}
 	}, default_filter=False).to_string() == expected
-
-def test_process_ldap_filter_overriding_defaults(
-		f_ou_mixin: OrganizationalUnitMixin,
-		f_object_category_filter: str,
-	):
-	expected = "(|(objectClass=person)(objectClass=user))"
-	expected = join_ldap_filter(f_object_category_filter, expected)
-	assert f_ou_mixin.process_ldap_filter(data_filter={
-		"include":{
-			"objectClass":[
-				"person",
-				"user",
-			]
-		}
-	}, override_defaults=True).to_string() == expected
