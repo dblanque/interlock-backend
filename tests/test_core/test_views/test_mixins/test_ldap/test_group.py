@@ -61,17 +61,6 @@ def f_sid_2():
 	return b"\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00\x11^\xb3\x83j\x06\x94\x00\x80\xdbi\xaaR\x04\x00\x00"
 
 @pytest.fixture
-def f_group_entry(mocker: MockerFixture, f_distinguished_name: str, f_sid_1: bytes) -> MockLDAPEntry:
-	m_entry: MockLDAPEntry = mocker.MagicMock()
-	m_entry.entry_dn = f_distinguished_name
-	m_entry.distinguishedName.value = f_distinguished_name
-	m_entry.distinguishedName.values = [f_distinguished_name]
-	m_entry.objectSid.value = f_sid_1
-	m_entry.objectSid.values = [f_sid_1]
-	m_entry.objectSid.raw_values = [f_sid_1]
-	return m_entry
-
-@pytest.fixture
 def f_ldap_connection(mocker: MockerFixture):
 	return mocker.Mock(spec=Connection)
 
@@ -90,6 +79,10 @@ def f_ldap_search_base(f_runtime_settings: RuntimeSettingsSingleton):
 @pytest.fixture
 def f_ldap_domain(f_runtime_settings: RuntimeSettingsSingleton):
 	return f_runtime_settings.LDAP_DOMAIN
+
+@pytest.fixture
+def f_auth_field_username(f_runtime_settings: RuntimeSettingsSingleton):
+	return f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
 
 @pytest.fixture
 def fc_group_entry(mocker: MockerFixture, f_ldap_search_base, f_ldap_domain, f_sid_1):
@@ -112,6 +105,8 @@ def fc_group_entry(mocker: MockerFixture, f_ldap_search_base, f_ldap_domain, f_s
 			m_attr = mocker.Mock()
 			m_attr.value = v
 			m_attr.values = [v]
+			if k == "objectSid":
+				m_attr.raw_values = [v]
 			setattr(mock, k, m_attr)
 			mock.entry_attributes_as_dict[k] = [v]
 			mock.entry_attributes.append(k)
@@ -260,15 +255,16 @@ class TestGetGroupByRid:
 		rid: int,
 		should_return_group_entry: bool,
 		f_group_mixin: GroupViewMixin,
-		f_group_entry: MockLDAPEntry,
+		fc_group_entry,
 		f_ldap_connector: MockLDAPConnector,
 		f_runtime_settings: RuntimeSettingsSingleton,
 	):
 		# Mock result LDAPObject
+		m_group_entry = fc_group_entry()
 		m_ldap_object = mocker.Mock()
-		m_sid = SID(getattr(f_group_entry, "objectSid"))
+		m_sid = SID(getattr(m_group_entry, "objectSid"))
 		m_ldap_object.attributes = {
-			"distinguishedName": f_group_entry.entry_dn,
+			"distinguishedName": m_group_entry.entry_dn,
 			"objectSid": m_sid,
 		}
 		mocker.patch("core.views.mixins.ldap.group.LDAPObject", return_value=m_ldap_object)
@@ -277,7 +273,7 @@ class TestGetGroupByRid:
 
 		# Mock LDAP Connection
 		m_connection = f_ldap_connector.connection
-		m_connection.entries = [f_group_entry, m_group_without_sid]
+		m_connection.entries = [m_group_entry, m_group_without_sid]
 		result = f_group_mixin.get_group_by_rid(rid=rid)
 		m_connection.search.assert_called_once_with(
 			search_base=f_runtime_settings.LDAP_AUTH_SEARCH_BASE,
@@ -317,3 +313,71 @@ class TestGroupMixinCRUD:
 			log_target_class=LOG_CLASS_GROUP,
 			log_target=LOG_TARGET_ALL,
 		)
+
+	@staticmethod
+	def test_fetch(
+		mocker: MockerFixture,
+		fc_group_entry: LDAPEntry,
+		f_group_mixin: GroupViewMixin,
+		f_log_mixin: LogMixin,
+		f_ldap_domain: str,
+		f_ldap_search_base: str,
+		f_auth_field_username: str,
+	):
+		m_common_name = "testgroup"
+		m_member_dn = "mock_member_dn"
+		m_group_entry = fc_group_entry(
+			groupname=m_common_name,
+			member=[ m_member_dn ]
+		)
+		f_group_mixin.ldap_connection.entries = [ m_group_entry ]
+		f_group_mixin.ldap_filter_attr = ["cn", "mail", "member", "distinguishedName", "groupType", "objectSid"]
+		f_group_mixin.ldap_filter_object = f"(&(objectClass=group)(distinguishedName={m_group_entry}))"
+
+		# Mock LDAP Object Member
+		m_ldap_user_object = mocker.Mock()
+		m_ldap_user_attrs = {"attributes": "dict"}
+		m_ldap_user_object.attributes = m_ldap_user_attrs
+		m_ldap_object = mocker.Mock(return_value=m_ldap_user_object)
+		mocker.patch("core.views.mixins.ldap.group.LDAPObject", m_ldap_object)
+
+		group, headers = f_group_mixin.fetch_group()
+		f_group_mixin.ldap_connection.search.assert_called_once_with(
+			search_base=f_ldap_search_base,
+			search_filter=f_group_mixin.ldap_filter_object,
+			attributes=f_group_mixin.ldap_filter_attr,
+		)
+		m_ldap_object.assert_called_once_with(
+			**{
+				"connection": f_group_mixin.ldap_connection,
+				"dn": m_member_dn,
+				"ldap_attrs": [
+					"cn",
+					"distinguishedName",
+					f_auth_field_username,
+					"givenName",
+					"sn",
+					"objectCategory",
+					"objectClass",
+				],
+			}
+		)
+		assert isinstance(group, dict)
+		assert group.get("cn") == m_common_name
+		assert group.get("mail") == f"mock@{f_ldap_domain}"
+		assert group.get("member") == [ m_ldap_user_attrs ]
+		assert group.get("groupType") == [LDAPGroupTypes.GROUP_SECURITY.name, LDAPGroupTypes.GROUP_GLOBAL.name]
+		assert group.get("objectSid") == "S-1-5-21-2209570321-9700970-2859064192-1159"
+		f_log_mixin.log.assert_called_once_with(
+			user=1,
+			operation_type=LOG_ACTION_READ,
+			log_target_class=LOG_CLASS_GROUP,
+			log_target=m_common_name,
+		)
+		assert set(headers) == {
+			"cn",
+			"mail",
+			"member",
+			"groupType",
+			"objectSid",
+		}

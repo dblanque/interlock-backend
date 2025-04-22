@@ -11,8 +11,11 @@
 from rest_framework import viewsets
 
 ### Interlock
-from core.ldap.adsi import join_ldap_filter
-from core.ldap.types.group import LDAPGroupTypes
+from core.ldap.types.group import (
+	LDAPGroupTypes,
+	LDAP_GROUP_SCOPE_MAPPING,
+	LDAP_GROUP_TYPE_MAPPING
+)
 from core.ldap.security_identifier import SID
 from core.ldap.connector import LDAPConnector
 from core.config.runtime import RuntimeSettings
@@ -165,12 +168,12 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		ldap_entries = self.ldap_connection.entries
 
 		# Remove attributes to return as table headers
-		valid_attributes: List[str] = self.ldap_filter_attr
+		headers: List[str] = self.ldap_filter_attr
 		remove_attributes = ["distinguishedName", "member"]
 
 		for attr in remove_attributes:
-			if attr in valid_attributes:
-				valid_attributes.remove(attr)
+			if attr in headers:
+				headers.remove(attr)
 
 		for group_entry in ldap_entries:
 			group_entry: LDAPEntry
@@ -186,7 +189,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 						group_type=int(getldapattr(group_entry, attr_key))
 					)
 				# Do the standard for every other key
-				elif attr_key in valid_attributes:
+				elif attr_key in headers:
 					group_dict[attr_key] = getldapattr(group_entry, attr_key, None)
 
 			# Check if group has Members
@@ -197,7 +200,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 			data.append(group_dict)
 
-		valid_attributes.append("hasMembers")
+		headers.append("hasMembers")
 
 		DBLogMixin.log(
 			user=self.request.user.id,
@@ -205,7 +208,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			log_target_class=LOG_CLASS_GROUP,
 			log_target=LOG_TARGET_ALL,
 		)
-		return data, valid_attributes
+		return data, headers
 
 	def fetch_group(self):
 		self.ldap_connection.search(
@@ -216,8 +219,8 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		ldap_group_entry: LDAPEntry = self.ldap_connection.entries[0]
 
 		# Remove attributes to return as table headers
-		valid_attributes: list[str] = self.ldap_filter_attr
-		valid_attributes.remove("distinguishedName")
+		headers: list[str] = self.ldap_filter_attr
+		headers.remove("distinguishedName")
 
 		# For each attribute in group object attributes
 		group_dict = {}
@@ -225,7 +228,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		group_dict["distinguishedName"] = ldap_group_entry.entry_dn
 
 		for attr_key in ldap_group_entry.entry_attributes:
-			if not attr_key in valid_attributes:
+			if not attr_key in headers:
 				continue
 
 			attr_value = getldapattr(ldap_group_entry, attr_key, None)
@@ -234,26 +237,28 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				group_type = int(attr_value)
 				group_dict[attr_key] = self.get_group_types(group_type=group_type)
 			elif attr_key == "member":
+				_username_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
 				attr_members = attr_value if isinstance(attr_value, list) \
 								else [attr_value]
 				member_list = []
 
 				# Fetch members
 				for member_user_dn in attr_members:
-					args = {
-						"connection": self.ldap_connection,
-						"dn": member_user_dn,
-						"ldap_attrs": [
-							"cn",
-							"distinguishedName",
-							RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
-							"givenName",
-							"sn",
-							"objectCategory",
-							"objectClass",
-						],
-					}
-					member_list.append(LDAPObject(**args).attributes)
+					member_list.append(
+						LDAPObject(**{
+							"connection": self.ldap_connection,
+							"dn": member_user_dn,
+							"ldap_attrs": [
+								"cn",
+								"distinguishedName",
+								_username_field,
+								"givenName",
+								"sn",
+								"objectCategory",
+								"objectClass",
+							],
+						}).attributes
+					)
 				group_dict[attr_key] = member_list
 			# Do the standard for every other key
 			elif attr_key == "objectSid":
@@ -272,11 +277,15 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			log_target_class=LOG_CLASS_GROUP,
 			log_target=group_dict["cn"],
 		)
-		return group_dict, valid_attributes
+		return group_dict, headers
 
-	def create_group(self, group_data: dict, exclude_keys=["member", "path"]):
+	def create_group(
+			self,
+			group_data: dict,
+			exclude_keys=["member", "path"]
+		) -> Connection:
 		if group_data.get("path", None):
-			distinguishedName = "cn=" + group_data["cn"] + "," + group_data["path"]
+			distinguishedName = f"cn={group_data['cn']},{group_data['path']}"
 		else:
 			distinguishedName = (
 				f"CN={group_data['cn']},CN=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}"
@@ -305,13 +314,15 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		# Set group Type
 		if "groupType" not in group_data or "groupScope" not in group_data:
-			self.ldap_connection.unbind()
-			group_data = {"group": group_data["cn"]}
-			raise exc_groups.GroupScopeOrTypeMissing(data=group_data)
+			raise exc_groups.GroupScopeOrTypeMissing(data={
+				"group": group_data["cn"]
+			})
 
-		sum = RuntimeSettings.LDAP_GROUP_TYPE_MAPPING[int(group_data["groupType"])]
-		sum += RuntimeSettings.LDAP_GROUP_SCOPE_MAPPING[int(group_data["groupScope"])]
-		group_data["groupType"] = sum
+		group_data["groupType"] = (
+			LDAP_GROUP_TYPE_MAPPING[int(group_data["groupType"])]
+			+
+			LDAP_GROUP_SCOPE_MAPPING[int(group_data["groupScope"])]
+		)
 		group_data.pop("groupScope")
 
 		group_dict = deepcopy(group_data)
@@ -330,25 +341,18 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		try:
 			self.ldap_connection.add(distinguishedName, "group", attributes=group_dict)
 		except Exception as e:
-			self.ldap_connection.unbind()
-			print(e)
-			group_data = {"ldap_response": self.ldap_connection.result}
-			raise exc_groups.GroupCreate(data=group_data)
+			logger.exception(e)
+			raise exc_groups.GroupCreate(data={
+				"ldap_response": self.ldap_connection.result
+			})
 
-		if len(membersToAdd) > 0:
+		if membersToAdd:
 			try:
 				self.ldap_connection.extend.microsoft.add_members_to_groups(
 					membersToAdd, distinguishedName
 				)
 			except Exception as e:
-				try:
-					self.ldap_connection.delete(distinguishedName)
-					group_data = {"ldap_response": self.ldap_connection.result}
-					raise exc_groups.GroupMembersAdd
-				except Exception as e:
-					self.ldap_connection.unbind()
-				self.ldap_connection.unbind()
-				print(e)
+				logger.exception(e)
 				group_data = {"ldap_response": self.ldap_connection.result}
 				raise exc_groups.GroupMembersAdd
 
@@ -424,8 +428,8 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		castGroupType = int(group_data["groupType"])
 		castGroupScope = int(group_data["groupScope"])
-		sum = RuntimeSettings.LDAP_GROUP_TYPE_MAPPING[castGroupType]
-		sum += RuntimeSettings.LDAP_GROUP_SCOPE_MAPPING[castGroupScope]
+		sum = LDAP_GROUP_TYPE_MAPPING[castGroupType]
+		sum += LDAP_GROUP_SCOPE_MAPPING[castGroupScope]
 		group_data["groupType"] = sum
 		group_data.pop("groupScope")
 
@@ -483,8 +487,8 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 						if ("GROUP_GLOBAL" in previousGroupTypes and castGroupScope == 1) or (
 							"GROUP_DOMAIN_LOCAL" in previousGroupTypes and castGroupScope == 0
 						):
-							passthroughSum = RuntimeSettings.LDAP_GROUP_TYPE_MAPPING[castGroupType]
-							passthroughSum += RuntimeSettings.LDAP_GROUP_SCOPE_MAPPING[2]
+							passthroughSum = LDAP_GROUP_TYPE_MAPPING[castGroupType]
+							passthroughSum += LDAP_GROUP_SCOPE_MAPPING[2]
 							logger.debug(passthroughSum)
 							logger.debug(group_dict[key])
 							# Change to Universal Scope

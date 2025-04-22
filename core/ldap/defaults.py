@@ -46,28 +46,6 @@ LDAP_AUTH_OBJECT_CLASS = "person"
 # Whether the DNS Zones are in the Legacy Location
 LDAP_DNS_LEGACY = False
 
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
-# ! Don't change the values below or Group Type/Scope changes will break ! #
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
-# Group Type Value Mapping
-LDAP_GROUP_TYPE_MAPPING = {
-	# Distribution Group
-	0: 0,
-	# Security Group
-	1: -2147483648,
-}
-
-# Group Scope Value Mapping
-LDAP_GROUP_SCOPE_MAPPING = {
-	# Global Scope
-	0: 2,
-	# Domain Local Scope
-	1: 4,
-	# Universal Scope
-	2: 8,
-}
-# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! #
-
 # Set this to False if you wish to include Computer Accounts in User Listings
 EXCLUDE_COMPUTER_ACCOUNTS = True
 

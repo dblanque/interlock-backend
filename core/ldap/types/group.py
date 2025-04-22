@@ -17,3 +17,21 @@ class LDAPGroupTypes(Enum):
 LDAP_GROUP_TYPES = {
 	t.name: t.value for t in LDAPGroupTypes
 }
+
+# Group Type Value Mapping
+LDAP_GROUP_TYPE_MAPPING = {
+	# Distribution Group
+	0: LDAPGroupTypes.GROUP_DISTRIBUTION.value,
+	# Security Group
+	1: -LDAPGroupTypes.GROUP_SECURITY.value,
+}
+
+# Group Scope Value Mapping
+LDAP_GROUP_SCOPE_MAPPING = {
+	# Global Scope
+	0: LDAPGroupTypes.GROUP_GLOBAL.value,
+	# Domain Local Scope
+	1: LDAPGroupTypes.GROUP_DOMAIN_LOCAL.value,
+	# Universal Scope
+	2: LDAPGroupTypes.GROUP_UNIVERSAL.value,
+}
