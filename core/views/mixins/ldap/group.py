@@ -39,11 +39,12 @@ import traceback
 from core.exceptions import ldap as exc_ldap, groups as exc_groups, dirtree as exc_dirtree
 
 ### Others
+from core.views.mixins.utils import getldapattr
 from typing import List
 from django.db import transaction
 from copy import deepcopy
 import ldap3
-from ldap3 import MODIFY_DELETE, MODIFY_REPLACE, Entry as LDAPEntry
+from ldap3 import MODIFY_DELETE, MODIFY_REPLACE, Entry as LDAPEntry, Connection
 import logging
 ################################################################################
 
@@ -52,7 +53,7 @@ logger = logging.getLogger(__name__)
 
 
 class GroupViewMixin(viewsets.ViewSetMixin):
-	ldap_connection = None
+	ldap_connection: Connection = None
 	ldap_filter_object = None
 	ldap_filter_attr = None
 
@@ -154,48 +155,45 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				return result.attributes
 		return None
 
-	def list_groups(self):
+	def list_groups(self) -> tuple[list[dict], list[str]]:
 		data = []
 		self.ldap_connection.search(
-			RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
-			self.ldap_filter_object,
+			search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
+			search_filter=self.ldap_filter_object,
 			attributes=self.ldap_filter_attr,
 		)
 		ldap_entries = self.ldap_connection.entries
 
 		# Remove attributes to return as table headers
-		valid_attributes = self.ldap_filter_attr
+		valid_attributes: List[str] = self.ldap_filter_attr
 		remove_attributes = ["distinguishedName", "member"]
 
 		for attr in remove_attributes:
 			if attr in valid_attributes:
-				valid_attributes.remove(str(attr))
+				valid_attributes.remove(attr)
 
-		for group in ldap_entries:
+		for group_entry in ldap_entries:
+			group_entry: LDAPEntry
 			# For each attribute in group object attributes
 			group_dict = {}
-			for attr_key in dir(group):
+			# Add entry DN to response dictionary
+			group_dict["distinguishedName"] = group_entry.entry_dn
+
+			for attr_key in group_entry.entry_attributes:
 				# Parse Group Type
 				if attr_key == "groupType":
-					groupVal = int(str(getattr(group, attr_key)))
-					group_dict[attr_key] = self.get_group_types(group_type=groupVal)
+					group_dict[attr_key] = self.get_group_types(
+						group_type=int(getldapattr(group_entry, attr_key))
+					)
 				# Do the standard for every other key
 				elif attr_key in valid_attributes:
-					str_key = str(attr_key)
-					str_value = str(getattr(group, attr_key))
-					if str_value == "[]":
-						group_dict[str_key] = ""
-					else:
-						group_dict[str_key] = str_value
+					group_dict[attr_key] = getldapattr(group_entry, attr_key, None)
 
 			# Check if group has Members
-			if str(getattr(group, "member")) == "[]" or getattr(group, "member") is None:
-				group_dict["hasMembers"] = False
-			else:
+			if getldapattr(group_entry, "member", None):
 				group_dict["hasMembers"] = True
-
-			# Add entry DN to response dictionary
-			group_dict["distinguishedName"] = group.entry_dn
+			else:
+				group_dict["hasMembers"] = False
 
 			data.append(group_dict)
 
@@ -211,73 +209,62 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 	def fetch_group(self):
 		self.ldap_connection.search(
-			RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
-			self.ldap_filter_object,
+			search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
+			search_filter=self.ldap_filter_object,
 			attributes=self.ldap_filter_attr,
 		)
-		group = self.ldap_connection.entries
+		ldap_group_entry: LDAPEntry = self.ldap_connection.entries[0]
 
 		# Remove attributes to return as table headers
-		valid_attributes = self.ldap_filter_attr
-		remove_attributes = [
-			"distinguishedName",
-			# 'member'
-		]
-
-		for attr in remove_attributes:
-			if attr in valid_attributes:
-				valid_attributes.remove(str(attr))
+		valid_attributes: list[str] = self.ldap_filter_attr
+		valid_attributes.remove("distinguishedName")
 
 		# For each attribute in group object attributes
 		group_dict = {}
-		for attr_key in dir(group[0]):
-			if attr_key in valid_attributes:
-				str_key = str(attr_key)
-				realValue = getattr(group[0], attr_key)
-				str_value = str(realValue)
-				if str_value == "[]":
-					group_dict[str_key] = ""
-				# Parse Group Type
-				elif str_key == "groupType":
-					groupVal = int(str(getattr(group[0], str_key)))
-					group_dict[str_key] = self.get_group_types(group_type=groupVal)
-				elif str_key == "member":
-					memberArray = []
-					memberAttributes = [
-						"cn",
-						"distinguishedName",
-						RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
-						"givenName",
-						"sn",
-						"objectCategory",
-						"objectClass",
-					]
-					# Fetch members
-					for u in getattr(group[0], str_key):
-						args = {
-							"connection": self.ldap_connection,
-							"dn": u,
-							"ldap_attrs": memberAttributes,
-						}
-						memberObject = LDAPObject(**args)
-						self.ldap_connection = memberObject.__get_connection__()
-						memberArray.append(memberObject.attributes)
-					group_dict[str_key] = memberArray
-				# Do the standard for every other key
-				elif str_key == "objectSid":
-					sid = SID(realValue)
-					sid = sid.__str__()
-					rid = sid.split("-")[-1]
-					group_dict[str_key] = sid
-					group_dict["objectRid"] = int(rid)
-				else:
-					group_dict[str_key] = str_value
+		# Add entry DN to response dictionary
+		group_dict["distinguishedName"] = ldap_group_entry.entry_dn
 
-				if group_dict[str_key] == "":
-					del group_dict[str_key]
+		for attr_key in ldap_group_entry.entry_attributes:
+			if not attr_key in valid_attributes:
+				continue
 
-			# Add entry DN to response dictionary
-			group_dict["distinguishedName"] = str(group[0].entry_dn)
+			attr_value = getldapattr(ldap_group_entry, attr_key, None)
+			# Parse Group Type
+			if attr_key == "groupType":
+				group_type = int(attr_value)
+				group_dict[attr_key] = self.get_group_types(group_type=group_type)
+			elif attr_key == "member":
+				attr_members = attr_value if isinstance(attr_value, list) \
+								else [attr_value]
+				member_list = []
+
+				# Fetch members
+				for member_user_dn in attr_members:
+					args = {
+						"connection": self.ldap_connection,
+						"dn": member_user_dn,
+						"ldap_attrs": [
+							"cn",
+							"distinguishedName",
+							RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
+							"givenName",
+							"sn",
+							"objectCategory",
+							"objectClass",
+						],
+					}
+					member_list.append(LDAPObject(**args).attributes)
+				group_dict[attr_key] = member_list
+			# Do the standard for every other key
+			elif attr_key == "objectSid":
+				# Don't use getldapattr for the sid, we need raw bytes
+				sid = SID(getattr(ldap_group_entry, attr_key))
+				sid = sid.__str__()
+				rid = sid.split("-")[-1]
+				group_dict[attr_key] = sid
+				group_dict["objectRid"] = int(rid)
+			else:
+				group_dict[attr_key] = attr_value
 
 		DBLogMixin.log(
 			user=self.request.user.id,
@@ -292,10 +279,11 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			distinguishedName = "cn=" + group_data["cn"] + "," + group_data["path"]
 		else:
 			distinguishedName = (
-				"CN=" + group_data["cn"] + ",CN=Users," + RuntimeSettings.LDAP_AUTH_SEARCH_BASE
+				f"CN={group_data['cn']},CN=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}"
 			)
 
-		group_data[RuntimeSettings.LDAP_GROUP_FIELD] = str(group_data["cn"]).lower()
+		group_cn: str = group_data.get("cn")
+		group_data[RuntimeSettings.LDAP_GROUP_FIELD] = group_cn.lower()
 
 		args = {
 			"connection": self.ldap_connection,
