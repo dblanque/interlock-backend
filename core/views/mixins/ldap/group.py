@@ -294,16 +294,16 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		group_cn: str = group_data.get("cn")
 		group_data[RuntimeSettings.LDAP_GROUP_FIELD] = group_cn.lower()
 
-		args = {
-			"connection": self.ldap_connection,
-			"ldap_filter": self.ldap_filter_object,
-			"ldap_attrs": self.ldap_filter_attr,
-			"hideErrors": True,
-		}
-
 		# !!! CHECK IF GROUP EXISTS !!! #
 		try:
-			group_exists = len(LDAPObject(**args).attributes) > 0
+			group_exists = len(
+				LDAPObject(**{
+					"connection": self.ldap_connection,
+					"ldap_filter": self.ldap_filter_object,
+					"ldap_attrs": self.ldap_filter_attr,
+					"hideErrors": True,
+				}).attributes
+			) > 0
 		except:
 			group_exists = False
 
