@@ -426,14 +426,17 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			data = {"group": group_cn}
 			raise exc_groups.GroupScopeOrTypeMissing(data=data)
 
-		castGroupType = int(group_data["groupType"])
-		castGroupScope = int(group_data["groupScope"])
-		sum = LDAP_GROUP_TYPE_MAPPING[castGroupType]
-		sum += LDAP_GROUP_SCOPE_MAPPING[castGroupScope]
-		group_data["groupType"] = sum
+		# Don't delete these, we need them later.
+		group_type_int = int(group_data["groupType"])
+		group_scope_int = int(group_data["groupScope"])
+		group_data["groupType"] = (
+			LDAP_GROUP_TYPE_MAPPING[group_type_int]
+			+
+			LDAP_GROUP_SCOPE_MAPPING[group_scope_int]
+		)
 		group_data.pop("groupScope")
 
-		excludeKeys = [
+		excluded_attrs = [
 			"cn",
 			"member",
 			"path",
@@ -444,7 +447,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		group_dict = deepcopy(group_data)
 		for key in group_data:
-			if key in excludeKeys:
+			if key in excluded_attrs:
 				logger.debug("Removing key from dictionary: " + key)
 				group_dict.pop(key)
 
@@ -454,17 +457,11 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				logger.error(data)
 				raise exc_groups.BadMemberSelection
 
-		if "membersToAdd" in group_dict:
-			membersToAdd = group_dict.pop("membersToAdd")
-		else:
-			membersToAdd = None
-		if "membersToRemove" in group_dict:
-			membersToRemove = group_dict.pop("membersToRemove")
-		else:
-			membersToRemove = None
+		members_to_add = group_dict.pop("membersToAdd", None)
+		members_to_remove = group_dict.pop("membersToRemove", None)
 
 		# We need to check if the attributes exist in the LDAP Object already
-		# To know what operation to apply. This is VERY important.
+		# To know what operation to apply.
 		arguments = {}
 		operation = None
 		for key in group_dict:
@@ -478,23 +475,23 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				elif group_dict[key] != "":
 					operation = MODIFY_REPLACE
 					if key == "groupType":
-						previousGroupTypes = self.get_group_types(
+						previous_group_types = self.get_group_types(
 							group_type=int(fetched_group_entry[key])
 						)
 						# If we're trying to go from Group Global to Domain Local Scope or viceversa
 						# We need to make it universal first, otherwise the LDAP server denies the update request
 						# Sucks but we have to do this :/
-						if ("GROUP_GLOBAL" in previousGroupTypes and castGroupScope == 1) or (
-							"GROUP_DOMAIN_LOCAL" in previousGroupTypes and castGroupScope == 0
+						if ("GROUP_GLOBAL" in previous_group_types and group_scope_int == 1) or (
+							"GROUP_DOMAIN_LOCAL" in previous_group_types and group_scope_int == 0
 						):
-							passthroughSum = LDAP_GROUP_TYPE_MAPPING[castGroupType]
-							passthroughSum += LDAP_GROUP_SCOPE_MAPPING[2]
-							logger.debug(passthroughSum)
+							group_type_sum = LDAP_GROUP_TYPE_MAPPING[group_type_int]
+							group_type_sum += LDAP_GROUP_SCOPE_MAPPING[2]
+							logger.debug(group_type_sum)
 							logger.debug(group_dict[key])
 							# Change to Universal Scope
 							self.ldap_connection.modify(
 								distinguished_name,
-								{key: [(operation, [passthroughSum])]},
+								{key: [(operation, [group_type_sum])]},
 							)
 							# Change to Target Scope (Global or Domain Local)
 							self.ldap_connection.modify(
@@ -533,27 +530,25 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		logger.debug(self.ldap_connection.result)
 
-		if membersToAdd is not None:
-			if len(membersToAdd) > 0:
-				try:
-					self.ldap_connection.extend.microsoft.add_members_to_groups(
-						membersToAdd, distinguished_name
-					)
-				except Exception as e:
-					self.ldap_connection.unbind()
-					print(e)
-					raise exc_groups.GroupMembersAdd
+		if members_to_add:
+			try:
+				self.ldap_connection.extend.microsoft.add_members_to_groups(
+					members_to_add, distinguished_name
+				)
+			except Exception as e:
+				self.ldap_connection.unbind()
+				print(e)
+				raise exc_groups.GroupMembersAdd
 
-		if membersToRemove is not None:
-			if len(membersToRemove) > 0:
-				try:
-					self.ldap_connection.extend.microsoft.remove_members_from_groups(
-						membersToRemove, distinguished_name
-					)
-				except Exception as e:
-					self.ldap_connection.unbind()
-					print(e)
-					raise exc_groups.GroupMembersRemove
+		if members_to_remove:
+			try:
+				self.ldap_connection.extend.microsoft.remove_members_from_groups(
+					members_to_remove, distinguished_name
+				)
+			except Exception as e:
+				self.ldap_connection.unbind()
+				print(e)
+				raise exc_groups.GroupMembersRemove
 
 		DBLogMixin.log(
 			user=self.request.user.id,
