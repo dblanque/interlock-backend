@@ -717,7 +717,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				if not any(
 					_g.get("objectRid", None) == _primary_group_id for _g in memberOfObjects
 				):
-					memberOfObjects.append(GroupViewMixin.get_group_by_rid(_primary_group_id))
+					memberOfObjects.append(
+						GroupViewMixin.get_group_by_rid(_primary_group_id)
+					)
 
 			if memberOfObjects:
 				user_dict["memberOfObjects"] = memberOfObjects

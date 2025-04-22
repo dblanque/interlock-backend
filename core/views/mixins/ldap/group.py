@@ -30,6 +30,7 @@ from core.models.choices.log import (
 	LOG_CLASS_GROUP,
 	LOG_TARGET_ALL,
 )
+from core.ldap.filter import LDAPFilter
 from core.models.ldap_object import LDAPObject
 from core.views.mixins.ldap.organizational_unit import OrganizationalUnitMixin
 
@@ -38,7 +39,6 @@ import traceback
 from core.exceptions import ldap as exc_ldap, groups as exc_groups, dirtree as exc_dirtree
 
 ### Others
-from core.views.mixins.utils import getldapattr
 from typing import List
 from django.db import transaction
 from copy import deepcopy
@@ -108,30 +108,28 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		else:
 			return result
 
-	def get_group_by_rid(rid: int = None, attributes=None):
+	@staticmethod
+	def get_group_by_rid(rid: int = None, attributes: List[str] = None) -> dict | None:
 		if not attributes:
 			attributes = ["objectSid", "distinguishedName"]
 		if isinstance(rid, list):
 			rid = rid[0]
-		if rid is None:
-			raise ValueError("RID To Search cannot be None")
+		if rid is None or rid is False:
+			raise ValueError("rid cannot be None or False")
 
 		# Cast to Integer just in case
 		try:
 			rid = int(rid)
 		except Exception as e:
-			logger.error(rid)
 			logger.exception(e)
-			raise ValueError("RID To Search must be an Integer") from e
+			logger.error(str(rid))
+			raise ValueError("Could not cast rid to int") from e
 
 		with LDAPConnector(force_admin=True) as ldc:
 			connection = ldc.connection
-
-			search_filter = join_ldap_filter(None, "objectClass=group")
-
 			connection.search(
-				RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
-				search_filter=search_filter,
+				search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
+				search_filter=LDAPFilter.eq("objectClass", "group").to_string(),
 				search_scope=ldap3.SUBTREE,
 				attributes=attributes,
 			)
@@ -154,6 +152,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 					ldap_attrs=attributes,
 				)
 				return result.attributes
+		return None
 
 	def list_groups(self):
 		data = []
