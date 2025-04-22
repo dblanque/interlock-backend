@@ -303,8 +303,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		# !!! CHECK IF GROUP EXISTS !!! #
 		try:
-			group_exists = LDAPObject(**args).attributes
-			group_exists = len(group_exists) > 0
+			group_exists = len(LDAPObject(**args).attributes) > 0
 		except:
 			group_exists = False
 
