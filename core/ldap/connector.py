@@ -184,7 +184,7 @@ class LDAPConnectionOptions(TypedDict):
 
 
 class LDAPConnector(object):
-	connection: ldap3.Connection
+	connection: ldap3.Connection = None
 	log_debug_prefix = "[DEBUG - LDAPConnector] | "
 	_entered = False
 
