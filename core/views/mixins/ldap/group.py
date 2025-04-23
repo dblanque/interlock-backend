@@ -498,6 +498,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			LDAP_GROUP_SCOPE_MAPPING[group_scope_int]
 		)
 		previous_group_type_int = int(fetched_group_attrs["groupType"])
+		# TODO - Move this into separate function
 		if isinstance(group_type_combined_int, int):
 			if group_type_combined_int != previous_group_type_int:
 				previous_group_types = self.get_group_types(
