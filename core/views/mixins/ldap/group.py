@@ -282,12 +282,13 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 	def create_group(
 			self,
 			group_data: dict,
-			exclude_keys=["member", "path"]
+			exclude_keys=["member", "path", "membersToAdd"]
 		) -> Connection:
 		if group_data.get("path", None):
-			distinguishedName = f"cn={group_data['cn']},{group_data['path']}"
+			distinguished_name = f"CN={group_data['cn']},{group_data['path']}"
+			logger.debug(f"Creating group in DN Path: {group_data['path']}")
 		else:
-			distinguishedName = (
+			distinguished_name = (
 				f"CN={group_data['cn']},CN=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}"
 			)
 
@@ -295,27 +296,15 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		group_data[RuntimeSettings.LDAP_GROUP_FIELD] = group_cn.lower()
 
 		# !!! CHECK IF GROUP EXISTS !!! #
-		try:
-			group_exists = len(
-				LDAPObject(**{
-					"connection": self.ldap_connection,
-					"ldap_filter": self.ldap_filter_object,
-					"ldap_attrs": self.ldap_filter_attr,
-					"hideErrors": True,
-				}).attributes
-			) > 0
-		except:
-			group_exists = False
-
 		# If group exists, return error
-		if group_exists:
+		self.ldap_connection.search(
+			search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
+			search_filter=self.ldap_filter_object,
+			search_scope=ldap3.SUBTREE,
+			attributes=self.ldap_filter_attr,
+		)
+		if self.ldap_connection.entries:
 			raise exc_ldap.LDAPObjectExists(data={"group": group_data["cn"]})
-
-		# Set group Type
-		if "groupType" not in group_data or "groupScope" not in group_data:
-			raise exc_groups.GroupScopeOrTypeMissing(data={
-				"group": group_data["cn"]
-			})
 
 		group_data["groupType"] = (
 			LDAP_GROUP_TYPE_MAPPING[int(group_data["groupType"])]
@@ -324,31 +313,27 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		)
 		group_data.pop("groupScope")
 
-		group_dict = deepcopy(group_data)
-		for key in group_data:
-			if key in exclude_keys:
-				logger.debug("Removing key from dictionary: " + key)
-				group_dict.pop(key)
+		members_to_add = group_data.pop("membersToAdd", [])
+		for _key in exclude_keys:
+			logger.debug("Removing key from dictionary: " + _key)
+			group_data.pop(_key, None)
 
-		group_dict["cn"] = group_dict["cn"]
-		if "membersToAdd" in group_dict:
-			membersToAdd = group_dict.pop("membersToAdd")
-		else:
-			membersToAdd = []
-
-		logger.debug("Creating group in DN Path: " + group_data["path"])
 		try:
-			self.ldap_connection.add(distinguishedName, "group", attributes=group_dict)
+			self.ldap_connection.add(
+				dn=distinguished_name,
+				object_class="group",
+				attributes=group_data
+			)
 		except Exception as e:
 			logger.exception(e)
 			raise exc_groups.GroupCreate(data={
 				"ldap_response": self.ldap_connection.result
 			})
 
-		if membersToAdd:
+		if members_to_add:
 			try:
 				self.ldap_connection.extend.microsoft.add_members_to_groups(
-					membersToAdd, distinguishedName
+					members_to_add, distinguished_name
 				)
 			except Exception as e:
 				logger.exception(e)
@@ -359,7 +344,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			user=self.request.user.id,
 			operation_type=LOG_ACTION_CREATE,
 			log_target_class=LOG_CLASS_GROUP,
-			log_target=group_dict["cn"],
+			log_target=group_data["cn"],
 		)
 		return self.ldap_connection
 
@@ -396,28 +381,19 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			group_cn = group_cn.split("CN=")[-1]
 
 		group_data[RuntimeSettings.LDAP_GROUP_FIELD] = str(group_cn).lower()
-		# Send LDAP Query for user being created to see if it exists
-		args = {
-			"connection": self.ldap_connection,
-			"dn": distinguished_name,
-			"ldap_attrs": self.ldap_filter_attr,
-			"hideErrors": True,
-		}
+		# Send LDAP Query for group being created to see if it exists
 
-		# !!! CHECK IF GROUP EXISTS !!! #
-		# We also need to fetch the existing LDAP group object to know what
+		# !!! CHECK IF GROUP EXISTS AND FETCH ATTRS !!! #
+		# We need to fetch the existing LDAP group object to know what
 		# kind of operation to apply when updating attributes
 		try:
-			fetched_group_entry = LDAPObject(**args).attributes
-			group_entry_exists = len(fetched_group_entry) > 0
+			fetched_group_entry = LDAPObject(**{
+				"connection": self.ldap_connection,
+				"dn": distinguished_name,
+				"ldap_attrs": self.ldap_filter_attr,
+			}).attributes
 		except:
-			group_entry_exists = False
-
-		# If group exists, return error
-		if not group_entry_exists:
-			self.ldap_connection.unbind()
-			data = {"group": group_cn}
-			raise exc_groups.GroupDoesNotExist(data=data)
+			raise exc_groups.GroupDoesNotExist(data={"group": group_cn})
 
 		# Set group Type
 		if "groupType" not in group_data or "groupScope" not in group_data:
