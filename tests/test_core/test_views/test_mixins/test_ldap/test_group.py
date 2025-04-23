@@ -127,7 +127,7 @@ def f_application_group(f_application, f_distinguished_name: str):
 	"""Fixture creating a test application group in the database"""
 	group = ApplicationSecurityGroup.objects.create(
 		application=f_application,
-		ldap_objects=[f_distinguished_name],
+		ldap_objects=[f_distinguished_name, "another_group_dn"],
 		enabled=True,
 	)
 	return group
@@ -1024,4 +1024,7 @@ class TestGroupMixinCRUD:
 			log_target_class=LOG_CLASS_GROUP,
 			log_target=m_common_name.split("=")[-1],
 		)
+		# Check that DN has been removed from ASG
+		f_application_group.refresh_from_db()
+		assert f_application_group.ldap_objects == ["another_group_dn"]
 
