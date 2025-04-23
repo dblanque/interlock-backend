@@ -75,7 +75,7 @@ def get_user_groups(user: User, ldc: Connection = None) -> list:
 
 
 class CustomScopeClaims(ScopeClaims, UserViewLDAPMixin):
-	def setup(self):
+	def setup(self): # pragma: no cover
 		# Define which claims are included for each scope
 		self.claims = {
 			"profile": {
