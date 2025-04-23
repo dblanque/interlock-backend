@@ -294,12 +294,6 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		extended_operations: ExtendedOperationsRoot = self.ldap_connection.extend
 		eo_microsoft: MicrosoftExtendedOperations = extended_operations.microsoft
 
-		# Set group Type
-		if "groupType" not in group_data or "groupScope" not in group_data:
-			self.ldap_connection.unbind()
-			data = {"group": group_cn}
-			raise exc_groups.GroupScopeOrTypeMissing(data=data)
-
 		if group_data.get("path", None):
 			distinguished_name = f"CN={group_data['cn']},{group_data['path']}"
 			logger.debug(f"Creating group in DN Path: {group_data['path']}")
@@ -414,12 +408,6 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			}).attributes
 		except:
 			raise exc_groups.GroupDoesNotExist(data={"group": group_cn})
-
-		# Set group Type
-		if "groupType" not in group_data or "groupScope" not in group_data:
-			self.ldap_connection.unbind()
-			data = {"group": group_cn}
-			raise exc_groups.GroupScopeOrTypeMissing(data=data)
 
 		# Don't delete these, we need them later.
 		group_type_int = int(group_data["groupType"])
