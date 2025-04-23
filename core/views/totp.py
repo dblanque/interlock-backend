@@ -19,7 +19,7 @@ from core.views.mixins.totp import (
 	validate_user_otp,
 	get_user_totp_device,
 	delete_device_totp_for_user,
-	parse_config_url,
+	set_interlock_otp_label,
 )
 from core.exceptions import users as exc_user, otp as exc_otp, base as exc_base
 from core.decorators.login import auth_required, admin_required
@@ -53,7 +53,7 @@ class TOTPViewSet(BaseViewSet):
 		data = {"code": code, "code_msg": code_msg}
 
 		if totp_device:
-			data["totp_uri"] = parse_config_url(totp_device.config_url)
+			data["totp_uri"] = set_interlock_otp_label(totp_device.config_url)
 			data["totp_confirmed"] = (totp_device.confirmed,)
 			data["recovery_codes"] = user.recovery_codes
 
