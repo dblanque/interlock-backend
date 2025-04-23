@@ -24,6 +24,14 @@ from core.config.runtime import RuntimeSettings
 from core.views.mixins.logs import LogMixin
 from core.models.application import ApplicationSecurityGroup
 
+### LDAP3
+import ldap3
+from ldap3 import MODIFY_DELETE, MODIFY_REPLACE, Entry as LDAPEntry, Connection
+from ldap3.extend import (
+	ExtendedOperationsRoot,
+	MicrosoftExtendedOperations,
+)
+
 ### Core
 from core.models.choices.log import (
 	LOG_ACTION_CREATE,
@@ -46,8 +54,6 @@ from core.views.mixins.utils import getldapattr
 from typing import List
 from django.db import transaction
 from copy import deepcopy
-import ldap3
-from ldap3 import MODIFY_DELETE, MODIFY_REPLACE, Entry as LDAPEntry, Connection
 import logging
 ################################################################################
 
@@ -284,6 +290,10 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			group_data: dict,
 			exclude_keys=["member", "path", "membersToAdd"]
 		) -> Connection:
+		# Type hinting defs
+		extended_operations: ExtendedOperationsRoot = self.ldap_connection.extend
+		eo_microsoft: MicrosoftExtendedOperations = extended_operations.microsoft
+
 		if group_data.get("path", None):
 			distinguished_name = f"CN={group_data['cn']},{group_data['path']}"
 			logger.debug(f"Creating group in DN Path: {group_data['path']}")
@@ -332,7 +342,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		if members_to_add:
 			try:
-				self.ldap_connection.extend.microsoft.add_members_to_groups(
+				eo_microsoft.add_members_to_groups(
 					members_to_add, distinguished_name
 				)
 			except Exception as e:
@@ -349,6 +359,10 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		return self.ldap_connection
 
 	def update_group(self, group_data: dict, unbind_on_error: bool = True):
+		# Type hinting defs
+		extended_operations: ExtendedOperationsRoot = self.ldap_connection.extend
+		eo_microsoft: MicrosoftExtendedOperations = extended_operations.microsoft
+
 		data = self.request.data
 		group_cn = None
 
@@ -437,9 +451,8 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		# We need to check if the attributes exist in the LDAP Object already
 		# To know what operation to apply.
-		arguments = {}
-		operation = None
 		for key in group_dict:
+			operation = None
 			try:
 				if key in fetched_group_entry and group_dict[key] == "" and key != "groupType":
 					operation = MODIFY_DELETE
@@ -492,37 +505,35 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				else:
 					logger.info("No suitable operation for attribute " + key)
 					pass
-			except:
-				logger.error(traceback.format_exc())
+			except Exception as e:
+				logger.exception(e)
 				logger.warning(
-					"Unable to update group '%s' with attribute '%s'", str(group_cn), str(key)
+					"Unable to update group '%s' with attribute '%s'",
+					str(group_cn),
+					str(key),
 				)
 				logger.warning("Attribute Value:" + str(group_dict[key]))
 				if operation is not None:
 					logger.warning("Operation Type: " + str(operation))
-				self.ldap_connection.unbind()
 				raise exc_groups.GroupUpdate
 
 		logger.debug(self.ldap_connection.result)
-
 		if members_to_add:
 			try:
-				self.ldap_connection.extend.microsoft.add_members_to_groups(
+				eo_microsoft.add_members_to_groups(
 					members_to_add, distinguished_name
 				)
 			except Exception as e:
-				self.ldap_connection.unbind()
-				print(e)
+				logger.exception(e)
 				raise exc_groups.GroupMembersAdd
 
 		if members_to_remove:
 			try:
-				self.ldap_connection.extend.microsoft.remove_members_from_groups(
+				eo_microsoft.remove_members_from_groups(
 					members_to_remove, distinguished_name
 				)
 			except Exception as e:
-				self.ldap_connection.unbind()
-				print(e)
+				logger.exception(e)
 				raise exc_groups.GroupMembersRemove
 
 		DBLogMixin.log(
@@ -533,33 +544,27 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		)
 		return self.ldap_connection
 
-	def delete_group(self, group_data: dict, unbind_on_error: bool = True):
+	def delete_group(self, group_data: dict):
 		if "cn" not in group_data:
 			logger.error(group_data)
-			if unbind_on_error:
-				self.ldap_connection.unbind()
 			raise exc_groups.GroupDoesNotExist
 
 		if "distinguishedName" in group_data:
 			distinguishedName = group_data["distinguishedName"]
 		else:
 			logger.error(group_data)
-			if unbind_on_error:
-				self.ldap_connection.unbind()
 			raise exc_groups.GroupDoesNotExist
 
 		if str(group_data["cn"]).startswith("Domain "):
 			logger.error(group_data)
-			if unbind_on_error:
-				self.ldap_connection.unbind()
 			raise exc_groups.GroupBuiltinProtect
 
 		try:
 			self.ldap_connection.delete(distinguishedName)
 		except:
-			self.ldap_connection.unbind()
-			data = {"ldap_response": self.ldap_connection.result}
-			raise exc_groups.GroupDelete(data=data)
+			raise exc_groups.GroupDelete(data={
+				"ldap_response": self.ldap_connection.result
+			})
 
 		with transaction.atomic():
 			asg_queryset = ApplicationSecurityGroup.objects.filter(
