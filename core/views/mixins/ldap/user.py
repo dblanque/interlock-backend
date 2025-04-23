@@ -443,7 +443,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			_replace[_key] = [(MODIFY_REPLACE, _value)]
 
 		for _key in delete_operation_keys:
-			_delete[_key] = [(MODIFY_DELETE), []]
+			_delete[_key] = [(MODIFY_DELETE, [])]
 
 		# LDAP Operation Execution
 		if replace_operation_keys:

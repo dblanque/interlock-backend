@@ -594,7 +594,7 @@ class TestUserViewLDAPMixin:
 		m_modify.assert_any_call(
 			m_user_dn, {LDAP_ATTR_FIRST_NAME: [(MODIFY_REPLACE, ["new_name"])]}
 		)
-		m_modify.assert_any_call(m_user_dn, {LDAP_ATTR_COUNTRY: [(MODIFY_DELETE), []]})
+		m_modify.assert_any_call(m_user_dn, {LDAP_ATTR_COUNTRY: [(MODIFY_DELETE, [])]})
 
 	def test_ldap_user_update_keys_entry(
 		self, mocker, f_user_mixin: UserViewLDAPMixin, fc_user_entry
@@ -617,7 +617,7 @@ class TestUserViewLDAPMixin:
 				]
 			},
 		)
-		m_modify.assert_any_call(m_user_dn, {LDAP_ATTR_COUNTRY: [(MODIFY_DELETE), []]})
+		m_modify.assert_any_call(m_user_dn, {LDAP_ATTR_COUNTRY: [(MODIFY_DELETE, [])]})
 
 	def test_ldap_user_update_with_non_existing_keys(
 		self, f_user_mixin: UserViewLDAPMixin, fc_user_entry
@@ -640,8 +640,8 @@ class TestUserViewLDAPMixin:
 		m_modify.assert_any_call(
 			m_user_dn,
 			{
-				LDAP_ATTR_COUNTRY: [(MODIFY_DELETE), []],
-				"another_key": [(MODIFY_DELETE), []],
+				LDAP_ATTR_COUNTRY: [(MODIFY_DELETE, [])],
+				"another_key": [(MODIFY_DELETE, [])],
 			},
 		)
 
