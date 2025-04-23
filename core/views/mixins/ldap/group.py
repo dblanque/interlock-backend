@@ -436,7 +436,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		group_dict = deepcopy(group_data)
 		for key in excluded_attrs:
-			logger.debug("Removing key from dictionary: " + key)
+			logger.debug("Popping key from dictionary: " + key)
 			group_dict.pop(key, None)
 
 		if "membersToAdd" in data and "membersToRemove" in data:
