@@ -435,10 +435,9 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		]
 
 		group_dict = deepcopy(group_data)
-		for key in group_data:
-			if key in excluded_attrs:
-				logger.debug("Removing key from dictionary: " + key)
-				group_dict.pop(key)
+		for key in excluded_attrs:
+			logger.debug("Removing key from dictionary: " + key)
+			group_dict.pop(key, None)
 
 		if "membersToAdd" in data and "membersToRemove" in data:
 			if (data["membersToAdd"] == data["membersToRemove"] and data["membersToAdd"]) != []:
