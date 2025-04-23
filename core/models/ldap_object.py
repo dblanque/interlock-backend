@@ -231,5 +231,5 @@ class LDAPObject:
 			return []
 		return list(self.attributes.keys())
 
-	def __get_common_name__(self, dn):
+	def __get_common_name__(self, dn: str):
 		return str(dn).split(",")[0].split("=")[-1]
