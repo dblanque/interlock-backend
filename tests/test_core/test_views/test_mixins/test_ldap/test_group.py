@@ -5,6 +5,7 @@ from pytest_mock import MockerFixture, MockType
 ################################################################################
 from core.views.mixins.ldap.group import GroupViewMixin
 from core.ldap.types.group import LDAPGroupTypes
+from core.exceptions import ldap as exc_ldap, groups as exc_groups
 from core.views.mixins.logs import LogMixin
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from ldap3 import Entry as LDAPEntry, SUBTREE, Connection
@@ -12,6 +13,9 @@ from core.ldap.connector import LDAPConnector
 from core.ldap.filter import LDAPFilter
 from core.ldap.security_identifier import SID
 from core.models.choices.log import (
+	LOG_ACTION_CREATE,
+	LOG_ACTION_UPDATE,
+	LOG_ACTION_DELETE,
 	LOG_ACTION_READ,
 	LOG_CLASS_GROUP,
 	LOG_TARGET_ALL,
@@ -381,3 +385,123 @@ class TestGroupMixinCRUD:
 			"groupType",
 			"objectSid",
 		}
+
+	@pytest.mark.parametrize(
+		"p_group_data",
+		(
+			{
+				"cn": "Test Group",
+				"groupType": 1, # Mapped to Security
+				"groupScope": 1, # Mapped to Domain Local
+				"membersToAdd": [ "mock_user_dn" ],
+			},
+			{
+				"cn": "Test Group",
+				"groupType": 1, # Mapped to Security
+				"groupScope": 1, # Mapped to Domain Local
+			},
+		),
+	)
+	def test_create(
+		mocker: MockerFixture,
+		p_group_data: dict,
+		f_group_mixin: GroupViewMixin,
+		f_log_mixin: LogMixin,
+		f_ldap_search_base: str,
+		f_auth_field_username: str,
+	):
+		f_group_mixin.ldap_connection.entries = []
+		m_common_name = p_group_data["cn"]
+		m_path = f"OU=Groups,{f_ldap_search_base}"
+		m_group_data = p_group_data.copy()
+		m_group_data["path"] = m_path
+		# Mock expected
+		expected_group_attrs = m_group_data.copy()
+		expected_group_attrs[f_auth_field_username] = expected_group_attrs["cn"].lower()
+		expected_group_attrs["groupType"] = -LDAPGroupTypes.GROUP_SECURITY.value + LDAPGroupTypes.GROUP_DOMAIN_LOCAL.value
+		expected_group_attrs.pop("path", None)
+		expected_group_attrs.pop("membersToAdd", None)
+		expected_group_attrs.pop("groupScope", None)
+
+		assert f_group_mixin.create_group(
+			group_data=m_group_data) == f_group_mixin.ldap_connection
+		f_group_mixin.ldap_connection.add.assert_called_once_with(
+			dn=f"CN={m_common_name},{m_path}",
+			object_class="group",
+			attributes=expected_group_attrs
+		)
+		if not p_group_data.get("membersToAdd", None):
+			f_group_mixin.ldap_connection.extend.microsoft.add_members_to_groups.assert_not_called()
+		f_log_mixin.log.assert_called_once_with(
+			user=1,
+			operation_type=LOG_ACTION_CREATE,
+			log_target_class=LOG_CLASS_GROUP,
+			log_target=m_common_name,
+		)
+
+	def test_create_raises_on_exists(
+		mocker: MockerFixture,
+		f_group_mixin: GroupViewMixin,
+		f_runtime_settings: RuntimeSettingsSingleton
+	):
+		f_group_mixin.ldap_connection.entries = ["some_entry"]
+		f_group_mixin.ldap_filter_attr = "mock_attr_filter"
+		f_group_mixin.ldap_filter_object = "mock_obj_filter"
+		with pytest.raises(exc_ldap.LDAPObjectExists):
+			f_group_mixin.create_group(group_data={"cn":"mock_cn"})
+		f_group_mixin.ldap_connection.search.assert_called_once_with(
+			search_base=f_runtime_settings.LDAP_AUTH_SEARCH_BASE,
+			search_filter=f_group_mixin.ldap_filter_object,
+			search_scope=SUBTREE,
+			attributes=f_group_mixin.ldap_filter_attr,
+		)
+
+	def test_create_raises_on_group_create(
+		mocker: MockerFixture,
+		f_group_mixin: GroupViewMixin,
+		f_log_mixin: LogMixin,
+		f_logger: Logger,
+		f_ldap_search_base: str,
+	):
+		f_group_mixin.ldap_connection.entries = []
+		m_group_data = {
+			"cn": "Test Group",
+			"path": f"OU=Groups,{f_ldap_search_base}",
+			"groupType": 1, # Mapped to Security
+			"groupScope": 1, # Mapped to Domain Local
+			"membersToAdd": [ "mock_user_dn" ],
+		}
+		f_group_mixin.ldap_connection.add.side_effect = Exception
+
+		with pytest.raises(exc_groups.GroupCreate):
+			f_group_mixin.create_group(
+				group_data=m_group_data)
+		f_logger.exception.assert_called_once()
+		f_group_mixin.ldap_connection.add.assert_called_once()
+		f_group_mixin.ldap_connection.extend.microsoft.add_members_to_groups.assert_not_called()
+		f_log_mixin.log.assert_not_called()
+
+	def test_create_raises_on_group_member_add(
+		mocker: MockerFixture,
+		f_group_mixin: GroupViewMixin,
+		f_log_mixin: LogMixin,
+		f_logger: Logger,
+		f_ldap_search_base: str,
+	):
+		f_group_mixin.ldap_connection.entries = []
+		m_group_data = {
+			"cn": "Test Group",
+			"path": f"OU=Groups,{f_ldap_search_base}",
+			"groupType": 1, # Mapped to Security
+			"groupScope": 1, # Mapped to Domain Local
+			"membersToAdd": [ "mock_user_dn" ],
+		}
+		f_group_mixin.ldap_connection.extend.microsoft.add_members_to_groups.side_effect = Exception
+
+		with pytest.raises(exc_groups.GroupMembersAdd):
+			f_group_mixin.create_group(
+				group_data=m_group_data)
+		f_logger.exception.assert_called_once()
+		f_group_mixin.ldap_connection.add.assert_called_once()
+		f_group_mixin.ldap_connection.extend.microsoft.add_members_to_groups.assert_called_once()
+		f_log_mixin.log.assert_not_called()
