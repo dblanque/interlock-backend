@@ -14,7 +14,12 @@ from rest_framework import viewsets
 from core.ldap.types.group import (
 	LDAPGroupTypes,
 	LDAP_GROUP_SCOPE_MAPPING,
-	LDAP_GROUP_TYPE_MAPPING
+	LDAP_GROUP_TYPE_MAPPING,
+	MAPPED_GROUP_TYPE_DISTRIBUTION,
+	MAPPED_GROUP_TYPE_SECURITY,
+	MAPPED_GROUP_SCOPE_GLOBAL,
+	MAPPED_GROUP_SCOPE_DOMAIN_LOCAL,
+	MAPPED_GROUP_SCOPE_UNIVERSAL,
 )
 from core.ldap.security_identifier import SID
 from core.ldap.connector import LDAPConnector
@@ -46,13 +51,13 @@ from core.models.ldap_object import LDAPObject
 from core.views.mixins.ldap.organizational_unit import OrganizationalUnitMixin
 
 ### Exceptions
-from rest_framework.exceptions import ValidationError
 from core.exceptions import ldap as exc_ldap, groups as exc_groups, dirtree as exc_dirtree
 
 ### Others
 from rest_framework.request import Request
+from ldap3.utils.dn import safe_dn, safe_rdn
 from core.views.mixins.utils import getldapattr
-from typing import List
+from typing import List, TypedDict, Required, NotRequired, Literal
 from django.db import transaction
 import logging
 ################################################################################
@@ -60,6 +65,18 @@ import logging
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
+class GroupDict(TypedDict):
+	cn: str
+	member: list[str]
+	path: str
+	distinguishedName: str
+	objectSid: str
+	objectRid: int
+	groupType: Literal[0,1]
+	groupScope: Literal[0,1,2]
+	membersToAdd: list[str]
+	membersToRemove: list[str]
+	mail: str
 
 class GroupViewMixin(viewsets.ViewSetMixin):
 	ldap_connection: Connection = None
@@ -80,36 +97,36 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				raise ValueError("group_type could not be cast to int.")
 		group_type_last_int = int(str(group_type)[-1])
 		if group_type < -1:
-			sum -= LDAPGroupTypes.GROUP_SECURITY.value
-			result.append(LDAPGroupTypes.GROUP_SECURITY.name)
+			sum -= LDAPGroupTypes.TYPE_SECURITY.value
+			result.append(LDAPGroupTypes.TYPE_SECURITY.name)
 
 			if (group_type_last_int % 2) != 0:
-				sum += LDAPGroupTypes.GROUP_SYSTEM.value
-				result.append(LDAPGroupTypes.GROUP_SYSTEM.name)
+				sum += LDAPGroupTypes.TYPE_SYSTEM.value
+				result.append(LDAPGroupTypes.TYPE_SYSTEM.name)
 			if group_type == (sum + 2):
-				sum += LDAPGroupTypes.GROUP_GLOBAL.value
-				result.append(LDAPGroupTypes.GROUP_GLOBAL.name)
+				sum += LDAPGroupTypes.SCOPE_GLOBAL.value
+				result.append(LDAPGroupTypes.SCOPE_GLOBAL.name)
 			if group_type == (sum + 4):
-				sum += LDAPGroupTypes.GROUP_DOMAIN_LOCAL.value
-				result.append(LDAPGroupTypes.GROUP_DOMAIN_LOCAL.name)
+				sum += LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
+				result.append(LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.name)
 			if group_type == (sum + 8):
-				sum += LDAPGroupTypes.GROUP_UNIVERSAL.value
-				result.append(LDAPGroupTypes.GROUP_UNIVERSAL.name)
+				sum += LDAPGroupTypes.SCOPE_UNIVERSAL.value
+				result.append(LDAPGroupTypes.SCOPE_UNIVERSAL.name)
 		else:
-			result.append(LDAPGroupTypes.GROUP_DISTRIBUTION.name)
+			result.append(LDAPGroupTypes.TYPE_DISTRIBUTION.name)
 
 			if (group_type_last_int % 2) != 0:
-				sum += LDAPGroupTypes.GROUP_SYSTEM.value
-				result.append(LDAPGroupTypes.GROUP_SYSTEM.name)
+				sum += LDAPGroupTypes.TYPE_SYSTEM.value
+				result.append(LDAPGroupTypes.TYPE_SYSTEM.name)
 			if group_type == (sum + 2):
-				sum += LDAPGroupTypes.GROUP_GLOBAL.value
-				result.append(LDAPGroupTypes.GROUP_GLOBAL.name)
+				sum += LDAPGroupTypes.SCOPE_GLOBAL.value
+				result.append(LDAPGroupTypes.SCOPE_GLOBAL.name)
 			if group_type == (sum + 4):
-				sum += LDAPGroupTypes.GROUP_DOMAIN_LOCAL.value
-				result.append(LDAPGroupTypes.GROUP_DOMAIN_LOCAL.name)
+				sum += LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
+				result.append(LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.name)
 			if group_type == (sum + 8):
-				sum += LDAPGroupTypes.GROUP_UNIVERSAL.value
-				result.append(LDAPGroupTypes.GROUP_UNIVERSAL.name)
+				sum += LDAPGroupTypes.SCOPE_UNIVERSAL.value
+				result.append(LDAPGroupTypes.SCOPE_UNIVERSAL.name)
 
 		if sum != group_type:
 			raise ValueError("Invalid group type integer")
@@ -289,7 +306,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 	def create_group(
 			self,
-			group_data: dict,
+			group_data: GroupDict,
 			exclude_keys=["member", "path", "membersToAdd"]
 		) -> Connection:
 		# Type hinting defs
@@ -360,100 +377,90 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		)
 		return self.ldap_connection
 
-	def update_group_keys(
-		self,
-		group_dn: str,
-		group_data: dict | LDAPEntry,
-		replace_operation_keys: list = None,
-		delete_operation_keys: list = None,
-	):
-		"""Executes LDAP Group Updates based on dictionary and requested
-		replace/delete operations.
+	def update_group_type(
+			self,
+			distinguished_name: str,
+			selected_scope: int,
+			selected_type: int,
+			new_group_type: int,
+			old_group_type: int,
+		):
+		"""Updates an LDAP Group's type and scope.
 
 		Args:
-			group_dn (str): Group Distinguished Name.
-			group_data (dict): Group Data to Update.
-			replace_operation_keys (list, optional): group_data keys to replace
-				in LDAP Server. Defaults to None.
-			delete_operation_keys (list, optional): group_data keys to delete
-				in LDAP Server. Defaults to None.
+			distinguished_name (str): The Group's SAFE Distinguished Name.
+			selected_scope (int): Group scope key in LDAP_GROUP_SCOPE_MAPPING
+			selected_type (int): Group type key in LDAP_GROUP_TYPE_MAPPING
+			new_group_type (int): Group type as required by LDAP Spec.
+			old_group_type (int): Previous group type integer.
 		"""
-		# Type checks
-		if not isinstance(group_dn, str):
-			raise TypeError("group_dn must be of type str.")
-		if not isinstance(group_data, (dict, LDAPEntry)):
-			raise TypeError("group_data must be any of types [dict, LDAPEntry]")
-		# Value Checks
-		if not group_dn:
-			raise ValueError("group_dn cannot be a falsy value.")
-		if any("groupType" in _keys for _keys in (replace_operation_keys, delete_operation_keys,)):
-			raise ValidationError("groupType key should've been popped before update_group_keys call.")
-		if any("groupScope" in _keys for _keys in (replace_operation_keys, delete_operation_keys,)):
-			raise ValidationError("groupScope key should've been popped before update_group_keys call.")
+		if not isinstance(distinguished_name, str):
+			raise TypeError("distinguished_name must be of type str.")
+		for arg, arg_value in [
+			("selected_scope", selected_scope),
+			("selected_type", selected_type),
+			("new_group_type", new_group_type),
+			("old_group_type", old_group_type),
+		]:
+			if not isinstance(arg_value, int):
+				raise TypeError(f"{arg} must be of type int.")
 
-		_replace = {}
-		_delete = {}
-		# LDAP Operation Setup
-		for _key in replace_operation_keys:
-			if isinstance(group_data, dict):
-				_value = group_data.get(_key, None)
-			elif isinstance(group_data, LDAPEntry):
-				_value = getldapattr(group_data, _key)
-			if _value is None:
-				continue
-			if not isinstance(_value, list):
-				_value = [_value]
-			_replace[_key] = [(MODIFY_REPLACE, _value)]
+		if new_group_type != old_group_type:
+			previous_group_type_names = self.get_group_types(
+				group_type=old_group_type
+			)
 
-		for _key in delete_operation_keys:
-			_delete[_key] = [(MODIFY_DELETE), []]
+			# If we're trying to go from Group Global to Domain Local Scope 
+			# or viceversa, we need to make it universal first, otherwise
+			# the LDAP server denies the update request.
+			#
+			# Sucks but we have to do this :/
+			if (
+				LDAPGroupTypes.SCOPE_GLOBAL.name in previous_group_type_names
+				and selected_scope == MAPPED_GROUP_SCOPE_DOMAIN_LOCAL
+			) or (
+				LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.name in previous_group_type_names
+				and selected_scope == MAPPED_GROUP_SCOPE_GLOBAL
+			):
+				# Sum type and scope
+				intermediate_group_type = (
+					LDAP_GROUP_TYPE_MAPPING[selected_type] # Group Type
+					+
+					LDAP_GROUP_SCOPE_MAPPING[MAPPED_GROUP_SCOPE_UNIVERSAL] # Universal
+				)
+				# Log if necessary
+				logger.debug(intermediate_group_type)
+				logger.debug(new_group_type)
+				# Change to Universal Scope First
+				self.ldap_connection.modify(
+					distinguished_name,
+					{"groupType": [(MODIFY_REPLACE, [intermediate_group_type])]},
+				)
+				# Change to Target Scope (Global or Domain Local)
+				self.ldap_connection.modify(
+					distinguished_name,
+					{"groupType": [(MODIFY_REPLACE, [new_group_type])]},
+				)
+			else:
+				self.ldap_connection.modify(
+					distinguished_name,
+					{"groupType": [(MODIFY_REPLACE, [new_group_type])]},
+				)
 
-		# LDAP Operation Execution
-		if replace_operation_keys:
-			self.ldap_connection.modify(group_dn, _replace)
-
-		if delete_operation_keys:
-			self.ldap_connection.modify(group_dn, _delete)
-
-	def update_group(self, group_data: dict):
+	def update_group(self, group_data: GroupDict):
 		# Type hinting defs
 		extended_operations: ExtendedOperationsRoot = self.ldap_connection.extend
 		eo_microsoft: MicrosoftExtendedOperations = extended_operations.microsoft
 
 		# Set Distinguished Name
-		if "distinguishedName" not in group_data:
+		distinguished_name = group_data.get("distinguishedName", None)
+		if not distinguished_name:
 			raise exc_groups.GroupDistinguishedNameMissing
 		else:
-			distinguished_name: str = group_data["distinguishedName"]
-			relative_dn: str = distinguished_name.split(",")[0]
-
-		# Set Common Name
-		group_cn = None
-		if "cn" not in group_data:
-			group_cn = relative_dn
-		# If Group CN was modified
-		else:
-			group_cn = f"CN={group_data['cn']}"
-			relative_dn = group_cn
-			if relative_dn == distinguished_name:
-				raise exc_dirtree.DirtreeDistinguishedNameConflict
 			try:
-				distinguished_name = OrganizationalUnitMixin.move_or_rename_object(
-					self,
-					distinguished_name=distinguished_name,
-					target_rdn=group_cn
-				)
+				safe_dn(distinguished_name)
 			except:
-				raise exc_dirtree.DirtreeRename
-
-		if group_cn.lower().startswith("cn="):
-			split_cn = group_cn.split("=")
-			if len(split_cn) != 2:
-				raise exc_groups.GroupDoesNotExist
-			group_cn = split_cn[-1]
-
-		group_data[RuntimeSettings.LDAP_GROUP_FIELD] = str(group_cn).lower()
-		# Send LDAP Query for group being created to see if it exists
+				raise exc_ldap.DistinguishedNameValidationError
 
 		# !!! CHECK IF GROUP EXISTS AND FETCH ATTRS !!! #
 		# We need to fetch the existing LDAP group object to know what
@@ -465,107 +472,84 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				"ldap_attrs": self.ldap_filter_attr,
 			}).attributes
 		except:
-			raise exc_groups.GroupDoesNotExist(data={"group": group_cn})	
+			raise exc_groups.GroupDoesNotExist
 
-		# Pop excluded attrs
-		excluded_attrs = [
-			"cn",
-			"member",
-			"path",
-			"distinguishedName",
-			"objectSid",  # LDAP Immutable attr
-			"objectRid",  # LDAP Immutable attr
-		]
-		for key in excluded_attrs:
-			logger.debug("Popping key from dictionary: " + key)
-			group_data.pop(key, None)
+		# Set Common Name
+		original_cn = safe_rdn(distinguished_name)[0]
+		group_cn: str = group_data.get("cn", None)
+		if not group_cn:
+			group_cn = original_cn
+		# If Group CN is present and has changed
+		elif group_cn != original_cn:
+			# Validate CN Identifier
+			if group_cn.lower().startswith("cn="):
+				split_cn = group_cn.split("=")
+				if len(split_cn) != 2:
+					raise exc_ldap.DistinguishedNameValidationError
+				group_cn = f"CN={split_cn[-1]}"
+			# Rename Group
+			try:
+				distinguished_name = OrganizationalUnitMixin.move_or_rename_object(
+					self,
+					distinguished_name=distinguished_name,
+					target_rdn=group_cn
+				)
+			except:
+				raise exc_dirtree.DirtreeRename
+
+		# Set group sAMAccountName to new CN, lower-cased
+		group_data[RuntimeSettings.LDAP_GROUP_FIELD] = str(group_cn).lower()
 
 		# Validate incorrect add-remove relationships
-		members_to_add = group_data.pop("membersToAdd", None)
-		members_to_remove = group_data.pop("membersToRemove", None)
-		for g_add, g_remove in zip(members_to_add, members_to_remove):
-			# g_add and g_remove should be distinguished names
-			if g_add == g_remove:
-				logger.error(f"Group Member {g_add} cannot be added and removed.")
-				raise exc_groups.BadMemberSelection
+		members_to_add = group_data.pop("membersToAdd", [])
+		members_to_remove = group_data.pop("membersToRemove", [])
+		if members_to_add and members_to_remove:
+			for g_add, g_remove in zip(members_to_add, members_to_remove):
+				# g_add and g_remove should be distinguished names
+				if g_add == g_remove:
+					logger.error(f"Group Member {g_add} cannot be added and removed.")
+					raise exc_groups.BadMemberSelection
 
 		# Change group type if necessary
-		group_type_int = int(group_data.pop("groupType", None))
-		group_scope_int = int(group_data.pop("groupScope", None))
-		group_type_combined_int = (
-			LDAP_GROUP_TYPE_MAPPING[group_type_int]
-			+
-			LDAP_GROUP_SCOPE_MAPPING[group_scope_int]
-		)
-		previous_group_type_int = int(fetched_group_attrs["groupType"])
-		# TODO - Move this into separate function
-		if isinstance(group_type_combined_int, int):
-			if group_type_combined_int != previous_group_type_int:
-				previous_group_types = self.get_group_types(
-					group_type=previous_group_type_int
-				)
+		group_type = group_data.pop("groupType", None)
+		group_scope = group_data.pop("groupScope", None)
+		if (
+			(group_type is not None and group_scope is None) or
+			(group_type is None and group_scope is not None)
+		):
+			raise exc_groups.GroupTypeMissingField
 
-				# If we're trying to go from Group Global to Domain Local Scope 
-				# or viceversa, we need to make it universal first, otherwise
-				# the LDAP server denies the update request.
-				#
-				# Sucks but we have to do this :/
-				#
-				# Check group_scope_int against value in LDAP_GROUP_TYPE_MAPPING
-				# 0 is GROUP_GLOBAL
-				# 1 is GROUP_DOMAIN_LOCAL
-				if ("GROUP_GLOBAL" in previous_group_types and group_scope_int == 1) or (
-					"GROUP_DOMAIN_LOCAL" in previous_group_types and group_scope_int == 0
-				):
-					# Sum type and scope
-					group_type_sum = (
-						LDAP_GROUP_TYPE_MAPPING[group_type_int] # Group Type
-						+
-						LDAP_GROUP_SCOPE_MAPPING[2] # Universal
-					)
-					# Log if necessary
-					logger.debug(group_type_sum)
-					logger.debug(group_type_combined_int)
-					# Change to Universal Scope First
+		# Only updates group type it if value has changed
+		if group_type and group_scope:
+			# Cast to int
+			group_type = int(group_type)
+			group_scope = int(group_scope)
+			self.update_group_type(
+				distinguished_name=distinguished_name,
+				selected_scope=group_scope,
+				selected_type=group_type,
+				new_group_type=(
+					LDAP_GROUP_TYPE_MAPPING[group_type]
+					+
+					LDAP_GROUP_SCOPE_MAPPING[group_scope]
+				),
+				old_group_type=int(fetched_group_attrs["groupType"])
+			)
+
+		# Update EMAIL Attr if any
+		group_email_attr = group_data.get("mail", None)
+		if group_email_attr is not None and fetched_group_attrs.get("mail", None):
+			try:
+				if group_email_attr == "":
 					self.ldap_connection.modify(
 						distinguished_name,
-						{key: [(operation, [group_type_sum])]},
-					)
-					# Change to Target Scope (Global or Domain Local)
-					self.ldap_connection.modify(
-						distinguished_name,
-						{key: [(operation, [group_type_combined_int])]},
+						{"email": [(MODIFY_DELETE, [])]},
 					)
 				else:
 					self.ldap_connection.modify(
 						distinguished_name,
-						{key: [(operation, [group_type_combined_int])]},
+						{"email": [(MODIFY_REPLACE, [group_email_attr])]},
 					)
-
-		################### START STANDARD ARGUMENT UPDATES ####################
-		# We need to check if the attributes exist in the LDAP Object already,
-		# to know what operation to apply.
-		replace_operation_keys = []
-		delete_operation_keys = []
-		for key in group_data:
-			if key in fetched_group_attrs and group_data[key] == "":
-				delete_operation_keys.append(key)
-			elif group_data[key] != "":
-				replace_operation_keys.append(key)
-			else:
-				logger.info("No suitable operation for attribute %s", key)
-		########################################################################
-		######################## OPERATION EXECUTION ###########################
-		########################################################################
-		for key in group_data:
-			operation = None
-			try:
-				self.update_group_keys(
-					group_dn=distinguished_name,
-					group_data=group_data,
-					replace_operation_keys=replace_operation_keys,
-					delete_operation_keys=delete_operation_keys
-				)
 			except Exception as e:
 				logger.exception(e)
 				raise exc_groups.GroupUpdate
@@ -597,23 +581,38 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		)
 		return self.ldap_connection
 
-	def delete_group(self, group_data: dict):
-		if "cn" not in group_data:
+	def delete_group(self, group_data: GroupDict):
+		distinguished_name = group_data.get("distinguishedName", None)
+		if not distinguished_name:
 			logger.error(group_data)
+			raise exc_ldap.DistinguishedNameValidationError
+
+		# !!! CHECK IF GROUP EXISTS AND FETCH ATTRS !!! #
+		# We need to fetch the existing LDAP group object to know what
+		# kind of operation to apply when updating attributes
+		try:
+			fetched_group_attrs = LDAPObject(**{
+				"connection": self.ldap_connection,
+				"dn": distinguished_name,
+				"ldap_attrs": self.ldap_filter_attr,
+			}).attributes
+		except:
 			raise exc_groups.GroupDoesNotExist
 
-		if "distinguishedName" in group_data:
-			distinguished_name = group_data["distinguishedName"]
-		else:
-			logger.error(group_data)
-			raise exc_groups.GroupDoesNotExist
+		# Check if group is a builtin object
+		group_cn: str = fetched_group_attrs["cn"]
+		if group_cn.lower().startswith("cn="):
+			group_cn = group_cn.split("=")[-1]
 
-		if str(group_data["cn"]).startswith("Domain "):
-			logger.error(group_data)
+		if group_cn.lower() not in distinguished_name.lower():
+			raise exc_ldap.DistinguishedNameValidationError
+
+		group_types = self.get_group_types(group_type=int(fetched_group_attrs["groupType"]))
+		if LDAPGroupTypes.TYPE_SYSTEM.name in group_types or group_cn.lower().startswith("domain "):
 			raise exc_groups.GroupBuiltinProtect
 
 		try:
-			self.ldap_connection.delete(distinguished_name)
+			self.ldap_connection.delete(dn=distinguished_name)
 		except:
 			raise exc_groups.GroupDelete(data={
 				"ldap_response": self.ldap_connection.result
@@ -632,6 +631,6 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			user=self.request.user.id,
 			operation_type=LOG_ACTION_DELETE,
 			log_target_class=LOG_CLASS_GROUP,
-			log_target=group_data["cn"],
+			log_target=group_cn,
 		)
 		return self.ldap_connection
