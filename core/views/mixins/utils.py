@@ -9,7 +9,6 @@
 # ---------------------------------- IMPORTS -----------------------------------#
 from core.ldap.defaults import LDAP_LDIF_IDENTIFIERS
 import socket
-import struct
 from typing import Iterable, Any, overload
 from ldap3 import Entry as LDAPEntry, Attribute as LDAPAttribute
 
@@ -34,7 +33,7 @@ def getldapattr(entry: LDAPEntry, attr: str, /, *args, **kwargs) -> str | Iterab
 		Any: Attribute value.
 	"""
 	try:
-		_attr: LDAPAttribute = entry.__getattr__(attr)
+		_attr: LDAPAttribute = getattr(entry, attr)
 		return _attr.value
 	except Exception as e:
 		if "default" in kwargs:
@@ -42,23 +41,6 @@ def getldapattr(entry: LDAPEntry, attr: str, /, *args, **kwargs) -> str | Iterab
 		if len(args) > 0:
 			return args[0]
 		raise e
-
-
-def convert_string_to_bytes(string):
-	if not isinstance(string, str):
-		raise ValueError("Value must be a string")
-	string = string.replace("\\\\", "\\")
-	string = string.lstrip("b'").rstrip("'")
-	bytes = b""
-	for k, i in enumerate(string):
-		if i != "\\" and k > 0:
-			bytes += struct.pack("B", ord(i))
-		elif k - 1 > 0:
-			if i == "\\" and string[k - 1] != "\\":
-				bytes += struct.pack("B", ord(i))
-		else:
-			bytes += struct.pack("B", ord(i))
-	return bytes.decode("unicode_escape").encode("raw_unicode_escape")
 
 
 def net_port_test(ip, port, timeout=5):
@@ -73,12 +55,12 @@ def net_port_test(ip, port, timeout=5):
 		return False
 
 
-def recursiveFindInDict(obj, key):
+def recursive_dict_find(obj, key):
 	if key in obj:
 		return obj[key]
 	for k, v in obj.items():
 		if isinstance(v, dict):
-			item = recursiveFindInDict(v, key)
+			item = recursive_dict_find(v, key)
 			if item is not None:
 				return item
 
@@ -89,16 +71,6 @@ def uppercase_ldif_identifiers(v: str):
 	for ldif_ident in LDAP_LDIF_IDENTIFIERS:
 		v = v.replace(f"{ldif_ident}=", f"{ldif_ident.upper()}=")
 	return v
-
-
-def __get_common_name__(dn):
-	return str(dn).split(",")[0].split("=")[-1]
-
-
-def __get_relative_dn__(dn):
-	_v: list = str(dn).split(",")
-	_v.remove(0)
-	return ",".join(_v)
 
 
 def is_non_str_iterable(v):
