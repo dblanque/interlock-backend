@@ -16,7 +16,7 @@ from core.ldap.adsi import LDAP_BUILTIN_OBJECTS, join_ldap_filter
 from core.ldap.security_identifier import SID
 
 ### Others
-from ldap3 import Connection, Entry as LDAPEntry, Attribute as LDAPAttribute
+from ldap3 import Connection, Entry as LDAPEntry, Attribute as LDAPAttribute, SUBTREE
 from typing import TypedDict, Iterable
 from typing_extensions import Required, NotRequired
 from logging import getLogger
@@ -157,7 +157,7 @@ class LDAPObject:
 		self.connection.search(
 			search_base=self.search_base,
 			search_filter=self.ldap_filter,
-			search_scope="SUBTREE",
+			search_scope=SUBTREE,
 			attributes=self.ldap_attrs,
 		)
 		search_result = self.connection.entries
