@@ -148,6 +148,8 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		data = request.data
 		group_data = data["group"]
 
+		self.ldap_filter_attr = ["cn","groupType"]
+
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
