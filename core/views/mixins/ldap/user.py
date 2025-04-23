@@ -9,6 +9,7 @@
 # ---------------------------------- IMPORTS -----------------------------------#
 ### ViewSets
 from rest_framework import viewsets
+from rest_framework.request import Request
 
 ### Interlock
 from core.ldap.adsi import join_ldap_filter
@@ -81,6 +82,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 	ldap_filter_object = None
 	ldap_filter_attr = None
 	filter_attr_builder = UserViewsetFilterAttributeBuilder
+	request: Request
 
 	def get_user_object_filter(
 		self, username: str = None, email: str = None, xor=True, match_both=False
