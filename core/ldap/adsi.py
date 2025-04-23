@@ -436,7 +436,7 @@ def list_user_perms(
 		user: LDAPEntry
 		if not hasattr(user, "userAccountControl"):
 			raise ValueError("User object does not contain a userAccountControl attribute.")
-		uac_value = getldapattr(user, "userAccountControl")
+		uac_value = getldapattr(user, "userAccountControl", None)
 	else:
 		user: dict
 		if not "userAccountControl" in user:
