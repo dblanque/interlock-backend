@@ -678,7 +678,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 					return True
 		return False
 
-	def ldap_user_fetch(self, user_search):
+	def ldap_user_fetch(self, user_search, return_entry = False) -> dict:
 		self.ldap_filter_object = self.get_user_object_filter(username=user_search)
 		if not self.ldap_filter_attr:
 			self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings).get_fetch_attrs()
@@ -763,6 +763,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		for fld in ["whenCreated", "whenChanged", "lastLogonTimestamp", "accountExpires"]:
 			if fld in _result:
 				_result[fld] = _result[fld].strftime(LDAP_DATE_FORMAT)
+
+		if return_entry:
+			return user_obj.entry
 		return _result
 
 	def ldap_user_change_status(self, username: str, enabled: bool) -> Connection:
