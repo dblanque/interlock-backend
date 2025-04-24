@@ -33,6 +33,7 @@ from django.core.exceptions import ObjectDoesNotExist
 # Models
 from core.models.user import User, USER_TYPE_LOCAL, USER_TYPE_LDAP
 from core.models.application import Application, ApplicationSecurityGroup
+from django.db.models import Manager
 from oidc_provider.models import Client, UserConsent
 
 # OIDC
@@ -51,25 +52,37 @@ import logging
 from interlock_backend.settings import LOGIN_URL
 from oidc_provider.lib.endpoints.authorize import AuthorizeEndpoint
 from core.ldap.connector import LDAPConnector, recursive_member_search
+import hashlib
 
 ################################################################################
 logger = logging.getLogger()
 
 
-def get_user_groups(user: User, ldc: Connection = None) -> list:
+def get_user_groups(user: User) -> list:
+	"""Fetches User Application Security Groups or LDAP Groups,
+	depending on type.
+
+	Args:
+		user (User): User Django Object
+
+	Returns:
+		list:  SHA1 Hashed user group UUIDs (if user is Local) or DNs (if user
+			is LDAP based)
+	"""
 	if user.user_type == USER_TYPE_LOCAL:
-		return list(user.groups.values_list("name", flat=True))
+		application_groups: Manager = user.asg_member.only("uuid")
+		asg_uuids = list(application_groups.values_list("uuid", flat=True))
+		return asg_uuids
 	elif user.user_type == USER_TYPE_LDAP:
-		if not ldc:
-			with LDAPConnector(force_admin=True) as ldc:
-				groups = []
-				user_mixin = UserViewLDAPMixin()
-				user_mixin.ldap_filter_attr = ["memberOf"]
-				user_mixin.ldap_connection = ldc.connection
-				ldap_user: dict = user_mixin.ldap_user_fetch(user_search=user.username)
-				for group in ldap_user["memberOfObjects"]:
-					groups.append(group["distinguishedName"])
-				return groups
+		with LDAPConnector(force_admin=True) as ldc:
+			groups = []
+			user_mixin = UserViewLDAPMixin()
+			user_mixin.ldap_filter_attr = ["memberOf"]
+			user_mixin.ldap_connection = ldc.connection
+			ldap_user: dict = user_mixin.ldap_user_fetch(user_search=user.username)
+			for group in ldap_user["memberOfObjects"]:
+				groups.append(group["distinguishedName"])
+			return groups
 	else:
 		return []
 
@@ -106,7 +119,7 @@ class CustomScopeClaims(ScopeClaims, UserViewLDAPMixin):
 			response_dic["email"] = self.user.email
 
 		if "groups" in self.scopes:
-			response_dic["groups"] = get_user_groups()
+			response_dic["groups"] = get_user_groups(self.user)
 
 		return response_dic
 
@@ -131,7 +144,7 @@ class OidcAuthorizeEndpoint(AuthorizeEndpoint):
 		return
 
 
-class OidcAuthorizeMixin(object):
+class OidcAuthorizeMixin:
 	authorize_endpoint_class = OidcAuthorizeEndpoint
 	client_id: int | None
 	client: Client | None
