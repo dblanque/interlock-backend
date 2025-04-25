@@ -47,12 +47,10 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 
 # Others
-from ldap3 import Connection
 import logging
 from interlock_backend.settings import LOGIN_URL
 from oidc_provider.lib.endpoints.authorize import AuthorizeEndpoint
 from core.ldap.connector import LDAPConnector, recursive_member_search
-import hashlib
 
 ################################################################################
 logger = logging.getLogger()
@@ -186,23 +184,31 @@ class OidcAuthorizeMixin:
 		except ObjectDoesNotExist:
 			pass
 		if consent:
+			# Check if consent is re-usable or has expired
 			if self.client.reuse_consent:
 				if timezone.make_aware(datetime.now()) < consent.expires_at:
 					return False
+
 			timedelta_consent_given = timezone.make_aware(datetime.now()) - consent.date_given
+			# Don't require consent if it was given within the last minute.
 			if timedelta_consent_given < timedelta(minutes=1):
 				return False
 		return True
 
 	def user_can_access_app(self, user: User):
+		# If no Security Group exists for App, assume no filtering.
 		try:
 			application_group = ApplicationSecurityGroup.objects.get(
 				application_id=self.application.id
 			)
 		except ObjectDoesNotExist:
 			return True
+
+		# If Application Security Group is disabled, assume no filtering.
 		if not application_group.enabled:
 			return True
+
+		# Else check membership of corresponding group.
 		if user.user_type == USER_TYPE_LDAP:
 			with LDAPConnector(force_admin=True) as ldc:
 				for distinguished_name in application_group.ldap_objects:
@@ -222,7 +228,9 @@ class OidcAuthorizeMixin:
 		encoded_url = quote(original_url)
 		login_url = f"{LOGIN_URL}/?{QK_NEXT}={encoded_url}"
 
-		extra_params = {
+		# These parameters need to be added or replaced with custom local data,
+		# instead of the default oidc_provider parameters
+		replace_params = {
 			"application": self.application.name,
 			"client_id": self.client.client_id,
 			"reuse_consent": self.client.reuse_consent,
@@ -230,11 +238,15 @@ class OidcAuthorizeMixin:
 			"redirect_uri": self.client.redirect_uris[0],
 		}
 		for attr in OIDC_ATTRS:
-			if attr in extra_params:
+			if attr in replace_params:
 				continue
-			if attr in self.authorize.params:
-				extra_params[attr] = self.authorize.params[attr]
-		login_url = self.set_extra_params(data=extra_params, login_url=login_url)
+			elif attr in self.authorize.params:
+				val = self.authorize.params[attr]
+				if isinstance(val, str):
+					replace_params[attr] = self.authorize.params[attr]
+				elif isinstance(val, (tuple, set, list)):
+					replace_params[attr] = "+".join(self.authorize.params[attr])
+		login_url = self.set_extra_params(data=replace_params, login_url=login_url)
 		return login_url
 
 	def login_redirect(self) -> HttpResponse:
