@@ -417,7 +417,7 @@ class TestGetLoginUrl:
 		f_mixin.application = f_application
 		f_mixin.client = f_client
 		f_mixin.request.user = f_user_ldap
-		
+
 		login_url = f_mixin.get_login_url()
 		parsed = urlparse(login_url)
 		params = parse_qs(parsed.query)
