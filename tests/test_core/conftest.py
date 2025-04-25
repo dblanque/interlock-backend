@@ -38,6 +38,10 @@ class ConnectorFactory(Protocol):
 
 @pytest.fixture
 def g_ldap_connector(mocker: MockerFixture) -> ConnectorFactory:
+	def fake_exit(self, exc_type, exc_value, traceback) -> None:
+		if exc_value:
+			raise exc_value
+
 	def maker(
 		patch_path: str,
 		use_spec=False,
@@ -56,7 +60,7 @@ def g_ldap_connector(mocker: MockerFixture) -> ConnectorFactory:
 		# Mock Context Manager
 		m_cxt_manager = mocker.Mock()
 		m_cxt_manager.__enter__ = mock_enter if mock_enter else default_m_enter
-		m_cxt_manager.__exit__ = mocker.Mock() if not mock_exit else mock_exit
+		m_cxt_manager.__exit__ = fake_exit if not mock_exit else mock_exit
 
 		# Patch Connector
 		m_connector_cls = mocker.patch(patch_path, return_value=m_cxt_manager)
