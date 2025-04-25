@@ -29,11 +29,17 @@ from django.utils import timezone
 from datetime import datetime, timedelta
 from pytest_mock import MockerFixture
 from urllib.parse import quote, parse_qs, urlparse
-from core.views.mixins.oidc import OidcAuthorizeMixin, OidcAuthorizeEndpoint
+from core.views.mixins.oidc import (
+	OidcAuthorizeMixin,
+	OidcAuthorizeEndpoint,
+	userinfo,
+	CustomScopeClaims,
+)
 from oidc_provider.models import Client, UserConsent
 from core.ldap.connector import LDAPConnector
 from django.http import QueryDict
 from typing import Protocol
+from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 
 ################################################################################
 ################################# FIXTURES #####################################
@@ -52,11 +58,12 @@ def f_default_password():
 	return "mockpassword"
 
 @pytest.fixture
-def f_user_local(f_default_password):
+def f_user_local(f_default_password, f_runtime_settings: RuntimeSettingsSingleton):
 	"""Test creating a user with all fields"""
 	m_user = User.objects.create(
 		username="testuserlocal",
 		password=f_default_password,
+		email=f"testuserlocal@{f_runtime_settings.LDAP_DOMAIN}",
 		user_type=USER_TYPE_LOCAL,
 		is_enabled=True,
 	)
@@ -155,12 +162,23 @@ def f_authorize_mixin(mocker: MockerFixture, f_user_local, f_request) -> OidcAut
 	mixin.authorize = mocker.MagicMock()
 	return mixin
 
+class ConsentFactory(Protocol):
+	def __call__(self, date_given: datetime=None, expire_delta: dict=None) -> UserConsent: ...
+
 @pytest.fixture
 def f_consent(mocker: MockerFixture) -> MockType:
-	m_consent = mocker.MagicMock(spec=UserConsent)
-	m_consent.expires_at = timezone.make_aware(datetime.now() + timedelta(days=1))
-	m_consent.date_given = timezone.make_aware(datetime.now())
-	return m_consent
+	def maker(date_given: datetime=None, expire_delta: dict=None):
+		m_consent = mocker.MagicMock(spec=UserConsent)
+		if expire_delta:
+			m_consent.expires_at = timezone.make_aware(datetime.now() + timedelta(**expire_delta))
+		else:
+			m_consent.expires_at = timezone.make_aware(datetime.now() + timedelta(days=1))
+		if date_given:
+			m_consent.date_given = date_given
+		else:
+			m_consent.date_given = timezone.make_aware(datetime.now())
+		return m_consent
+	return maker
 
 @pytest.fixture
 def f_security_group(mocker: MockerFixture) -> MockType:
@@ -201,7 +219,79 @@ def test_get_user_groups_ldap_user(
 	)
 	assert get_user_groups(user=f_user_ldap) == [ "some_group_dn" ]
 
-# -------------------------------- TEST CLASSES --------------------------------#
+@pytest.mark.django_db
+def test_userinfo(mocker: MockerFixture, f_user_local: User):
+	m_claims = {}
+	m_groups = ["mock_group_list"]
+	m_get_user_groups = mocker.patch(
+		"core.views.mixins.oidc.get_user_groups",
+		return_value=m_groups
+	)
+
+	result = userinfo(m_claims, f_user_local)
+	m_get_user_groups.assert_called_once_with(f_user_local)
+	assert result["sub"] == f_user_local.username  # Subject identifier
+	assert result["preferred_username"] == f_user_local.username  # Subject identifier
+	assert result["username"] == f_user_local.username  # Subject identifier
+	assert result["groups"] == m_groups
+
+class TestCustomScopeClaims:
+	@staticmethod
+	def test_setup(mocker: MockerFixture):
+		m_scope_claims = mocker.Mock()
+		m_scope_claims.setup = CustomScopeClaims.setup
+		m_scope_claims.setup(m_scope_claims)
+
+		assert m_scope_claims.claims == {
+			"profile": {
+				"sub": "Username",
+				"username": "Username",
+				"email": "Email",
+				"groups": "Groups",
+			},
+			"email": {
+				"email": "Email",
+			},
+			"groups": {
+				"groups": "Groups",
+			},
+		}
+
+	@staticmethod
+	@pytest.mark.django_db
+	@pytest.mark.parametrize(
+		"scopes",
+		(
+			("profile"),
+			("email"),
+			("groups"),
+		),
+	)
+	def test_create_response_dic(scopes: tuple[str], mocker: MockerFixture, f_user_local: User):
+		m_super_method = mocker.patch(
+			"core.views.mixins.oidc.ScopeClaims.create_response_dic",
+			return_value={}
+		)
+		m_scope_claims = mocker.Mock(spec=CustomScopeClaims)
+		m_scope_claims.user = f_user_local
+		m_scope_claims.scopes = scopes
+		m_scope_claims.create_response_dic = CustomScopeClaims.create_response_dic
+		m_groups = ["mock_group_list"]
+		m_get_user_groups = mocker.patch(
+			"core.views.mixins.oidc.get_user_groups",
+			return_value=m_groups
+		)
+
+		response_dict: dict = m_scope_claims.create_response_dic(m_scope_claims)
+		m_super_method.assert_called_once()
+		if scopes[0] == "profile":
+			assert response_dict["username"] == f_user_local.username
+		if scopes[0] in ("profile", "email",):
+			assert response_dict["email"] == f_user_local.email
+		if scopes[0] in ("profile", "groups",):
+			assert response_dict["groups"] == m_groups
+
+
 
 @pytest.mark.django_db
 class TestSetExtraParams:
@@ -313,7 +403,7 @@ class TestUserRequiresConsent:
 		f_authorize_mixin: OidcAuthorizeMixin,
 		f_user_ldap: MockType,
 		f_client: MockType,
-		f_consent: MockType,
+		f_consent: ConsentFactory,
 	) -> None:
 		mocker.patch(
 			"core.views.mixins.oidc.OIDC_SKIP_CUSTOM_CONSENT",
@@ -322,7 +412,31 @@ class TestUserRequiresConsent:
 		f_authorize_mixin.client = f_client
 		mocker.patch(
 			"core.views.mixins.oidc.UserConsent.objects.get",
-			return_value=f_consent
+			return_value=f_consent()
+		)
+		assert not f_authorize_mixin.user_requires_consent(f_user_ldap)
+
+	@staticmethod
+	def test_no_reuse_consent_but_user_just_consented(
+		mocker: MockerFixture,
+		f_authorize_mixin: OidcAuthorizeMixin,
+		f_user_ldap: MockType,
+		f_client: MockType,
+		f_consent: ConsentFactory,
+	) -> None:
+		f_client.reuse_consent = False
+		f_client.save()
+		f_client.refresh_from_db()
+		mocker.patch(
+			"core.views.mixins.oidc.OIDC_SKIP_CUSTOM_CONSENT",
+			False
+		)
+		f_authorize_mixin.client = f_client
+		mocker.patch(
+			"core.views.mixins.oidc.UserConsent.objects.get",
+			return_value=f_consent(
+				date_given=timezone.make_aware(datetime.now() - timedelta(seconds=30))
+			)
 		)
 		assert not f_authorize_mixin.user_requires_consent(f_user_ldap)
 
@@ -341,6 +455,46 @@ class TestUserCanAccessApp:
 			side_effect=ObjectDoesNotExist
 		)
 		assert f_authorize_mixin.user_can_access_app(f_user_ldap)
+
+	@staticmethod
+	def test_with_disabled_security_group(
+		mocker: MockerFixture,
+		f_authorize_mixin: OidcAuthorizeMixin,
+		f_user_ldap: MockType,
+		f_application: MockType,
+		f_application_group: MockType,
+	) -> None:
+		f_authorize_mixin.application = f_application
+		f_application_group.enabled = False
+		mocker.patch(
+			"core.views.mixins.oidc.ApplicationSecurityGroup.objects.get",
+			return_value=f_application_group
+		)
+		assert f_authorize_mixin.user_can_access_app(f_user_ldap)
+
+	@staticmethod
+	def test_user_not_in_group(
+		mocker: MockerFixture,
+		f_authorize_mixin: OidcAuthorizeMixin,
+		f_user_ldap: MockType,
+		f_application: MockType,
+		f_application_group: MockType,
+	) -> None:
+		f_authorize_mixin.application = f_application
+		assert f_authorize_mixin.user_can_access_app(f_user_ldap) is False
+
+	@staticmethod
+	def test_user_in_group(
+		f_authorize_mixin: OidcAuthorizeMixin,
+		f_user_local: MockType,
+		f_application: MockType,
+		f_application_group: MockType,
+	) -> None:
+		f_authorize_mixin.application = f_application
+		f_application_group.users.add(f_user_local)
+		f_application_group.save()
+		f_application_group.refresh_from_db()
+		assert f_authorize_mixin.user_can_access_app(f_user_local)
 
 	@staticmethod
 	def test_with_ldap_user_access(
@@ -367,6 +521,33 @@ class TestUserCanAccessApp:
 			group_dn=f_security_group.ldap_objects[0]
 		)
 		f_ldap_connector.cls_mock.assert_called_once_with(force_admin=True)
+
+	@staticmethod
+	def test_ldap_user_cannot_access(
+		mocker: MockerFixture,
+		f_authorize_mixin: OidcAuthorizeMixin,
+		f_user_ldap: MockType,
+		f_application: MockType,
+		f_security_group: MockType,
+		f_ldap_connector: LDAPConnector,
+	):
+		f_authorize_mixin.application = f_application
+		mocker.patch(
+			"core.views.mixins.oidc.ApplicationSecurityGroup.objects.get",
+			return_value=f_security_group
+		)
+		m_recursive_search = mocker.patch(
+			"core.views.mixins.oidc.recursive_member_search",
+			return_value=False
+		)
+		assert f_authorize_mixin.user_can_access_app(f_user_ldap) is False
+		m_recursive_search.assert_called_once_with(
+			user_dn=f_user_ldap.dn,
+			connection=f_ldap_connector.connection,
+			group_dn=f_security_group.ldap_objects[0]
+		)
+		f_ldap_connector.cls_mock.assert_called_once_with(force_admin=True)
+		
 
 @pytest.mark.django_db
 class TestLoginRedirect:
