@@ -68,3 +68,15 @@ class TestList:
 
 		response = admin_user_client.get("/api/ldap/users/")
 		assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+
+	@staticmethod
+	def test_list_users_ldap_error(admin_user_client, mocker):
+		"""Test LDAP connection failure"""
+		# Mock LDAPConnector to raise an exception
+		mocker.patch(
+			"core.views.ldap.user.LDAPConnector",
+			side_effect=CouldNotOpenConnection,
+		)
+
+		response = admin_user_client.get("/api/ldap/users/")
+		assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
