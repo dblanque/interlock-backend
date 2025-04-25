@@ -1,6 +1,5 @@
 ########################### Standard Pytest Imports ############################
 import pytest
-from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
 ################################################################################
 from core.views.ldap.record import LDAPRecordViewSet
@@ -16,6 +15,10 @@ def f_ldap_connector(g_ldap_connector) -> MockType:
 @pytest.fixture
 def f_viewset():
 	return LDAPRecordViewSet()
+
+@pytest.fixture(autouse=True)
+def f_interlock_ldap_enabled(g_interlock_ldap_enabled):
+	return g_interlock_ldap_enabled
 
 class TestInsert:
 	@staticmethod

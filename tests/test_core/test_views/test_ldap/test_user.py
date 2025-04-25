@@ -8,11 +8,6 @@ from rest_framework import status
 from core.views.ldap.user import LDAPUserViewSet
 from rest_framework.test import APIClient
 from core.exceptions.ldap import CouldNotOpenConnection
-from core.models.interlock_settings import (
-	InterlockSetting,
-	INTERLOCK_SETTING_ENABLE_LDAP,
-	TYPE_BOOL,
-)
 
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector) -> MockType:
@@ -20,12 +15,8 @@ def f_ldap_connector(g_ldap_connector) -> MockType:
 	return g_ldap_connector(patch_path="core.views.ldap.user.LDAPConnector")
 
 @pytest.fixture(autouse=True)
-def f_interlock_ldap_enabled(db):
-	# Fake LDAP Enabled
-	InterlockSetting.objects.create(
-		name=INTERLOCK_SETTING_ENABLE_LDAP, type=TYPE_BOOL, value=True
-	)
-
+def f_interlock_ldap_enabled(g_interlock_ldap_enabled):
+	return g_interlock_ldap_enabled
 
 class TestList:
 	@staticmethod

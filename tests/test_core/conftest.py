@@ -1,12 +1,29 @@
 import pytest
-from typing import Union
 from pytest_mock import MockType, MockerFixture
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from inspect import getmembers, isroutine
 from core.ldap import defaults as ldap_defaults
 from core.ldap.connector import LDAPConnector
 from typing import Protocol
+from core.models.interlock_settings import (
+	InterlockSetting,
+	INTERLOCK_SETTING_ENABLE_LDAP,
+	TYPE_BOOL,
+)
 
+@pytest.fixture
+def g_interlock_ldap_enabled(db):
+	# Fake LDAP Enabled
+	InterlockSetting.objects.create(
+		name=INTERLOCK_SETTING_ENABLE_LDAP, type=TYPE_BOOL, value=True
+	)
+
+@pytest.fixture
+def g_interlock_ldap_disabled(db):
+	# Fake LDAP Disabled
+	InterlockSetting.objects.create(
+		name=INTERLOCK_SETTING_ENABLE_LDAP, type=TYPE_BOOL, value=False
+	)
 
 class RuntimeSettingsFactory(Protocol):
 	def __call__(self) -> RuntimeSettingsSingleton: ...

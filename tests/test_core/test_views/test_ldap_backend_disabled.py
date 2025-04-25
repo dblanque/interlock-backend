@@ -2,18 +2,10 @@ import pytest
 from rest_framework.test import APIClient
 from rest_framework.response import Response
 from rest_framework import status
-from core.models.interlock_settings import (
-	InterlockSetting,
-	INTERLOCK_SETTING_ENABLE_LDAP,
-	TYPE_BOOL,
-)
 
 @pytest.fixture(autouse=True)
-def f_interlock_ldap_disabled(db):
-	# Fake LDAP Disabled
-	InterlockSetting.objects.create(
-		name=INTERLOCK_SETTING_ENABLE_LDAP, type=TYPE_BOOL, value=False
-	)
+def f_interlock_ldap_disabled(g_interlock_ldap_disabled):
+	return g_interlock_ldap_disabled
 
 @pytest.mark.parametrize(
 	"url, method",
