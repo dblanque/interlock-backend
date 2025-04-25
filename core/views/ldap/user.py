@@ -50,6 +50,7 @@ from core.ldap.connector import LDAPConnector
 import ldap3
 
 ### Others
+from core.ldap.filter import LDAPFilter
 from core.decorators.intercept import ldap_backend_intercept
 from core.constants.user import PUBLIC_FIELDS
 from core.config.runtime import RuntimeSettings
@@ -74,7 +75,9 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code = 0
 		code_msg = "ok"
 
-		self.ldap_filter_object = "(objectClass=" + RuntimeSettings.LDAP_AUTH_OBJECT_CLASS + ")"
+		self.ldap_filter_object = LDAPFilter.eq(
+			"objectClass", RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
+		).to_string()
 		self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings).get_list_attrs()
 
 		# Open LDAP Connection
@@ -213,7 +216,9 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		enabled = data.pop("enabled")
 
 		######################## Set LDAP Attributes ###########################
-		self.ldap_filter_object = "(objectClass=" + RuntimeSettings.LDAP_AUTH_OBJECT_CLASS + ")"
+		self.ldap_filter_object = LDAPFilter.eq(
+			"objectClass", RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
+		).to_string()
 		self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings).get_update_attrs()
 		########################################################################
 
