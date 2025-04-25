@@ -43,3 +43,76 @@ class TestInsert:
 		m_create_record.assert_called_once_with(record_data=m_valid_record)
 		assert response.status_code == status.HTTP_200_OK
 		assert response.data["data"] == m_return_record
+
+class TestUpdate:
+	@staticmethod
+	def test_old_record_not_in_request(admin_user_client: APIClient):
+		response: Response = admin_user_client.put(
+			"/api/ldap/record/update/",
+			data={"record": {"some":"record"}},
+			format="json",
+		)
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert response.data["code"] == "dns_record_not_in_request"
+
+	@staticmethod
+	def test_record_not_in_request(admin_user_client: APIClient):
+		response: Response = admin_user_client.put(
+			"/api/ldap/record/update/",
+			data={"old_record": {"some":"record"}},
+			format="json",
+		)
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert response.data["code"] == "dns_record_not_in_request"
+
+	@staticmethod
+	def test_successful(mocker: MockerFixture, admin_user_client: APIClient):
+		# Mocked Request Data
+		m_request_record = {"some_record_attr":"some_value"}
+		m_request_old_record = {"some_record_attr":"some_old_value"}
+		# Mocked Validated Data
+		m_valid_record = {"some_record_attr":"some_value"}
+		m_valid_old_record = {"some_record_attr":"some_old_value"}
+
+		m_result = {"some_record_result":"some_value"}
+		m_validate_record = mocker.Mock(side_effect=[m_valid_record, m_valid_old_record])
+		m_update_record = mocker.Mock(return_value=m_result)
+
+		mocker.patch.object(LDAPRecordViewSet, "validate_record", m_validate_record)
+		mocker.patch.object(LDAPRecordViewSet, "update_record", m_update_record)
+		response: Response = admin_user_client.put(
+			"/api/ldap/record/update/", 
+			data={
+				"record": m_request_record,
+				"oldRecord": m_request_old_record
+			},
+			format="json"
+		)
+		m_validate_record.assert_any_call(record_data=m_request_record)
+		m_validate_record.assert_any_call(record_data=m_request_old_record)
+		m_validate_record.call_count == 2
+		m_update_record.assert_called_once_with(
+			record_data=m_valid_record,
+			old_record_data=m_valid_old_record
+		)
+		assert response.status_code == status.HTTP_200_OK
+		assert response.data["data"] == m_result
+
+class TestDelete:
+	@staticmethod
+	def test_record_not_in_request(admin_user_client: APIClient):
+		response: Response = admin_user_client.post("/api/ldap/record/delete/", data={})
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert response.data["code"] == "dns_record_not_in_request"
+
+	@staticmethod
+	def test_successful_single(mocker: MockerFixture, admin_user_client: APIClient):
+		pass
+
+	@staticmethod
+	def test_successful_multi(mocker: MockerFixture, admin_user_client: APIClient):
+		pass
+
+	@staticmethod
+	def test_overlapping_operations_raises():
+		pass
