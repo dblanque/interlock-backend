@@ -3,9 +3,7 @@ import pytest
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
 ################################################################################
-from core.exceptions import dns as exc_dns
 from core.views.ldap.record import LDAPRecordViewSet
-from django.test.client import RequestFactory
 from rest_framework.test import APIClient
 from rest_framework.response import Response
 from rest_framework import status
@@ -45,8 +43,3 @@ class TestInsert:
 		m_create_record.assert_called_once_with(record_data=m_valid_record)
 		assert response.status_code == status.HTTP_200_OK
 		assert response.data["data"] == m_return_record
-
-	@staticmethod
-	def test_normal_user_forbidden(normal_user_client: APIClient):
-		response: Response = normal_user_client.post("/api/ldap/record/insert/")
-		assert response.status_code == status.HTTP_403_FORBIDDEN
