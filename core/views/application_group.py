@@ -34,6 +34,7 @@ class ApplicationGroupViewSet(BaseViewSet, ApplicationSecurityGroupViewMixin):
 	@auth_required
 	@admin_required
 	def create_info(self, request: Request):
+		"""Returns required creation info for application groups"""
 		code = 0
 		code_msg = "ok"
 		data = {"applications": [], "users": []}
