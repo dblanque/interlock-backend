@@ -66,7 +66,7 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
-			attributesToSearch = [
+			search_attrs = [
 				# User Attrs
 				"objectClass",
 				"objectCategory",
@@ -80,19 +80,19 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			]
 
 			# Read-only end-point, build filters from default dictionary
-			filterDict = RuntimeSettings.LDAP_DIRTREE_OU_FILTER
-			ldap_filter = search_filter_from_dict(filterDict)
+			filter_dict = RuntimeSettings.LDAP_DIRTREE_OU_FILTER
+			search_filter = search_filter_from_dict(filter_dict)
 			ldap_tree_options: LDAPTreeOptions = {
 				"connection": self.ldap_connection,
 				"recursive": True,
-				"ldap_filter": ldap_filter,
-				"ldap_attrs": attributesToSearch,
+				"ldap_filter": search_filter,
+				"ldap_attrs": search_attrs,
 			}
 
 			try:
 				if DIRTREE_PERF_LOGGING:
 					debugTimerStart = perf_counter()
-				dirList = LDAPTree(**ldap_tree_options)
+				dirtree = LDAPTree(**ldap_tree_options)
 				if DIRTREE_PERF_LOGGING:
 					debugTimerEnd = perf_counter()
 					logger.info(
@@ -119,7 +119,7 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			data={
 				"code": code,
 				"code_msg": code_msg,
-				"ldapObjectList": dirList.children,
+				"ldapObjectList": dirtree.children,
 			}
 		)
 
