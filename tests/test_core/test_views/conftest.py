@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 from core.ldap.defaults import LDAP_DOMAIN
 import pytest
+from typing import Protocol
 from rest_framework import status
 
 User = get_user_model()
@@ -52,9 +53,11 @@ def admin_user(user_factory):
 	"""Admin user instance"""
 	return user_factory(is_staff=True, is_superuser=True)
 
+class NormalApiClient(Protocol):
+	def __call__(self) -> APIClient: ...
 
 @pytest.fixture
-def normal_user_client(normal_user, api_client: APIClient) -> APIClient:
+def normal_user_client(normal_user, api_client: APIClient) -> NormalApiClient:
 	"""Authenticated API client for normal user"""
 	api_client.post(
 		"/api/token/",
@@ -66,8 +69,11 @@ def normal_user_client(normal_user, api_client: APIClient) -> APIClient:
 	return api_client
 
 
+class AdminApiClient(Protocol):
+	def __call__(self) -> APIClient: ...
+
 @pytest.fixture
-def admin_user_client(admin_user, api_client: APIClient) -> APIClient:
+def admin_user_client(admin_user, api_client: APIClient) -> AdminApiClient:
 	"""Authenticated API client for admin user"""
 	api_client.post(
 		"/api/token/",
