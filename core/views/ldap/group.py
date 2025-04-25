@@ -47,10 +47,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
-			self.ldap_filter_object = LDAPFilter.eq(
-				"objectClass",
-				"group"
-			).to_string()
+			self.ldap_filter_object = LDAPFilter.eq("objectClass", "group").to_string()
 			self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings).get_list_filter()
 
 			data, valid_attributes = self.list_groups()

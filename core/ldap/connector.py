@@ -70,7 +70,8 @@ def recursive_member_search(user_dn: str, connection: ldap3.Connection, group_dn
 
 	# Add filter for username
 	ldap_filter_object = LDAPFilter.and_(
-		LDAPFilter.eq("distinguishedName", group_dn), LDAPFilter.eq("objectClass", "group")
+		LDAPFilter.eq("distinguishedName", group_dn),
+		LDAPFilter.eq("objectClass", "group")
 	).to_string()
 	connection.search(
 		RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
