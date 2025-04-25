@@ -23,6 +23,7 @@ from rest_framework.decorators import action
 ### Others
 from core.constants.group import GroupViewsetFilterAttributeBuilder
 from core.decorators.login import auth_required, admin_required
+from core.decorators.intercept import ldap_backend_intercept
 from core.ldap.connector import LDAPConnector
 from core.ldap.filter import LDAPFilter
 from core.config.runtime import RuntimeSettings
@@ -37,6 +38,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 
 	@auth_required
 	@admin_required
+	@ldap_backend_intercept
 	def list(self, request):
 		user: User = request.user
 		data = []
@@ -68,6 +70,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
+	@ldap_backend_intercept
 	def fetch(self, request):
 		user: User = request.user
 		data = []
@@ -103,6 +106,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
+	@ldap_backend_intercept
 	def insert(self, request):
 		user: User = request.user
 		code = 0
@@ -133,6 +137,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 
 	@auth_required
 	@admin_required
+	@ldap_backend_intercept
 	def update(self, request, pk=None):
 		user: User = request.user
 		code = 0
@@ -151,6 +156,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
+	@ldap_backend_intercept
 	def delete(self, request, pk=None):
 		user: User = request.user
 		code = 0

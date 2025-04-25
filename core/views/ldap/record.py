@@ -27,6 +27,7 @@ from rest_framework.decorators import action
 
 ### Others
 from core.decorators.login import auth_required, admin_required
+from core.decorators.intercept import ldap_backend_intercept
 from core.ldap.connector import LDAPConnector
 import logging
 ################################################################################
@@ -38,6 +39,7 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
+	@ldap_backend_intercept
 	def insert(self, request):
 		user: User = request.user
 		data: dict = request.data
@@ -64,6 +66,7 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 
 	@auth_required
 	@admin_required
+	@ldap_backend_intercept
 	def update(self, request, pk=None):
 		user: User = request.user
 		data: dict = request.data
@@ -100,6 +103,7 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
+	@ldap_backend_intercept
 	def delete(self, request):
 		user: User = request.user
 		data: dict = request.data

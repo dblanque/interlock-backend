@@ -44,6 +44,7 @@ from core.models.validators.ldap import (
 	ipv4_validator,
 	ipv6_validator,
 )
+from core.decorators.intercept import ldap_backend_intercept
 from interlock_backend.settings import DEBUG as INTERLOCK_DEBUG
 from core.utils import dnstool
 from core.utils.dnstool import record_to_dict
@@ -103,6 +104,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
+	@ldap_backend_intercept
 	def zones(self, request):
 		user: User = request.user
 		data = {}
@@ -227,6 +229,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
+	@ldap_backend_intercept
 	def insert(self, request):
 		user: User = request.user
 		data = {}
@@ -434,6 +437,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
+	@ldap_backend_intercept
 	def delete(self, request):
 		user: User = request.user
 		data = {}

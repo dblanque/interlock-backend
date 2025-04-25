@@ -44,6 +44,7 @@ from time import perf_counter
 from core.ldap.connector import LDAPConnector
 from core.ldap.adsi import search_filter_from_dict
 from core.decorators.login import auth_required, admin_required
+from core.decorators.intercept import ldap_backend_intercept
 from core.config.runtime import RuntimeSettings
 from interlock_backend.settings import PERF_LOGGING_ROUND, DIRTREE_PERF_LOGGING
 import logging
@@ -56,6 +57,7 @@ logger = logging.getLogger(__name__)
 class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 	@auth_required
 	@admin_required
+	@ldap_backend_intercept
 	def list(self, request):
 		user: User = request.user
 		data = request.data
@@ -126,6 +128,7 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
+	@ldap_backend_intercept
 	def dirtree(self, request):
 		user: User = request.user
 		data: dict = request.data
@@ -208,6 +211,7 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
+	@ldap_backend_intercept
 	def move(self, request):
 		user: User = request.user
 		data = request.data
@@ -236,6 +240,7 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
+	@ldap_backend_intercept
 	def rename(self, request):
 		user: User = request.user
 		data = request.data
@@ -264,6 +269,7 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
+	@ldap_backend_intercept
 	def insert(self, request):
 		user: User = request.user
 		data = request.data
@@ -335,6 +341,7 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
+	@ldap_backend_intercept
 	def delete(self, request, pk=None):
 		user: User = request.user
 		code = 0
