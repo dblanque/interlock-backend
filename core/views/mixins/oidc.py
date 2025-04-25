@@ -64,8 +64,8 @@ def get_user_groups(user: User) -> list:
 		user (User): User Django Object
 
 	Returns:
-		list:  SHA1 Hashed user group UUIDs (if user is Local) or DNs (if user
-			is LDAP based)
+		list:  List of group DNs if LDAP User or List of 
+			local application group uuids.
 	"""
 	if user.user_type == USER_TYPE_LOCAL:
 		application_groups: Manager = user.asg_member.only("uuid")
@@ -216,9 +216,8 @@ class OidcAuthorizeMixin:
 						user_dn=user.dn, connection=ldc.connection, group_dn=distinguished_name
 					):
 						return True
-		else:
-			if user in application_group.users.all():
-				return True
+		elif user in application_group.users.all():
+			return True
 		return False
 
 	def get_login_url(self) -> str:
