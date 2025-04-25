@@ -8,7 +8,6 @@ from core.models.user import User
 from typing import Union
 from ldap3 import MODIFY_DELETE, MODIFY_REPLACE
 from core.views.mixins.utils import getldapattr
-from core.serializers.user import LDAP_DATE_FORMAT
 from datetime import datetime
 from core.models.choices.log import (
 	LOG_ACTION_DELETE,
@@ -43,6 +42,7 @@ from ldap3.extend import (
 	MicrosoftExtendedOperations,
 )
 from core.ldap.constants import (
+	LDAP_DATE_FORMAT,
 	LDAP_ATTR_FIRST_NAME,
 	LDAP_ATTR_LAST_NAME,
 	LDAP_ATTR_INITIALS,

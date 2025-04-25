@@ -1,5 +1,9 @@
 # core.ldap.constants
 
+# Global
+LDAP_DATE_FORMAT = "%Y%m%d%H%M%S.%fZ"
+
+# Attributes
 LOCAL_ATTR_PASSWORD = "password"
 LDAP_ATTR_PASSWORD = "unicodePwd"
 LDAP_ATTR_FIRST_NAME = "givenName"

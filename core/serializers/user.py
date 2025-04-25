@@ -1,6 +1,7 @@
 import re
 from rest_framework import serializers
 from core.models.application import User
+from core.ldap.constants import LDAP_DATE_FORMAT
 
 FIELD_VALIDATORS = {
 	"username": "ldap_user",  # username
@@ -58,10 +59,6 @@ class UserSerializer(serializers.ModelSerializer):
 			else:
 				return False
 		return True
-
-
-LDAP_DATE_FORMAT = "%Y%m%d%H%M%S.%fZ"
-
 
 class LDAPUserSerializer(serializers.Serializer):
 	name = serializers.CharField(required=False)

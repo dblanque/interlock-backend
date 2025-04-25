@@ -59,12 +59,11 @@ from core.exceptions import (
 import logging
 
 ### Others
-from core.serializers.user import LDAP_DATE_FORMAT
-from datetime import datetime
 from core.views.mixins.utils import getldapattr
 from ldap3.utils.dn import safe_dn
 from core.constants.user import UserViewsetFilterAttributeBuilder
 from core.ldap.constants import (
+	LDAP_DATE_FORMAT,
 	LDAP_ATTR_COUNTRY,
 	LDAP_ATTR_COUNTRY_DCC,
 	LDAP_ATTR_COUNTRY_ISO,
