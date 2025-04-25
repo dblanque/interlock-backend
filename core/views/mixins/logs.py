@@ -41,7 +41,9 @@ class LogMixin(viewsets.ViewSetMixin):
 
 		LOG_OPTION = f"LDAP_LOG_{operation_type}"
 		if not hasattr(RuntimeSettings, LOG_OPTION):
-			logger.warning("RuntimeSettings does not have the %s attribute.", LOG_OPTION)
+			logger.warning(
+				"RuntimeSettings does not have the %s attribute.", LOG_OPTION
+			)
 		if not getattr(RuntimeSettings, LOG_OPTION, False):
 			return None
 		log_limit = RuntimeSettings.LDAP_LOG_MAX
@@ -53,7 +55,9 @@ class LogMixin(viewsets.ViewSetMixin):
 
 		with transaction.atomic():
 			# Get aggregated log information in a single query
-			log_info = Log.objects.aggregate(total_logs=Count("id"), max_id=Max("id"))
+			log_info = Log.objects.aggregate(
+				total_logs=Count("id"), max_id=Max("id")
+			)
 
 			# Rotate logs if necessary using bulk operations
 			if log_info["total_logs"] >= log_limit:
@@ -75,10 +79,14 @@ class LogMixin(viewsets.ViewSetMixin):
 		"""Handle log rotation using bulk ops."""
 
 		# Calculate how many logs to remove
-		remove_count = current_count - log_limit + 1  # +1 to make space for new log
+		remove_count = (
+			current_count - log_limit + 1
+		)  # +1 to make space for new log
 
 		# Get IDs of oldest logs to remove
-		old_log_ids = Log.objects.order_by("id").values_list("id", flat=True)[:remove_count]
+		old_log_ids = Log.objects.order_by("id").values_list("id", flat=True)[
+			:remove_count
+		]
 
 		# Bulk delete old logs
 		Log.objects.filter(id__in=old_log_ids).delete()

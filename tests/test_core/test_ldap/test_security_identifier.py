@@ -51,7 +51,9 @@ def f_logger(mocker: MockType) -> MockType:
 	return mocker.patch("core.ldap.security_identifier.logger", autospec=True)
 
 
-def test_init_with_bytearray(f_valid_sid_bytearray: bytearray, f_valid_sid_str: str):
+def test_init_with_bytearray(
+	f_valid_sid_bytearray: bytearray, f_valid_sid_str: str
+):
 	"""Test initialization with a direct bytearray."""
 	sid = SID(f_valid_sid_bytearray)
 	assert str(sid) == f_valid_sid_str
@@ -81,7 +83,9 @@ def test_init_with_object(f_object_wrapper: Any, f_valid_sid_str: str):
 
 def test_init_invalid_type():
 	"""Test initialization with invalid type raises assertion."""
-	with pytest.raises(ValueError, match="sid_byte_array must be a byte array."):
+	with pytest.raises(
+		ValueError, match="sid_byte_array must be a byte array."
+	):
 		SID("invalid_type")
 
 
@@ -105,7 +109,9 @@ def test_logging(f_valid_sid_bytearray: bytearray, f_logger: MockType):
 	assert f_logger.debug.call_count >= 5
 
 
-def test_str_representation(f_valid_sid_bytearray: bytearray, f_valid_sid_str: str):
+def test_str_representation(
+	f_valid_sid_bytearray: bytearray, f_valid_sid_str: str
+):
 	"""Test the string representation of the SID."""
 	sid = SID(f_valid_sid_bytearray)
 	assert str(sid) == f_valid_sid_str

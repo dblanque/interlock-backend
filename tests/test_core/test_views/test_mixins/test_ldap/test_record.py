@@ -43,13 +43,17 @@ def f_logger(mocker):
 
 @pytest.fixture(autouse=True)
 def f_log_mixin(mocker):
-	return mocker.patch(f"core.views.mixins.ldap.record.DBLogMixin", mocker.MagicMock())
+	return mocker.patch(
+		f"core.views.mixins.ldap.record.DBLogMixin", mocker.MagicMock()
+	)
 
 
 @pytest.fixture
 def fc_record_serial_epoch():
 	def maker(sequence: int = 1):
-		return int(datetime.today().strftime("%Y%m%d") + str(sequence).rjust(2, "0"))
+		return int(
+			datetime.today().strftime("%Y%m%d") + str(sequence).rjust(2, "0")
+		)
 
 	return maker
 
@@ -66,12 +70,18 @@ def f_record_data(fc_record_serial_epoch):
 
 @pytest.fixture
 def f_record_data_a(f_record_data):
-	return f_record_data | {"type": RecordTypes.DNS_RECORD_TYPE_A.value, "address": "127.0.0.1"}
+	return f_record_data | {
+		"type": RecordTypes.DNS_RECORD_TYPE_A.value,
+		"address": "127.0.0.1",
+	}
 
 
 @pytest.fixture
 def f_record_data_aaaa(f_record_data):
-	return f_record_data | {"type": RecordTypes.DNS_RECORD_TYPE_AAAA.value, "ipv6Address": "::1"}
+	return f_record_data | {
+		"type": RecordTypes.DNS_RECORD_TYPE_AAAA.value,
+		"ipv6Address": "::1",
+	}
 
 
 @pytest.fixture
@@ -213,7 +223,10 @@ def test_get_serializer(
 	expected_serializer_cls,
 ):
 	for _type in record_types:
-		assert f_record_mixin.get_serializer(_type.value) == expected_serializer_cls
+		assert (
+			f_record_mixin.get_serializer(_type.value)
+			== expected_serializer_cls
+		)
 
 
 def test_get_serializer_raises_missing_type(f_record_mixin: DNSRecordMixin):
@@ -233,7 +246,9 @@ def test_get_serializer_raises_missing_type(f_record_mixin: DNSRecordMixin):
 		["some", "list"],
 	),
 )
-def test_get_serializer_raises_validation_error(bad_record_type, f_record_mixin: DNSRecordMixin):
+def test_get_serializer_raises_validation_error(
+	bad_record_type, f_record_mixin: DNSRecordMixin
+):
 	with pytest.raises(ValidationError):
 		f_record_mixin.get_serializer(bad_record_type)
 
@@ -260,7 +275,9 @@ def test_get_serializer_raises_validation_error(bad_record_type, f_record_mixin:
 def test_validate_record(
 	f_logger, record_type: RecordTypes, request, f_record_mixin: DNSRecordMixin
 ):
-	m_record_data = request.getfixturevalue(get_record_fixture_name(record_type))
+	m_record_data = request.getfixturevalue(
+		get_record_fixture_name(record_type)
+	)
 	m_record_data["type"] = record_type.value
 	m_record_data["unknown_key"] = "some_weird_value"
 	f_record_mixin.validate_record(record_data=m_record_data)
@@ -305,13 +322,18 @@ def test_validate_record_raises_root_dns_servers_validation_error(
 	),
 )
 def test_validate_record_raises_root_dns_servers_validation_error(
-	bad_zone: str, mocker, f_record_data_soa: dict, f_record_mixin: DNSRecordMixin
+	bad_zone: str,
+	mocker,
+	f_record_data_soa: dict,
+	f_record_mixin: DNSRecordMixin,
 ):
 	m_serializer = mocker.MagicMock()
 	m_serializer.is_valid.return_value = None
 	m_serializer.initial_data = f_record_data_soa
 	m_serializer.fields = f_record_data_soa
-	mocker.patch.object(f_record_mixin, "get_serializer", return_value=m_serializer)
+	mocker.patch.object(
+		f_record_mixin, "get_serializer", return_value=m_serializer
+	)
 	f_record_data_soa["zone"] = bad_zone
 	with pytest.raises(exc_dns.DNSRootServersOnlyCLI):
 		f_record_mixin.validate_record(record_data=f_record_data_soa)
@@ -367,23 +389,32 @@ def test_create_record(
 	f_record_mixin: DNSRecordMixin,
 	f_log_mixin: LogMixin,
 ):
-	record_fixture = request.getfixturevalue(get_record_fixture_name(record_type))
+	record_fixture = request.getfixturevalue(
+		get_record_fixture_name(record_type)
+	)
 	record_fixture["type"] = record_type
-	record_main_value = record_fixture[record_type_main_field(record_fixture["type"])]
+	record_main_value = record_fixture[
+		record_type_main_field(record_fixture["type"])
+	]
 	m_request = mocker.MagicMock()
 	m_request.user.id = 1
 	f_record_mixin.request = m_request
-	m_increment_serial: MockType = mocker.patch.object(f_record_mixin, "increment_soa_serial")
+	m_increment_serial: MockType = mocker.patch.object(
+		f_record_mixin, "increment_soa_serial"
+	)
 	m_ldap_record_instance = mocker.MagicMock()
 	m_ldap_record = mocker.patch(
-		f"core.views.mixins.ldap.record.LDAPRecord", return_value=m_ldap_record_instance
+		f"core.views.mixins.ldap.record.LDAPRecord",
+		return_value=m_ldap_record_instance,
 	)
 	m_soa_object = mocker.MagicMock()
 	m_create: MockType = mocker.MagicMock()
 	m_ldap_record_instance.create = m_create
 	m_ldap_record_instance.soa_object = m_soa_object
 	m_ldap_record_instance.as_dict = record_fixture
-	m_ldap_record_instance.__fullname__ = mocker.Mock(return_value="mock_fullname")
+	m_ldap_record_instance.__fullname__ = mocker.Mock(
+		return_value="mock_fullname"
+	)
 
 	result = f_record_mixin.create_record(record_data=record_fixture)
 	m_ldap_record.assert_called_once_with(
@@ -422,15 +453,22 @@ def test_create_record_raises_could_not_increment_soa(
 	m_request = mocker.MagicMock()
 	m_request.user.id = 1
 	f_record_mixin.request = m_request
-	mocker.patch.object(f_record_mixin, "increment_soa_serial", side_effect=Exception)
+	mocker.patch.object(
+		f_record_mixin, "increment_soa_serial", side_effect=Exception
+	)
 	m_ldap_record_instance = mocker.MagicMock()
-	mocker.patch(f"core.views.mixins.ldap.record.LDAPRecord", return_value=m_ldap_record_instance)
+	mocker.patch(
+		f"core.views.mixins.ldap.record.LDAPRecord",
+		return_value=m_ldap_record_instance,
+	)
 	m_soa_object = mocker.MagicMock()
 	m_create: MockType = mocker.MagicMock()
 	m_ldap_record_instance.create = m_create
 	m_ldap_record_instance.soa_object = m_soa_object
 	m_ldap_record_instance.as_dict = record_fixture
-	m_ldap_record_instance.__fullname__ = mocker.Mock(return_value="mock_fullname")
+	m_ldap_record_instance.__fullname__ = mocker.Mock(
+		return_value="mock_fullname"
+	)
 
 	with pytest.raises(exc_dns.DNSCouldNotIncrementSOA):
 		f_record_mixin.create_record(record_data=record_fixture)
@@ -481,17 +519,24 @@ def test_update_record_same_name(
 	m_request = mocker.MagicMock()
 	m_request.user.id = 1
 	f_record_mixin.request = m_request
-	m_increment_serial: MockType = mocker.patch.object(f_record_mixin, "increment_soa_serial")
+	m_increment_serial: MockType = mocker.patch.object(
+		f_record_mixin, "increment_soa_serial"
+	)
 	m_ldap_record_instance = mocker.MagicMock()
 	m_soa_object = mocker.MagicMock()
 	m_ldap_record_instance.soa_object = m_soa_object
 	m_ldap_record_instance.as_dict = record_data
-	m_ldap_record_instance.__fullname__ = mocker.Mock(return_value="mock_fullname")
+	m_ldap_record_instance.__fullname__ = mocker.Mock(
+		return_value="mock_fullname"
+	)
 	m_ldap_record = mocker.patch(
-		f"core.views.mixins.ldap.record.LDAPRecord", return_value=m_ldap_record_instance
+		f"core.views.mixins.ldap.record.LDAPRecord",
+		return_value=m_ldap_record_instance,
 	)
 
-	result = f_record_mixin.update_record(record_data=record_data, old_record_data=old_record_data)
+	result = f_record_mixin.update_record(
+		record_data=record_data, old_record_data=old_record_data
+	)
 	m_ldap_record.assert_called_once_with(
 		connection=f_record_mixin.ldap_connection,
 		record_name=record_fixture["name"],
@@ -560,20 +605,26 @@ def test_update_record_different_name(
 	m_request = mocker.MagicMock()
 	m_request.user.id = 1
 	f_record_mixin.request = m_request
-	m_increment_serial: MockType = mocker.patch.object(f_record_mixin, "increment_soa_serial")
+	m_increment_serial: MockType = mocker.patch.object(
+		f_record_mixin, "increment_soa_serial"
+	)
 	m_ldap_record_instance = mocker.MagicMock()
 	m_old_ldap_record_instance = mocker.MagicMock()
 	m_soa_object = mocker.MagicMock()
 	m_ldap_record_instance.create.return_value = {"result": 0}
 	m_ldap_record_instance.soa_object = m_soa_object
 	m_ldap_record_instance.as_dict = record_data
-	m_ldap_record_instance.__fullname__ = mocker.Mock(return_value="mock_fullname")
+	m_ldap_record_instance.__fullname__ = mocker.Mock(
+		return_value="mock_fullname"
+	)
 	m_ldap_record = mocker.patch(
 		f"core.views.mixins.ldap.record.LDAPRecord",
 		side_effect=[m_ldap_record_instance, m_old_ldap_record_instance],
 	)
 
-	result = f_record_mixin.update_record(record_data=record_data, old_record_data=old_record_data)
+	result = f_record_mixin.update_record(
+		record_data=record_data, old_record_data=old_record_data
+	)
 	m_ldap_record.assert_any_call(
 		connection=f_record_mixin.ldap_connection,
 		record_name=record_data["name"],
@@ -626,21 +677,27 @@ def test_update_record_raises_increment_soa_exception(
 	old_record_data[record_main_field] = "old_value"
 	record_data[record_main_field] = "new_value"
 
-	mocker.patch.object(f_record_mixin, "increment_soa_serial", side_effect=Exception)
+	mocker.patch.object(
+		f_record_mixin, "increment_soa_serial", side_effect=Exception
+	)
 	m_ldap_record_instance = mocker.MagicMock()
 	m_old_ldap_record_instance = mocker.MagicMock()
 	m_soa_object = mocker.MagicMock()
 	m_ldap_record_instance.create.return_value = {"result": 0}
 	m_ldap_record_instance.soa_object = m_soa_object
 	m_ldap_record_instance.as_dict = record_data
-	m_ldap_record_instance.__fullname__ = mocker.Mock(return_value="mock_fullname")
+	m_ldap_record_instance.__fullname__ = mocker.Mock(
+		return_value="mock_fullname"
+	)
 	mocker.patch(
 		f"core.views.mixins.ldap.record.LDAPRecord",
 		side_effect=[m_ldap_record_instance, m_old_ldap_record_instance],
 	)
 
 	with pytest.raises(exc_dns.DNSCouldNotIncrementSOA):
-		f_record_mixin.update_record(record_data=record_data, old_record_data=old_record_data)
+		f_record_mixin.update_record(
+			record_data=record_data, old_record_data=old_record_data
+		)
 
 
 def test_update_record_different_name_raises_ldap_backend_error(
@@ -666,14 +723,18 @@ def test_update_record_different_name_raises_ldap_backend_error(
 	m_ldap_record_instance.create.return_value = {"result": 1}
 	m_ldap_record_instance.soa_object = m_soa_object
 	m_ldap_record_instance.as_dict = record_data
-	m_ldap_record_instance.__fullname__ = mocker.Mock(return_value="mock_fullname")
+	m_ldap_record_instance.__fullname__ = mocker.Mock(
+		return_value="mock_fullname"
+	)
 	mocker.patch(
 		f"core.views.mixins.ldap.record.LDAPRecord",
 		side_effect=[m_ldap_record_instance, m_old_ldap_record_instance],
 	)
 
 	with pytest.raises(exc_base.LDAPBackendException):
-		f_record_mixin.update_record(record_data=record_data, old_record_data=old_record_data)
+		f_record_mixin.update_record(
+			record_data=record_data, old_record_data=old_record_data
+		)
 
 
 def test_update_record_raises_type_mismatch(f_record_mixin: DNSRecordMixin):
@@ -687,8 +748,14 @@ def test_update_record_raises_type_mismatch(f_record_mixin: DNSRecordMixin):
 def test_update_record_raises_zone_mismatch(f_record_mixin: DNSRecordMixin):
 	with pytest.raises(exc_dns.DNSRecordZoneMismatch):
 		f_record_mixin.update_record(
-			record_data={"type": RecordTypes.DNS_RECORD_TYPE_A.value, "zone": "zone_a"},
-			old_record_data={"type": RecordTypes.DNS_RECORD_TYPE_A.value, "zone": "zone_b"},
+			record_data={
+				"type": RecordTypes.DNS_RECORD_TYPE_A.value,
+				"zone": "zone_a",
+			},
+			old_record_data={
+				"type": RecordTypes.DNS_RECORD_TYPE_A.value,
+				"zone": "zone_b",
+			},
 		)
 
 
@@ -722,16 +789,21 @@ def test_delete_record(
 	record_fixture_name = get_record_fixture_name(record_type)
 	record_fixture: dict = request.getfixturevalue(record_fixture_name)
 	record_fixture["type"] = record_type
-	record_main_value = record_fixture[record_type_main_field(record_fixture["type"])]
+	record_main_value = record_fixture[
+		record_type_main_field(record_fixture["type"])
+	]
 	m_request = mocker.MagicMock()
 	m_request.user.id = 1
 	f_record_mixin.request = m_request
 	m_delete = mocker.MagicMock()
 	m_ldap_record_instance = mocker.MagicMock()
 	m_ldap_record_instance.delete = m_delete
-	m_ldap_record_instance.__fullname__ = mocker.Mock(return_value="mock_fullname")
+	m_ldap_record_instance.__fullname__ = mocker.Mock(
+		return_value="mock_fullname"
+	)
 	m_ldap_record = mocker.patch(
-		f"core.views.mixins.ldap.record.LDAPRecord", return_value=m_ldap_record_instance
+		f"core.views.mixins.ldap.record.LDAPRecord",
+		return_value=m_ldap_record_instance,
 	)
 
 	f_record_mixin.delete_record(record_data=record_fixture)

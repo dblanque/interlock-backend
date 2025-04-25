@@ -17,10 +17,18 @@ def m_request(mocker):
 	(
 		# Test cases for admin_required
 		(True, True, "response"),  # Superuser
-		(False, True, "response"),  # Same as above, but using decorator as a factory
+		(
+			False,
+			True,
+			"response",
+		),  # Same as above, but using decorator as a factory
 		(True, False, PermissionDenied),  # Not a superuser
 	),
-	ids=("As Decorator (default), Superuser", "As Decorator Factory, Superuser", "Not Superuser"),
+	ids=(
+		"As Decorator (default), Superuser",
+		"As Decorator Factory, Superuser",
+		"Not Superuser",
+	),
 )
 def test_admin_required(is_factory, is_superuser, expected, m_request, mocker):
 	m_request.user.is_superuser = is_superuser

@@ -18,7 +18,9 @@ def f_encrypted_password() -> tuple:
 @pytest.fixture
 def f_ldap_connector(mocker) -> MockType:
 	"""Fixture to mock LDAPConnector and its context manager."""
-	m_connector = mocker.patch("core.ldap.connector.LDAPConnector", return_value=mocker.MagicMock())
+	m_connector = mocker.patch(
+		"core.ldap.connector.LDAPConnector", return_value=mocker.MagicMock()
+	)
 	return m_connector
 
 
@@ -94,7 +96,9 @@ def test_authenticate_rebind_is_not_truthy(
 
 	f_ldc.get_user.assert_called_once()
 	f_ldc.connection.unbind.assert_called_once()
-	f_ldc.rebind.assert_called_once_with(user_dn=f_user.dn, password=f_request_data["password"])
+	f_ldc.rebind.assert_called_once_with(
+		user_dn=f_user.dn, password=f_request_data["password"]
+	)
 	assert result is None
 
 
@@ -124,7 +128,9 @@ def test_authenticate_success(
 	# Assertions
 	f_ldc.get_user.assert_called_once()
 	f_ldc.connection.unbind.assert_called_once()
-	f_ldc.rebind.assert_called_once_with(user_dn=f_user.dn, password=f_request_data["password"])
+	f_ldc.rebind.assert_called_once_with(
+		user_dn=f_user.dn, password=f_request_data["password"]
+	)
 	m_aes_encrypt.assert_called_once_with(f_request_data["password"])
 	for index, field in enumerate(USER_PASSWORD_FIELDS):
 		m_setattr.assert_any_call(f_user, field, f_encrypted_password[index])

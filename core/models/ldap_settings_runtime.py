@@ -60,7 +60,9 @@ class RuntimeSettingsSingleton:
 	LDAP_AUTH_SYNC_USER_RELATIONS = defaults.LDAP_AUTH_SYNC_USER_RELATIONS
 	LDAP_AUTH_FORMAT_SEARCH_FILTERS = defaults.LDAP_AUTH_FORMAT_SEARCH_FILTERS
 	LDAP_AUTH_FORMAT_USERNAME = defaults.LDAP_AUTH_FORMAT_USERNAME
-	LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN = defaults.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN
+	LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN = (
+		defaults.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN
+	)
 	LDAP_AUTH_CONNECTION_USER_DN = defaults.LDAP_AUTH_CONNECTION_USER_DN
 	LDAP_AUTH_CONNECTION_USERNAME = defaults.LDAP_AUTH_CONNECTION_USERNAME
 	LDAP_AUTH_CONNECTION_PASSWORD = defaults.LDAP_AUTH_CONNECTION_PASSWORD
@@ -128,13 +130,17 @@ class RuntimeSettingsSingleton:
 
 def get_settings(uuid, quiet=False) -> dict:
 	if not quiet:
-		logger.info(f"Re-synchronizing settings for {this_module} (Configuration Instance {uuid})")
+		logger.info(
+			f"Re-synchronizing settings for {this_module} (Configuration Instance {uuid})"
+		)
 	active_preset = None
 	r = {}
 
 	for t in [LDAP_PRESET_TABLE, LDAP_SETTING_TABLE]:
 		if not db_table_exists(t):
-			logger.warning("Table %s does not exist, please check migrations.", t)
+			logger.warning(
+				"Table %s does not exist, please check migrations.", t
+			)
 
 	if db_table_exists(LDAP_PRESET_TABLE):
 		active_preset = LDAPPreset.objects.get(active=True)
@@ -144,7 +150,9 @@ def get_settings(uuid, quiet=False) -> dict:
 		setting_instance = None
 		if db_table_exists(LDAP_SETTING_TABLE):
 			# Setting
-			setting_instance = LDAPSetting.objects.filter(name=setting_key, preset_id=active_preset)
+			setting_instance = LDAPSetting.objects.filter(
+				name=setting_key, preset_id=active_preset
+			)
 			if setting_instance.exists():
 				setting_instance = setting_instance[0]
 		# Default

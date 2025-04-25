@@ -1,6 +1,9 @@
 import pytest
 from core.models.ldap_settings import LDAPSetting, LDAPPreset, LDAP_SETTING_MAP
-from core.models.ldap_settings_runtime import RuntimeSettingsSingleton, get_settings
+from core.models.ldap_settings_runtime import (
+	RuntimeSettingsSingleton,
+	get_settings,
+)
 from core.ldap import defaults as ldap_defaults
 from pytest_mock import MockType
 from interlock_backend.encrypt import aes_encrypt
@@ -127,7 +130,9 @@ def test_all_properties_initialized():
 def test_init_calls_newuuid_and_resync(mocker):
 	"""Test that __init__ calls __newUuid__ and resync()"""
 	# Setup mocks
-	mock_new_uuid = mocker.patch.object(RuntimeSettingsSingleton, "__newUuid__", autospec=True)
+	mock_new_uuid = mocker.patch.object(
+		RuntimeSettingsSingleton, "__newUuid__", autospec=True
+	)
 	mock_resync = mocker.patch.object(
 		RuntimeSettingsSingleton, "resync", autospec=True, return_value=True
 	)
@@ -198,7 +203,9 @@ def test_init_with_existing_instance(mocker):
 
 	# Setup mocks - these shouldn't be called on subsequent inits
 	mock_new_uuid = mocker.patch.object(
-		RuntimeSettingsSingleton, "__newUuid__", wraps=original_instance.__newUuid__
+		RuntimeSettingsSingleton,
+		"__newUuid__",
+		wraps=original_instance.__newUuid__,
 	)
 	mock_resync = mocker.patch.object(
 		RuntimeSettingsSingleton, "resync", wraps=original_instance.resync
@@ -234,15 +241,23 @@ def test_resync_with_defaults(mocker):
 	instance = RuntimeSettingsSingleton()
 	instance.__newUuid__()
 
-	m_new_uuid: MockType = mocker.patch.object(RuntimeSettingsSingleton, "__newUuid__")
-	m_get_settings: MockType = mocker.patch(f"core.models.ldap_settings_runtime.get_settings")
-	m_postsync: MockType = mocker.patch.object(RuntimeSettingsSingleton, "postsync")
+	m_new_uuid: MockType = mocker.patch.object(
+		RuntimeSettingsSingleton, "__newUuid__"
+	)
+	m_get_settings: MockType = mocker.patch(
+		f"core.models.ldap_settings_runtime.get_settings"
+	)
+	m_postsync: MockType = mocker.patch.object(
+		RuntimeSettingsSingleton, "postsync"
+	)
 	instance.resync()
 	m_new_uuid.assert_called_once()
 	m_get_settings.assert_called_once_with(instance.uuid)
 	m_postsync.assert_called_once()
 
-	ldap_default_settings = getmembers(RuntimeSettingsSingleton, lambda a: not (isroutine(a)))
+	ldap_default_settings = getmembers(
+		RuntimeSettingsSingleton, lambda a: not (isroutine(a))
+	)
 	for setting_key, default_value in ldap_default_settings:
 		if setting_key.startswith("__") and setting_key.endswith("__"):
 			continue
@@ -253,11 +268,15 @@ def test_resync_raises_exception(mocker):
 	mocker.patch.object(RuntimeSettingsSingleton, "__init__", return_value=None)
 	instance = RuntimeSettingsSingleton()
 
-	m_new_uuid: MockType = mocker.patch.object(RuntimeSettingsSingleton, "__newUuid__")
+	m_new_uuid: MockType = mocker.patch.object(
+		RuntimeSettingsSingleton, "__newUuid__"
+	)
 	m_get_settings: MockType = mocker.patch(
 		f"core.models.ldap_settings_runtime.get_settings", side_effect=Exception
 	)
-	m_postsync: MockType = mocker.patch.object(RuntimeSettingsSingleton, "postsync")
+	m_postsync: MockType = mocker.patch.object(
+		RuntimeSettingsSingleton, "postsync"
+	)
 	with pytest.raises(Exception):
 		instance.resync(raise_exc=True)
 	m_new_uuid.assert_called_once()
@@ -270,8 +289,12 @@ def test_resync_returns_false_on_exception(mocker):
 	instance = RuntimeSettingsSingleton()
 
 	mocker.patch.object(RuntimeSettingsSingleton, "__newUuid__")
-	mocker.patch(f"core.models.ldap_settings_runtime.get_settings", side_effect=Exception)
-	m_postsync: MockType = mocker.patch.object(RuntimeSettingsSingleton, "postsync")
+	mocker.patch(
+		f"core.models.ldap_settings_runtime.get_settings", side_effect=Exception
+	)
+	m_postsync: MockType = mocker.patch.object(
+		RuntimeSettingsSingleton, "postsync"
+	)
 	assert instance.resync() is False
 	m_postsync.assert_not_called()
 
@@ -283,7 +306,9 @@ def test_get_settings_no_preset():
 
 
 def test_get_settings_tables_do_not_exist(mocker):
-	mocker.patch("core.models.ldap_settings_runtime.db_table_exists", return_value=False)
+	mocker.patch(
+		"core.models.ldap_settings_runtime.db_table_exists", return_value=False
+	)
 	m_logger = mocker.patch("core.models.ldap_settings_runtime.logger")
 	m_settings = get_settings("non-existing-uuid")
 	for s_key, s_val in m_settings.items():
@@ -342,13 +367,19 @@ class TestLDAPSettingsWithDB:
 		),
 	)
 	def test_get_settings_mock_db_overrides(
-		self, test_key, test_value, expected_result, mocker, f_ldap_settings_preset
+		self,
+		test_key,
+		test_value,
+		expected_result,
+		mocker,
+		f_ldap_settings_preset,
 	):
 		if not expected_result:
 			expected_result = test_value
 		if test_key == "LDAP_AUTH_CONNECTION_PASSWORD":
 			m_aes_decrypt: MockType = mocker.patch(
-				"core.models.ldap_settings_runtime.aes_decrypt", return_value=expected_result
+				"core.models.ldap_settings_runtime.aes_decrypt",
+				return_value=expected_result,
 			)
 		LDAPSetting.objects.create(
 			name=test_key,

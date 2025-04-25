@@ -33,7 +33,14 @@ class UserSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = User
-		fields = ("username", "first_name", "last_name", "email", "password", "passwordConfirm")
+		fields = (
+			"username",
+			"first_name",
+			"last_name",
+			"email",
+			"password",
+			"passwordConfirm",
+		)
 
 	def validate_password_confirm(self, data: dict = None, raise_exc=True):
 		if not data:
@@ -79,16 +86,24 @@ class LDAPUserSerializer(serializers.Serializer):
 	userPrincipalName = serializers.CharField(required=False)
 	userAccountControl = serializers.IntegerField(required=False)
 	whenCreated = serializers.DateTimeField(
-		format=LDAP_DATE_FORMAT, input_formats=[LDAP_DATE_FORMAT, "iso-8601"], required=False
+		format=LDAP_DATE_FORMAT,
+		input_formats=[LDAP_DATE_FORMAT, "iso-8601"],
+		required=False,
 	)
 	whenChanged = serializers.DateTimeField(
-		format=LDAP_DATE_FORMAT, input_formats=[LDAP_DATE_FORMAT, "iso-8601"], required=False
+		format=LDAP_DATE_FORMAT,
+		input_formats=[LDAP_DATE_FORMAT, "iso-8601"],
+		required=False,
 	)
 	lastLogonTimestamp = serializers.DateTimeField(
-		format=LDAP_DATE_FORMAT, input_formats=[LDAP_DATE_FORMAT, "iso-8601"], required=False
+		format=LDAP_DATE_FORMAT,
+		input_formats=[LDAP_DATE_FORMAT, "iso-8601"],
+		required=False,
 	)
 	accountExpires = serializers.DateTimeField(
-		format=LDAP_DATE_FORMAT, input_formats=[LDAP_DATE_FORMAT, "iso-8601"], required=False
+		format=LDAP_DATE_FORMAT,
+		input_formats=[LDAP_DATE_FORMAT, "iso-8601"],
+		required=False,
 	)
 	lastLogon = serializers.IntegerField(required=False)
 	badPwdCount = serializers.IntegerField(required=False)

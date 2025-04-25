@@ -65,14 +65,20 @@ class UserViewSet(BaseViewSet):
 		)
 		user_queryset = User.objects.all()
 		DBLogMixin.log(
-			user=request.user.id, operation_type=LOG_ACTION_READ, log_target_class=LOG_CLASS_USER
+			user=request.user.id,
+			operation_type=LOG_ACTION_READ,
+			log_target_class=LOG_CLASS_USER,
 		)
 		return Response(
 			data={
 				"code": code,
 				"code_msg": code_msg,
 				"users": user_queryset.values(*PUBLIC_FIELDS_SHORT),
-				"headers": [field for field in PUBLIC_FIELDS_SHORT if not field in VALUE_ONLY],
+				"headers": [
+					field
+					for field in PUBLIC_FIELDS_SHORT
+					if not field in VALUE_ONLY
+				],
 			}
 		)
 
@@ -214,7 +220,9 @@ class UserViewSet(BaseViewSet):
 		data: dict = request.data
 		pk = int(pk)
 		if not "enabled" in data or not isinstance(data["enabled"], bool):
-			raise BadRequest(data={"errors": "Must contain field enabled (bool)"})
+			raise BadRequest(
+				data={"errors": "Must contain field enabled (bool)"}
+			)
 		user_instance = User.objects.get(id=pk)
 		user_instance.is_enabled = data.pop("enabled")
 		user_instance.save()
@@ -224,7 +232,9 @@ class UserViewSet(BaseViewSet):
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_USER,
 			log_target=user_instance.username,
-			message=LOG_EXTRA_ENABLE if user_instance.is_enabled else LOG_EXTRA_DISABLE,
+			message=LOG_EXTRA_ENABLE
+			if user_instance.is_enabled
+			else LOG_EXTRA_DISABLE,
 		)
 		return Response(
 			data={
@@ -244,7 +254,9 @@ class UserViewSet(BaseViewSet):
 		pk = int(pk)
 		for field in ("password", "passwordConfirm"):
 			if not field in data:
-				raise BadRequest(data={"errors": f"Must contain field {field}."})
+				raise BadRequest(
+					data={"errors": f"Must contain field {field}."}
+				)
 		if not self.serializer_class().validate_password_confirm(data):
 			raise exc_user.UserPasswordsDontMatch
 		user_instance = User.objects.get(id=pk)
@@ -260,7 +272,11 @@ class UserViewSet(BaseViewSet):
 		)
 
 		return Response(
-			data={"code": code, "code_msg": code_msg, "data": {"username": user_instance.username}}
+			data={
+				"code": code,
+				"code_msg": code_msg,
+				"data": {"username": user_instance.username},
+			}
 		)
 
 	@action(detail=False, methods=["post", "put"])
@@ -272,7 +288,9 @@ class UserViewSet(BaseViewSet):
 		data: dict = request.data
 		for field in ("password", "passwordConfirm"):
 			if not field in data:
-				raise BadRequest(data={"errors": f"Must contain field {field}."})
+				raise BadRequest(
+					data={"errors": f"Must contain field {field}."}
+				)
 		if not self.serializer_class().validate_password_confirm(data):
 			raise exc_user.UserPasswordsDontMatch
 		user.set_password(data["password"])
@@ -287,7 +305,11 @@ class UserViewSet(BaseViewSet):
 		)
 
 		return Response(
-			data={"code": code, "code_msg": code_msg, "data": {"username": user.username}}
+			data={
+				"code": code,
+				"code_msg": code_msg,
+				"data": {"username": user.username},
+			}
 		)
 
 	@action(detail=False, methods=["post", "put"])

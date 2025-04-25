@@ -51,7 +51,11 @@ from core.models.ldap_object import LDAPObject
 from core.views.mixins.ldap.organizational_unit import OrganizationalUnitMixin
 
 ### Exceptions
-from core.exceptions import ldap as exc_ldap, groups as exc_groups, dirtree as exc_dirtree
+from core.exceptions import (
+	ldap as exc_ldap,
+	groups as exc_groups,
+	dirtree as exc_dirtree,
+)
 
 ### Others
 from rest_framework.request import Request
@@ -65,6 +69,7 @@ import logging
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
+
 class GroupDict(TypedDict):
 	cn: str
 	member: list[str]
@@ -72,11 +77,12 @@ class GroupDict(TypedDict):
 	distinguishedName: str
 	objectSid: str
 	objectRid: int
-	groupType: Literal[0,1]
-	groupScope: Literal[0,1,2]
+	groupType: Literal[0, 1]
+	groupScope: Literal[0, 1, 2]
 	membersToAdd: list[str]
 	membersToRemove: list[str]
 	mail: str
+
 
 class GroupViewMixin(viewsets.ViewSetMixin):
 	ldap_connection: Connection = None
@@ -132,12 +138,17 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			raise ValueError("Invalid group type integer")
 
 		if debug:
-			return (result, group_type,)
+			return (
+				result,
+				group_type,
+			)
 		else:
 			return result
 
 	@staticmethod
-	def get_group_by_rid(rid: int = None, attributes: List[str] = None) -> dict | None:
+	def get_group_by_rid(
+		rid: int = None, attributes: List[str] = None
+	) -> dict | None:
 		if not attributes:
 			attributes = ["objectSid", "distinguishedName"]
 		if isinstance(rid, list):
@@ -214,7 +225,9 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 					)
 				# Do the standard for every other key
 				elif attr_key in headers:
-					group_dict[attr_key] = getldapattr(group_entry, attr_key, None)
+					group_dict[attr_key] = getldapattr(
+						group_entry, attr_key, None
+					)
 
 			# Check if group has Members
 			if getldapattr(group_entry, "member", None):
@@ -260,29 +273,36 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			# Parse Group Type
 			if attr_key == "groupType":
 				group_type = int(attr_value)
-				group_dict[attr_key] = self.get_group_types(group_type=group_type)
+				group_dict[attr_key] = self.get_group_types(
+					group_type=group_type
+				)
 			elif attr_key == "member":
-				_username_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
-				attr_members = attr_value if isinstance(attr_value, list) \
-								else [attr_value]
+				_username_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS[
+					"username"
+				]
+				attr_members = (
+					attr_value if isinstance(attr_value, list) else [attr_value]
+				)
 				member_list = []
 
 				# Fetch members
 				for member_user_dn in attr_members:
 					member_list.append(
-						LDAPObject(**{
-							"connection": self.ldap_connection,
-							"dn": member_user_dn,
-							"ldap_attrs": [
-								"cn",
-								"distinguishedName",
-								_username_field,
-								"givenName",
-								"sn",
-								"objectCategory",
-								"objectClass",
-							],
-						}).attributes
+						LDAPObject(
+							**{
+								"connection": self.ldap_connection,
+								"dn": member_user_dn,
+								"ldap_attrs": [
+									"cn",
+									"distinguishedName",
+									_username_field,
+									"givenName",
+									"sn",
+									"objectCategory",
+									"objectClass",
+								],
+							}
+						).attributes
 					)
 				group_dict[attr_key] = member_list
 			# Do the standard for every other key
@@ -305,21 +325,23 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		return group_dict, headers
 
 	def create_group(
-			self,
-			group_data: GroupDict,
-			exclude_keys=["member", "path", "membersToAdd"]
-		) -> Connection:
+		self,
+		group_data: GroupDict,
+		exclude_keys=["member", "path", "membersToAdd"],
+	) -> Connection:
 		# Type hinting defs
-		extended_operations: ExtendedOperationsRoot = self.ldap_connection.extend
-		eo_microsoft: MicrosoftExtendedOperations = extended_operations.microsoft
+		extended_operations: ExtendedOperationsRoot = (
+			self.ldap_connection.extend
+		)
+		eo_microsoft: MicrosoftExtendedOperations = (
+			extended_operations.microsoft
+		)
 
 		if group_data.get("path", None):
 			distinguished_name = f"CN={group_data['cn']},{group_data['path']}"
 			logger.debug(f"Creating group in DN Path: {group_data['path']}")
 		else:
-			distinguished_name = (
-				f"CN={group_data['cn']},CN=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}"
-			)
+			distinguished_name = f"CN={group_data['cn']},CN=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}"
 
 		group_cn: str = group_data.get("cn")
 		group_data[RuntimeSettings.LDAP_GROUP_FIELD] = group_cn.lower()
@@ -337,8 +359,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		group_data["groupType"] = (
 			LDAP_GROUP_TYPE_MAPPING[int(group_data["groupType"])]
-			+
-			LDAP_GROUP_SCOPE_MAPPING[int(group_data["groupScope"])]
+			+ LDAP_GROUP_SCOPE_MAPPING[int(group_data["groupScope"])]
 		)
 		group_data.pop("groupScope")
 
@@ -351,13 +372,13 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			self.ldap_connection.add(
 				dn=distinguished_name,
 				object_class="group",
-				attributes=group_data
+				attributes=group_data,
 			)
 		except Exception as e:
 			logger.exception(e)
-			raise exc_groups.GroupCreate(data={
-				"ldap_response": self.ldap_connection.result
-			})
+			raise exc_groups.GroupCreate(
+				data={"ldap_response": self.ldap_connection.result}
+			)
 
 		if members_to_add:
 			try:
@@ -378,13 +399,13 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		return self.ldap_connection
 
 	def update_group_type(
-			self,
-			distinguished_name: str,
-			selected_scope: int,
-			selected_type: int,
-			new_group_type: int,
-			old_group_type: int,
-		):
+		self,
+		distinguished_name: str,
+		selected_scope: int,
+		selected_type: int,
+		new_group_type: int,
+		old_group_type: int,
+	):
 		"""Updates an LDAP Group's type and scope.
 
 		Args:
@@ -410,7 +431,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				group_type=old_group_type
 			)
 
-			# If we're trying to go from Group Global to Domain Local Scope 
+			# If we're trying to go from Group Global to Domain Local Scope
 			# or viceversa, we need to make it universal first, otherwise
 			# the LDAP server denies the update request.
 			#
@@ -419,14 +440,16 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				LDAPGroupTypes.SCOPE_GLOBAL.name in previous_group_type_names
 				and selected_scope == MAPPED_GROUP_SCOPE_DOMAIN_LOCAL
 			) or (
-				LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.name in previous_group_type_names
+				LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.name
+				in previous_group_type_names
 				and selected_scope == MAPPED_GROUP_SCOPE_GLOBAL
 			):
 				# Sum type and scope
 				intermediate_group_type = (
-					LDAP_GROUP_TYPE_MAPPING[selected_type] # Group Type
-					+
-					LDAP_GROUP_SCOPE_MAPPING[MAPPED_GROUP_SCOPE_UNIVERSAL] # Universal
+					LDAP_GROUP_TYPE_MAPPING[selected_type]  # Group Type
+					+ LDAP_GROUP_SCOPE_MAPPING[
+						MAPPED_GROUP_SCOPE_UNIVERSAL
+					]  # Universal
 				)
 				# Log if necessary
 				logger.debug(intermediate_group_type)
@@ -434,7 +457,11 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				# Change to Universal Scope First
 				self.ldap_connection.modify(
 					distinguished_name,
-					{"groupType": [(MODIFY_REPLACE, [intermediate_group_type])]},
+					{
+						"groupType": [
+							(MODIFY_REPLACE, [intermediate_group_type])
+						]
+					},
 				)
 				# Change to Target Scope (Global or Domain Local)
 				self.ldap_connection.modify(
@@ -449,8 +476,12 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 	def update_group(self, group_data: GroupDict):
 		# Type hinting defs
-		extended_operations: ExtendedOperationsRoot = self.ldap_connection.extend
-		eo_microsoft: MicrosoftExtendedOperations = extended_operations.microsoft
+		extended_operations: ExtendedOperationsRoot = (
+			self.ldap_connection.extend
+		)
+		eo_microsoft: MicrosoftExtendedOperations = (
+			extended_operations.microsoft
+		)
 
 		# Set Distinguished Name
 		distinguished_name = group_data.get("distinguishedName", None)
@@ -466,11 +497,13 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		# We need to fetch the existing LDAP group object to know what
 		# kind of operation to apply when updating attributes
 		try:
-			fetched_group_attrs = LDAPObject(**{
-				"connection": self.ldap_connection,
-				"dn": distinguished_name,
-				"ldap_attrs": self.ldap_filter_attr,
-			}).attributes
+			fetched_group_attrs = LDAPObject(
+				**{
+					"connection": self.ldap_connection,
+					"dn": distinguished_name,
+					"ldap_attrs": self.ldap_filter_attr,
+				}
+			).attributes
 		except:
 			raise exc_groups.GroupDoesNotExist
 
@@ -489,10 +522,12 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				group_cn = f"CN={split_cn[-1]}"
 			# Rename Group
 			try:
-				distinguished_name = OrganizationalUnitMixin.move_or_rename_object(
-					self,
-					distinguished_name=distinguished_name,
-					target_rdn=group_cn
+				distinguished_name = (
+					OrganizationalUnitMixin.move_or_rename_object(
+						self,
+						distinguished_name=distinguished_name,
+						target_rdn=group_cn,
+					)
 				)
 			except:
 				raise exc_dirtree.DirtreeRename
@@ -507,15 +542,16 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			for g_add, g_remove in zip(members_to_add, members_to_remove):
 				# g_add and g_remove should be distinguished names
 				if g_add == g_remove:
-					logger.error(f"Group Member {g_add} cannot be added and removed.")
+					logger.error(
+						f"Group Member {g_add} cannot be added and removed."
+					)
 					raise exc_groups.BadMemberSelection
 
 		# Change group type if necessary
 		group_type = group_data.pop("groupType", None)
 		group_scope = group_data.pop("groupScope", None)
-		if (
-			(group_type is not None and group_scope is None) or
-			(group_type is None and group_scope is not None)
+		if (group_type is not None and group_scope is None) or (
+			group_type is None and group_scope is not None
 		):
 			raise exc_groups.GroupTypeMissingField
 
@@ -530,15 +566,16 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				selected_type=group_type,
 				new_group_type=(
 					LDAP_GROUP_TYPE_MAPPING[group_type]
-					+
-					LDAP_GROUP_SCOPE_MAPPING[group_scope]
+					+ LDAP_GROUP_SCOPE_MAPPING[group_scope]
 				),
-				old_group_type=int(fetched_group_attrs["groupType"])
+				old_group_type=int(fetched_group_attrs["groupType"]),
 			)
 
 		# Update EMAIL Attr if any
 		group_email_attr = group_data.get("mail", None)
-		if group_email_attr is not None and fetched_group_attrs.get("mail", None):
+		if group_email_attr is not None and fetched_group_attrs.get(
+			"mail", None
+		):
 			try:
 				if group_email_attr == "":
 					self.ldap_connection.modify(
@@ -591,11 +628,13 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		# We need to fetch the existing LDAP group object to know what
 		# kind of operation to apply when updating attributes
 		try:
-			fetched_group_attrs = LDAPObject(**{
-				"connection": self.ldap_connection,
-				"dn": distinguished_name,
-				"ldap_attrs": self.ldap_filter_attr,
-			}).attributes
+			fetched_group_attrs = LDAPObject(
+				**{
+					"connection": self.ldap_connection,
+					"dn": distinguished_name,
+					"ldap_attrs": self.ldap_filter_attr,
+				}
+			).attributes
 		except:
 			raise exc_groups.GroupDoesNotExist
 
@@ -607,16 +646,21 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		if group_cn.lower() not in distinguished_name.lower():
 			raise exc_ldap.DistinguishedNameValidationError
 
-		group_types = self.get_group_types(group_type=int(fetched_group_attrs["groupType"]))
-		if LDAPGroupTypes.TYPE_SYSTEM.name in group_types or group_cn.lower().startswith("domain "):
+		group_types = self.get_group_types(
+			group_type=int(fetched_group_attrs["groupType"])
+		)
+		if (
+			LDAPGroupTypes.TYPE_SYSTEM.name in group_types
+			or group_cn.lower().startswith("domain ")
+		):
 			raise exc_groups.GroupBuiltinProtect
 
 		try:
 			self.ldap_connection.delete(dn=distinguished_name)
 		except:
-			raise exc_groups.GroupDelete(data={
-				"ldap_response": self.ldap_connection.result
-			})
+			raise exc_groups.GroupDelete(
+				data={"ldap_response": self.ldap_connection.result}
+			)
 
 		with transaction.atomic():
 			asg_queryset = ApplicationSecurityGroup.objects.filter(

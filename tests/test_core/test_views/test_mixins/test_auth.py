@@ -91,7 +91,9 @@ def test_remove_token_response_with_refresh(mock_request, jwt_settings):
 	assert response.cookies["refresh_token"].value == "expired"
 
 
-def test_remove_token_response_with_bad_login_count_zero(mock_request, jwt_settings):
+def test_remove_token_response_with_bad_login_count_zero(
+	mock_request, jwt_settings
+):
 	response = RemoveTokenResponse(mock_request, bad_login_count=True)
 
 	assert BAD_LOGIN_COOKIE_NAME in response.cookies
@@ -99,7 +101,9 @@ def test_remove_token_response_with_bad_login_count_zero(mock_request, jwt_setti
 	assert response.data["remaining_login_count"] == BAD_LOGIN_LIMIT - 1
 
 
-def test_remove_token_response_with_bad_login_count_existing(mock_request, jwt_settings):
+def test_remove_token_response_with_bad_login_count_existing(
+	mock_request, jwt_settings
+):
 	mock_request.COOKIES[BAD_LOGIN_COOKIE_NAME] = "2"
 	response = RemoveTokenResponse(mock_request, bad_login_count=True)
 
@@ -107,7 +111,9 @@ def test_remove_token_response_with_bad_login_count_existing(mock_request, jwt_s
 	assert response.data["remaining_login_count"] == BAD_LOGIN_LIMIT - 3
 
 
-def test_remove_token_response_with_bad_login_count_max(mock_request, jwt_settings):
+def test_remove_token_response_with_bad_login_count_max(
+	mock_request, jwt_settings
+):
 	mock_request.COOKIES[BAD_LOGIN_COOKIE_NAME] = str(BAD_LOGIN_LIMIT)
 	response = RemoveTokenResponse(mock_request, bad_login_count=True)
 
@@ -115,7 +121,9 @@ def test_remove_token_response_with_bad_login_count_max(mock_request, jwt_settin
 	assert response.data["remaining_login_count"] == BAD_LOGIN_LIMIT
 
 
-def test_remove_token_response_with_invalid_bad_login_count(mock_request, jwt_settings):
+def test_remove_token_response_with_invalid_bad_login_count(
+	mock_request, jwt_settings
+):
 	mock_request.COOKIES[BAD_LOGIN_COOKIE_NAME] = "invalid"
 	response = RemoveTokenResponse(mock_request, bad_login_count=True)
 
@@ -128,7 +136,9 @@ def test_remove_token_response_with_invalid_bad_login_count(mock_request, jwt_se
 ##########################################################################################
 
 
-def test_cookie_jwt_authenticate_no_token(cookie_auth: CookieJWTAuthentication, mock_request):
+def test_cookie_jwt_authenticate_no_token(
+	cookie_auth: CookieJWTAuthentication, mock_request
+):
 	user, token = cookie_auth.authenticate(mock_request)
 
 	assert isinstance(user, AnonymousUser)
@@ -156,7 +166,11 @@ def test_cookie_jwt_authenticate_empty_token(
 
 
 def test_cookie_jwt_authenticate_valid_token(
-	cookie_auth: CookieJWTAuthentication, mock_request, jwt_settings, valid_access_token, test_user
+	cookie_auth: CookieJWTAuthentication,
+	mock_request,
+	jwt_settings,
+	valid_access_token,
+	test_user,
 ):
 	mock_request.COOKIES[jwt_settings["AUTH_COOKIE_NAME"]] = valid_access_token
 	user, token = cookie_auth.authenticate(mock_request)
@@ -169,13 +183,17 @@ def test_cookie_jwt_authenticate_valid_token(
 def test_cookie_jwt_authenticate_invalid_token(
 	cookie_auth: CookieJWTAuthentication, mock_request, jwt_settings
 ):
-	mock_request.COOKIES[jwt_settings["AUTH_COOKIE_NAME"]] = "invalid.token.here"
+	mock_request.COOKIES[jwt_settings["AUTH_COOKIE_NAME"]] = (
+		"invalid.token.here"
+	)
 
 	with pytest.raises(AccessTokenInvalid):
 		cookie_auth.authenticate(mock_request)
 
 
-def test_cookie_jwt_refresh_no_token(cookie_auth: CookieJWTAuthentication, mock_request):
+def test_cookie_jwt_refresh_no_token(
+	cookie_auth: CookieJWTAuthentication, mock_request
+):
 	with pytest.raises(RefreshTokenExpired):
 		cookie_auth.refresh(mock_request)
 
@@ -199,9 +217,14 @@ def test_cookie_jwt_refresh_empty_token(
 
 
 def test_cookie_jwt_refresh_valid_token(
-	cookie_auth: CookieJWTAuthentication, mock_request, jwt_settings, valid_refresh_token
+	cookie_auth: CookieJWTAuthentication,
+	mock_request,
+	jwt_settings,
+	valid_refresh_token,
 ):
-	mock_request.COOKIES[jwt_settings["REFRESH_COOKIE_NAME"]] = valid_refresh_token
+	mock_request.COOKIES[jwt_settings["REFRESH_COOKIE_NAME"]] = (
+		valid_refresh_token
+	)
 	access_token, refresh_token = cookie_auth.refresh(mock_request)
 
 	# Verify the tokens are valid by attempting to decode them
@@ -212,17 +235,27 @@ def test_cookie_jwt_refresh_valid_token(
 def test_cookie_jwt_refresh_invalid_token(
 	cookie_auth: CookieJWTAuthentication, mock_request, jwt_settings
 ):
-	mock_request.COOKIES[jwt_settings["REFRESH_COOKIE_NAME"]] = "invalid.token.here"
+	mock_request.COOKIES[jwt_settings["REFRESH_COOKIE_NAME"]] = (
+		"invalid.token.here"
+	)
 
 	with pytest.raises(RefreshTokenExpired):
 		cookie_auth.refresh(mock_request)
 
 
 def test_cookie_jwt_refresh_token_error_handling(
-	mocker, cookie_auth: CookieJWTAuthentication, mock_request, jwt_settings, valid_refresh_token
+	mocker,
+	cookie_auth: CookieJWTAuthentication,
+	mock_request,
+	jwt_settings,
+	valid_refresh_token,
 ):
-	mock_request.COOKIES[jwt_settings["REFRESH_COOKIE_NAME"]] = valid_refresh_token
-	mocker.patch.object(RefreshToken, "__init__", side_effect=TokenError("Test error"))
+	mock_request.COOKIES[jwt_settings["REFRESH_COOKIE_NAME"]] = (
+		valid_refresh_token
+	)
+	mocker.patch.object(
+		RefreshToken, "__init__", side_effect=TokenError("Test error")
+	)
 
 	with pytest.raises(RefreshTokenExpired):
 		cookie_auth.refresh(mock_request)
@@ -232,7 +265,9 @@ def test_cookie_jwt_authenticate_generic_error_handling(
 	mocker, cookie_auth: CookieJWTAuthentication, mock_request, jwt_settings
 ):
 	mock_request.COOKIES[jwt_settings["AUTH_COOKIE_NAME"]] = "valid.token"
-	mocker.patch.object(AccessToken, "__init__", side_effect=Exception("Generic error"))
+	mocker.patch.object(
+		AccessToken, "__init__", side_effect=Exception("Generic error")
+	)
 
 	with pytest.raises(Exception):
 		cookie_auth.authenticate(mock_request)

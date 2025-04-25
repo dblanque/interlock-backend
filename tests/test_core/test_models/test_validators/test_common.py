@@ -1,5 +1,9 @@
 import pytest
-from core.models.validators.common import ascii_validator, int32_validator, natural_validator
+from core.models.validators.common import (
+	ascii_validator,
+	int32_validator,
+	natural_validator,
+)
 from rest_framework.serializers import ValidationError
 
 

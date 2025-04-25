@@ -59,14 +59,19 @@ class LDAPDNS:
 
 	def __init__(self, connection):
 		if RuntimeSettings.LDAP_DNS_LEGACY:
-			self.dns_root = "CN=MicrosoftDNS,CN=System,%s" % RuntimeSettings.LDAP_AUTH_SEARCH_BASE
+			self.dns_root = (
+				"CN=MicrosoftDNS,CN=System,%s"
+				% RuntimeSettings.LDAP_AUTH_SEARCH_BASE
+			)
 		else:
 			self.dns_root = (
-				"CN=MicrosoftDNS,DC=DomainDnsZones,%s" % RuntimeSettings.LDAP_AUTH_SEARCH_BASE
+				"CN=MicrosoftDNS,DC=DomainDnsZones,%s"
+				% RuntimeSettings.LDAP_AUTH_SEARCH_BASE
 			)
 
 		self.forest_root = (
-			"CN=MicrosoftDNS,DC=ForestDnsZones,%s" % RuntimeSettings.LDAP_AUTH_SEARCH_BASE
+			"CN=MicrosoftDNS,DC=ForestDnsZones,%s"
+			% RuntimeSettings.LDAP_AUTH_SEARCH_BASE
 		)
 		self.connection = connection
 		self.list_dns_zones()
@@ -137,7 +142,9 @@ class SerialGenerator:
 class LDAPRecordMixin:
 	def get_soa_entry(self: "LDAPRecord") -> "LDAPRecord":
 		if self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
-			raise exc_base.CoreException("SOA Recursion Exception (get_soa_entry).")
+			raise exc_base.CoreException(
+				"SOA Recursion Exception (get_soa_entry)."
+			)
 		return LDAPRecord(
 			connection=self.connection,
 			record_name="@",
@@ -156,7 +163,9 @@ class LDAPRecordMixin:
 			raise exc_dns.DNSCouldNotGetSOA
 		for index, record in enumerate(self.soa_object.entry):
 			if record["type"] == RecordTypes.DNS_RECORD_TYPE_SOA.value:
-				self.soa_bytes = self.soa_object.raw_entry["raw_attributes"]["dnsRecord"][index]
+				self.soa_bytes = self.soa_object.raw_entry["raw_attributes"][
+					"dnsRecord"
+				][index]
 				self.soa = record
 
 	def get_soa_serial(self: "LDAPRecord") -> int:
@@ -167,7 +176,9 @@ class LDAPRecordMixin:
 			int
 		"""
 		if self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
-			raise exc_base.CoreException("SOA Recursion Exception (get_soa_serial).")
+			raise exc_base.CoreException(
+				"SOA Recursion Exception (get_soa_serial)."
+			)
 
 		self.get_soa()
 		if self.soa["dwSerialNo"] != self.soa["serial"]:
@@ -189,7 +200,9 @@ class LDAPRecordMixin:
 			logger.exception(e)
 			raise exc_dns.DNSCouldNotGetSOA from e
 
-	def get_serial(self: "LDAPRecord", record_values: dict, old_serial: int = None) -> int:
+	def get_serial(
+		self: "LDAPRecord", record_values: dict, old_serial: int = None
+	) -> int:
 		if self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
 			return int(record_values["dwSerialNo"])
 
@@ -225,7 +238,9 @@ class LDAPRecordMixin:
 				return self.mapping["main_field"]
 			return self.mapping["fields"][0]
 		except:
-			raise Exception("LDAPRecord could not obtain a valid main_field key.")
+			raise Exception(
+				"LDAPRecord could not obtain a valid main_field key."
+			)
 
 	def record_in_entry(self: "LDAPRecord", values: dict = None) -> bool:
 		"""
@@ -281,7 +296,11 @@ class LDAPRecordMixin:
 						f"{self.mapping['name']} Record already exists in an LDAP Entry and must be unique in Zone."
 					)
 					try:
-						logger.error(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
+						logger.error(
+							record_to_dict(
+								dnstool.DNS_RECORD(self.structure.getData())
+							)
+						)
 					except:
 						pass
 					raise exc_dns.DNSRecordExistsConflict(
@@ -291,7 +310,9 @@ class LDAPRecordMixin:
 							"name": self.name,
 						}
 					)
-		raise exc_base.CoreException(data={"detail": "LDAPRecord has no entry attribute."})
+		raise exc_base.CoreException(
+			data={"detail": "LDAPRecord has no entry attribute."}
+		)
 
 	def _validate_create_update(self: "LDAPRecord", values: dict, create=True):
 		"""Validates new record values.
@@ -314,7 +335,11 @@ class LDAPRecordMixin:
 					f"{self.mapping['name']} Record already exists in an LDAP Entry (Conflicting value: {values[self.main_field]})"
 				)
 				try:
-					logger.error(record_to_dict(dnstool.DNS_RECORD(self.structure.getData())))
+					logger.error(
+						record_to_dict(
+							dnstool.DNS_RECORD(self.structure.getData())
+						)
+					)
 				except:
 					pass
 				raise exc_dns.DNSRecordExistsConflict(
@@ -376,7 +401,8 @@ class LDAPRecordMixin:
 								RecordTypes.DNS_RECORD_TYPE_A.value,
 								RecordTypes.DNS_RECORD_TYPE_AAAA.value,
 							]
-							and record["type"] == RecordTypes.DNS_RECORD_TYPE_CNAME.value
+							and record["type"]
+							== RecordTypes.DNS_RECORD_TYPE_CNAME.value
 						)
 					):
 						exc = True
@@ -395,7 +421,9 @@ class LDAPRecordMixin:
 
 class LDAPRecordRawAttributes(TypedDict):
 	name: list[bytes]  # The Record Name
-	dNSTombstoned: list[bytes]  # It's actually a list of string boolean as bytes
+	dNSTombstoned: list[
+		bytes
+	]  # It's actually a list of string boolean as bytes
 	dnsRecord: list[bytes]  # DNS Record Struct
 
 
@@ -454,8 +482,14 @@ def record_type_main_field(t: RecordTypes | int | str) -> str:
 	Returns:
 		str: Key string for field
 	"""
-	if not isinstance(t, RecordTypes) and not isinstance(t, int) and not isinstance(t, str):
-		raise TypeError(f"t must be a valid RecordType Enum, RecordType int, or string identifier.")
+	if (
+		not isinstance(t, RecordTypes)
+		and not isinstance(t, int)
+		and not isinstance(t, str)
+	):
+		raise TypeError(
+			f"t must be a valid RecordType Enum, RecordType int, or string identifier."
+		)
 	if isinstance(t, str):
 		t_str = t.upper()
 		if not t_str.startswith(RECORD_TYPE_ENUM_PREFIX):
@@ -463,7 +497,9 @@ def record_type_main_field(t: RecordTypes | int | str) -> str:
 		try:
 			t = RecordTypes[t_str].value
 		except:
-			raise ValueError("Could not fetch RecordTypes value from string identifier.")
+			raise ValueError(
+				"Could not fetch RecordTypes value from string identifier."
+			)
 	mapping = get_record_mapping_from_type(t)
 	if "main_field" in mapping:
 		return mapping["main_field"]
@@ -510,10 +546,14 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		# Record Type checks
 		if record_type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
 			if record_name != "@":
-				raise ValueError("Start of Authority must be in the root of the DNS Zone.")
+				raise ValueError(
+					"Start of Authority must be in the root of the DNS Zone."
+				)
 		else:
 			if record_main_value is None:
-				raise ValueError("Main value is required for LDAPRecord initialization.")
+				raise ValueError(
+					"Main value is required for LDAPRecord initialization."
+				)
 		# Zone Type Checks
 		if zone_type != "fwdLookup":
 			raise ValueError(
@@ -552,10 +592,14 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		else:
 			raise TypeError("Class key not in Record Mapping definition.")
 
-		if not isinstance(record_main_value, str) and isinstance(record_main_value, Iterable):
+		if not isinstance(record_main_value, str) and isinstance(
+			record_main_value, Iterable
+		):
 			logger.warning("record_main_value is an iterable, is this okay?")
 		self.main_value = record_main_value
-		self.distinguished_name = f"DC={self.name},DC={self.zone},{self.dns_root}"
+		self.distinguished_name = (
+			f"DC={self.name},DC={self.zone},{self.dns_root}"
+		)
 		if auto_fetch:
 			self.fetch()
 
@@ -589,7 +633,10 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 					return index
 		elif self.main_value:
 			for index, record in enumerate(self.entry):
-				if record["type"] == self.type and record[self.main_field] == self.main_value:
+				if (
+					record["type"] == self.type
+					and record[self.main_field] == self.main_value
+				):
 					return index
 		else:
 			raise ValueError("main_value must be defined in LDAPRecord call.")
@@ -622,7 +669,9 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		_raw_entry_records = self.raw_entry["raw_attributes"]["dnsRecord"]
 		return _raw_entry_records[self.get_record_index_from_entry()]
 
-	def make_record_bytes(self, values: dict, serial: int | str, ttl: int = None) -> ldr.DNS_RECORD:
+	def make_record_bytes(
+		self, values: dict, serial: int | str, ttl: int = None
+	) -> ldr.DNS_RECORD:
 		"""Make record byte struct from values dictionary
 
 		Args:
@@ -667,7 +716,10 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				]
 				# Additional Operations based on special case type
 				for field in self.mapping["fields"]:
-					if self.mapping["class"] in ["DNS_RPC_RECORD_A", "DNS_RPC_RECORD_AAAA"]:
+					if self.mapping["class"] in [
+						"DNS_RPC_RECORD_A",
+						"DNS_RPC_RECORD_AAAA",
+					]:
 						record_data.fromCanonical(values[field])
 
 					elif self.mapping["class"] == "DNS_RPC_RECORD_NODE_NAME":
@@ -677,9 +729,14 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 						if field == "stringData":
 							record_data.toRPCName(values[field])
 
-					elif self.mapping["class"] == "DNS_RPC_RECORD_NAME_PREFERENCE":
+					elif (
+						self.mapping["class"]
+						== "DNS_RPC_RECORD_NAME_PREFERENCE"
+					):
 						if field == "wPreference":
-							record_data.insert_field_to_struct(fieldName=field, fieldStructVal=">H")
+							record_data.insert_field_to_struct(
+								fieldName=field, fieldStructVal=">H"
+							)
 							record_data.setCastField(field, value=values[field])
 						if field == "nameExchange":
 							record_data.toCountName(values[field])
@@ -688,13 +745,17 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 						if field in INT_FIELDS:
 							record_data.setField(field, values[field])
 						else:
-							record_data[field] = record_data.addCountName(values[field])
+							record_data[field] = record_data.addCountName(
+								values[field]
+							)
 
 					elif self.mapping["class"] == "DNS_RPC_RECORD_SRV":
 						if field in INT_FIELDS:
 							record_data.setField(field, values[field])
 						else:
-							record_data[field] = record_data.addCountName(values[field])
+							record_data[field] = record_data.addCountName(
+								values[field]
+							)
 				record["Data"] = record_data
 			return record
 		else:
@@ -727,7 +788,9 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			raise exc_dns.DNSCouldNotGetSerial from e
 
 		try:
-			self.structure = self.make_record_bytes(values, ttl=values["ttl"], serial=self.serial)
+			self.structure = self.make_record_bytes(
+				values, ttl=values["ttl"], serial=self.serial
+			)
 		except Exception as e:
 			logger.exception(e)
 			raise exc_dns.DNSRecordCreate from e
@@ -750,11 +813,15 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			}
 			try:
 				if not dry_run:
-					self.connection.add(self.distinguished_name, ["top", "dnsNode"], node_data)
+					self.connection.add(
+						self.distinguished_name, ["top", "dnsNode"], node_data
+					)
 			except Exception as e:
 				logger.exception(e)
 				try:
-					logger.error(record_to_dict(dnstool.DNS_RECORD(result), ts=False))
+					logger.error(
+						record_to_dict(dnstool.DNS_RECORD(result), ts=False)
+					)
 				except:  # pragma: no cover
 					pass
 				raise e
@@ -774,7 +841,8 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			# If all checks passed
 			if not dry_run:
 				self.connection.modify(
-					self.distinguished_name, {"dnsRecord": [(MODIFY_ADD, self.structure.getData())]}
+					self.distinguished_name,
+					{"dnsRecord": [(MODIFY_ADD, self.structure.getData())]},
 				)
 		return self.connection.result
 
@@ -789,13 +857,16 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			raise exc_dns.DNSZoneInRecord
 
 		search_filter = join_ldap_filter(
-			"objectClass=dnsNode", f"distinguishedName={self.distinguished_name}"
+			"objectClass=dnsNode",
+			f"distinguishedName={self.distinguished_name}",
 		)
 		attributes = ["dnsRecord", "dNSTombstoned", "name"]
 
 		search_target = f"DC={self.zone},{self.dns_root}"
 		self.connection.search(
-			search_base=search_target, search_filter=search_filter, attributes=attributes
+			search_base=search_target,
+			search_filter=search_filter,
+			attributes=attributes,
 		)
 		if len(self.connection.response) > 0:
 			self.raw_entry = self.connection.response[0]
@@ -817,14 +888,19 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			# Set Record Data
 			for record in self.raw_entry["raw_attributes"]["dnsRecord"]:
 				dr = dnstool.DNS_RECORD(record)
-				record_dict = record_to_dict(dr, self.raw_entry["attributes"]["dNSTombstoned"])
+				record_dict = record_to_dict(
+					dr, self.raw_entry["attributes"]["dNSTombstoned"]
+				)
 				record_dict["name"] = record_name
 				record_dict["ttl"] = dr.__getTTL__()
 				logger.debug(
 					f"{__name__} [DEBUG] - Record: {record_name}, Starts With Underscore: {record_name.startswith('_')}, Exclude Entry: {record_name in self.EXCLUDED_ENTRIES}"
 				)
 				logger.debug(f"{__name__} [DEBUG] {dr}")
-				if not record_name.startswith("_") and record_name not in self.EXCLUDED_ENTRIES:
+				if (
+					not record_name.startswith("_")
+					and record_name not in self.EXCLUDED_ENTRIES
+				):
 					result.append(record_dict)
 
 			if len(result) > 0:
@@ -848,7 +924,9 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 
 		self.serial = None
 		try:
-			self.serial = self.get_serial(record_values=new_values, old_serial=old_values["serial"])
+			self.serial = self.get_serial(
+				record_values=new_values, old_serial=old_values["serial"]
+			)
 		except Exception as e:
 			logger.exception(e)
 			raise exc_dns.DNSCouldNotGetSerial
@@ -870,13 +948,15 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		## ! and the operation will be halted.
 		self.main_value = old_values[self.main_field]
 		self.connection.modify(
-			self.distinguished_name, {"dnsRecord": [(MODIFY_DELETE, self.as_bytes)]}
+			self.distinguished_name,
+			{"dnsRecord": [(MODIFY_DELETE, self.as_bytes)]},
 		)
 
 		## Add new DNS Record
 		self.main_value = new_values[self.main_field]
 		self.connection.modify(
-			self.distinguished_name, {"dnsRecord": [(MODIFY_ADD, new_record_bytes)]}
+			self.distinguished_name,
+			{"dnsRecord": [(MODIFY_ADD, new_record_bytes)]},
 		)
 		return self.connection.result
 
@@ -893,7 +973,8 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		# Check if Record exists in Entry
 		if (
 			self.raw_entry is None
-			or self.as_bytes not in self.raw_entry["raw_attributes"]["dnsRecord"]
+			or self.as_bytes
+			not in self.raw_entry["raw_attributes"]["dnsRecord"]
 		):
 			raise exc_dns.DNSRecordEntryDoesNotExist
 
@@ -902,7 +983,8 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		try:
 			if len(self.raw_entry["raw_attributes"]["dnsRecord"]) > 1:
 				self.connection.modify(
-					self.distinguished_name, {"dnsRecord": [(MODIFY_DELETE, self.as_bytes)]}
+					self.distinguished_name,
+					{"dnsRecord": [(MODIFY_DELETE, self.as_bytes)]},
 				)
 			else:  # Delete full entry
 				self.connection.delete(self.distinguished_name)

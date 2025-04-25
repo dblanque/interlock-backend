@@ -2,7 +2,9 @@ import re
 from rest_framework.serializers import ValidationError
 
 
-def canonical_hostname_validator(value: str, trailing_dot=True, allow_underscores=True) -> None:
+def canonical_hostname_validator(
+	value: str, trailing_dot=True, allow_underscores=True
+) -> None:
 	_exc = ValidationError("invalid_field_canonical_hostname")
 	if not isinstance(value, str):
 		raise _exc
@@ -35,7 +37,9 @@ def canonical_hostname_validator(value: str, trailing_dot=True, allow_underscore
 
 
 def srv_target_validator(value: str) -> None:
-	canonical_hostname_validator(value, trailing_dot=True, allow_underscores=True)
+	canonical_hostname_validator(
+		value, trailing_dot=True, allow_underscores=True
+	)
 
 
 def domain_validator(value) -> None:

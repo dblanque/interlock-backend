@@ -97,7 +97,12 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 					debugTimerEnd = perf_counter()
 					logger.info(
 						"Dirtree Fetch Time Elapsed: "
-						+ str(round(debugTimerEnd - debugTimerStart, PERF_LOGGING_ROUND))
+						+ str(
+							round(
+								debugTimerEnd - debugTimerStart,
+								PERF_LOGGING_ROUND,
+							)
+						)
 					)
 			except Exception as e:
 				print(e)
@@ -128,7 +133,9 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		code_msg = "ok"
 
 		data_filter: dict = data.get("filter", None)
-		data_filter_use_defaults = data_filter.pop("use_defaults", None) if data_filter else None
+		data_filter_use_defaults = (
+			data_filter.pop("use_defaults", None) if data_filter else None
+		)
 		try:
 			ldap_filter_object = self.process_ldap_filter(
 				data_filter, default_filter=data_filter_use_defaults
@@ -172,7 +179,12 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 					debugTimerEnd = perf_counter()
 					logger.info(
 						"Dirtree Fetch Time Elapsed: "
-						+ str(round(debugTimerEnd - debugTimerStart, PERF_LOGGING_ROUND))
+						+ str(
+							round(
+								debugTimerEnd - debugTimerStart,
+								PERF_LOGGING_ROUND,
+							)
+						)
 					)
 			except Exception as e:
 				print(e)
@@ -209,7 +221,9 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			self.move_or_rename_object(distinguished_name=distinguished_name, target_path=ldap_path)
+			self.move_or_rename_object(
+				distinguished_name=distinguished_name, target_path=ldap_path
+			)
 
 		return Response(
 			data={
@@ -235,7 +249,9 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			self.move_or_rename_object(distinguished_name=distinguished_name, target_rdn=new_rdn)
+			self.move_or_rename_object(
+				distinguished_name=distinguished_name, target_rdn=new_rdn
+			)
 
 		return Response(
 			data={
@@ -282,7 +298,9 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			self.ldap_connection = ldc.connection
 
 			try:
-				self.ldap_connection.add(object_dn, object_type, attributes=attributes)
+				self.ldap_connection.add(
+					object_dn, object_type, attributes=attributes
+				)
 			except Exception as e:
 				print(f"Could not Add LDAP Object: {object_dn}")
 				print(ldap_object)
@@ -291,7 +309,10 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 					"ldap_response": self.ldap_connection.result,
 					"ldapObject": object_name,
 				}
-				if self.ldap_connection.result.description == "entryAlreadyExists":
+				if (
+					self.ldap_connection.result.description
+					== "entryAlreadyExists"
+				):
 					data["code"] = 409
 				self.ldap_connection.unbind()
 				raise exc_ou.OUCreate(data=data)

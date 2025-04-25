@@ -8,7 +8,10 @@ class CoreException(APIException):
 		if data is not None:
 			self.set_detail(data)
 		else:
-			self.detail = {"code": self.default_code, "detail": self.default_detail}
+			self.detail = {
+				"code": self.default_code,
+				"detail": self.default_detail,
+			}
 
 	def set_detail(self, data):
 		self.detail = data

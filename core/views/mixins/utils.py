@@ -18,10 +18,14 @@ def getldapattr(entry: LDAPEntry, attr: str, /) -> str | Iterable | Any: ...
 
 
 @overload
-def getldapattr(entry: LDAPEntry, attr: str, /, default=None) -> str | Iterable | Any: ...
+def getldapattr(
+	entry: LDAPEntry, attr: str, /, default=None
+) -> str | Iterable | Any: ...
 
 
-def getldapattr(entry: LDAPEntry, attr: str, /, *args, **kwargs) -> str | Iterable | Any:
+def getldapattr(
+	entry: LDAPEntry, attr: str, /, *args, **kwargs
+) -> str | Iterable | Any:
 	"""Get LDAP Attribute with optional default
 
 	Args:

@@ -3,7 +3,10 @@ from django.core.exceptions import ValidationError
 from django.db.transaction import TransactionManagementError
 from django.db.utils import IntegrityError
 from core.models.user import User, USER_TYPE_LOCAL, USER_TYPE_LDAP
-from interlock_backend.test_settings import DEFAULT_SUPERUSER_PASSWORD, DEFAULT_SUPERUSER_USERNAME
+from interlock_backend.test_settings import (
+	DEFAULT_SUPERUSER_PASSWORD,
+	DEFAULT_SUPERUSER_USERNAME,
+)
 from django.db import transaction
 
 
@@ -17,7 +20,9 @@ class TestUserModel:
 	def test_create_user_minimal(self):
 		"""Test creating a user with minimal required fields"""
 		user = User.objects.create(
-			username="test_create_user_minimal", user_type=USER_TYPE_LOCAL, is_enabled=True
+			username="test_create_user_minimal",
+			user_type=USER_TYPE_LOCAL,
+			is_enabled=True,
 		)
 		assert user.pk is not None
 		assert user.user_type == USER_TYPE_LOCAL
@@ -125,11 +130,17 @@ class TestUserModel:
 	def test_user_type_required(self):
 		"""Test that user_type is required"""
 		with pytest.raises(IntegrityError):
-			User.objects.create(username="test_user_type_required", user_type=None, is_enabled=True)
+			User.objects.create(
+				username="test_user_type_required",
+				user_type=None,
+				is_enabled=True,
+			)
 
 	def test_is_enabled_default(self):
 		"""Test that is_enabled defaults to True"""
-		user = User.objects.create(username="test_is_enabled_default", user_type=USER_TYPE_LOCAL)
+		user = User.objects.create(
+			username="test_is_enabled_default", user_type=USER_TYPE_LOCAL
+		)
 		assert user.is_enabled is True
 
 	def test_recovery_codes_field(self):
@@ -235,14 +246,22 @@ class TestUserModel:
 
 	def test_create_superuser_validation(self):
 		"""Test BaseUserManager.create_superuser validation"""
-		with pytest.raises(ValueError, match="Superuser must have is_staff=True"):
+		with pytest.raises(
+			ValueError, match="Superuser must have is_staff=True"
+		):
 			User.objects.create_superuser(
-				username="invalid_superuser1", password=self.default_password, is_staff=False
+				username="invalid_superuser1",
+				password=self.default_password,
+				is_staff=False,
 			)
 
-		with pytest.raises(ValueError, match="Superuser must have is_superuser=True"):
+		with pytest.raises(
+			ValueError, match="Superuser must have is_superuser=True"
+		):
 			User.objects.create_superuser(
-				username="invalid_superuser2", password=self.default_password, is_superuser=False
+				username="invalid_superuser2",
+				password=self.default_password,
+				is_superuser=False,
 			)
 
 	def test_get_queryset_excludes_deleted(self):
@@ -251,7 +270,9 @@ class TestUserModel:
 			username="active_user", password=self.default_password
 		)
 		deleted_user = User.objects.create_user(
-			username="deleted_user", password=self.default_password, deleted=True
+			username="deleted_user",
+			password=self.default_password,
+			deleted=True,
 		)
 
 		queryset = User.objects.get_queryset()
@@ -264,7 +285,9 @@ class TestUserModel:
 			username="active_user2", password=self.default_password
 		)
 		deleted_user = User.objects.create_user(
-			username="deleted_user2", password=self.default_password, deleted=True
+			username="deleted_user2",
+			password=self.default_password,
+			deleted=True,
 		)
 
 		queryset = User.objects.get_full_queryset()
@@ -275,7 +298,9 @@ class TestUserModel:
 	def test_user_properties(self):
 		"""Test BaseUser properties through User model"""
 		user = User.objects.create_user(
-			username="test_properties", password=self.default_password, email="props@example.com"
+			username="test_properties",
+			password=self.default_password,
+			email="props@example.com",
 		)
 
 		assert user.get_username() == "test_properties"
@@ -317,7 +342,9 @@ class TestUserModel:
 
 	def test_username_uniqueness(self):
 		"""Test BaseUser username uniqueness through User model"""
-		User.objects.create_user(username="unique_user", password=self.default_password)
+		User.objects.create_user(
+			username="unique_user", password=self.default_password
+		)
 
 		with pytest.raises(IntegrityError):
 			User.objects.create_user(
@@ -332,7 +359,9 @@ class TestUserModel:
 
 		with transaction.atomic():
 			# Create first user with email
-			User.objects.create_user(username="user1", password=self.default_password, email=email)
+			User.objects.create_user(
+				username="user1", password=self.default_password, email=email
+			)
 
 		# Attempt to create second user with same email - should fail
 		with pytest.raises((IntegrityError, TransactionManagementError)):
@@ -363,7 +392,9 @@ class TestUserModel:
 		"""Test BaseUser required fields through User model"""
 		# Username is required
 		with pytest.raises(ValueError, match="must have a username"):
-			User.objects.create_user(username=None, password=self.default_password)
+			User.objects.create_user(
+				username=None, password=self.default_password
+			)
 
 		# Password is required (validation error, not integrity error)
 		with pytest.raises(ValidationError):

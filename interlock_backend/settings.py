@@ -38,7 +38,9 @@ SECRET_KEY_FALLBACKS = []
 FERNET_KEY = None
 
 django_key_file = os.path.join(BASE_DIR, "interlock_backend", "django_key.py")
-django_key_spec = importutils.find_spec("interlock_backend.django_key", package="django_key_spec")
+django_key_spec = importutils.find_spec(
+	"interlock_backend.django_key", package="django_key_spec"
+)
 if django_key_spec is not None:
 	from interlock_backend import django_key
 
@@ -68,7 +70,9 @@ if SECRET_KEY is None or len(str(SECRET_KEY)) < 1:
 
 FERNET_KEY = None
 fernet_key_file = os.path.join(BASE_DIR, "interlock_backend", "fernet_key.py")
-fernet_key_spec = importutils.find_spec("interlock_backend.fernet_key", package="fernet_key_spec")
+fernet_key_spec = importutils.find_spec(
+	"interlock_backend.fernet_key", package="fernet_key_spec"
+)
 if fernet_key_spec is not None:
 	from interlock_backend import fernet_key
 
@@ -329,7 +333,9 @@ if DEBUG:
 REST_FRAMEWORK = {
 	"COERCE_DECIMAL_TO_STRING": False,
 	"EXCEPTION_HANDLER": "core.system.exceptionhandler.custom_exception_handler",
-	"DEFAULT_AUTHENTICATION_CLASSES": ("core.views.mixins.auth.CookieJWTAuthentication",),
+	"DEFAULT_AUTHENTICATION_CLASSES": (
+		"core.views.mixins.auth.CookieJWTAuthentication",
+	),
 	"DEFAULT_RENDERER_CLASSES": DEFAULT_RENDERER_CLASSES,
 	"DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
 	"PAGE_SIZE": 10,
@@ -400,9 +406,7 @@ EMAIL_PORT = 587
 EMAIL_HOST_USER = ""
 EMAIL_HOST_PASSWORD = "NOUSERYET"
 EMAIL_USE_TLS = True
-EMAIL_USE_SSL = (
-	False  # Note that TLS and SSL are mutually exclusive, both can NOT be simultaneously True.
-)
+EMAIL_USE_SSL = False  # Note that TLS and SSL are mutually exclusive, both can NOT be simultaneously True.
 EMAIL_TIMEOUT = 30
 EMAIL_SSL_KEYFILE = None
 EMAIL_SSL_CERTFILE = None

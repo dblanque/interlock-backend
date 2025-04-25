@@ -45,7 +45,9 @@ class TestViewSet(BaseViewSet):
 		ldap_result = None
 		try:
 			with LDAPConnector(force_admin=True) as ldc:
-				ldap_server = ldc.connection.server_pool.get_current_server(ldc.connection)
+				ldap_server = ldc.connection.server_pool.get_current_server(
+					ldc.connection
+				)
 				ldap_result = ldc.connection.result
 		except Exception as e:
 			print(e)
@@ -59,7 +61,9 @@ class TestViewSet(BaseViewSet):
 					if hasattr(ldap_info, "schema") and ldap_info.schema:
 						f.write(ldap_info.schema.to_json())
 					f.close()
-			CONNECTION_CLOSED = True if not ldap_info.connection.bound else False
+			CONNECTION_CLOSED = (
+				True if not ldap_info.connection.bound else False
+			)
 		except:
 			logger.warning("LDAP Connector Debugging could not log schema.")
 			pass

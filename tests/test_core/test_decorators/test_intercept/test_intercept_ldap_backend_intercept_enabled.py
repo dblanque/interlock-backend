@@ -23,7 +23,9 @@ def interlock_setting_get():
 	),
 	ids=lambda x: "As Decorator Factory" if x else "As Decorator",
 )
-def test_ldap_backend_intercept_enabled(is_factory, mock_request, interlock_setting_get, mocker):
+def test_ldap_backend_intercept_enabled(
+	is_factory, mock_request, interlock_setting_get, mocker
+):
 	# Mock InterlockSetting.objects.get to return an enabled LDAP setting
 	mock_ldap_setting = mocker.Mock()
 	mock_ldap_setting.value = True
@@ -40,7 +42,9 @@ def test_ldap_backend_intercept_enabled(is_factory, mock_request, interlock_sett
 	assert result == "response"
 
 
-def test_ldap_backend_intercept_disabled(mock_request, interlock_setting_get, mocker):
+def test_ldap_backend_intercept_disabled(
+	mock_request, interlock_setting_get, mocker
+):
 	# Mock InterlockSetting.objects.get to return a disabled LDAP setting
 	mock_ldap_setting = mocker.Mock()
 	mock_ldap_setting.value = False
@@ -51,7 +55,9 @@ def test_ldap_backend_intercept_disabled(mock_request, interlock_setting_get, mo
 		decorated_func(None, mock_request)
 
 
-def test_ldap_backend_intercept_setting_missing(mock_request, interlock_setting_get, mocker):
+def test_ldap_backend_intercept_setting_missing(
+	mock_request, interlock_setting_get, mocker
+):
 	# Mock InterlockSetting.objects.get to raise ObjectDoesNotExist
 	mocker.patch(interlock_setting_get, side_effect=ObjectDoesNotExist)
 

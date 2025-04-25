@@ -35,13 +35,23 @@ class BaseLogModel(models.Model):
 class Log(BaseLogModel):
 	user = models.ForeignKey("User", on_delete=models.CASCADE)
 	operation_type = models.CharField(
-		_("operation_type"), choices=ACTION_CHOICES, max_length=256, null=False, blank=False
+		_("operation_type"),
+		choices=ACTION_CHOICES,
+		max_length=256,
+		null=False,
+		blank=False,
 	)
 	log_target_class = models.CharField(
-		_("log_target_class"), choices=CLASS_CHOICES, max_length=256, null=False, blank=False
+		_("log_target_class"),
+		choices=CLASS_CHOICES,
+		max_length=256,
+		null=False,
+		blank=False,
 	)
 	log_target = models.JSONField(_("log_target"), null=True, blank=True)
-	message = models.CharField(_("message"), max_length=256, null=True, blank=True)
+	message = models.CharField(
+		_("message"), max_length=256, null=True, blank=True
+	)
 
 	def __str__(self):
 		return f"log_{self.id}_{self.operation_type.lower()}_{self.log_target_class.lower()}"

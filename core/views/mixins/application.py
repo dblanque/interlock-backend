@@ -39,7 +39,9 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 	application_serializer = ApplicationSerializer
 	client_serializer = ClientSerializer
 
-	def get_application_data(self, application_id: int) -> tuple[Application, Client]:
+	def get_application_data(
+		self, application_id: int
+	) -> tuple[Application, Client]:
 		"""Fetched Application with corresponding Client
 
 		Args:
@@ -73,7 +75,9 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 	def get_response_type_codes():
 		return ResponseType.objects.all().values_list("value", flat=True)
 
-	def set_client_response_types(self, new_response_types: dict, client: Client) -> None:
+	def set_client_response_types(
+		self, new_response_types: dict, client: Client
+	) -> None:
 		RESPONSE_TYPE_ID_MAP = self.get_response_type_id_map()
 		for key, value in new_response_types.items():
 			if key in RESPONSE_TYPE_ID_MAP:
@@ -86,7 +90,9 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 			else:
 				logger.warning("Unknown response type key (%s)", key)
 
-	def insert_clean_data(self, data: dict) -> tuple[ApplicationSerializer, dict]:
+	def insert_clean_data(
+		self, data: dict
+	) -> tuple[ApplicationSerializer, dict]:
 		FIELDS_EXCLUDE = (
 			"client_id",
 			"client_secret",
@@ -102,7 +108,9 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 			if field in data:
 				extra_fields[field] = data.pop(field)
 
-		if not isinstance(data["scopes"], str) and isinstance(data["scopes"], Iterable):
+		if not isinstance(data["scopes"], str) and isinstance(
+			data["scopes"], Iterable
+		):
 			data["scopes"] = " ".join(data["scopes"])
 
 		serializer = self.application_serializer(data=data)
@@ -180,7 +188,9 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 		)
 
 		data = {}
-		application, client = self.get_application_data(application_id=application_id)
+		application, client = self.get_application_data(
+			application_id=application_id
+		)
 		response_types: list[str] = client.response_type_values()
 
 		for field in APPLICATION_FIELDS:
@@ -202,7 +212,9 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 				data["response_types"][r_type] = True
 		return data
 
-	def update_application(self, application_id: int, data: dict) -> tuple[Application, Client]:
+	def update_application(
+		self, application_id: int, data: dict
+	) -> tuple[Application, Client]:
 		APPLICATION_FIELDS = (
 			"name",
 			"redirect_uris",
@@ -223,7 +235,9 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 			if field in data:
 				del data[field]
 
-		application, client = self.get_application_data(application_id=application_id)
+		application, client = self.get_application_data(
+			application_id=application_id
+		)
 		application: Application
 		client: Client
 		new_application = {}
@@ -244,7 +258,9 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 		):
 			new_application["scopes"] = " ".join(new_application["scopes"])
 
-		serializer = self.application_serializer(data=new_application, partial=True)
+		serializer = self.application_serializer(
+			data=new_application, partial=True
+		)
 		if not serializer.is_valid():
 			raise BadRequest(data={"errors": serializer.errors})
 
@@ -254,7 +270,9 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 				new_client[field] = data.pop(field)
 
 		if "redirect_uris" in new_application:
-			new_client["redirect_uris"] = new_application["redirect_uris"].split(",")
+			new_client["redirect_uris"] = new_application[
+				"redirect_uris"
+			].split(",")
 		c_serializer = self.client_serializer(data=new_client, partial=True)
 		if not c_serializer.is_valid():
 			raise BadRequest(data={"errors": c_serializer.errors})

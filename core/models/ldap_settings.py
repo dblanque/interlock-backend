@@ -10,7 +10,11 @@
 from django.db import models
 from core.models.validators.ldap import ldap_uri_validator
 from django.utils.translation import gettext_lazy as _
-from core.models.setting.base import BaseSetting, BaseSettingsPreset, add_fields_from_dict
+from core.models.setting.base import (
+	BaseSetting,
+	BaseSettingsPreset,
+	add_fields_from_dict,
+)
 from core.models.types.settings import (
 	LDAP_SETTING_FIELDS,
 	TYPE_STRING,
@@ -98,16 +102,26 @@ LDAP_SETTING_TYPE_CHOICES = tuple(LDAP_SETTING_TYPE_CHOICES)
 class LDAPPreset(BaseSettingsPreset):
 	id = models.BigAutoField(verbose_name=_("id"), primary_key=True)
 	name = models.CharField(
-		verbose_name=_("name"), unique=True, null=False, blank=False, max_length=128
+		verbose_name=_("name"),
+		unique=True,
+		null=False,
+		blank=False,
+		max_length=128,
 	)
-	label = models.CharField(verbose_name=_("label"), blank=False, null=False, max_length=64)
-	active = models.BooleanField(verbose_name=_("active"), unique=True, null=True)
+	label = models.CharField(
+		verbose_name=_("label"), blank=False, null=False, max_length=64
+	)
+	active = models.BooleanField(
+		verbose_name=_("active"), unique=True, null=True
+	)
 
 	class Meta:
 		db_table = LDAP_PRESET_TABLE
 
 
-@add_fields_from_dict(LDAP_SETTING_FIELDS, validators_dict=VALIDATORS, args_pass=FIELD_ARGS)
+@add_fields_from_dict(
+	LDAP_SETTING_FIELDS, validators_dict=VALIDATORS, args_pass=FIELD_ARGS
+)
 class LDAPSetting(BaseSetting):
 	setting_fields = LDAP_SETTING_FIELDS
 	name = models.CharField(
@@ -121,7 +135,9 @@ class LDAPSetting(BaseSetting):
 	preset = models.ForeignKey(
 		LDAPPreset, verbose_name=_("settings_preset"), on_delete=models.CASCADE
 	)
-	type = models.CharField(verbose_name=_("type"), choices=LDAP_SETTING_TYPE_CHOICES, null=False)
+	type = models.CharField(
+		verbose_name=_("type"), choices=LDAP_SETTING_TYPE_CHOICES, null=False
+	)
 
 	class Meta:
 		db_table = LDAP_SETTING_TABLE

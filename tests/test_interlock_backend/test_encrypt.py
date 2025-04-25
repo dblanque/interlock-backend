@@ -32,7 +32,8 @@ def test_create_rsa_key(mocker):
 		"interlock_backend.encrypt.RSA.generate", return_value=m_key
 	)
 	m_create: MockType = mocker.patch(
-		"core.models.interlock_settings.InterlockSetting.objects.create", return_value=m_db_obj
+		"core.models.interlock_settings.InterlockSetting.objects.create",
+		return_value=m_db_obj,
 	)
 	result = create_rsa_key()
 
@@ -68,7 +69,8 @@ def test_import_rsa_key_when_exists(mocker):
 
 	# Mocked internal functions
 	m_get: MockType = mocker.patch(
-		"core.models.interlock_settings.InterlockSetting.objects.get", return_value=m_db_obj
+		"core.models.interlock_settings.InterlockSetting.objects.get",
+		return_value=m_db_obj,
 	)
 	m_import_key: MockType = mocker.patch(
 		"interlock_backend.encrypt.RSA.import_key", return_value=m_key

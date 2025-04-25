@@ -34,7 +34,9 @@ RSA_KEY_BITS = 4096
 KEY_FILE_EXPORT = os.path.join(KEY_PATH, f"rsa_{RSA_KEY_BITS}.pem")
 
 
-def fernet_encrypt(data: str, return_bytes=False, bytes_encoding="utf-8") -> str | bytes:
+def fernet_encrypt(
+	data: str, return_bytes=False, bytes_encoding="utf-8"
+) -> str | bytes:
 	"""
 	:rtype: str | bytes
 	:return: bytes cast to string by default
@@ -139,7 +141,11 @@ def aes_encrypt(data: str, fernet_pass=False) -> tuple[bytes]:
 
 
 def aes_decrypt(
-	encrypted_aes_key: bytes, ciphertext: bytes, nonce: bytes, tag: bytes, fernet_pass=False
+	encrypted_aes_key: bytes,
+	ciphertext: bytes,
+	nonce: bytes,
+	tag: bytes,
+	fernet_pass=False,
 ) -> str:
 	"""
 	:param fernet_pass: Whether to do an additional Fernet-based Encryption,

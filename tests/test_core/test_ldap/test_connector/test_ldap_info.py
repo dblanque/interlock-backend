@@ -6,9 +6,13 @@ from core.ldap.connector import LDAPInfo
 @pytest.fixture
 def f_ldap_info(mocker, f_user, f_server_pool, f_server, f_ldap_connection):
 	mocker.patch("core.ldap.connector.LDAPInfo.__init__", return_value=None)
-	mocker.patch("core.ldap.connector.ldap3.ServerPool", return_value=f_server_pool)
+	mocker.patch(
+		"core.ldap.connector.ldap3.ServerPool", return_value=f_server_pool
+	)
 	mocker.patch("core.ldap.connector.ldap3.Server", return_value=f_server)
-	mocker.patch("core.ldap.connector.ldap3.Connection", return_value=f_ldap_connection)
+	mocker.patch(
+		"core.ldap.connector.ldap3.Connection", return_value=f_ldap_connection
+	)
 	mocker.patch("core.ldap.connector.aes_decrypt", return_value="somepassword")
 	m_ldap_info = LDAPInfo(user=f_user)
 	m_ldap_info.connection = f_ldap_connection
@@ -22,7 +26,9 @@ def fake_enter(self):
 
 def test_init_sets_get_ldap_info(mocker, f_user):
 	m_super_init = mocker.patch("core.ldap.connector.LDAPConnector.__init__")
-	m_super_enter = mocker.patch("core.ldap.connector.LDAPConnector.__enter__", new=fake_enter)
+	m_super_enter = mocker.patch(
+		"core.ldap.connector.LDAPConnector.__enter__", new=fake_enter
+	)
 	mocker.patch("core.ldap.connector.LDAPConnector.__exit__")
 	m_refresh = mocker.patch("core.ldap.connector.LDAPInfo.refresh_server_info")
 
@@ -46,8 +52,12 @@ def test_refresh_server_info(mocker, f_ldap_info, f_server, f_server_pool):
 	f_ldap_info.refresh_server_info()
 
 	# Verify
-	f_server_pool.get_current_server.assert_called_once_with(f_ldap_info.connection)
-	f_server.get_info_from_server.assert_called_once_with(f_ldap_info.connection)
+	f_server_pool.get_current_server.assert_called_once_with(
+		f_ldap_info.connection
+	)
+	f_server.get_info_from_server.assert_called_once_with(
+		f_ldap_info.connection
+	)
 	assert f_ldap_info.schema == f_server.schema
 	assert f_ldap_info.info == f_server.info
 

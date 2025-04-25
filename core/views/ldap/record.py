@@ -78,7 +78,9 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 		# New Record Data Validation
 		validated_record_data = self.validate_record(record_data=record_data)
 		# Old Record Data Validation
-		validated_old_record_data = self.validate_record(record_data=old_record_data)
+		validated_old_record_data = self.validate_record(
+			record_data=old_record_data
+		)
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
@@ -121,7 +123,9 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 				if not isinstance(record_delete, dict):
 					raise exc_dns.DNSRecordDataMalformed
 				# Record Data Validation
-				validated_record_data = self.validate_record(record_data=record_delete)
+				validated_record_data = self.validate_record(
+					record_data=record_delete
+				)
 				result = self.delete_record(validated_record_data)
 			# Multi Record Delete
 			if multi_record_delete:
@@ -131,7 +135,9 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 				for _record in multi_record_delete:
 					if not isinstance(_record, dict):
 						raise exc_dns.DNSRecordDataMalformed
-					validated_record_data = self.validate_record(record_data=_record)
+					validated_record_data = self.validate_record(
+						record_data=_record
+					)
 
 					result.append(self.delete_record(validated_record_data))
 

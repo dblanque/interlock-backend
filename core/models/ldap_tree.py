@@ -70,7 +70,10 @@ class LDAPTree(LDAPObject):
 		# Set LDAPTree Default Values
 		self.subobject_id = 0
 		self.ldap_filter = search_filter_from_dict(
-			{**RuntimeSettings.LDAP_DIRTREE_CN_FILTER, **RuntimeSettings.LDAP_DIRTREE_OU_FILTER}
+			{
+				**RuntimeSettings.LDAP_DIRTREE_CN_FILTER,
+				**RuntimeSettings.LDAP_DIRTREE_OU_FILTER,
+			}
 		)
 		self.children_object_type = "array"
 
@@ -88,10 +91,14 @@ class LDAPTree(LDAPObject):
 	def __validate_kwargs__(self, kwargs):
 		"""Super class override."""
 		if "connection" not in kwargs:
-			raise Exception("LDAP Object requires an LDAP Connection to Initialize")
+			raise Exception(
+				"LDAP Object requires an LDAP Connection to Initialize"
+			)
 
 	def __fetch_object__(self):
-		raise AttributeError(f"{type(self).__name__} has no attribute __fetch_object__")
+		raise AttributeError(
+			f"{type(self).__name__} has no attribute __fetch_object__"
+		)
 
 	def __fetch_tree__(self):
 		self.connection.search(
@@ -115,10 +122,14 @@ class LDAPTree(LDAPObject):
 			distinguished_name = entity.entry_dn
 			# Set entity attributes
 			_current_obj = {}
-			_current_obj["name"] = str(distinguished_name).split(",")[0].split("=")[1]
+			_current_obj["name"] = (
+				str(distinguished_name).split(",")[0].split("=")[1]
+			)
 			_current_obj["id"] = self.subobject_id
 			_current_obj["distinguishedName"] = distinguished_name
-			_current_obj["type"] = str(entity.objectCategory).split(",")[0].split("=")[1]
+			_current_obj["type"] = (
+				str(entity.objectCategory).split(",")[0].split("=")[1]
+			)
 			if (
 				_current_obj["name"] in LDAP_BUILTIN_OBJECTS
 				or "builtinDomain" in entity.objectClass
@@ -129,7 +140,9 @@ class LDAPTree(LDAPObject):
 			# Recursive Children Search Here #
 			##################################
 			if self.recursive == True:
-				_current_obj["children"] = self.__get_children__(distinguished_name)
+				_current_obj["children"] = self.__get_children__(
+					distinguished_name
+				)
 
 			# If children object type should be Array
 			if self.children_object_type == "array":
@@ -141,7 +154,9 @@ class LDAPTree(LDAPObject):
 			elif self.children_object_type == "dict":
 				###### Append subobject to Dict ######
 				children[_current_obj["distinguishedName"]] = _current_obj
-				children[_current_obj["distinguishedName"]].pop("distinguishedName")
+				children[_current_obj["distinguishedName"]].pop(
+					"distinguishedName"
+				)
 
 				###### Increase subobject_id ######
 				self.subobject_id += 1
@@ -204,22 +219,35 @@ class LDAPTree(LDAPObject):
 			_current_obj["name"] = str(entry["dn"]).split(",")[0].split("=")[1]
 			_current_obj["distinguishedName"] = entry["dn"]
 			_current_obj["type"] = (
-				str(entry["attributes"]["objectCategory"]).split(",")[0].split("=")[1]
+				str(entry["attributes"]["objectCategory"])
+				.split(",")[0]
+				.split("=")[1]
 			)
 			if (
 				_current_obj["name"] in LDAP_BUILTIN_OBJECTS
 				or "builtinDomain" in entry["attributes"]["objectClass"]
 				or common_name in LDAP_BUILTIN_OBJECTS
 				or common_name == "Domain Controllers"
-			) and (common_name.lower() != "computers" and common_name.lower() != "users"):
+			) and (
+				common_name.lower() != "computers"
+				and common_name.lower() != "users"
+			):
 				_current_obj["builtin"] = True
 			# Set the sub-object children
-			if self.children_object_type == "array" and "children" not in _current_obj:
+			if (
+				self.children_object_type == "array"
+				and "children" not in _current_obj
+			):
 				_current_obj["children"] = []
-			elif self.children_object_type == "dict" and "children" not in _current_obj:
+			elif (
+				self.children_object_type == "dict"
+				and "children" not in _current_obj
+			):
 				_current_obj["children"] = {}
 			else:
-				raise ValueError(f"children_object_type ({self.children_object_type}) unsupported.")
+				raise ValueError(
+					f"children_object_type ({self.children_object_type}) unsupported."
+				)
 
 			# Set all other attributes
 			for attr in entry["attributes"]:
@@ -232,15 +260,21 @@ class LDAPTree(LDAPObject):
 						for cla in user_types:
 							if (
 								cla in entry["attributes"]["objectClass"]
-								and "contact" not in entry["attributes"]["objectClass"]
+								and "contact"
+								not in entry["attributes"]["objectClass"]
 							):
 								value = entry["attributes"][attr][0]
 								_current_obj["username"] = value
-					elif attr == "cn" and "group" in entry["attributes"]["objectClass"]:
+					elif (
+						attr == "cn"
+						and "group" in entry["attributes"]["objectClass"]
+					):
 						value = entry["attributes"][attr][0]
 						_current_obj["groupname"] = value
 					elif attr == "objectCategory":
-						value = self.__get_common_name__(entry["attributes"][attr])
+						value = self.__get_common_name__(
+							entry["attributes"][attr]
+						)
 						_current_obj["type"] = value
 					elif (
 						attr == "objectSid"
@@ -256,7 +290,8 @@ class LDAPTree(LDAPObject):
 						except Exception as e:
 							logger.exception(e)
 							logger.error(
-								"Could not translate SID Byte Array for " + distinguished_name
+								"Could not translate SID Byte Array for "
+								+ distinguished_name
 							)
 					elif attr not in self.excluded_ldap_attrs:
 						try:

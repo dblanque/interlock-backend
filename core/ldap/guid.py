@@ -66,7 +66,9 @@ class GUID:
 				try:
 					guid = bytearray(guid)
 				except Exception as e:
-					raise ValueError("Could not implicitly convert bytes to bytearray.") from e
+					raise ValueError(
+						"Could not implicitly convert bytes to bytearray."
+					) from e
 			self.from_bytes(guid_bytes=guid)
 		return None
 
@@ -80,7 +82,9 @@ class GUID:
 
 		parts = guid_str.split("-")
 		if len(parts) != 5:
-			raise ValueError("Invalid GUID format, must have 5 parts separated by '-'")
+			raise ValueError(
+				"Invalid GUID format, must have 5 parts separated by '-'"
+			)
 
 		byte_list = [0] * 16
 
@@ -90,7 +94,9 @@ class GUID:
 			# Split part into two-character hex pairs
 			hex_pairs = [part[i : i + 2] for i in range(0, len(part), 2)]
 			if len(hex_pairs) * 2 != len(part):
-				raise ValueError(f"Part {group_index} '{part}' has invalid length")
+				raise ValueError(
+					f"Part {group_index} '{part}' has invalid length"
+				)
 
 			# Reverse the hex pairs if required
 			if reverse_flag:
@@ -100,7 +106,9 @@ class GUID:
 			try:
 				bytes_group = [int(hp, 16) for hp in hex_pairs]
 			except ValueError as e:
-				raise ValueError(f"Invalid hex in part {group_index} '{part}': {e}")
+				raise ValueError(
+					f"Invalid hex in part {group_index} '{part}': {e}"
+				)
 
 			# Check if the number of bytes matches the slice length
 			start = byte_slice.start
@@ -134,8 +142,12 @@ class GUID:
 			try:
 				guid_bytes = bytearray(guid_bytes[0])
 			except Exception as e:
-				raise ValueError("Could not implicitly convert list to bytearray.") from e
-		assert isinstance(guid_bytes, bytearray), "guid_bytes must be a bytearray"
+				raise ValueError(
+					"Could not implicitly convert list to bytearray."
+				) from e
+		assert isinstance(guid_bytes, bytearray), (
+			"guid_bytes must be a bytearray"
+		)
 		self.data_bytes_raw = guid_bytes
 		# Unpack with Network Byte Ordering
 		try:
@@ -158,7 +170,9 @@ class GUID:
 			self.data[d_index] = "".join(sliced_hex_list)
 
 		# Construct the UUID string from the data dictionary
-		self.uuid_str = "-".join([self.data[i] for i in range(len(DATA_DEF_LDAP))])
+		self.uuid_str = "-".join(
+			[self.data[i] for i in range(len(DATA_DEF_LDAP))]
+		)
 
 		# Validate the constructed UUID string
 		try:

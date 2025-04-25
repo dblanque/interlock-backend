@@ -9,7 +9,10 @@
 
 # ---------------------------------- IMPORTS -----------------------------------#
 ### Interlock
-from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS, BAD_LOGIN_COOKIE_NAME
+from interlock_backend.settings import (
+	SIMPLE_JWT as JWT_SETTINGS,
+	BAD_LOGIN_COOKIE_NAME,
+)
 
 ### Rest Framework
 from rest_framework_simplejwt import views as jwt_views
@@ -42,7 +45,9 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 
 	def post(self, request: Request, *args, **kwargs):
 		try:
-			serializer: TokenObtainPairSerializer = self.get_serializer(data=request.data)
+			serializer: TokenObtainPairSerializer = self.get_serializer(
+				data=request.data
+			)
 			serializer.is_valid(raise_exception=True)
 		except Exception as e:
 			if any(type(e) == te for te in self.token_exc):
@@ -72,14 +77,18 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 		validated_data["access_expire"] = access_expire_epoch_seconds * 1000
 		validated_data["refresh_expire"] = refresh_expire_epoch_seconds * 1000
 
-		response = Response(serializer.validated_data, status=status.HTTP_200_OK)
+		response = Response(
+			serializer.validated_data, status=status.HTTP_200_OK
+		)
 		response.set_cookie(
 			key=JWT_SETTINGS["AUTH_COOKIE_NAME"],
 			value=tokens["access"],
 			httponly=True,
 			samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
 			secure=JWT_SETTINGS["AUTH_COOKIE_SECURE"],
-			expires=datetime.fromtimestamp(access_expire_epoch_seconds).strftime(DATE_FMT_COOKIE),
+			expires=datetime.fromtimestamp(
+				access_expire_epoch_seconds
+			).strftime(DATE_FMT_COOKIE),
 			domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
 		)
 		response.set_cookie(
@@ -88,7 +97,9 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 			httponly=True,
 			samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
 			secure=JWT_SETTINGS["AUTH_COOKIE_SECURE"],
-			expires=datetime.fromtimestamp(refresh_expire_epoch_seconds).strftime(DATE_FMT_COOKIE),
+			expires=datetime.fromtimestamp(
+				refresh_expire_epoch_seconds
+			).strftime(DATE_FMT_COOKIE),
 			domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
 		)
 		response.set_cookie(

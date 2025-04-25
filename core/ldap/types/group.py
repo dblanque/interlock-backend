@@ -6,6 +6,7 @@
 # Module: core.ldap.types.group
 from enum import Enum
 
+
 class LDAPGroupTypes(Enum):
 	# Types
 	TYPE_DISTRIBUTION = 0
@@ -16,9 +17,8 @@ class LDAPGroupTypes(Enum):
 	SCOPE_DOMAIN_LOCAL = 4
 	SCOPE_UNIVERSAL = 8
 
-LDAP_GROUP_TYPES = {
-	t.name: t.value for t in LDAPGroupTypes
-}
+
+LDAP_GROUP_TYPES = {t.name: t.value for t in LDAPGroupTypes}
 
 # Group Type Value Mapping
 MAPPED_GROUP_TYPE_DISTRIBUTION = 0

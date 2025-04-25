@@ -21,7 +21,10 @@ def f_mock_soa_record():
 
 class TestDomainViewMixin:
 	def test_get_zone_soa(self, f_domain_mixin, f_mock_soa_record, mocker):
-		mocker.patch("core.views.mixins.ldap.domain.LDAPRecord", return_value=f_mock_soa_record)
+		mocker.patch(
+			"core.views.mixins.ldap.domain.LDAPRecord",
+			return_value=f_mock_soa_record,
+		)
 
 		result = f_domain_mixin.get_zone_soa(LDAP_DOMAIN)
 		assert result == f_mock_soa_record.data

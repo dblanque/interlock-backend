@@ -25,8 +25,12 @@ INTERLOCK_SETTING_MAP = {
 	INTERLOCK_SETTING_ENABLE_LDAP: TYPE_BOOL,
 }
 INTERLOCK_SETTING_PUBLIC = (INTERLOCK_SETTING_ENABLE_LDAP,)
-INTERLOCK_SETTING_NAME_CHOICES = tuple([(k, k.upper()) for k in INTERLOCK_SETTING_MAP.keys()])
-INTERLOCK_SETTING_TYPE_CHOICES = tuple([(k, k.upper()) for k in INTERLOCK_SETTING_FIELDS.keys()])
+INTERLOCK_SETTING_NAME_CHOICES = tuple(
+	[(k, k.upper()) for k in INTERLOCK_SETTING_MAP.keys()]
+)
+INTERLOCK_SETTING_TYPE_CHOICES = tuple(
+	[(k, k.upper()) for k in INTERLOCK_SETTING_FIELDS.keys()]
+)
 
 
 @add_fields_from_dict(INTERLOCK_SETTING_FIELDS)
@@ -34,10 +38,16 @@ class InterlockSetting(BaseSetting):
 	setting_fields = INTERLOCK_SETTING_FIELDS
 	id = models.BigAutoField(verbose_name=_("id"), primary_key=True)
 	name = models.CharField(
-		verbose_name=_("type"), choices=INTERLOCK_SETTING_NAME_CHOICES, null=False, blank=False
+		verbose_name=_("type"),
+		choices=INTERLOCK_SETTING_NAME_CHOICES,
+		null=False,
+		blank=False,
 	)
 	type = models.CharField(
-		verbose_name=_("type"), choices=INTERLOCK_SETTING_TYPE_CHOICES, null=False, blank=False
+		verbose_name=_("type"),
+		choices=INTERLOCK_SETTING_TYPE_CHOICES,
+		null=False,
+		blank=False,
 	)
 
 	def save(self, *args, **kwargs):

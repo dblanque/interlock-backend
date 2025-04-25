@@ -12,11 +12,16 @@ from core.models.user import User
 from core.models.application import Application, ApplicationSecurityGroup
 
 ### Serializers
-from core.serializers.application_group import ApplicationSecurityGroupSerializer
+from core.serializers.application_group import (
+	ApplicationSecurityGroupSerializer,
+)
 
 ### Exceptions
 from core.exceptions.base import BadRequest
-from core.exceptions.application_group import ApplicationGroupExists, ApplicationGroupDoesNotExist
+from core.exceptions.application_group import (
+	ApplicationGroupExists,
+	ApplicationGroupDoesNotExist,
+)
 from core.exceptions.base import BadRequest
 
 ### ViewSets
@@ -38,7 +43,9 @@ class ApplicationSecurityGroupViewMixin(viewsets.ViewSetMixin):
 
 	def insert_application_group(self, data: dict) -> None:
 		serializer = self.serializer_class(data=data)
-		application: Application = self.app_queryset.get(id=int(data["application"]))
+		application: Application = self.app_queryset.get(
+			id=int(data["application"])
+		)
 		if self.queryset.filter(application=application.id).exists():
 			raise ApplicationGroupExists
 
@@ -46,9 +53,12 @@ class ApplicationSecurityGroupViewMixin(viewsets.ViewSetMixin):
 			raise BadRequest(data={"errors": serializer.errors})
 		with transaction.atomic():
 			asg = ApplicationSecurityGroup.objects.create(
-				application=application, ldap_objects=serializer.data["ldap_objects"]
+				application=application,
+				ldap_objects=serializer.data["ldap_objects"],
 			)
-			users = list(self.user_queryset.filter(pk__in=serializer.data["users"]))
+			users = list(
+				self.user_queryset.filter(pk__in=serializer.data["users"])
+			)
 			for user in users:
 				asg.users.add(user)
 			asg.save()
@@ -56,7 +66,13 @@ class ApplicationSecurityGroupViewMixin(viewsets.ViewSetMixin):
 	def list_application_groups(self):
 		data = []
 		for asg in list(self.queryset.all()):
-			data.append({"id": asg.id, "enabled": asg.enabled, "application": asg.application.name})
+			data.append(
+				{
+					"id": asg.id,
+					"enabled": asg.enabled,
+					"application": asg.application.name,
+				}
+			)
 		return {
 			"application_groups": data,
 			"headers": [
@@ -88,7 +104,9 @@ class ApplicationSecurityGroupViewMixin(viewsets.ViewSetMixin):
 			raise ApplicationGroupDoesNotExist
 
 		asg = self.queryset.get(id=pk)
-		users = self.user_queryset.filter(pk__in=data["users"]).values_list("id", flat=True)
+		users = self.user_queryset.filter(pk__in=data["users"]).values_list(
+			"id", flat=True
+		)
 		data["users"] = users
 		serializer = self.serializer_class(asg, data=data)
 		if not serializer.is_valid():
@@ -101,9 +119,13 @@ class ApplicationSecurityGroupViewMixin(viewsets.ViewSetMixin):
 		if not self.queryset.filter(id=pk).exists():
 			raise ApplicationGroupDoesNotExist
 		if not "enabled" in data:
-			raise BadRequest(data={"errors": "Missing boolean field 'enabled' in data."})
+			raise BadRequest(
+				data={"errors": "Missing boolean field 'enabled' in data."}
+			)
 		if not isinstance(data["enabled"], bool):
-			raise BadRequest(data={"errors": "Field 'enabled' must be a boolean."})
+			raise BadRequest(
+				data={"errors": "Field 'enabled' must be a boolean."}
+			)
 		asg = self.queryset.get(id=pk)
 		asg.enabled = data["enabled"]
 		asg.save()

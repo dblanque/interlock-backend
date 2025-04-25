@@ -63,7 +63,9 @@ named_view_sets = {
 }
 
 if DEBUG == True:
-	named_view_sets.update({r"ldap/gpo": GPOViewSet, r"test": TestViewSet, r"debug": DebugViewSet})
+	named_view_sets.update(
+		{r"ldap/gpo": GPOViewSet, r"test": TestViewSet, r"debug": DebugViewSet}
+	)
 
 [
 	router.register(f"api/{name}", view_set, basename=name)
@@ -83,11 +85,25 @@ urlpatterns = [
 	path("admin/", admin.site.urls),
 	# {BASE_URL} api/token/*
 	path("api/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
-	path("api/token/refresh/", AuthViewSet.as_view({"post": "refresh"}), name="token_refresh"),
-	path("api/token/revoke/", AuthViewSet.as_view({"post": "logout"}), name="token_revoke"),
+	path(
+		"api/token/refresh/",
+		AuthViewSet.as_view({"post": "refresh"}),
+		name="token_refresh",
+	),
+	path(
+		"api/token/revoke/",
+		AuthViewSet.as_view({"post": "logout"}),
+		name="token_revoke",
+	),
 	# Default OIDC endpoint overrides
-	re_path(r"openid/authorize/?$", OidcAuthorizeView.as_view(), name="authorize"),
-	re_path(r"openid/consent/?$", CustomOidcViewSet.as_view({"post": "consent"}), name="consent"),
+	re_path(
+		r"openid/authorize/?$", OidcAuthorizeView.as_view(), name="authorize"
+	),
+	re_path(
+		r"openid/consent/?$",
+		CustomOidcViewSet.as_view({"post": "consent"}),
+		name="consent",
+	),
 	# {BASE_URL} / openid
 	path("openid/", include("oidc_provider.urls", namespace="oidc_provider")),
 ]

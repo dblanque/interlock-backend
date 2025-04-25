@@ -91,12 +91,16 @@ LDAP_AUTH_SYNC_USER_RELATIONS = "django_python3_ldap.utils.sync_user_relations"
 # Path to a callable that takes a dict of {ldap_field_name: value},
 # returning a list of [ldap_search_filter]. The search filters will then be AND'd
 # together when creating the final search filter.
-LDAP_AUTH_FORMAT_SEARCH_FILTERS = "django_python3_ldap.utils.format_search_filters"
+LDAP_AUTH_FORMAT_SEARCH_FILTERS = (
+	"django_python3_ldap.utils.format_search_filters"
+)
 
 # Path to a callable that takes a dict of {model_field_name: value}, and returns
 # a string of the username to bind to the LDAP server.
 # Use this to support different types of LDAP server.
-LDAP_AUTH_FORMAT_USERNAME = "django_python3_ldap.utils.format_username_active_directory"
+LDAP_AUTH_FORMAT_USERNAME = (
+	"django_python3_ldap.utils.format_username_active_directory"
+)
 
 # Sets the login domain for Active Directory users.
 LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN = "EXAMPLE"
@@ -107,7 +111,9 @@ LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN = "EXAMPLE"
 # This is used when the local Interlock Admin is logged in.
 LDAP_AUTH_CONNECTION_USER_DN = "CN=Administrator,CN=Users,DC=example,DC=com"
 
-LDAP_AUTH_CONNECTION_USERNAME = LDAP_AUTH_CONNECTION_USER_DN.split(",")[0].split("CN=")[1]
+LDAP_AUTH_CONNECTION_USERNAME = LDAP_AUTH_CONNECTION_USER_DN.split(",")[
+	0
+].split("CN=")[1]
 LDAP_AUTH_CONNECTION_PASSWORD = None
 
 # Set connection/receive timeouts (in seconds) on the underlying `ldap3` library.

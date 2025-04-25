@@ -59,11 +59,15 @@ class GroupBuiltinProtect(CoreException):
 
 class BadMemberSelection(CoreException):
 	status_code = status.HTTP_400_BAD_REQUEST
-	default_detail = "The same members are in the Add Member and Remove Member lists"
+	default_detail = (
+		"The same members are in the Add Member and Remove Member lists"
+	)
 	default_code = "group_members_bad"
 
 
 class GroupTypeMissingField(CoreException):
 	status_code = status.HTTP_400_BAD_REQUEST
-	default_detail = "To modify Group Type both groupType and groupScope must be provided"
+	default_detail = (
+		"To modify Group Type both groupType and groupScope must be provided"
+	)
 	default_code = "group_type_missing_field"

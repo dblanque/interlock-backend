@@ -46,9 +46,7 @@ class TestLDAPTree:
 		# Setup
 		mock_entry = mocker.MagicMock()
 		mock_entry.entry_dn = "CN=Test,DC=example,DC=com"
-		mock_entry.objectCategory = (
-			"CN=Organizational-Unit,CN=Schema,CN=Configuration,DC=example,DC=com"
-		)
+		mock_entry.objectCategory = "CN=Organizational-Unit,CN=Schema,CN=Configuration,DC=example,DC=com"
 		mock_entry.objectClass = ["top", "organizationalUnit"]
 
 		f_connection.entries = [mock_entry]
@@ -74,14 +72,14 @@ class TestLDAPTree:
 		mocker.patch.object(
 			LDAPTree,
 			"__get_children__",
-			return_value=[{"name": "Child", "id": 1, "type": "Organizational-Unit"}],
+			return_value=[
+				{"name": "Child", "id": 1, "type": "Organizational-Unit"}
+			],
 		)
 
 		mock_entry = mocker.MagicMock()
 		mock_entry.entry_dn = "CN=Parent,DC=example,DC=com"
-		mock_entry.objectCategory = (
-			"CN=Organizational-Unit,CN=Schema,CN=Configuration,DC=example,DC=com"
-		)
+		mock_entry.objectCategory = "CN=Organizational-Unit,CN=Schema,CN=Configuration,DC=example,DC=com"
 		mock_entry.objectClass = ["top", "organizationalUnit"]
 		f_connection.entries = [mock_entry]
 
@@ -98,9 +96,7 @@ class TestLDAPTree:
 		"""Test tree fetching in dictionary mode"""
 		mock_entry = mocker.MagicMock()
 		mock_entry.entry_dn = "CN=Test,DC=example,DC=com"
-		mock_entry.objectCategory = (
-			"CN=Organizational-Unit,CN=Schema,CN=Configuration,DC=example,DC=com"
-		)
+		mock_entry.objectCategory = "CN=Organizational-Unit,CN=Schema,CN=Configuration,DC=example,DC=com"
 		mock_entry.objectClass = ["top", "organizationalUnit"]
 		f_connection.entries = [mock_entry]
 
@@ -108,7 +104,9 @@ class TestLDAPTree:
 
 		assert isinstance(tree.children, dict)
 
-	def test_get_children_raises_no_distinguished_name(self, mocker, f_connection):
+	def test_get_children_raises_no_distinguished_name(
+		self, mocker, f_connection
+	):
 		tree = LDAPTree(connection=f_connection)
 		with pytest.raises(ValueError):
 			tree.__get_children__(distinguished_name=None)
@@ -148,7 +146,12 @@ class TestLDAPTree:
 			{
 				"dn": "CN=User1,CN=Users,DC=example,DC=com",
 				"attributes": {
-					"objectClass": ["top", "person", "organizationalPerson", "user"],
+					"objectClass": [
+						"top",
+						"person",
+						"organizationalPerson",
+						"user",
+					],
 					"objectCategory": "CN=Person,CN=Schema,CN=Configuration,DC=example,DC=com",
 					"cn": ["User1"],
 					"sAMAccountName": ["user1"],
@@ -174,7 +177,11 @@ class TestLDAPTree:
 				"name": "Parent",
 				"children": [
 					{"id": 2, "name": "Child1"},
-					{"id": 3, "name": "Child2", "children": [{"id": 4, "name": "Grandchild"}]},
+					{
+						"id": 3,
+						"name": "Child2",
+						"children": [{"id": 4, "name": "Grandchild"}],
+					},
 				],
 			}
 		]
@@ -188,9 +195,7 @@ class TestLDAPTree:
 		# Setup builtin object
 		mock_entry = mocker.MagicMock()
 		mock_entry.entry_dn = "CN=Builtin,DC=example,DC=com"
-		mock_entry.objectCategory = (
-			"CN=Organizational-Unit,CN=Schema,CN=Configuration,DC=example,DC=com"
-		)
+		mock_entry.objectCategory = "CN=Organizational-Unit,CN=Schema,CN=Configuration,DC=example,DC=com"
 		mock_entry.objectClass = ["top", "builtinDomain"]
 		f_connection.entries = [mock_entry]
 
@@ -212,7 +217,9 @@ class TestLDAPTree:
 					"objectClass": ["top", "group"],
 					"objectCategory": "CN=Group,CN=Schema,CN=Configuration,DC=example,DC=com",
 					"cn": ["AdminGroup"],
-					"objectSid": [b"\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00"],
+					"objectSid": [
+						b"\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00"
+					],
 				},
 			}
 		]

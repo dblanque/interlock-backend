@@ -14,7 +14,9 @@ from core.views.base import BaseViewSet
 from core.models.user import USER_TYPE_LOCAL
 
 # Mixins
-from core.views.mixins.application_group import ApplicationSecurityGroupViewMixin
+from core.views.mixins.application_group import (
+	ApplicationSecurityGroupViewMixin,
+)
 
 # REST Framework
 from rest_framework.response import Response
@@ -42,9 +44,9 @@ class ApplicationGroupViewSet(BaseViewSet, ApplicationSecurityGroupViewMixin):
 			if not self.queryset.filter(application=app["id"]).exists():
 				data["applications"].append(app)
 		if len(data["applications"]) > 0:
-			for user in self.user_queryset.filter(user_type=USER_TYPE_LOCAL).values(
-				*("id", "username", "first_name", "last_name")
-			):
+			for user in self.user_queryset.filter(
+				user_type=USER_TYPE_LOCAL
+			).values(*("id", "username", "first_name", "last_name")):
 				data["users"].append(user)
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
 

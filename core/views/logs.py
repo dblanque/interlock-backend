@@ -51,7 +51,10 @@ class LogsViewSet(BaseViewSet, LogMixin):
 			"extraMessage",
 		]
 		response_list = []
-		date_format = {"iso": "%Y-%m-%dT%H:%M:%S.%f%z", "readable": "%Y-%m-%d %H:%M:%S"}
+		date_format = {
+			"iso": "%Y-%m-%dT%H:%M:%S.%f%z",
+			"readable": "%Y-%m-%d %H:%M:%S",
+		}
 		querySet = Log.objects.all()
 		for log in querySet:
 			logDict = {}
@@ -59,7 +62,9 @@ class LogsViewSet(BaseViewSet, LogMixin):
 				if h == "user":
 					logDict[h] = getattr(log, h).username
 				elif h == "date":
-					logDict[h] = getattr(log, "logged_at").strftime(date_format["iso"])
+					logDict[h] = getattr(log, "logged_at").strftime(
+						date_format["iso"]
+					)
 				elif h == "actionType":
 					logDict[h] = getattr(log, "operation_type")
 				elif h == "objectClass":
@@ -73,7 +78,12 @@ class LogsViewSet(BaseViewSet, LogMixin):
 			response_list.append(logDict)
 
 		return Response(
-			data={"code": code, "code_msg": "ok", "logs": response_list, "headers": headers}
+			data={
+				"code": code,
+				"code_msg": "ok",
+				"logs": response_list,
+				"headers": headers,
+			}
 		)
 
 	@action(detail=False, methods=["get"])

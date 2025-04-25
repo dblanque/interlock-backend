@@ -18,7 +18,11 @@ class ResponseHandler:
 		data = {}
 		if num_msg_dict == None:
 			data["code"] = -1
-			data["message"] = "Incorrect Configuration. Code '" + message_code + "' not found."
+			data["message"] = (
+				"Incorrect Configuration. Code '"
+				+ message_code
+				+ "' not found."
+			)
 		else:
 			data["code"] = num_msg_dict["code"]
 			data["message"] = num_msg_dict["message"]

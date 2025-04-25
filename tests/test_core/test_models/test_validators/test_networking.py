@@ -1,5 +1,9 @@
 import pytest
-from core.models.validators.networking import ipv4_validator, ipv6_validator, port_validator
+from core.models.validators.networking import (
+	ipv4_validator,
+	ipv6_validator,
+	port_validator,
+)
 from rest_framework.serializers import ValidationError
 
 

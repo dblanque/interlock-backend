@@ -29,14 +29,18 @@ def fixture_sample_guids() -> Tuple[Tuple[bytes, str], ...]:
 
 def test_init_str(mocker):
 	val = "guid_string"
-	m_from_str: MockType = mocker.patch.object(GUID, "from_str", return_value=None)
+	m_from_str: MockType = mocker.patch.object(
+		GUID, "from_str", return_value=None
+	)
 	GUID(val)
 	m_from_str.assert_called_once_with(guid_str=val)
 
 
 def test_init_bytes(mocker):
 	val = b"guid_bytes"
-	m_from_bytes: MockType = mocker.patch.object(GUID, "from_bytes", return_value=None)
+	m_from_bytes: MockType = mocker.patch.object(
+		GUID, "from_bytes", return_value=None
+	)
 	GUID(val)
 	m_from_bytes.assert_called_once_with(guid_bytes=val)
 
@@ -44,8 +48,12 @@ def test_init_bytes(mocker):
 def test_init_bytearray_exception(mocker):
 	mocker.patch("core.ldap.guid.bytearray", side_effect=Exception)
 	val = b"guid_bytes"
-	m_from_bytes: MockType = mocker.patch.object(GUID, "from_bytes", return_value=None)
-	with pytest.raises(ValueError, match="Could not implicitly convert bytes to bytearray."):
+	m_from_bytes: MockType = mocker.patch.object(
+		GUID, "from_bytes", return_value=None
+	)
+	with pytest.raises(
+		ValueError, match="Could not implicitly convert bytes to bytearray."
+	):
 		GUID(val)
 		m_from_bytes.assert_called_once_with(guid_bytes=val)
 
@@ -77,7 +85,8 @@ def test_from_bytes_valid_conversion(guid_bytes: bytes, expected_str: str):
 def test_from_bytes_uuid_raises(mocker):
 	"""Test exception raise when UUID is invalid"""
 	mocker.patch(
-		"core.ldap.guid.uuid.UUID", side_effect=ValueError("Generated invalid UUID string")
+		"core.ldap.guid.uuid.UUID",
+		side_effect=ValueError("Generated invalid UUID string"),
 	)
 	m_logger: MockType = mocker.patch("core.ldap.guid.logger")
 	with pytest.raises(ValueError, match="invalid UUID string"):
@@ -125,11 +134,27 @@ def test_from_str_valid_conversion(guid_str: str, expected_bytes: bytes):
 @pytest.mark.parametrize(
 	"invalid_input, expected_error",
 	(
-		pytest.param(b"tooshort", "unpack requires a buffer of 16 bytes", id="bytes-too-short"),
-		pytest.param("invalid-guid-format", "badly formed hex", id="str-invalid-format"),
-		pytest.param("missing-parts", "badly formed hex", id="str-missing-parts"),
 		pytest.param(
-			"g" * 8 + "-" + "b" * 4 + "-" + "c" * 4 + "-" + "d" * 4 + "-" + "e" * 12,
+			b"tooshort",
+			"unpack requires a buffer of 16 bytes",
+			id="bytes-too-short",
+		),
+		pytest.param(
+			"invalid-guid-format", "badly formed hex", id="str-invalid-format"
+		),
+		pytest.param(
+			"missing-parts", "badly formed hex", id="str-missing-parts"
+		),
+		pytest.param(
+			"g" * 8
+			+ "-"
+			+ "b" * 4
+			+ "-"
+			+ "c" * 4
+			+ "-"
+			+ "d" * 4
+			+ "-"
+			+ "e" * 12,
 			"invalid literal for int() with base 16",
 			id="str-invalid-hex",
 		),
@@ -155,7 +180,9 @@ def test_invalid_string_logs_error(mocker):
 
 def test_invalid_byte_length_logs_error(mocker):
 	"""Test invalid byte length logs error."""
-	m_logger: MockType = mocker.patch("core.ldap.guid.logger", mocker.MagicMock())
+	m_logger: MockType = mocker.patch(
+		"core.ldap.guid.logger", mocker.MagicMock()
+	)
 	invalid_bytes = b"tooshort"  # 8 bytes
 
 	with pytest.raises(struct.error):

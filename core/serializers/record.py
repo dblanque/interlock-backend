@@ -33,22 +33,36 @@ class DNSRecordNameNodeSerializer(DNSRecordSerializer):
 
 
 class DNSRecordMXSerializer(DNSRecordSerializer):
-	nameExchange = serializers.CharField(validators=[canonical_hostname_validator])
+	nameExchange = serializers.CharField(
+		validators=[canonical_hostname_validator]
+	)
 	wPreference = serializers.IntegerField(max_value=MAX_16_BIT)
 
 
 class DNSRecordStringDataSerializer(DNSRecordSerializer):
-	stringData = serializers.CharField(max_length=255, validators=[ascii_validator])
+	stringData = serializers.CharField(
+		max_length=255, validators=[ascii_validator]
+	)
 
 
 class DNSRecordSOASerializer(DNSRecordSerializer):
-	namePrimaryServer = serializers.CharField(validators=[canonical_hostname_validator])
-	zoneAdminEmail = serializers.CharField(validators=[canonical_hostname_validator])
-	dwSerialNo = serializers.IntegerField(min_value=0, validators=[int32_validator])
-	dwRefresh = serializers.IntegerField(min_value=0, max_value=MAX_TTL_RFC_2181)
+	namePrimaryServer = serializers.CharField(
+		validators=[canonical_hostname_validator]
+	)
+	zoneAdminEmail = serializers.CharField(
+		validators=[canonical_hostname_validator]
+	)
+	dwSerialNo = serializers.IntegerField(
+		min_value=0, validators=[int32_validator]
+	)
+	dwRefresh = serializers.IntegerField(
+		min_value=0, max_value=MAX_TTL_RFC_2181
+	)
 	dwRetry = serializers.IntegerField(min_value=0, max_value=MAX_TTL_RFC_2181)
 	dwExpire = serializers.IntegerField(min_value=0, max_value=MAX_TTL_RFC_2181)
-	dwMinimumTtl = serializers.IntegerField(min_value=0, max_value=MAX_TTL_RFC_2181)
+	dwMinimumTtl = serializers.IntegerField(
+		min_value=0, max_value=MAX_TTL_RFC_2181
+	)
 
 
 class DNSRecordSRVSerializer(DNSRecordSerializer):

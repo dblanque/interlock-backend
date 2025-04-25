@@ -89,7 +89,9 @@ class TestApplicationMixin:
 		assert ApplicationViewMixin.get_response_type_id_map() == f_response_map
 
 	def test_get_response_type_codes(self, f_response_map):
-		assert set(ApplicationViewMixin.get_response_type_codes()) == set(f_response_map.keys())
+		assert set(ApplicationViewMixin.get_response_type_codes()) == set(
+			f_response_map.keys()
+		)
 
 	def test_set_client_response_types(self, mocker, f_response_map):
 		test_params = {
@@ -102,8 +104,12 @@ class TestApplicationMixin:
 		ApplicationViewMixin().set_client_response_types(
 			new_response_types=test_params, client=m_client
 		)
-		m_client.response_types.add.assert_called_once_with(f_response_map["code"])
-		m_client.response_types.remove.assert_called_once_with(f_response_map["id_token"])
+		m_client.response_types.add.assert_called_once_with(
+			f_response_map["code"]
+		)
+		m_client.response_types.remove.assert_called_once_with(
+			f_response_map["id_token"]
+		)
 		m_logger.warning.assert_called_once()
 
 	def test_get_application_data_raises_not_exists(self):
@@ -111,7 +117,9 @@ class TestApplicationMixin:
 			ApplicationViewMixin().get_application_data(application_id=0)
 
 	def test_get_application_data(self, f_pre_application, f_pre_client):
-		assert ApplicationViewMixin().get_application_data(application_id=f_pre_application.id) == (
+		assert ApplicationViewMixin().get_application_data(
+			application_id=f_pre_application.id
+		) == (
 			f_pre_application,
 			f_pre_client,
 		)
@@ -121,7 +129,9 @@ class TestApplicationMixin:
 	):
 		f_pre_client.delete()
 		with pytest.raises(exc_app.ApplicationOidcClientDoesNotExist):
-			ApplicationViewMixin().get_application_data(application_id=f_pre_application.id)
+			ApplicationViewMixin().get_application_data(
+				application_id=f_pre_application.id
+			)
 
 	@pytest.mark.parametrize(
 		"test_scopes",
@@ -149,7 +159,9 @@ class TestApplicationMixin:
 			**m_extra_fields,
 			**m_excluded_fields,
 		}
-		serializer, extra_fields = ApplicationViewMixin().insert_clean_data(data=application_values)
+		serializer, extra_fields = ApplicationViewMixin().insert_clean_data(
+			data=application_values
+		)
 		expected = m_values.copy()
 		expected["scopes"] = "scope1 scope2"
 		assert extra_fields == m_extra_fields
@@ -168,7 +180,9 @@ class TestApplicationMixin:
 		with pytest.raises(exc_base.BadRequest):
 			ApplicationViewMixin().insert_clean_data(data=m_values)
 
-	def test_insert_application_raises_exists(self, f_pre_application: Application):
+	def test_insert_application_raises_exists(
+		self, f_pre_application: Application
+	):
 		mixin = ApplicationViewMixin()
 		m_values = {
 			"name": f_pre_application.name,
@@ -177,7 +191,9 @@ class TestApplicationMixin:
 		}
 		serializer, extra_fields = mixin.insert_clean_data(data=m_values)
 		with pytest.raises(exc_app.ApplicationExists):
-			mixin.insert_application(serializer=serializer, extra_fields=extra_fields)
+			mixin.insert_application(
+				serializer=serializer, extra_fields=extra_fields
+			)
 
 	def test_insert_application(self):
 		m_excluded_fields = {
@@ -201,8 +217,12 @@ class TestApplicationMixin:
 			**m_excluded_fields,
 		}
 		mixin = ApplicationViewMixin()
-		serializer, extra_fields = mixin.insert_clean_data(data=application_values)
-		result = mixin.insert_application(serializer=serializer, extra_fields=extra_fields)
+		serializer, extra_fields = mixin.insert_clean_data(
+			data=application_values
+		)
+		result = mixin.insert_application(
+			serializer=serializer, extra_fields=extra_fields
+		)
 		assert result.name == "Mock Application"
 		assert Application.objects.count() == 1
 		assert Client.objects.count() == 1
@@ -224,10 +244,14 @@ class TestApplicationMixin:
 		)
 		assert len(result["applications"]) == 1
 
-	def test_fetch_application(self, f_pre_application: Application, f_pre_client: Client):
+	def test_fetch_application(
+		self, f_pre_application: Application, f_pre_client: Client
+	):
 		mixin = ApplicationViewMixin()
 		RESPONSE_TYPE_ID_MAP = mixin.get_response_type_id_map()
-		expected_response_types = {field: False for field in RESPONSE_TYPE_ID_MAP.keys()}
+		expected_response_types = {
+			field: False for field in RESPONSE_TYPE_ID_MAP.keys()
+		}
 		expected_response_types["code"] = True
 		data = mixin.fetch_application(application_id=f_pre_application.id)
 		assert isinstance(data, dict)
@@ -235,7 +259,9 @@ class TestApplicationMixin:
 		assert data["client_id"] == f_pre_application.client_id
 		assert data["client_secret"] == f_pre_application.client_secret
 
-	def test_update_application(self, f_pre_application: Application, f_application_data: dict):
+	def test_update_application(
+		self, f_pre_application: Application, f_application_data: dict
+	):
 		m_data = f_application_data(
 			**{
 				"name": "New Mock Application",
@@ -264,7 +290,9 @@ class TestApplicationMixin:
 		assert app.enabled is False
 		assert cli.client_id != "changed"
 		assert cli.client_secret != "changed"
-		assert ["id_token token"] == list(cli.response_types.all().values_list("value", flat=True))
+		assert ["id_token token"] == list(
+			cli.response_types.all().values_list("value", flat=True)
+		)
 
 	def test_update_application_invalid_data(
 		self, f_pre_application: Application, f_pre_client: Client
@@ -296,6 +324,8 @@ class TestApplicationMixin:
 			ApplicationViewMixin().delete_application(application_id=0)
 
 	def test_delete_application(self, f_pre_application):
-		ApplicationViewMixin().delete_application(application_id=f_pre_application.id)
+		ApplicationViewMixin().delete_application(
+			application_id=f_pre_application.id
+		)
 		assert Application.objects.count() == 0
 		assert Client.objects.count() == 0

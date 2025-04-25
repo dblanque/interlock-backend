@@ -1,7 +1,11 @@
 import re
 import pytest
 from pytest_mock import MockType
-from core.models.application import generate_client_id, generate_client_secret, Application
+from core.models.application import (
+	generate_client_id,
+	generate_client_secret,
+	Application,
+)
 
 
 @pytest.mark.django_db
@@ -35,7 +39,9 @@ class TestApplicationFunctions:
 		# Mock exists() to return True for first values
 		m_queryset = mocker.MagicMock()
 		m_queryset.exists.side_effect = [True, True, False]
-		mocker.patch("core.models.Application.objects.filter", return_value=m_queryset)
+		mocker.patch(
+			"core.models.Application.objects.filter", return_value=m_queryset
+		)
 
 		# Second call should return the unique value
 		result = generate_client_id()

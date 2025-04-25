@@ -76,7 +76,9 @@ class LDAPFilter:
 			children_str = "".join(child.to_string() for child in self.children)
 			return encapsulate(f"{self.type.value}{children_str}")
 		elif self.type == LDAPFilterType.NOT:
-			return encapsulate(f"{self.type.value}{self.children[0].to_string()}")
+			return encapsulate(
+				f"{self.type.value}{self.children[0].to_string()}"
+			)
 		elif self.type == LDAPFilterType.EQUALITY:
 			return encapsulate(f"{self.attribute}={self.value}")
 		elif self.type == LDAPFilterType.PRESENCE:
@@ -104,7 +106,8 @@ class LDAPFilter:
 			raise ValueError("Empty filter content")
 
 		if content[0] in (
-			t.value for t in (LDAPFilterType.AND, LDAPFilterType.OR, LDAPFilterType.NOT)
+			t.value
+			for t in (LDAPFilterType.AND, LDAPFilterType.OR, LDAPFilterType.NOT)
 		):
 			return cls._parse_complex_filter(content)
 		return cls._parse_simple_filter(content)
@@ -173,14 +176,20 @@ class LDAPFilter:
 		return cls._parse_operator_filter(attr, op, value)
 
 	@classmethod
-	def _parse_equality_or_substring(cls, attr: str, value: str) -> "LDAPFilter":
+	def _parse_equality_or_substring(
+		cls, attr: str, value: str
+	) -> "LDAPFilter":
 		"""Handle equality or substring filters"""
 		if "*" in value:
-			return cls(LDAPFilterType.SUBSTRING, attribute=attr, parts=value.split("*"))
+			return cls(
+				LDAPFilterType.SUBSTRING, attribute=attr, parts=value.split("*")
+			)
 		return cls(LDAPFilterType.EQUALITY, attribute=attr, value=value)
 
 	@classmethod
-	def _parse_operator_filter(cls, attr: str, op: str, value: str) -> "LDAPFilter":
+	def _parse_operator_filter(
+		cls, attr: str, op: str, value: str
+	) -> "LDAPFilter":
 		"""Handle comparison operators"""
 		try:
 			filter_type = {
@@ -298,7 +307,9 @@ class LDAPFilter:
 		Returns:
 			LDAPFilter: Corresponding LDAP Filter.
 		"""
-		return cls(LDAPFilterType.GREATER_OR_EQUAL, attribute=attribute, value=value)
+		return cls(
+			LDAPFilterType.GREATER_OR_EQUAL, attribute=attribute, value=value
+		)
 
 	@classmethod
 	def le(cls, attribute: str, value: str | int) -> "LDAPFilter":
@@ -314,7 +325,9 @@ class LDAPFilter:
 		Returns:
 			LDAPFilter: Corresponding LDAP Filter.
 		"""
-		return cls(LDAPFilterType.LESS_OR_EQUAL, attribute=attribute, value=value)
+		return cls(
+			LDAPFilterType.LESS_OR_EQUAL, attribute=attribute, value=value
+		)
 
 	@classmethod
 	def approximate(cls, attribute: str, value: str | int) -> "LDAPFilter":

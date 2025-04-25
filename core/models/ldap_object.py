@@ -16,7 +16,12 @@ from core.ldap.adsi import LDAP_BUILTIN_OBJECTS, join_ldap_filter
 from core.ldap.security_identifier import SID
 
 ### Others
-from ldap3 import Connection, Entry as LDAPEntry, Attribute as LDAPAttribute, SUBTREE
+from ldap3 import (
+	Connection,
+	Entry as LDAPEntry,
+	Attribute as LDAPAttribute,
+	SUBTREE,
+)
 from typing import TypedDict, Iterable
 from typing_extensions import Required, NotRequired
 from logging import getLogger
@@ -107,14 +112,18 @@ class LDAPObject:
 		self.name = RuntimeSettings.LDAP_AUTH_SEARCH_BASE
 		self.search_base = RuntimeSettings.LDAP_AUTH_SEARCH_BASE
 		self.connection = kwargs.pop("connection")
-		self.username_identifier = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
+		self.username_identifier = RuntimeSettings.LDAP_AUTH_USER_FIELDS[
+			"username"
+		]
 		self.excluded_ldap_attrs = []
 		self.required_ldap_attrs = DEFAULT_REQUIRED_LDAP_ATTRS
 		self.container_types = DEFAULT_CONTAINER_TYPES
 		self.user_types = DEFAULT_USER_TYPES
 		self.ldap_attrs = RuntimeSettings.LDAP_DIRTREE_ATTRIBUTES
 		if "dn" in kwargs:
-			self.ldap_filter = join_ldap_filter(None, f"distinguishedName={str(kwargs['dn'])}")
+			self.ldap_filter = join_ldap_filter(
+				None, f"distinguishedName={str(kwargs['dn'])}"
+			)
 
 		self.__set_kwargs__(kwargs)
 
@@ -123,7 +132,9 @@ class LDAPObject:
 
 	def __validate_kwargs__(self, kwargs):
 		if "connection" not in kwargs:
-			raise Exception("LDAP Object requires an LDAP Connection to Initialize")
+			raise Exception(
+				"LDAP Object requires an LDAP Connection to Initialize"
+			)
 		if "dn" not in kwargs and "ldap_filter" not in kwargs:
 			raise Exception(
 				"LDAP Object requires a Distinguished Name or a valid ldap_filter to search for the object"
@@ -164,7 +175,9 @@ class LDAPObject:
 		if not isinstance(search_result, Iterable) or not search_result:
 			return
 		if len(search_result) > 1:
-			logger.warning("Search result for LDAP Object has more than one entries.")
+			logger.warning(
+				"Search result for LDAP Object has more than one entries."
+			)
 			logger.warning("Search filter used: %s", self.ldap_filter)
 		try:
 			self.entry = search_result[0]
@@ -178,9 +191,13 @@ class LDAPObject:
 		self.attributes["name"] = distinguished_name.split(",")[0].split("=")[1]
 		self.attributes["distinguishedName"] = distinguished_name
 		self.attributes["type"] = (
-			getldapattr(self.entry, "objectCategory").split(",")[0].split("=")[1]
+			getldapattr(self.entry, "objectCategory")
+			.split(",")[0]
+			.split("=")[1]
 		)
-		entry_object_classes: LDAPAttribute = getldapattr(self.entry, "objectClass", [])
+		entry_object_classes: LDAPAttribute = getldapattr(
+			self.entry, "objectClass", []
+		)
 		if (
 			self.attributes["name"] in LDAP_BUILTIN_OBJECTS
 			or "builtinDomain" in entry_object_classes
@@ -200,7 +217,8 @@ class LDAPObject:
 				self.attributes["groupname"] = attr_value
 			elif (
 				attr_key == "objectSid"
-				and self.__get_common_name__(distinguished_name).lower() != "builtin"
+				and self.__get_common_name__(distinguished_name).lower()
+				!= "builtin"
 			):
 				try:
 					# Do not use getldapattr here, we want raw_values
@@ -210,7 +228,10 @@ class LDAPObject:
 					self.attributes["objectSid"] = sid
 					self.attributes["objectRid"] = rid
 				except Exception as e:
-					logger.error("Could not translate SID Byte Array for " + distinguished_name)
+					logger.error(
+						"Could not translate SID Byte Array for "
+						+ distinguished_name
+					)
 					logger.exception(e)
 			elif attr_key not in self.attributes and attr_value is not None:
 				self.attributes[attr_key] = attr_value
@@ -222,7 +243,9 @@ class LDAPObject:
 				_v = int(self.attributes[fld])
 				self.attributes[fld] = _v
 			except:
-				logger.error(f"Could not cast LDAP Object field to int ({fld}).")
+				logger.error(
+					f"Could not cast LDAP Object field to int ({fld})."
+				)
 				pass
 		return self.attributes
 

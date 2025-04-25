@@ -48,7 +48,9 @@ def getDNSResolver(dnsAddresses):
 	# Set Query for IP Address
 	if dnsAddresses is None:
 		raise ValueError("You need a Server Address to query")
-	elif not isinstance(dnsAddresses, list) and not isinstance(dnsAddresses, str):
+	elif not isinstance(dnsAddresses, list) and not isinstance(
+		dnsAddresses, str
+	):
 		raise ValueError("dnsAddresses can only be a list or string value")
 	else:
 		# Create Resolver Object

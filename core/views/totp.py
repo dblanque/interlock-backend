@@ -12,7 +12,11 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Core
-from core.models.choices.log import LOG_ACTION_DELETE, LOG_CLASS_USER, LOG_EXTRA_TOTP_DELETE
+from core.models.choices.log import (
+	LOG_ACTION_DELETE,
+	LOG_CLASS_USER,
+	LOG_EXTRA_TOTP_DELETE,
+)
 from core.serializers.token import OTPTokenSerializer
 from core.views.mixins.totp import (
 	create_device_totp_for_user,
@@ -150,4 +154,6 @@ class TOTPViewSet(BaseViewSet):
 		except:
 			raise
 
-		return Response(data={"code": code, "code_msg": code_msg, "data": target_username})
+		return Response(
+			data={"code": code, "code_msg": code_msg, "data": target_username}
+		)

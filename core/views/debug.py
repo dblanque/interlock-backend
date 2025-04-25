@@ -43,7 +43,13 @@ class DebugViewSet(BaseViewSet):
 				valid_debug_operations.remove(op)
 		code = 0
 		code_msg = "ok"
-		return Response(data={"code": code, "code_msg": code_msg, "data": valid_debug_operations})
+		return Response(
+			data={
+				"code": code,
+				"code_msg": code_msg,
+				"data": valid_debug_operations,
+			}
+		)
 
 	@action(detail=False, methods=["post"])
 	@auth_required

@@ -64,7 +64,7 @@ def get_user_groups(user: User) -> list:
 		user (User): User Django Object
 
 	Returns:
-		list:  List of group DNs if LDAP User or List of 
+		list:  List of group DNs if LDAP User or List of
 			local application group uuids.
 	"""
 	if user.user_type == USER_TYPE_LOCAL:
@@ -77,7 +77,9 @@ def get_user_groups(user: User) -> list:
 			user_mixin = UserViewLDAPMixin()
 			user_mixin.ldap_filter_attr = ["memberOf"]
 			user_mixin.ldap_connection = ldc.connection
-			ldap_user: dict = user_mixin.ldap_user_fetch(user_search=user.username)
+			ldap_user: dict = user_mixin.ldap_user_fetch(
+				user_search=user.username
+			)
 			for group in ldap_user["memberOfObjects"]:
 				groups.append(group["distinguishedName"])
 			return groups
@@ -86,7 +88,7 @@ def get_user_groups(user: User) -> list:
 
 
 class CustomScopeClaims(ScopeClaims, UserViewLDAPMixin):
-	def setup(self): # pragma: no cover
+	def setup(self):  # pragma: no cover
 		# Define which claims are included for each scope
 		self.claims = {
 			"profile": {
@@ -180,7 +182,9 @@ class OidcAuthorizeMixin:
 
 		consent = None
 		try:
-			consent = UserConsent.objects.get(user_id=user.id, client_id=self.client.id)
+			consent = UserConsent.objects.get(
+				user_id=user.id, client_id=self.client.id
+			)
 		except ObjectDoesNotExist:
 			pass
 		if consent:
@@ -190,7 +194,9 @@ class OidcAuthorizeMixin:
 					return False
 
 			# Don't require consent if it was given within the last minute.
-			timedelta_consent_given = timezone.make_aware(datetime.now()) - consent.date_given
+			timedelta_consent_given = (
+				timezone.make_aware(datetime.now()) - consent.date_given
+			)
 			if timedelta_consent_given < timedelta(minutes=1):
 				return False
 		return True
@@ -213,7 +219,9 @@ class OidcAuthorizeMixin:
 			with LDAPConnector(force_admin=True) as ldc:
 				for distinguished_name in application_group.ldap_objects:
 					if recursive_member_search(
-						user_dn=user.dn, connection=ldc.connection, group_dn=distinguished_name
+						user_dn=user.dn,
+						connection=ldc.connection,
+						group_dn=distinguished_name,
 					):
 						return True
 		elif user in application_group.users.all():
@@ -233,7 +241,9 @@ class OidcAuthorizeMixin:
 			"application": self.application.name,
 			"client_id": self.client.client_id,
 			"reuse_consent": self.client.reuse_consent,
-			"require_consent": self.user_requires_consent(user=self.request.user),
+			"require_consent": self.user_requires_consent(
+				user=self.request.user
+			),
 			"redirect_uri": self.client.redirect_uris[0],
 		}
 		for attr in OIDC_ATTRS:
@@ -245,7 +255,9 @@ class OidcAuthorizeMixin:
 					replace_params[attr] = self.authorize.params[attr]
 				elif isinstance(val, (tuple, set, list)):
 					replace_params[attr] = "+".join(self.authorize.params[attr])
-		login_url = self.set_extra_params(data=replace_params, login_url=login_url)
+		login_url = self.set_extra_params(
+			data=replace_params, login_url=login_url
+		)
 		return login_url
 
 	def login_redirect(self) -> HttpResponse:

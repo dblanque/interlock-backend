@@ -29,7 +29,8 @@ def f_logger(mocker: MockerFixture):
 @pytest.fixture(autouse=True)
 def f_log_mixin(mocker: MockerFixture) -> LogMixin:
 	return mocker.patch(
-		f"core.views.mixins.ldap.organizational_unit.DBLogMixin", mocker.MagicMock()
+		f"core.views.mixins.ldap.organizational_unit.DBLogMixin",
+		mocker.MagicMock(),
 	)
 
 
@@ -51,7 +52,9 @@ def f_object_category_filter():
 			if value in kwargs:
 				continue
 			flt = join_ldap_filter(
-				filter_string=flt, filter_to_add=f"objectCategory={value}", expression="|"
+				filter_string=flt,
+				filter_to_add=f"objectCategory={value}",
+				expression="|",
 			)
 		return flt
 
@@ -66,7 +69,9 @@ def f_object_class_filter():
 			if value in kwargs:
 				continue
 			flt = join_ldap_filter(
-				filter_string=flt, filter_to_add=f"objectClass={value}", expression="|"
+				filter_string=flt,
+				filter_to_add=f"objectClass={value}",
+				expression="|",
 			)
 		return flt
 
@@ -74,7 +79,9 @@ def f_object_class_filter():
 
 
 @pytest.fixture
-def f_object_class_and_category_filter(f_object_category_filter, f_object_class_filter):
+def f_object_class_and_category_filter(
+	f_object_category_filter, f_object_class_filter
+):
 	return f"{f_object_category_filter()[:-1]}{f_object_class_filter()[2:]}"
 
 
@@ -143,7 +150,9 @@ def f_object_class_and_category_filter(f_object_category_filter, f_object_class_
 		"Empty Set",
 	],
 )
-def test_cleanup_attr_value(value, expected, f_ou_mixin: OrganizationalUnitMixin):
+def test_cleanup_attr_value(
+	value, expected, f_ou_mixin: OrganizationalUnitMixin
+):
 	assert f_ou_mixin.cleanup_attr_value(value=value) == expected
 
 
@@ -184,11 +193,17 @@ def test_cleanup_attr_value(value, expected, f_ou_mixin: OrganizationalUnitMixin
 		"Set of str values",
 	],
 )
-def test_is_multi_value_attribute(value, expected, f_ou_mixin: OrganizationalUnitMixin):
-	assert f_ou_mixin.is_multi_value_attribute("mockAttribute", value) == expected
+def test_is_multi_value_attribute(
+	value, expected, f_ou_mixin: OrganizationalUnitMixin
+):
+	assert (
+		f_ou_mixin.is_multi_value_attribute("mockAttribute", value) == expected
+	)
 
 
-def test_is_multi_value_raises_validation_error(f_ou_mixin: OrganizationalUnitMixin):
+def test_is_multi_value_raises_validation_error(
+	f_ou_mixin: OrganizationalUnitMixin,
+):
 	with pytest.raises(ValidationError):
 		f_ou_mixin.is_multi_value_attribute("mockAttribute", b"some_bytes")
 
@@ -305,12 +320,22 @@ def test_is_multi_value_raises_validation_error(f_ou_mixin: OrganizationalUnitMi
 	),
 )
 def test_process_ldap_filter_type(
-	filter_type: str, filter_dict: dict, expected: str, f_ou_mixin: OrganizationalUnitMixin
+	filter_type: str,
+	filter_dict: dict,
+	expected: str,
+	f_ou_mixin: OrganizationalUnitMixin,
 ):
-	assert f_ou_mixin.process_ldap_filter_type(filter_type, filter_dict).to_string() == expected
+	assert (
+		f_ou_mixin.process_ldap_filter_type(
+			filter_type, filter_dict
+		).to_string()
+		== expected
+	)
 
 
-def test_process_ldap_filter_type_raises_on_iterable(f_ou_mixin: OrganizationalUnitMixin):
+def test_process_ldap_filter_type_raises_on_iterable(
+	f_ou_mixin: OrganizationalUnitMixin,
+):
 	with pytest.raises(ValidationError):
 		f_ou_mixin.process_ldap_filter_type("gte", {"mockAttribute": [1]})
 
@@ -353,7 +378,9 @@ def test_process_ldap_filter_with_defaults(
 	f_ou_mixin: OrganizationalUnitMixin,
 	f_object_class_and_category_filter,
 ):
-	result = f_ou_mixin.process_ldap_filter(data_filter={}, default_filter=True).to_string()
+	result = f_ou_mixin.process_ldap_filter(
+		data_filter={}, default_filter=True
+	).to_string()
 
 	expected = f_object_class_and_category_filter
 	assert result == expected
@@ -382,24 +409,33 @@ def test_move_or_rename_object_raises_dn_validation_exception(
 	f_ou_mixin: OrganizationalUnitMixin,
 	f_logger,
 ):
-	mocker.patch("core.views.mixins.ldap.organizational_unit.safe_dn", side_effect=Exception)
+	mocker.patch(
+		"core.views.mixins.ldap.organizational_unit.safe_dn",
+		side_effect=Exception,
+	)
 	with pytest.raises(exc_ldap.DistinguishedNameValidationError):
 		f_ou_mixin.move_or_rename_object(distinguished_name="some_bad_dn")
 	f_logger.exception.assert_called_once()
 
 
 def test_move_or_rename_raises_no_rdn_or_target(
-	f_ou_mixin: OrganizationalUnitMixin, g_runtime_settings: RuntimeSettingsSingleton
+	f_ou_mixin: OrganizationalUnitMixin,
+	g_runtime_settings: RuntimeSettingsSingleton,
 ):
-	m_distinguishedName = f"PA=something,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
+	m_distinguishedName = (
+		f"PA=something,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
+	)
 	with pytest.raises(exc_dirtree.DirtreeDistinguishedNameConflict):
 		f_ou_mixin.move_or_rename_object(distinguished_name=m_distinguishedName)
 
 
 def test_move_or_rename_raises_bad_dn_identifier(
-	f_ou_mixin: OrganizationalUnitMixin, g_runtime_settings: RuntimeSettingsSingleton
+	f_ou_mixin: OrganizationalUnitMixin,
+	g_runtime_settings: RuntimeSettingsSingleton,
 ):
-	m_distinguishedName = f"PA=something,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
+	m_distinguishedName = (
+		f"PA=something,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
+	)
 	with pytest.raises(exc_ldap.LDIFBadField) as e:
 		f_ou_mixin.move_or_rename_object(
 			distinguished_name=m_distinguishedName, target_rdn="new name"
@@ -443,7 +479,8 @@ def test_move_or_rename_rdn_same_as_current(
 ):
 	with pytest.raises(exc_dirtree.DirtreeNewNameIsOld):
 		f_ou_mixin.move_or_rename_object(
-			distinguished_name=f_distinguished_name, target_rdn=f_distinguished_name.split(",")[0]
+			distinguished_name=f_distinguished_name,
+			target_rdn=f_distinguished_name.split(",")[0],
 		)
 
 
@@ -460,10 +497,14 @@ def test_move_or_rename_object_rename_only(
 	f_distinguished_name: str,
 	f_log_mixin: LogMixin,
 ):
-	expected_rdn = f"CN={target_rdn}" if not target_rdn.startswith("CN=") else target_rdn
+	expected_rdn = (
+		f"CN={target_rdn}" if not target_rdn.startswith("CN=") else target_rdn
+	)
 	expected_path = ",".join(f_distinguished_name.split(",")[1:])
 
-	f_ou_mixin.move_or_rename_object(distinguished_name=f_distinguished_name, target_rdn=target_rdn)
+	f_ou_mixin.move_or_rename_object(
+		distinguished_name=f_distinguished_name, target_rdn=target_rdn
+	)
 	f_ou_mixin.ldap_connection.modify_dn.assert_called_once_with(
 		dn=f_distinguished_name, relative_dn="CN=new name"
 	)
@@ -515,13 +556,19 @@ def test_move_or_rename_object_both_ops(
 	f_log_mixin: LogMixin,
 ):
 	m_target_path = f"OU=SomeUnit,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
-	expected_rdn = f"CN={target_rdn}" if not target_rdn.startswith("CN=") else target_rdn
+	expected_rdn = (
+		f"CN={target_rdn}" if not target_rdn.startswith("CN=") else target_rdn
+	)
 	expected_dn = f"{expected_rdn},{m_target_path}"
 	f_ou_mixin.move_or_rename_object(
-		distinguished_name=f_distinguished_name, target_rdn=target_rdn, target_path=m_target_path
+		distinguished_name=f_distinguished_name,
+		target_rdn=target_rdn,
+		target_path=m_target_path,
 	)
 	f_ou_mixin.ldap_connection.modify_dn.assert_called_once_with(
-		dn=f_distinguished_name, relative_dn=expected_rdn, new_superior=m_target_path
+		dn=f_distinguished_name,
+		relative_dn=expected_rdn,
+		new_superior=m_target_path,
 	)
 	f_log_mixin.log.assert_called_once_with(
 		user=f_ou_mixin.request.user.id,
@@ -552,6 +599,8 @@ def test_move_or_rename_object_ldap_server_raises(
 	f_ou_mixin.ldap_connection.result = m_result
 	f_ou_mixin.ldap_connection.modify_dn.side_effect = Exception
 	with pytest.raises(exc_dirtree.DirtreeMove) as e:
-		f_ou_mixin.move_or_rename_object(distinguished_name=f_distinguished_name, target_rdn="mock")
+		f_ou_mixin.move_or_rename_object(
+			distinguished_name=f_distinguished_name, target_rdn="mock"
+		)
 	f_logger.exception.assert_called_once()
 	assert e._excinfo[1].detail["code"] == expected_code

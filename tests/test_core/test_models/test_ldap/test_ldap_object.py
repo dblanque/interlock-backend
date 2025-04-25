@@ -190,10 +190,14 @@ def test_init_raises_kwarg_exception(object_args, expected_exc_msg_match):
 	),
 	ids=lambda x: "With auto_fetch" if x else "Without auto_fetch",
 )
-def test_init(mocker, f_connection, g_runtime_settings, auto_fetch, f_object_args):
+def test_init(
+	mocker, f_connection, g_runtime_settings, auto_fetch, f_object_args
+):
 	object_args: LDAPObjectOptions = f_object_args()
 	m_set_kwargs: MockType = mocker.patch.object(LDAPObject, "__set_kwargs__")
-	m_fetch_object: MockType = mocker.patch.object(LDAPObject, "__fetch_object__")
+	m_fetch_object: MockType = mocker.patch.object(
+		LDAPObject, "__fetch_object__"
+	)
 	m_ldap_object = LDAPObject(**object_args, auto_fetch=auto_fetch)
 	object_args.pop("connection")
 	assert m_ldap_object.entry == None
@@ -201,7 +205,10 @@ def test_init(mocker, f_connection, g_runtime_settings, auto_fetch, f_object_arg
 	assert m_ldap_object.name == g_runtime_settings.LDAP_AUTH_SEARCH_BASE
 	assert m_ldap_object.search_base == g_runtime_settings.LDAP_AUTH_SEARCH_BASE
 	assert m_ldap_object.connection == f_connection
-	assert m_ldap_object.username_identifier == g_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
+	assert (
+		m_ldap_object.username_identifier
+		== g_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
+	)
 	assert m_ldap_object.excluded_ldap_attrs == []
 	assert m_ldap_object.required_ldap_attrs == DEFAULT_REQUIRED_LDAP_ATTRS
 	assert m_ldap_object.container_types == DEFAULT_CONTAINER_TYPES
@@ -211,7 +218,10 @@ def test_init(mocker, f_connection, g_runtime_settings, auto_fetch, f_object_arg
 		"username",
 	]
 	assert m_ldap_object.ldap_attrs == list(set(dirtree_attrs))
-	assert m_ldap_object.ldap_filter == f"(distinguishedName={object_args.get('dn')})"
+	assert (
+		m_ldap_object.ldap_filter
+		== f"(distinguishedName={object_args.get('dn')})"
+	)
 	m_set_kwargs.assert_called_once_with(object_args)
 	if auto_fetch:
 		m_fetch_object.assert_called_once()
@@ -219,7 +229,9 @@ def test_init(mocker, f_connection, g_runtime_settings, auto_fetch, f_object_arg
 		m_fetch_object.assert_not_called()
 
 
-def test_dunder_set_kwargs(mocker, f_connection, g_runtime_settings, f_object_args):
+def test_dunder_set_kwargs(
+	mocker, f_connection, g_runtime_settings, f_object_args
+):
 	object_args: LDAPObjectOptions = f_object_args()
 	mocker.patch.object(LDAPObject, "__fetch_object__")
 	m_ldap_object = LDAPObject(**object_args)
@@ -293,7 +305,9 @@ def test_dunder_fetch_object_returns_none_on_empty_response(
 		"f_object_entry_group",
 	),
 )
-def test_dunder_fetch_object(test_entry, request, f_connection, g_runtime_settings, f_object_args):
+def test_dunder_fetch_object(
+	test_entry, request, f_connection, g_runtime_settings, f_object_args
+):
 	m_entry = request.getfixturevalue(test_entry)()
 	f_connection.entries = [m_entry]
 
@@ -309,7 +323,11 @@ def test_dunder_fetch_object(test_entry, request, f_connection, g_runtime_settin
 
 
 def test_dunder_fetch_object_removes_empty_string(
-	f_object_attrs_user, f_object_entry_user, f_connection, g_runtime_settings, f_object_args
+	f_object_attrs_user,
+	f_object_entry_user,
+	f_connection,
+	g_runtime_settings,
+	f_object_args,
 ):
 	m_entry = f_object_entry_user(attrs={"objectRid": ""})
 	result: dict = deepcopy(f_object_attrs_user())
@@ -336,7 +354,11 @@ def test_dunder_fetch_object_removes_empty_string(
 	),
 )
 def test_dunder_fetch_object_marks_builtin(
-	object_classes, f_object_entry_user, f_connection, g_runtime_settings, f_object_args
+	object_classes,
+	f_object_entry_user,
+	f_connection,
+	g_runtime_settings,
+	f_object_args,
 ):
 	m_entry: dict = f_object_entry_user(attrs={"objectClass": object_classes})
 	f_connection.entries = [m_entry]
@@ -394,7 +416,9 @@ def test_dunder_fetch_object_successful_user_fetch(
 	)
 
 
-def test_dunder_fetch_object_no_results_returns_none(f_object_args, f_connection):
+def test_dunder_fetch_object_no_results_returns_none(
+	f_object_args, f_connection
+):
 	# Setup
 	object_args: LDAPObjectOptions = f_object_args()
 	f_connection.entries = []
@@ -421,7 +445,9 @@ def test_dunder_fetch_object_handles_sid_conversion(
 
 	# Mock SID conversion
 	mock_sid = mocker.MagicMock(spec=SID)
-	mock_sid.__str__.return_value = "S-1-5-21-123456789-1234567890-123456789-1105"
+	mock_sid.__str__.return_value = (
+		"S-1-5-21-123456789-1234567890-123456789-1105"
+	)
 	mocker.patch("core.models.ldap_object.SID", return_value=mock_sid)
 
 	# Instantiate LDAPObject
@@ -431,7 +457,10 @@ def test_dunder_fetch_object_handles_sid_conversion(
 	ldap_obj.__fetch_object__()
 
 	# Assert SID was processed
-	assert ldap_obj.attributes["objectSid"] == "S-1-5-21-123456789-1234567890-123456789-1105"
+	assert (
+		ldap_obj.attributes["objectSid"]
+		== "S-1-5-21-123456789-1234567890-123456789-1105"
+	)
 	assert ldap_obj.attributes["objectRid"] == 1105
 
 
@@ -440,7 +469,9 @@ def test_dunder_fetch_object_handles_iterable_attributes(
 ):
 	# Setup
 	object_args: LDAPObjectOptions = f_object_args()
-	mock_entry = f_object_entry_user(attrs={"objectClass": ["value1", "value2"]})
+	mock_entry = f_object_entry_user(
+		attrs={"objectClass": ["value1", "value2"]}
+	)
 
 	# Add an iterable attribute
 	f_connection.entries = [mock_entry]
@@ -456,7 +487,9 @@ def test_dunder_fetch_object_handles_iterable_attributes(
 	assert ldap_obj.attributes["objectClass"] == ["value1", "value2"]
 
 
-def test_dunder_ldap_attrs_returns_attribute_keys(f_object_args, f_object_entry_user, f_connection):
+def test_dunder_ldap_attrs_returns_attribute_keys(
+	f_object_args, f_object_entry_user, f_connection
+):
 	# Setup
 	object_args: LDAPObjectOptions = f_object_args()
 	mock_entry = f_object_entry_user()
@@ -474,7 +507,9 @@ def test_dunder_ldap_attrs_returns_attribute_keys(f_object_args, f_object_entry_
 	assert all(attr in result for attr in ldap_obj.attributes.keys())
 
 
-def test_dunder_ldap_attrs_returns_empty_list_when_no_attributes(f_object_args, f_connection):
+def test_dunder_ldap_attrs_returns_empty_list_when_no_attributes(
+	f_object_args, f_connection
+):
 	# Setup
 	object_args: LDAPObjectOptions = f_object_args()
 
@@ -488,7 +523,9 @@ def test_dunder_ldap_attrs_returns_empty_list_when_no_attributes(f_object_args, 
 	assert result == []
 
 
-def test_dunder_get_common_name_extracts_cn_from_dn(f_object_args, f_connection):
+def test_dunder_get_common_name_extracts_cn_from_dn(
+	f_object_args, f_connection
+):
 	# Setup
 	object_args: LDAPObjectOptions = f_object_args()
 	test_dn = "CN=Test User,CN=Users,DC=example,DC=com"
@@ -503,7 +540,9 @@ def test_dunder_get_common_name_extracts_cn_from_dn(f_object_args, f_connection)
 	assert result == "Test User"
 
 
-def test_dunder_get_common_name_handles_empty_string(f_object_args, f_connection):
+def test_dunder_get_common_name_handles_empty_string(
+	f_object_args, f_connection
+):
 	# Setup
 	object_args: LDAPObjectOptions = f_object_args()
 	ldap_obj = LDAPObject(auto_fetch=False, **object_args)
@@ -515,7 +554,9 @@ def test_dunder_get_common_name_handles_empty_string(f_object_args, f_connection
 	assert result == ""
 
 
-def test_dunder_get_common_name_handles_malformed_dn(f_object_args, f_connection):
+def test_dunder_get_common_name_handles_malformed_dn(
+	f_object_args, f_connection
+):
 	# Setup
 	object_args: LDAPObjectOptions = f_object_args()
 	ldap_obj = LDAPObject(auto_fetch=False, **object_args)

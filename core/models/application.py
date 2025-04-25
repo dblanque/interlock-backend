@@ -12,10 +12,13 @@ def generate_client_id() -> str:
 	"""
 	tries = 0
 	while True and tries <= 10:
-		client_id = get_random_string(24, "abcdefghijklmnopqrstuvwxyz0123456789")
+		client_id = get_random_string(
+			24, "abcdefghijklmnopqrstuvwxyz0123456789"
+		)
 		if not Application.objects.filter(client_id=client_id).exists():
 			return client_id
 		tries += 1
+
 
 def generate_asg_uuid():
 	"""Generates a 12 character ASG id, retries up to 10 times and gives up.
@@ -28,27 +31,36 @@ def generate_asg_uuid():
 			return uuid
 		tries += 1
 
+
 def generate_client_secret() -> str:
 	"""Generates a 48 character urlsafe token."""
 	_urlsafe_token = secrets.token_urlsafe(48)
-	return _urlsafe_token # Cryptographically secure
+	return _urlsafe_token  # Cryptographically secure
 
 
 class Application(BaseModel):
 	name = models.CharField(max_length=255)
 	enabled = models.BooleanField(default=True)
-	client_id = models.CharField(max_length=25, default=generate_client_id, unique=True)
-	client_secret = models.CharField(max_length=129, default=generate_client_secret)
+	client_id = models.CharField(
+		max_length=25, default=generate_client_id, unique=True
+	)
+	client_secret = models.CharField(
+		max_length=129, default=generate_client_secret
+	)
 	redirect_uris = models.TextField(help_text="Comma-separated redirect URIs")
 	scopes = models.TextField(default="openid profile email groups")
 
 
 class ApplicationSecurityGroup(BaseModel):
 	application = models.OneToOneField(Application, on_delete=models.CASCADE)
-	uuid = models.CharField(max_length=13, default=generate_asg_uuid, unique=True)
+	uuid = models.CharField(
+		max_length=13, default=generate_asg_uuid, unique=True
+	)
 	enabled = models.BooleanField(default=True)
 	users = models.ManyToManyField(User, blank=True, related_name="asg_member")
-	ldap_objects = ArrayField(models.CharField(max_length=255), blank=True, null=True)
+	ldap_objects = ArrayField(
+		models.CharField(max_length=255), blank=True, null=True
+	)
 
 	class Meta:
 		db_table = "core_application_security_group"

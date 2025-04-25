@@ -84,7 +84,9 @@ class DNSRecordZoneMismatch(CoreException):
 
 class DNSRecordSelfReference(CoreException):
 	status_code = status.HTTP_409_CONFLICT
-	default_detail = "Requested Record Type Insertion or Update cannot reference itself"
+	default_detail = (
+		"Requested Record Type Insertion or Update cannot reference itself"
+	)
 	default_code = "dns_record_self_reference_conflict"
 
 
@@ -108,13 +110,17 @@ class DNSRecordDoesNotExist(CoreException):
 
 class DNSRecordTypeUnsupported(CoreException):
 	status_code = status.HTTP_400_BAD_REQUEST
-	default_detail = "Creating or Updating requested Record Type is not supported"
+	default_detail = (
+		"Creating or Updating requested Record Type is not supported"
+	)
 	default_code = "dns_record_type_unsupported"
 
 
 class DNSRecordDataMissing(CoreException):
 	status_code = status.HTTP_400_BAD_REQUEST
-	default_detail = "A required attribute is missing in Record Operation Request"
+	default_detail = (
+		"A required attribute is missing in Record Operation Request"
+	)
 	default_code = "dns_record_attr_missing"
 
 
@@ -156,7 +162,9 @@ class DNSCouldNotGetSOA(CoreException):
 
 class SOARecordRootOnly(CoreException):
 	status_code = status.HTTP_400_BAD_REQUEST
-	default_detail = "A Start Of Authority Record can only be set for the root of your zone"
+	default_detail = (
+		"A Start Of Authority Record can only be set for the root of your zone"
+	)
 	default_code = "dns_soa_record_root_only"
 
 
@@ -192,5 +200,7 @@ class DNSListEmpty(CoreException):
 
 class DNSValueNotCanonicalHostname(CoreException):
 	status_code = status.HTTP_400_BAD_REQUEST
-	default_detail = "The value provided is not a canonical hostname (requires trailing dot)"
+	default_detail = (
+		"The value provided is not a canonical hostname (requires trailing dot)"
+	)
 	default_code = "dns_value_not_canonical"

@@ -1,10 +1,16 @@
 from rest_framework import serializers
 from django.core.validators import RegexValidator
-from core.models.ldap_settings import LDAPSetting, LDAPPreset, LDAP_SETTING_NAME_CHOICES
+from core.models.ldap_settings import (
+	LDAPSetting,
+	LDAPPreset,
+	LDAP_SETTING_NAME_CHOICES,
+)
 
 
 class LDAPPresetSerializer(serializers.ModelSerializer):
-	name = serializers.CharField(validators=[RegexValidator("^[A-Za-z0-9_-]*$")])
+	name = serializers.CharField(
+		validators=[RegexValidator("^[A-Za-z0-9_-]*$")]
+	)
 
 	class Meta:
 		model = LDAPPreset

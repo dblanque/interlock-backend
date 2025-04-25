@@ -83,13 +83,18 @@ class DNSRecordMixin(DomainViewMixin):
 		# Record Data Validation
 		record_type = record_data.get("type", None)
 		self.record_serializer = self.get_serializer(record_type)
-		self.record_serializer: DNSRecordSerializer = self.record_serializer(data=record_data)
+		self.record_serializer: DNSRecordSerializer = self.record_serializer(
+			data=record_data
+		)
 		self.record_serializer.is_valid(raise_exception=True)
 		unknown_keys = set(self.record_serializer.initial_data.keys()) - set(
 			self.record_serializer.fields.keys()
 		)
 		if unknown_keys:
-			logger.info("Unknown keys in serialized data for LDAP DNS Record: %s.", unknown_keys)
+			logger.info(
+				"Unknown keys in serialized data for LDAP DNS Record: %s.",
+				unknown_keys,
+			)
 
 		# Check that it's not modifying Root DNS Server data
 		if record_data["zone"].lower() in [
@@ -156,7 +161,9 @@ class DNSRecordMixin(DomainViewMixin):
 		# Update Start of Authority Record Serial
 		if record_type != RecordTypes.DNS_RECORD_TYPE_SOA.value:
 			try:
-				self.increment_soa_serial(dns_record.soa_object, dns_record.serial)
+				self.increment_soa_serial(
+					dns_record.soa_object, dns_record.serial
+				)
 			except Exception as e:
 				logger.exception(e)
 				raise exc_dns.DNSCouldNotIncrementSOA
@@ -220,7 +227,9 @@ class DNSRecordMixin(DomainViewMixin):
 				record_name=old_record_name,
 				record_zone=old_record_zone,
 				record_type=old_record_type,
-				record_main_value=old_record_data[record_type_main_field(old_record_type)],
+				record_main_value=old_record_data[
+					record_type_main_field(old_record_type)
+				],
 			)
 			# Create new record with different name
 			result = dns_record.create(values=record_data)
@@ -229,13 +238,17 @@ class DNSRecordMixin(DomainViewMixin):
 			# If creation was successful delete old record
 			old_record.delete()
 		else:
-			result = dns_record.update(new_values=record_data, old_values=old_record_data)
+			result = dns_record.update(
+				new_values=record_data, old_values=old_record_data
+			)
 
 		#########################################
 		# Update Start of Authority Record Serial
 		if record_type != RecordTypes.DNS_RECORD_TYPE_SOA.value:
 			try:
-				self.increment_soa_serial(dns_record.soa_object, dns_record.serial)
+				self.increment_soa_serial(
+					dns_record.soa_object, dns_record.serial
+				)
 			except Exception as e:
 				logger.exception(e)
 				raise exc_dns.DNSCouldNotIncrementSOA

@@ -47,13 +47,22 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
-			self.ldap_filter_object = LDAPFilter.eq("objectClass", "group").to_string()
-			self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings).get_list_filter()
+			self.ldap_filter_object = LDAPFilter.eq(
+				"objectClass", "group"
+			).to_string()
+			self.ldap_filter_attr = self.filter_attr_builder(
+				RuntimeSettings
+			).get_list_filter()
 
 			data, valid_attributes = self.list_groups()
 
 		return Response(
-			data={"code": code, "code_msg": code_msg, "groups": data, "headers": valid_attributes}
+			data={
+				"code": code,
+				"code_msg": code_msg,
+				"groups": data,
+				"headers": valid_attributes,
+			}
 		)
 
 	@action(detail=False, methods=["post"])
@@ -68,10 +77,12 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		########################################################################
 		group_search = request.data["group"]
 		group_object_class = "group"
-		self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings).get_fetch_filter()
+		self.ldap_filter_attr = self.filter_attr_builder(
+			RuntimeSettings
+		).get_fetch_filter()
 		self.ldap_filter_object = LDAPFilter.and_(
 			LDAPFilter.eq("objectClass", group_object_class),
-			LDAPFilter.eq("distinguishedName", group_search)
+			LDAPFilter.eq("distinguishedName", group_search),
 		).to_string()
 		########################################################################
 
@@ -107,13 +118,15 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 			self.ldap_filter_object = LDAPFilter.or_(
 				LDAPFilter.eq("cn", group_data["cn"]),
 				LDAPFilter.eq(
-					RuntimeSettings.LDAP_AUTH_USER_FIELDS['username'],
-					group_data['cn']
-				)
+					RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
+					group_data["cn"],
+				),
 			).to_string()
 
 			# Send LDAP Query for user being created to see if it exists
-			self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings).get_insert_filter()
+			self.ldap_filter_attr = self.filter_attr_builder(
+				RuntimeSettings
+			).get_insert_filter()
 			self.create_group(group_data=group_data)
 
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
@@ -145,11 +158,13 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		data = request.data
 		group_data = data["group"]
 
-		self.ldap_filter_attr = ["cn","groupType"]
+		self.ldap_filter_attr = ["cn", "groupType"]
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			self.delete_group(group_data=group_data)
 
-		return Response(data={"code": code, "code_msg": code_msg, "data": group_data})
+		return Response(
+			data={"code": code, "code_msg": code_msg, "data": group_data}
+		)

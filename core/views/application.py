@@ -56,7 +56,9 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 		code = 0
 		code_msg = "ok"
 		serializer, extra_fields = self.insert_clean_data(data=data)
-		self.insert_application(serializer=serializer, extra_fields=extra_fields)
+		self.insert_application(
+			serializer=serializer, extra_fields=extra_fields
+		)
 		return Response(data={"code": code, "code_msg": code_msg})
 
 	@action(detail=True, methods=["delete"], url_path="delete")
@@ -67,7 +69,13 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 		code_msg = "ok"
 		application_id = int(pk)
 		self.delete_application(application_id)
-		return Response(data={"code": code, "code_msg": code_msg, "data": {"id": application_id}})
+		return Response(
+			data={
+				"code": code,
+				"code_msg": code_msg,
+				"data": {"id": application_id},
+			}
+		)
 
 	@action(detail=True, methods=["get"])
 	@auth_required

@@ -7,7 +7,10 @@
 # Contains Interception related decorators
 # ONLY FOR BUILDING TESTS FROM REAL DATA
 from core.models.user import User
-from core.models.interlock_settings import InterlockSetting, INTERLOCK_SETTING_ENABLE_LDAP
+from core.models.interlock_settings import (
+	InterlockSetting,
+	INTERLOCK_SETTING_ENABLE_LDAP,
+)
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.request import Request
 from core.exceptions.base import LDAPBackendDisabled
@@ -46,7 +49,9 @@ def ldap_backend_intercept(func=None):
 		@wraps(view_func)
 		def _wrapped(self, request: Request, *args, **kwargs):
 			try:
-				ldap_setting = InterlockSetting.objects.get(name=INTERLOCK_SETTING_ENABLE_LDAP)
+				ldap_setting = InterlockSetting.objects.get(
+					name=INTERLOCK_SETTING_ENABLE_LDAP
+				)
 				ldap_enabled = ldap_setting.value
 			except ObjectDoesNotExist:
 				# Handle missing setting (now properly initialized)

@@ -142,8 +142,15 @@ from core.ldap.adsi import (
 		),
 	),
 )
-def test_join_ldap_filter(filter_string, filter_add, expression, negate, negate_add, expected):
-	assert join_ldap_filter(filter_string, filter_add, expression, negate, negate_add) == expected
+def test_join_ldap_filter(
+	filter_string, filter_add, expression, negate, negate_add, expected
+):
+	assert (
+		join_ldap_filter(
+			filter_string, filter_add, expression, negate, negate_add
+		)
+		== expected
+	)
 
 
 def test_join_ldap_filter_raises_empty_string():
@@ -179,8 +186,13 @@ def test_join_ldap_filter_raises_invalid_expression():
 		),
 	),
 )
-def test_search_filter_from_dict(filter_dict, expression, reverse_key, expected):
-	assert search_filter_from_dict(filter_dict, expression, reverse_key) == expected
+def test_search_filter_from_dict(
+	filter_dict, expression, reverse_key, expected
+):
+	assert (
+		search_filter_from_dict(filter_dict, expression, reverse_key)
+		== expected
+	)
 
 
 @pytest.mark.parametrize(
@@ -189,7 +201,10 @@ def test_search_filter_from_dict(filter_dict, expression, reverse_key, expected)
 		(10, "00000000000000000000000000001010"),  # Positive integer
 		(123456789, "00000111010110111100110100010101"),  # Large integer
 		(0, "00000000000000000000000000000000"),  # Zero
-		("255", "00000000000000000000000011111111"),  # String representation of integer
+		(
+			"255",
+			"00000000000000000000000011111111",
+		),  # String representation of integer
 		("1010", "00000000000000000000000000001010"),  # Binary string
 	),
 )
@@ -248,14 +263,17 @@ def test_merge_val_bin(perm_a, perm_b, expected):
 	assert merge_val_bin(perm_a, perm_b) == expected
 
 
-@pytest.mark.parametrize("perm_a, perm_b", ((LDAP_PERMS[LDAP_UF_NORMAL_ACCOUNT]["val_bin"], 1),))
+@pytest.mark.parametrize(
+	"perm_a, perm_b", ((LDAP_PERMS[LDAP_UF_NORMAL_ACCOUNT]["val_bin"], 1),)
+)
 def test_merge_val_bin_invalid_type(perm_a, perm_b):
 	with pytest.raises(TypeError):
 		merge_val_bin(perm_a, perm_b)
 
 
 @pytest.mark.parametrize(
-	"perm_a, perm_b", ((LDAP_PERMS[LDAP_UF_NORMAL_ACCOUNT]["val_bin"], "000123"),)
+	"perm_a, perm_b",
+	((LDAP_PERMS[LDAP_UF_NORMAL_ACCOUNT]["val_bin"], "000123"),),
 )
 def test_merge_val_bin_invalid_length(perm_a, perm_b):
 	with pytest.raises(LengthError):
@@ -278,7 +296,10 @@ def test_merge_val_bin_invalid_value(perm_a, perm_b):
 	"raw_user_permissions, expected",
 	(
 		(LDAP_PERMS[LDAP_UF_NORMAL_ACCOUNT]["value"], [LDAP_UF_NORMAL_ACCOUNT]),
-		(LDAP_PERMS[LDAP_UF_NORMAL_ACCOUNT]["val_bin"], [LDAP_UF_NORMAL_ACCOUNT]),
+		(
+			LDAP_PERMS[LDAP_UF_NORMAL_ACCOUNT]["val_bin"],
+			[LDAP_UF_NORMAL_ACCOUNT],
+		),
 		(
 			LDAP_PERMS[LDAP_UF_NORMAL_ACCOUNT]["value"]
 			+ LDAP_PERMS[LDAP_UF_DONT_EXPIRE_PASSWD]["value"],
@@ -319,7 +340,11 @@ def sum_permissions(perm_list: list[str]) -> int:
 		),
 		# Calculate permissions that are repeated
 		(
-			[LDAP_UF_DONT_EXPIRE_PASSWD, LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_NORMAL_ACCOUNT],
+			[
+				LDAP_UF_DONT_EXPIRE_PASSWD,
+				LDAP_UF_NORMAL_ACCOUNT,
+				LDAP_UF_NORMAL_ACCOUNT,
+			],
 			None,
 			None,
 			[LDAP_UF_DONT_EXPIRE_PASSWD, LDAP_UF_NORMAL_ACCOUNT],
@@ -358,7 +383,11 @@ def sum_permissions(perm_list: list[str]) -> int:
 			[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
 			[LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_DONT_EXPIRE_PASSWD],
 			None,
-			[LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
+			[
+				LDAP_UF_ACCOUNT_DISABLE,
+				LDAP_UF_NORMAL_ACCOUNT,
+				LDAP_UF_DONT_EXPIRE_PASSWD,
+			],
 		),
 		# Remove single permission
 		(
@@ -369,7 +398,11 @@ def sum_permissions(perm_list: list[str]) -> int:
 		),
 		# Remove multiple permissions
 		(
-			[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_DONT_EXPIRE_PASSWD],
+			[
+				LDAP_UF_NORMAL_ACCOUNT,
+				LDAP_UF_ACCOUNT_DISABLE,
+				LDAP_UF_DONT_EXPIRE_PASSWD,
+			],
 			None,
 			[LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_DONT_EXPIRE_PASSWD],
 			[LDAP_UF_NORMAL_ACCOUNT],
@@ -384,7 +417,9 @@ def sum_permissions(perm_list: list[str]) -> int:
 	),
 )
 def test_calc_permissions(permission_list, perm_add, perm_remove, expected):
-	assert calc_permissions(permission_list, perm_add, perm_remove) == sum_permissions(expected)
+	assert calc_permissions(
+		permission_list, perm_add, perm_remove
+	) == sum_permissions(expected)
 
 
 def test_calc_permission_type_error():
@@ -396,9 +431,17 @@ def test_calc_permission_type_error():
 	"userAccountControl, perm_search, expected",
 	(
 		(
-			[LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
+			[
+				LDAP_UF_ACCOUNT_DISABLE,
+				LDAP_UF_NORMAL_ACCOUNT,
+				LDAP_UF_DONT_EXPIRE_PASSWD,
+			],
 			None,
-			[LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD].sort(),
+			[
+				LDAP_UF_ACCOUNT_DISABLE,
+				LDAP_UF_NORMAL_ACCOUNT,
+				LDAP_UF_DONT_EXPIRE_PASSWD,
+			].sort(),
 		),
 		(
 			[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
@@ -412,7 +455,9 @@ def test_calc_permission_type_error():
 		),
 	),
 )
-def test_list_user_perms_user_object(userAccountControl, perm_search, expected, mocker):
+def test_list_user_perms_user_object(
+	userAccountControl, perm_search, expected, mocker
+):
 	user: MockType = mocker.MagicMock()
 	user.userAccountControl.value = sum_permissions(userAccountControl)
 	if isinstance(expected, bool):
@@ -449,9 +494,17 @@ def test_list_user_perms_user_dict_has_no_uac(mocker):
 	"userAccountControl, perm_search, expected",
 	(
 		(
-			[LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],
+			[
+				LDAP_UF_ACCOUNT_DISABLE,
+				LDAP_UF_NORMAL_ACCOUNT,
+				LDAP_UF_DONT_EXPIRE_PASSWD,
+			],
 			None,
-			[LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD].sort(),
+			[
+				LDAP_UF_ACCOUNT_DISABLE,
+				LDAP_UF_NORMAL_ACCOUNT,
+				LDAP_UF_DONT_EXPIRE_PASSWD,
+			].sort(),
 		),
 		(
 			[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD],

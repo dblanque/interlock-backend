@@ -41,7 +41,9 @@ class UserBulkInsertMappingError(CoreException):
 
 class UserBulkInsertLengthError(CoreException):
 	status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-	default_detail = "A row does not have the correct field amount or delimitation"
+	default_detail = (
+		"A row does not have the correct field amount or delimitation"
+	)
 	default_code = "user_bulk_length_error"
 
 
@@ -101,7 +103,9 @@ class CannotDeleteUserPrimaryGroup(CoreException):
 
 class BadGroupSelection(CoreException):
 	status_code = status.HTTP_400_BAD_REQUEST
-	default_detail = "The same groups are in the Add to Group and Remove from Group entries"
+	default_detail = (
+		"The same groups are in the Add to Group and Remove from Group entries"
+	)
 	default_code = "user_group_bad"
 
 
@@ -128,7 +132,5 @@ class UserExists(CoreException):
 
 class UserNotSynced(CoreException):
 	status_code = status.HTTP_404_NOT_FOUND
-	default_detail = (
-		"No synced user with that name, make sure the user has logged into Interlock at least once."
-	)
+	default_detail = "No synced user with that name, make sure the user has logged into Interlock at least once."
 	default_code = "user_not_synced"

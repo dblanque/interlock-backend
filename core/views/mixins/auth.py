@@ -13,7 +13,10 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import AnonymousUser
 
 ### Interlock
-from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS, BAD_LOGIN_COOKIE_NAME
+from interlock_backend.settings import (
+	SIMPLE_JWT as JWT_SETTINGS,
+	BAD_LOGIN_COOKIE_NAME,
+)
 
 ### Core
 from core.models.user import User
@@ -37,7 +40,9 @@ DATE_FMT_COOKIE = "%a, %d %b %Y %H:%M:%S GMT"
 BAD_LOGIN_LIMIT = 5
 
 
-def RemoveTokenResponse(request, remove_refresh=False, bad_login_count=False) -> Response:
+def RemoveTokenResponse(
+	request, remove_refresh=False, bad_login_count=False
+) -> Response:
 	response = Response(status=status.HTTP_401_UNAUTHORIZED)
 	response.set_cookie(
 		key=JWT_SETTINGS["AUTH_COOKIE_NAME"],
@@ -96,7 +101,11 @@ class CookieJWTAuthentication(JWTAuthentication):
 		"""
 		try:
 			AUTH_TOKEN = request.COOKIES.get(JWT_SETTINGS["AUTH_COOKIE_NAME"])
-			if not AUTH_TOKEN or AUTH_TOKEN == "expired" or len(AUTH_TOKEN) == 0:
+			if (
+				not AUTH_TOKEN
+				or AUTH_TOKEN == "expired"
+				or len(AUTH_TOKEN) == 0
+			):
 				return AnonymousUser(), EMPTY_TOKEN
 			validated_token = AccessToken(AUTH_TOKEN)
 		except TokenError as e:
@@ -115,7 +124,11 @@ class CookieJWTAuthentication(JWTAuthentication):
 				and stringified Refresh Token.
 		"""
 		REFRESH_TOKEN = request.COOKIES.get(JWT_SETTINGS["REFRESH_COOKIE_NAME"])
-		if not REFRESH_TOKEN or REFRESH_TOKEN == "expired" or len(REFRESH_TOKEN) == 0:
+		if (
+			not REFRESH_TOKEN
+			or REFRESH_TOKEN == "expired"
+			or len(REFRESH_TOKEN) == 0
+		):
 			raise RefreshTokenExpired()
 
 		try:

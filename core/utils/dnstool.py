@@ -60,7 +60,9 @@ def print_f(string):
 
 
 def get_dns_zones(connection, root):
-	connection.search(root, "(objectClass=dnsZone)", search_scope=LEVEL, attributes=["dc"])
+	connection.search(
+		root, "(objectClass=dnsZone)", search_scope=LEVEL, attributes=["dc"]
+	)
 	zones = []
 	for entry in connection.response:
 		if entry["type"] != "searchResEntry":
@@ -97,7 +99,10 @@ def print_record(record, ts=False):
 	if ts:
 		print("Record is tombStoned (inactive)")
 	print_o("Record entry:")
-	print(" - Type: %d (%s) (Serial: %d)" % (record["Type"], rtype, record["Serial"]))
+	print(
+		" - Type: %d (%s) (Serial: %d)"
+		% (record["Type"], rtype, record["Serial"])
+	)
 	if record["Type"] == 0:
 		tstime = DNS_RPC_RECORD_TS(record["Data"])
 		print(" - Tombstoned at: %s" % tstime.toDatetime())
@@ -127,8 +132,12 @@ def print_record(record, ts=False):
 		print(" - Retry: %d" % record_data["dwRetry"])
 		print(" - Expire: %d" % record_data["dwExpire"])
 		print(" - Minimum TTL: %d" % record_data["dwMinimumTtl"])
-		print(" - Primary server: %s" % record_data["namePrimaryServer"].toFqdn())
-		print(" - Zone admin email: %s" % record_data["zoneAdminEmail"].toFqdn())
+		print(
+			" - Primary server: %s" % record_data["namePrimaryServer"].toFqdn()
+		)
+		print(
+			" - Zone admin email: %s" % record_data["zoneAdminEmail"].toFqdn()
+		)
 
 
 def new_record(rtype, serial, ttl=180, rank=240):
@@ -169,7 +178,11 @@ def main():
 		help="Hostname/ip or ldap://host:port connection string to connect to",
 	)
 	parser.add_argument(
-		"-u", "--user", type=str, metavar="USERNAME", help="DOMAIN\\username for authentication."
+		"-u",
+		"--user",
+		type=str,
+		metavar="USERNAME",
+		help="DOMAIN\\username for authentication.",
 	)
 	parser.add_argument(
 		"-p",
@@ -179,12 +192,19 @@ def main():
 		help="Password or LM:NTLM hash, will prompt if not specified",
 	)
 	parser.add_argument(
-		"--forest", action="store_true", help="Search the ForestDnsZones instead of DomainDnsZones"
+		"--forest",
+		action="store_true",
+		help="Search the ForestDnsZones instead of DomainDnsZones",
 	)
 	parser.add_argument(
-		"--legacy", action="store_true", help="Search the System partition (legacy DNS storage)"
+		"--legacy",
+		action="store_true",
+		help="Search the System partition (legacy DNS storage)",
 	)
-	parser.add_argument("--zone", help="Zone to search in (if different than the current domain)")
+	parser.add_argument(
+		"--zone",
+		help="Zone to search in (if different than the current domain)",
+	)
 	parser.add_argument(
 		"--print-zones",
 		action="store_true",
@@ -194,7 +214,11 @@ def main():
 
 	recordopts = parser.add_argument_group("Record options")
 	recordopts.add_argument(
-		"-r", "--record", type=str, metavar="TARGETRECORD", help="Record to target (FQDN)"
+		"-r",
+		"--record",
+		type=str,
+		metavar="TARGETRECORD",
+		help="Record to target (FQDN)",
 	)
 	recordopts.add_argument(
 		"-a",
@@ -212,11 +236,17 @@ def main():
 		default="A",
 		help="Record type to add (Currently only A records supported)",
 	)
-	recordopts.add_argument("-d", "--data", metavar="RECORDDATA", help="Record data (IP address)")
 	recordopts.add_argument(
-		"--allow-multiple", action="store_true", help="Allow multiple A records for the same name"
+		"-d", "--data", metavar="RECORDDATA", help="Record data (IP address)"
 	)
-	recordopts.add_argument("--ttl", type=int, default=180, help="TTL for record (default: 180)")
+	recordopts.add_argument(
+		"--allow-multiple",
+		action="store_true",
+		help="Allow multiple A records for the same name",
+	)
+	recordopts.add_argument(
+		"--ttl", type=int, default=180, help="TTL for record (default: 180)"
+	)
 
 	args = parser.parse_args()
 	# Prompt for password if not set
@@ -232,7 +262,9 @@ def main():
 	# define the server and the connection
 	s = Server(args.host, get_info=ALL)
 	print_m("Connecting to host...")
-	c = Connection(s, user=args.user, password=args.password, authentication=authentication)
+	c = Connection(
+		s, user=args.user, password=args.password, authentication=authentication
+	)
 	print_m("Binding to host")
 	# perform the Bind operation
 	if not c.bind():
@@ -257,7 +289,8 @@ def main():
 			for zone in zones:
 				print("    %s" % zone)
 		forestdns = (
-			"CN=MicrosoftDNS,DC=ForestDnsZones,%s" % s.info.other["rootDomainNamingContext"][0]
+			"CN=MicrosoftDNS,DC=ForestDnsZones,%s"
+			% s.info.other["rootDomainNamingContext"][0]
 		)
 		zones = get_dns_zones(c, forestdns)
 		if len(zones) > 0:
@@ -284,7 +317,8 @@ def main():
 	# print s.info.naming_contexts
 	c.search(
 		searchtarget,
-		"(&(objectClass=dnsNode)(name=%s))" % ldap3.utils.conv.escape_filter_chars(target),
+		"(&(objectClass=dnsNode)(name=%s))"
+		% ldap3.utils.conv.escape_filter_chars(target),
 		attributes=["dnsRecord", "dNSTombstoned", "name"],
 	)
 	targetentry = None
@@ -295,11 +329,16 @@ def main():
 
 	# Check if we have the required data
 	if args.action in ["add", "modify", "remove"] and not args.data:
-		print_f("This operation requires you to specify record data with --data")
+		print_f(
+			"This operation requires you to specify record data with --data"
+		)
 		return
 
 	# Check if we need the target record to exists, and if yes if it does
-	if args.action in ["modify", "remove", "ldapdelete", "resurrect", "query"] and not targetentry:
+	if (
+		args.action in ["modify", "remove", "ldapdelete", "resurrect", "query"]
+		and not targetentry
+	):
 		print_f("Target record not found!")
 		return
 
@@ -327,20 +366,28 @@ def main():
 						)
 						return False
 			# If we are here, no A records exists yet
-			record = new_record(addtype, get_next_serial(args.host, zone, args.tcp))
+			record = new_record(
+				addtype, get_next_serial(args.host, zone, args.tcp)
+			)
 			record["Data"] = DNS_RPC_RECORD_A()
 			record["Data"].fromCanonical(args.data)
 			print_m("Adding extra record")
-			c.modify(targetentry["dn"], {"dnsRecord": [(MODIFY_ADD, record.getData())]})
+			c.modify(
+				targetentry["dn"],
+				{"dnsRecord": [(MODIFY_ADD, record.getData())]},
+			)
 			print_operation_result(c.result)
 		else:
 			node_data = {
 				# Schema is in the root domain (take if from schemaNamingContext to be sure)
-				"objectCategory": "CN=Dns-Node,%s" % s.info.other["schemaNamingContext"][0],
+				"objectCategory": "CN=Dns-Node,%s"
+				% s.info.other["schemaNamingContext"][0],
 				"dNSTombstoned": False,
 				"name": target,
 			}
-			record = new_record(addtype, get_next_serial(args.host, zone, args.tcp))
+			record = new_record(
+				addtype, get_next_serial(args.host, zone, args.tcp)
+			)
 			record["Data"] = DNS_RPC_RECORD_A()
 			record["Data"].fromCanonical(args.data)
 			record_dn = "DC=%s,%s" % (target, searchtarget)
@@ -383,14 +430,19 @@ def main():
 			if not targetrecord:
 				print_f("Could not find a record with the specified data")
 				return
-			c.modify(targetentry["dn"], {"dnsRecord": [(MODIFY_DELETE, targetrecord)]})
+			c.modify(
+				targetentry["dn"],
+				{"dnsRecord": [(MODIFY_DELETE, targetrecord)]},
+			)
 			print_operation_result(c.result)
 		else:
 			print_m("Target has only one record, tombstoning it")
 			diff = datetime.datetime.today() - datetime.datetime(1601, 1, 1)
 			tstime = int(diff.total_seconds() * 10000)
 			# Add a null record
-			record = new_record(addtype, get_next_serial(args.host, zone, args.tcp))
+			record = new_record(
+				addtype, get_next_serial(args.host, zone, args.tcp)
+			)
 			record["Data"] = DNS_RPC_RECORD_TS()
 			record["Data"]["entombedTime"] = tstime
 			c.modify(
@@ -408,14 +460,18 @@ def main():
 	elif args.action == "resurrect":
 		addtype = 0
 		if len(targetentry["raw_attributes"]["dnsRecord"]) > 1:
-			print_m("Target has multiple records, I dont  know how to handle this.")
+			print_m(
+				"Target has multiple records, I dont  know how to handle this."
+			)
 			return
 		else:
 			print_m("Target has only one record, resurrecting it")
 			diff = datetime.datetime.today() - datetime.datetime(1601, 1, 1)
 			tstime = int(diff.total_seconds() * 10000)
 			# Add a null record
-			record = new_record(addtype, get_next_serial(args.host, zone, args.tcp))
+			record = new_record(
+				addtype, get_next_serial(args.host, zone, args.tcp)
+			)
 			record["Data"] = DNS_RPC_RECORD_TS()
 			record["Data"]["entombedTime"] = tstime
 			c.modify(
@@ -425,7 +481,9 @@ def main():
 					"dNSTombstoned": [(MODIFY_REPLACE, False)],
 				},
 			)
-			print_o("Record resurrected. You will need to (re)add the record with the IP address.")
+			print_o(
+				"Record resurrected. You will need to (re)add the record with the IP address."
+			)
 
 
 if __name__ == "__main__":

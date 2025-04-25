@@ -21,7 +21,10 @@ from rest_framework.response import Response
 
 ### Interlock
 from core.config.runtime import RuntimeSettings
-from interlock_backend.settings import SIMPLE_JWT as JWT_SETTINGS, BAD_LOGIN_COOKIE_NAME
+from interlock_backend.settings import (
+	SIMPLE_JWT as JWT_SETTINGS,
+	BAD_LOGIN_COOKIE_NAME,
+)
 
 ### Others
 from datetime import datetime
@@ -58,7 +61,9 @@ class AuthViewSet(BaseViewSet):
 		response.set_cookie(
 			key=JWT_SETTINGS["AUTH_COOKIE_NAME"],
 			value=access,
-			expires=datetime.fromtimestamp(access_expire_epoch_seconds).strftime(DATE_FMT_COOKIE),
+			expires=datetime.fromtimestamp(
+				access_expire_epoch_seconds
+			).strftime(DATE_FMT_COOKIE),
 			secure=JWT_SETTINGS["AUTH_COOKIE_SECURE"],
 			httponly=JWT_SETTINGS["AUTH_COOKIE_HTTP_ONLY"],
 			samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
@@ -66,7 +71,9 @@ class AuthViewSet(BaseViewSet):
 		response.set_cookie(
 			key=JWT_SETTINGS["REFRESH_COOKIE_NAME"],
 			value=refresh,
-			expires=datetime.fromtimestamp(refresh_expire_epoch_seconds).strftime(DATE_FMT_COOKIE),
+			expires=datetime.fromtimestamp(
+				refresh_expire_epoch_seconds
+			).strftime(DATE_FMT_COOKIE),
 			secure=JWT_SETTINGS["AUTH_COOKIE_SECURE"],
 			httponly=JWT_SETTINGS["AUTH_COOKIE_HTTP_ONLY"],
 			samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],

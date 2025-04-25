@@ -12,7 +12,9 @@ class CoreConfig(AppConfig):
 		create_default_superuser()
 
 		# DEFAULT SETTINGS CREATION
-		from core.setup.interlock_setting import create_default_interlock_settings
+		from core.setup.interlock_setting import (
+			create_default_interlock_settings,
+		)
 
 		create_default_interlock_settings()
 

@@ -9,7 +9,10 @@ from rest_framework.response import Response
 from core.models.user import User, USER_TYPE_LDAP, USER_TYPE_LOCAL
 from core.ldap.connector import LDAPConnector
 from ldap3 import Server, ServerPool
-from core.models.interlock_settings import InterlockSetting, INTERLOCK_SETTING_ENABLE_LDAP
+from core.models.interlock_settings import (
+	InterlockSetting,
+	INTERLOCK_SETTING_ENABLE_LDAP,
+)
 from core.config.runtime import RuntimeSettings
 
 ### Auth
@@ -30,14 +33,20 @@ class HomeViewSet(BaseViewSet):
 	def list(self, request):
 		user: User = request.user
 		code = 0
-		local_user_count = User.objects.filter(user_type=USER_TYPE_LOCAL).count()
+		local_user_count = User.objects.filter(
+			user_type=USER_TYPE_LOCAL
+		).count()
 		ldap_user_count = User.objects.filter(user_type=USER_TYPE_LDAP).count()
-		oidc_well_known_info = ProviderInfoView()._build_response_dict(request=request)
+		oidc_well_known_info = ProviderInfoView()._build_response_dict(
+			request=request
+		)
 
 		# Check if LDAP Enabled
 		ldap_enabled = False
 		try:
-			ldap_enabled = InterlockSetting.objects.get(name=INTERLOCK_SETTING_ENABLE_LDAP)
+			ldap_enabled = InterlockSetting.objects.get(
+				name=INTERLOCK_SETTING_ENABLE_LDAP
+			)
 			ldap_enabled = ldap_enabled.value
 		except ObjectDoesNotExist:
 			pass
@@ -50,7 +59,9 @@ class HomeViewSet(BaseViewSet):
 				with LDAPConnector(user=user) as ldc:
 					CONNECTION_OPEN = True if ldc.connection.bound else False
 					ldap_server_pool: ServerPool = ldc.connection.server_pool
-					ldap_server: Server = ldap_server_pool.get_current_server(ldc.connection)
+					ldap_server: Server = ldap_server_pool.get_current_server(
+						ldc.connection
+					)
 					ldap_server = ldap_server.host
 				CONNECTION_CLOSED = True if not ldc.connection.bound else False
 				if CONNECTION_OPEN and CONNECTION_CLOSED:

@@ -76,23 +76,35 @@ def f_forest_zones():
 @pytest.fixture
 def f_dns_root(f_runtime_settings):
 	if f_runtime_settings.LDAP_DNS_LEGACY:
-		return "CN=MicrosoftDNS,CN=System,%s" % f_runtime_settings.LDAP_AUTH_SEARCH_BASE
+		return (
+			"CN=MicrosoftDNS,CN=System,%s"
+			% f_runtime_settings.LDAP_AUTH_SEARCH_BASE
+		)
 	else:
-		return "CN=MicrosoftDNS,DC=DomainDnsZones,%s" % f_runtime_settings.LDAP_AUTH_SEARCH_BASE
+		return (
+			"CN=MicrosoftDNS,DC=DomainDnsZones,%s"
+			% f_runtime_settings.LDAP_AUTH_SEARCH_BASE
+		)
 
 
 @pytest.fixture
 def f_record(mocker, f_connection, f_dns_zones, f_forest_zones) -> LDAPRecord:
 	def maker(record_type, record_values: dict):
 		mocker.patch.object(LDAPRecord, "fetch")
-		mocker.patch.object(LDAPRecord, "list_dns_zones", return_value=f_dns_zones)
-		mocker.patch.object(LDAPRecord, "list_forest_zones", return_value=f_forest_zones)
+		mocker.patch.object(
+			LDAPRecord, "list_dns_zones", return_value=f_dns_zones
+		)
+		mocker.patch.object(
+			LDAPRecord, "list_forest_zones", return_value=f_forest_zones
+		)
 		m_record = LDAPRecord(
 			connection=f_connection,
 			record_name="@",
 			record_zone=LDAP_DOMAIN,
 			record_type=record_type,
-			record_main_value=record_values[record_type_main_field(record_type)],
+			record_main_value=record_values[
+				record_type_main_field(record_type)
+			],
 		)
 		m_record.values = record_values
 		return m_record
@@ -194,12 +206,17 @@ def f_record_instance_type_a(f_record, f_record_data_type_a) -> LDAPRecord:
 def f_record_instance_type_cname_subdomain(
 	f_record, f_record_data_type_cname_subdomain
 ) -> LDAPRecord:
-	return f_record(RecordTypes.DNS_RECORD_TYPE_CNAME.value, f_record_data_type_cname_subdomain)
+	return f_record(
+		RecordTypes.DNS_RECORD_TYPE_CNAME.value,
+		f_record_data_type_cname_subdomain,
+	)
 
 
 @pytest.fixture
 def f_record_instance_type_soa(f_record, f_record_data_type_soa) -> LDAPRecord:
-	return f_record(RecordTypes.DNS_RECORD_TYPE_SOA.value, f_record_data_type_soa)
+	return f_record(
+		RecordTypes.DNS_RECORD_TYPE_SOA.value, f_record_data_type_soa
+	)
 
 
 @pytest.mark.parametrize(
@@ -257,11 +274,16 @@ class TestLDAPDNS:
 		"legacy_dns, expected_dns_root",
 		(
 			(True, f"CN=MicrosoftDNS,CN=System,{LDAP_AUTH_SEARCH_BASE}"),
-			(False, f"CN=MicrosoftDNS,DC=DomainDnsZones,{LDAP_AUTH_SEARCH_BASE}"),
+			(
+				False,
+				f"CN=MicrosoftDNS,DC=DomainDnsZones,{LDAP_AUTH_SEARCH_BASE}",
+			),
 		),
 		ids=["Legacy LDAP DNS", "Standard LDAP DNS"],
 	)
-	def test_init(self, mocker, legacy_dns, expected_dns_root, f_runtime_settings):
+	def test_init(
+		self, mocker, legacy_dns, expected_dns_root, f_runtime_settings
+	):
 		m_connection = mocker.MagicMock()
 		f_runtime_settings.LDAP_DNS_LEGACY = legacy_dns
 		m_list_dns_zones: MockType = mocker.patch.object(
@@ -273,20 +295,29 @@ class TestLDAPDNS:
 		ldap_dns = LDAPDNS(m_connection)
 
 		assert ldap_dns.dns_root == expected_dns_root
-		assert ldap_dns.forest_root == f"CN=MicrosoftDNS,DC=ForestDnsZones,{LDAP_AUTH_SEARCH_BASE}"
+		assert (
+			ldap_dns.forest_root
+			== f"CN=MicrosoftDNS,DC=ForestDnsZones,{LDAP_AUTH_SEARCH_BASE}"
+		)
 		m_list_dns_zones.assert_called_once()
 		m_list_forest_zones.assert_called_once()
 
 	def test_list_dns_zones(self, mocker, f_runtime_settings, f_dns_zones):
 		m_connection = mocker.MagicMock()
-		mocker.patch("core.models.dns.dnstool.get_dns_zones", return_value=f_dns_zones)
+		mocker.patch(
+			"core.models.dns.dnstool.get_dns_zones", return_value=f_dns_zones
+		)
 		mocker.patch.object(LDAPDNS, "list_forest_zones", return_value=None)
 		ldap_dns = LDAPDNS(m_connection)
 		assert ldap_dns.dns_zones == f_dns_zones
 
-	def test_list_forest_zones(self, mocker, f_runtime_settings, f_forest_zones):
+	def test_list_forest_zones(
+		self, mocker, f_runtime_settings, f_forest_zones
+	):
 		m_connection = mocker.MagicMock()
-		mocker.patch("core.models.dns.dnstool.get_dns_zones", return_value=f_forest_zones)
+		mocker.patch(
+			"core.models.dns.dnstool.get_dns_zones", return_value=f_forest_zones
+		)
 		mocker.patch.object(LDAPDNS, "list_dns_zones", return_value=None)
 		ldap_dns = LDAPDNS(m_connection)
 		assert ldap_dns.forest_zones == f_forest_zones
@@ -301,9 +332,9 @@ class TestSerialGenerator:
 		assert SerialGenerator.serial_as_datetime(1) is False
 
 	def test_serial_is_epoch_datetime(self):
-		assert SerialGenerator.serial_as_datetime(2024010121) == datetime.strptime(
-			"20240101", DATE_FMT
-		)
+		assert SerialGenerator.serial_as_datetime(
+			2024010121
+		) == datetime.strptime("20240101", DATE_FMT)
 
 	@pytest.mark.parametrize(
 		"old_serial, new_serial",
@@ -336,18 +367,25 @@ class TestSerialGenerator:
 		old_serial = get_mock_serial(old_serial)
 		new_serial = get_mock_serial(new_serial)
 		old_serial_obj = datetime.strptime(str(old_serial)[:8], DATE_FMT)
-		generated_serial = SerialGenerator.generate_epoch(old_serial, old_serial_obj)
+		generated_serial = SerialGenerator.generate_epoch(
+			old_serial, old_serial_obj
+		)
 		assert generated_serial == new_serial
 
 	@pytest.mark.parametrize(
 		"serial, serial_date_obj, expected",
-		((b"2024010121", None, "of type int or str"), (20240101_01, None, "of type datetime")),
+		(
+			(b"2024010121", None, "of type int or str"),
+			(20240101_01, None, "of type datetime"),
+		),
 		ids=[
 			"serial not int or str raises TypeError",
 			"serial_date_obj not datetime raises TypeError",
 		],
 	)
-	def test_generate_epoch_raises_type_error(self, serial, serial_date_obj, expected):
+	def test_generate_epoch_raises_type_error(
+		self, serial, serial_date_obj, expected
+	):
 		with pytest.raises(TypeError, match=expected):
 			SerialGenerator.generate_epoch(serial, serial_date_obj)
 
@@ -403,7 +441,9 @@ class TestLDAPRecordMixin:
 			f_record_data_type_ns,
 			f_record_data_type_soa,
 		]
-		mocker.patch.object(LDAPRecord, "get_soa_entry", return_value=m_soa_object)
+		mocker.patch.object(
+			LDAPRecord, "get_soa_entry", return_value=m_soa_object
+		)
 
 		f_record_instance_type_a.get_soa()
 		assert f_record_instance_type_a.soa_bytes == m_soa_bytes
@@ -429,7 +469,9 @@ class TestLDAPRecordMixin:
 
 	def test_get_soa_serial_raise_could_not_get_soa(self, mocker):
 		mocker.patch.object(
-			SerialGenerator, "serial_as_datetime", side_effect=exc_dns.DNSCouldNotGetSOA
+			SerialGenerator,
+			"serial_as_datetime",
+			side_effect=exc_dns.DNSCouldNotGetSOA,
 		)
 		m_get_soa: MockType = mocker.Mock(return_value=None)
 		m_mixin: LDAPRecord = LDAPRecordMixin()
@@ -496,7 +538,9 @@ class TestLDAPRecordMixin:
 			m_mixin.get_serial(record_values={"dwSerialNo": "a"})
 
 	def test_get_serial_raise(self, mocker):
-		mocker.patch.object(LDAPRecordMixin, "get_soa", side_effect=exc_dns.DNSCouldNotGetSOA)
+		mocker.patch.object(
+			LDAPRecordMixin, "get_soa", side_effect=exc_dns.DNSCouldNotGetSOA
+		)
 		m_mixin: LDAPRecord = LDAPRecordMixin()
 		m_mixin.type = RecordTypes.DNS_RECORD_TYPE_A.value
 		m_mixin.mapping = RECORD_MAPPINGS[m_mixin.type]
@@ -504,27 +548,38 @@ class TestLDAPRecordMixin:
 			m_mixin.get_serial({})
 
 	def test_get_serial_key_doesnt_exist(self, mocker):
-		mocker.patch.object(LDAPRecordMixin, "get_soa_serial", return_value=2024010101)
+		mocker.patch.object(
+			LDAPRecordMixin, "get_soa_serial", return_value=2024010101
+		)
 		m_mixin: LDAPRecord = LDAPRecordMixin()
 		m_mixin.type = RecordTypes.DNS_RECORD_TYPE_A.value
 		m_mixin.mapping = RECORD_MAPPINGS[m_mixin.type]
 		assert m_mixin.get_serial({}) == 2024010101
 
 	def test_get_serial_old_is_same(self, mocker):
-		mocker.patch.object(LDAPRecordMixin, "get_soa_serial", return_value=2024010101)
+		mocker.patch.object(
+			LDAPRecordMixin, "get_soa_serial", return_value=2024010101
+		)
 		m_mixin: LDAPRecord = LDAPRecordMixin()
 		m_mixin.type = RecordTypes.DNS_RECORD_TYPE_A.value
 		m_mixin.mapping = RECORD_MAPPINGS[m_mixin.type]
-		assert m_mixin.get_serial(record_values={"serial": 1}, old_serial=1) == 2024010101
+		assert (
+			m_mixin.get_serial(record_values={"serial": 1}, old_serial=1)
+			== 2024010101
+		)
 
 	def test_get_serial(self, mocker):
 		mocker.patch.object(LDAPRecordMixin, "get_soa_serial", return_value=3)
 		m_mixin: LDAPRecord = LDAPRecordMixin()
 		m_mixin.type = RecordTypes.DNS_RECORD_TYPE_A.value
 		m_mixin.mapping = RECORD_MAPPINGS[m_mixin.type]
-		assert m_mixin.get_serial(record_values={"serial": 2}, old_serial=1) == 2
+		assert (
+			m_mixin.get_serial(record_values={"serial": 2}, old_serial=1) == 2
+		)
 
-	def test_property_main_field_exception(self, mocker, f_record_instance_type_a: LDAPRecord):
+	def test_property_main_field_exception(
+		self, mocker, f_record_instance_type_a: LDAPRecord
+	):
 		f_record_instance_type_a.mapping = {}
 		with pytest.raises(Exception):
 			print(f_record_instance_type_a.main_field)
@@ -597,11 +652,17 @@ class TestLDAPRecordMixin:
 		],
 	)
 	def test_record_type_in_entry(
-		self, record_type, existing_record_type, existing_record_value, expected_result
+		self,
+		record_type,
+		existing_record_type,
+		existing_record_value,
+		expected_result,
 	):
 		if not existing_record_value:
 			existing_record_value = "value"
-		existing_record_main_field = record_type_main_field(existing_record_type)
+		existing_record_main_field = record_type_main_field(
+			existing_record_type
+		)
 		m_mixin: LDAPRecord = LDAPRecordMixin()
 		m_mixin.name = "subdomain"
 		m_mixin.type = record_type
@@ -616,7 +677,9 @@ class TestLDAPRecordMixin:
 			}
 		]
 		assert (
-			m_mixin.record_in_entry(values={existing_record_main_field: existing_record_value})
+			m_mixin.record_in_entry(
+				values={existing_record_main_field: existing_record_value}
+			)
 			== expected_result
 		)
 
@@ -646,7 +709,9 @@ class TestLDAPRecordMixin:
 		m_mixin.name = "subdomain"
 		m_mixin.type = RecordTypes.DNS_RECORD_TYPE_SOA.value
 		m_mixin.mapping = RECORD_MAPPINGS[m_mixin.type]
-		m_mixin.entry = [{"name": "@", "type": RecordTypes.DNS_RECORD_TYPE_SOA.value}]
+		m_mixin.entry = [
+			{"name": "@", "type": RecordTypes.DNS_RECORD_TYPE_SOA.value}
+		]
 		with pytest.raises(exc_dns.DNSRecordExistsConflict):
 			m_mixin.validate_soa()
 
@@ -669,11 +734,18 @@ class TestLDAPRecordMixin:
 		f_record_instance: LDAPRecord = request.getfixturevalue(
 			f"f_record_instance_type_{record_type}"
 		)
-		f_record_data: dict = request.getfixturevalue(f"f_record_data_type_{record_type}")
+		f_record_data: dict = request.getfixturevalue(
+			f"f_record_data_type_{record_type}"
+		)
 		mocker.patch.object(LDAPRecord, "record_in_entry", return_value=False)
-		mocker.patch.object(LDAPRecord, "record_has_collision", return_value=(False, ""))
+		mocker.patch.object(
+			LDAPRecord, "record_has_collision", return_value=(False, "")
+		)
 		assert (
-			f_record_instance._validate_create_update(values=f_record_data, create=create) is None
+			f_record_instance._validate_create_update(
+				values=f_record_data, create=create
+			)
+			is None
 		)
 
 	def test_validate_create_update_raises_exists_conflict(
@@ -683,9 +755,13 @@ class TestLDAPRecordMixin:
 		f_record_data_type_a,
 	):
 		mocker.patch.object(LDAPRecord, "record_in_entry", return_value=True)
-		mocker.patch.object(LDAPRecord, "record_has_collision", return_value=(False, ""))
+		mocker.patch.object(
+			LDAPRecord, "record_has_collision", return_value=(False, "")
+		)
 		with pytest.raises(exc_dns.DNSRecordExistsConflict):
-			f_record_instance_type_a._validate_create_update(values=f_record_data_type_a)
+			f_record_instance_type_a._validate_create_update(
+				values=f_record_data_type_a
+			)
 
 	def test_validate_create_update_raises_type_conflict(
 		self,
@@ -694,9 +770,13 @@ class TestLDAPRecordMixin:
 		f_record_data_type_a,
 	):
 		mocker.patch.object(LDAPRecord, "record_in_entry", return_value=False)
-		mocker.patch.object(LDAPRecord, "record_has_collision", return_value=(True, ""))
+		mocker.patch.object(
+			LDAPRecord, "record_has_collision", return_value=(True, "")
+		)
 		with pytest.raises(exc_dns.DNSRecordTypeConflict):
-			f_record_instance_type_a._validate_create_update(values=f_record_data_type_a)
+			f_record_instance_type_a._validate_create_update(
+				values=f_record_data_type_a
+			)
 
 	def test_validate_create(
 		self,
@@ -704,13 +784,22 @@ class TestLDAPRecordMixin:
 		f_record_instance_type_a: LDAPRecord,
 		f_record_data_type_a,
 	):
-		m_validate_soa: MockType = mocker.patch.object(LDAPRecord, "validate_soa")
+		m_validate_soa: MockType = mocker.patch.object(
+			LDAPRecord, "validate_soa"
+		)
 		m_validate_create_update: MockType = mocker.patch.object(
 			LDAPRecord, "_validate_create_update"
 		)
-		assert f_record_instance_type_a.validate_create(values=f_record_data_type_a) is None
+		assert (
+			f_record_instance_type_a.validate_create(
+				values=f_record_data_type_a
+			)
+			is None
+		)
 		m_validate_soa.assert_not_called()
-		m_validate_create_update.assert_called_once_with(values=f_record_data_type_a)
+		m_validate_create_update.assert_called_once_with(
+			values=f_record_data_type_a
+		)
 
 	def test_validate_create_soa(
 		self,
@@ -718,11 +807,18 @@ class TestLDAPRecordMixin:
 		f_record_instance_type_soa: LDAPRecord,
 		f_record_data_type_soa,
 	):
-		m_validate_soa: MockType = mocker.patch.object(LDAPRecord, "validate_soa")
+		m_validate_soa: MockType = mocker.patch.object(
+			LDAPRecord, "validate_soa"
+		)
 		m_validate_create_update: MockType = mocker.patch.object(
 			LDAPRecord, "_validate_create_update"
 		)
-		assert f_record_instance_type_soa.validate_create(values=f_record_data_type_soa) is None
+		assert (
+			f_record_instance_type_soa.validate_create(
+				values=f_record_data_type_soa
+			)
+			is None
+		)
 		m_validate_soa.assert_called_once()
 		m_validate_create_update.assert_not_called()
 
@@ -735,8 +831,15 @@ class TestLDAPRecordMixin:
 		m_validate_create_update: MockType = mocker.patch.object(
 			LDAPRecord, "_validate_create_update"
 		)
-		assert f_record_instance_type_a.validate_update(new_values=f_record_data_type_a) is None
-		m_validate_create_update.assert_called_once_with(values=f_record_data_type_a, create=False)
+		assert (
+			f_record_instance_type_a.validate_update(
+				new_values=f_record_data_type_a
+			)
+			is None
+		)
+		m_validate_create_update.assert_called_once_with(
+			values=f_record_data_type_a, create=False
+		)
 
 	def test_record_has_collision_data_is_none(self):
 		m_mixin: LDAPRecord = LDAPRecordMixin()
@@ -812,7 +915,9 @@ class TestLDAPRecordMixin:
 		"record_type, collision_type",
 		(
 			pytest.param(
-				RecordTypes.DNS_RECORD_TYPE_A.value, None, id="DNS_RECORD_TYPE_A with itself"
+				RecordTypes.DNS_RECORD_TYPE_A.value,
+				None,
+				id="DNS_RECORD_TYPE_A with itself",
 			),
 			pytest.param(
 				RecordTypes.DNS_RECORD_TYPE_CNAME.value,
@@ -820,16 +925,24 @@ class TestLDAPRecordMixin:
 				id="DNS_RECORD_TYPE_CNAME with itself",
 			),
 			pytest.param(
-				RecordTypes.DNS_RECORD_TYPE_AAAA.value, None, id="DNS_RECORD_TYPE_AAAA with itself"
+				RecordTypes.DNS_RECORD_TYPE_AAAA.value,
+				None,
+				id="DNS_RECORD_TYPE_AAAA with itself",
 			),
 			pytest.param(
-				RecordTypes.DNS_RECORD_TYPE_NS.value, None, id="DNS_RECORD_TYPE_NS with itself"
+				RecordTypes.DNS_RECORD_TYPE_NS.value,
+				None,
+				id="DNS_RECORD_TYPE_NS with itself",
 			),
 			pytest.param(
-				RecordTypes.DNS_RECORD_TYPE_TXT.value, None, id="DNS_RECORD_TYPE_TXT with itself"
+				RecordTypes.DNS_RECORD_TYPE_TXT.value,
+				None,
+				id="DNS_RECORD_TYPE_TXT with itself",
 			),
 			pytest.param(
-				RecordTypes.DNS_RECORD_TYPE_MX.value, None, id="DNS_RECORD_TYPE_MX with itself"
+				RecordTypes.DNS_RECORD_TYPE_MX.value,
+				None,
+				id="DNS_RECORD_TYPE_MX with itself",
 			),
 		),
 	)
@@ -902,9 +1015,15 @@ class TestLDAPRecord:
 		test_args,
 		expected_exc,
 	):
-		m_record_fetch: MockType = mocker.patch.object(LDAPRecord, "fetch", return_value=None)
+		m_record_fetch: MockType = mocker.patch.object(
+			LDAPRecord, "fetch", return_value=None
+		)
 		with pytest.raises((ValueError, TypeError)) as exc_info:
-			LDAPRecord(connection=f_connection, **test_args, record_main_value="some_value")
+			LDAPRecord(
+				connection=f_connection,
+				**test_args,
+				record_main_value="some_value",
+			)
 		assert expected_exc in exc_info.value.args[0].lower()
 		m_record_fetch.assert_not_called()
 
@@ -981,7 +1100,9 @@ class TestLDAPRecord:
 		expected_cls,
 	):
 		expected_dn = f"DC=@,DC={f_runtime_settings.LDAP_DOMAIN},{f_dns_root}"
-		m_record_fetch: MockType = mocker.patch.object(LDAPRecord, "fetch", return_value=None)
+		m_record_fetch: MockType = mocker.patch.object(
+			LDAPRecord, "fetch", return_value=None
+		)
 		m_record = LDAPRecord(
 			connection=f_connection,
 			record_name="@",
@@ -1009,7 +1130,9 @@ class TestLDAPRecord:
 		f_runtime_settings,
 		test_type,
 	):
-		m_record_fetch: MockType = mocker.patch.object(LDAPRecord, "fetch", return_value=None)
+		m_record_fetch: MockType = mocker.patch.object(
+			LDAPRecord, "fetch", return_value=None
+		)
 		with pytest.raises(exc_dns.DNSRecordTypeUnsupported):
 			LDAPRecord(
 				connection=f_connection,
@@ -1030,7 +1153,9 @@ class TestLDAPRecord:
 				record_zone=f_runtime_settings.LDAP_DOMAIN,
 			)
 
-	def test_init_soa_not_on_root(self, mocker, f_connection, f_runtime_settings):
+	def test_init_soa_not_on_root(
+		self, mocker, f_connection, f_runtime_settings
+	):
 		mocker.patch.object(LDAPRecord, "fetch", return_value=None)
 		with pytest.raises(ValueError, match="must be in the root"):
 			LDAPRecord(
@@ -1041,8 +1166,13 @@ class TestLDAPRecord:
 				record_main_value="value",
 			)
 
-	def test_init_class_not_in_def(self, mocker, f_connection, f_runtime_settings):
-		mocker.patch("core.models.dns.RECORD_MAPPINGS", {RecordTypes.DNS_RECORD_TYPE_A.value: {}})
+	def test_init_class_not_in_def(
+		self, mocker, f_connection, f_runtime_settings
+	):
+		mocker.patch(
+			"core.models.dns.RECORD_MAPPINGS",
+			{RecordTypes.DNS_RECORD_TYPE_A.value: {}},
+		)
 		with pytest.raises(TypeError, match="key not in"):
 			LDAPRecord(
 				connection=f_connection,
@@ -1052,7 +1182,9 @@ class TestLDAPRecord:
 				record_main_value="some_value",
 			)
 
-	def test_init_record_type_no_mapping(self, mocker, f_connection, f_runtime_settings):
+	def test_init_record_type_no_mapping(
+		self, mocker, f_connection, f_runtime_settings
+	):
 		mocker.patch("core.models.dns.RECORD_MAPPINGS", {})
 		with pytest.raises(TypeError, match="type not found in"):
 			LDAPRecord(
@@ -1063,10 +1195,14 @@ class TestLDAPRecord:
 				record_main_value="some_value",
 			)
 
-	def test_init_log_iterable_main_value(self, mocker, f_connection, f_runtime_settings):
+	def test_init_log_iterable_main_value(
+		self, mocker, f_connection, f_runtime_settings
+	):
 		m_logger = mocker.patch("core.models.dns.logger", mocker.MagicMock())
 		mocker.patch.object(
-			LDAPRecord, "list_dns_zones", return_value=[f_runtime_settings.LDAP_DOMAIN]
+			LDAPRecord,
+			"list_dns_zones",
+			return_value=[f_runtime_settings.LDAP_DOMAIN],
 		)
 		LDAPRecord(
 			connection=f_connection,
@@ -1076,7 +1212,9 @@ class TestLDAPRecord:
 			record_main_value=("some_value",),
 			auto_fetch=False,
 		)
-		m_logger.warning.assert_called_once_with("record_main_value is an iterable, is this okay?")
+		m_logger.warning.assert_called_once_with(
+			"record_main_value is an iterable, is this okay?"
+		)
 
 	def test_dunder_attributes(self, mocker):
 		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
@@ -1129,7 +1267,9 @@ class TestLDAPRecord:
 		m_record.soa = "soa"
 		assert m_record.__soa__() == "soa"
 
-	def test_get_record_index_from_entry_raises_no_main_value_attr(self, mocker):
+	def test_get_record_index_from_entry_raises_no_main_value_attr(
+		self, mocker
+	):
 		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
 		m_record = LDAPRecord()
 		m_record.type = RecordTypes.DNS_RECORD_TYPE_A.value
@@ -1158,20 +1298,29 @@ class TestLDAPRecord:
 		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
 		m_record = LDAPRecord()
 		m_record.type = RecordTypes.DNS_RECORD_TYPE_A.value
-		m_record.mapping = get_record_mapping_from_type(RecordTypes.DNS_RECORD_TYPE_A.value)
+		m_record.mapping = get_record_mapping_from_type(
+			RecordTypes.DNS_RECORD_TYPE_A.value
+		)
 		m_record.main_value = "127.0.0.1"
 		m_record.entry = [
 			{"type": RecordTypes.DNS_RECORD_TYPE_SOA.value},
-			{"type": RecordTypes.DNS_RECORD_TYPE_A.value, m_record.main_field: "127.0.0.1"},
+			{
+				"type": RecordTypes.DNS_RECORD_TYPE_A.value,
+				m_record.main_field: "127.0.0.1",
+			},
 		]
 		assert m_record.get_record_index_from_entry() == 1
 
-	def test_property_data_raises_not_exists_no_attr(self, f_record_instance_type_a: LDAPRecord):
+	def test_property_data_raises_not_exists_no_attr(
+		self, f_record_instance_type_a: LDAPRecord
+	):
 		delattr(f_record_instance_type_a, "entry")
 		with pytest.raises(exc_dns.DNSRecordEntryDoesNotExist):
 			f_record_instance_type_a.data
 
-	def test_property_data_raises_not_exists(self, f_record_instance_type_a: LDAPRecord):
+	def test_property_data_raises_not_exists(
+		self, f_record_instance_type_a: LDAPRecord
+	):
 		f_record_instance_type_a.entry = None
 		with pytest.raises(exc_dns.DNSRecordEntryDoesNotExist):
 			f_record_instance_type_a.data
@@ -1190,14 +1339,19 @@ class TestLDAPRecord:
 	def test_property_as_dict(self, mocker):
 		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
 		mocker.patch.object(
-			LDAPRecord, "data", new_callable=mocker.PropertyMock, return_value="data"
+			LDAPRecord,
+			"data",
+			new_callable=mocker.PropertyMock,
+			return_value="data",
 		)
 		m_record = LDAPRecord()
 		m_record.as_dict == "data"
 
 	def test_property_as_bytes(self, mocker):
 		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
-		mocker.patch.object(LDAPRecord, "get_record_index_from_entry", return_value=1)
+		mocker.patch.object(
+			LDAPRecord, "get_record_index_from_entry", return_value=1
+		)
 		m_record = LDAPRecord()
 		m_record.raw_entry = {
 			"raw_attributes": {
@@ -1245,7 +1399,9 @@ class TestLDAPRecord:
 		)
 
 		m_record.make_record_bytes(test_values, m_serial)
-		m_new_record.assert_called_once_with(record_type.value, m_serial, ttl=m_record.DEFAULT_TTL)
+		m_new_record.assert_called_once_with(
+			record_type.value, m_serial, ttl=m_record.DEFAULT_TTL
+		)
 		m_data_struct.fromCanonical.assert_called_once_with(test_field_value)
 
 	@pytest.mark.parametrize(
@@ -1276,8 +1432,12 @@ class TestLDAPRecord:
 		)
 
 		m_record.make_record_bytes(test_values, m_serial)
-		m_new_record.assert_called_once_with(record_type.value, m_serial, ttl=m_record.DEFAULT_TTL)
-		m_data_struct.toCountName.assert_called_once_with(test_values["nameNode"])
+		m_new_record.assert_called_once_with(
+			record_type.value, m_serial, ttl=m_record.DEFAULT_TTL
+		)
+		m_data_struct.toCountName.assert_called_once_with(
+			test_values["nameNode"]
+		)
 
 	@pytest.mark.parametrize(
 		"record_type",
@@ -1308,8 +1468,12 @@ class TestLDAPRecord:
 		)
 
 		m_record.make_record_bytes(test_values, m_serial)
-		m_new_record.assert_called_once_with(record_type.value, m_serial, ttl=m_record.DEFAULT_TTL)
-		m_data_struct.toRPCName.assert_called_once_with(test_values["stringData"])
+		m_new_record.assert_called_once_with(
+			record_type.value, m_serial, ttl=m_record.DEFAULT_TTL
+		)
+		m_data_struct.toRPCName.assert_called_once_with(
+			test_values["stringData"]
+		)
 
 	def test_make_record_bytes_rpc_name_preference(self, mocker, f_record):
 		test_values = {
@@ -1317,7 +1481,9 @@ class TestLDAPRecord:
 			"nameExchange": f"mx.{LDAP_DOMAIN}.",
 		}
 		m_serial = get_mock_serial()
-		m_record: LDAPRecord = f_record(RecordTypes.DNS_RECORD_TYPE_MX.value, test_values)
+		m_record: LDAPRecord = f_record(
+			RecordTypes.DNS_RECORD_TYPE_MX.value, test_values
+		)
 		m_data_struct = mocker.MagicMock(spec=DNS_RPC_RECORD_NAME_PREFERENCE)
 		m_data_struct: Union[DNS_COUNT_NAME, MockType]
 		m_data_struct.insert_field_to_struct = mocker.Mock(return_value=None)
@@ -1331,7 +1497,9 @@ class TestLDAPRecord:
 
 		m_record.make_record_bytes(test_values, m_serial)
 		m_new_record.assert_called_once_with(
-			RecordTypes.DNS_RECORD_TYPE_MX.value, m_serial, ttl=m_record.DEFAULT_TTL
+			RecordTypes.DNS_RECORD_TYPE_MX.value,
+			m_serial,
+			ttl=m_record.DEFAULT_TTL,
 		)
 		m_data_struct.insert_field_to_struct.assert_called_once_with(
 			fieldName="wPreference",
@@ -1341,7 +1509,9 @@ class TestLDAPRecord:
 			"wPreference",
 			value=test_values["wPreference"],
 		)
-		m_data_struct.toCountName.assert_called_once_with(test_values["nameExchange"])
+		m_data_struct.toCountName.assert_called_once_with(
+			test_values["nameExchange"]
+		)
 
 	def test_make_record_bytes_rpc_soa(self, mocker, f_record):
 		test_values = {
@@ -1354,7 +1524,9 @@ class TestLDAPRecord:
 			"zoneAdminEmail": f"hostmaster.{LDAP_DOMAIN}.",
 		}
 		m_serial = get_mock_serial()
-		m_record: LDAPRecord = f_record(RecordTypes.DNS_RECORD_TYPE_SOA.value, test_values)
+		m_record: LDAPRecord = f_record(
+			RecordTypes.DNS_RECORD_TYPE_SOA.value, test_values
+		)
 		m_data_struct = mocker.MagicMock(spec=DNS_RPC_RECORD_SOA)
 		m_data_struct: Union[DNS_RPC_RECORD_SOA, MockType]
 		m_data_struct.setField = mocker.Mock(return_value=None)
@@ -1367,7 +1539,9 @@ class TestLDAPRecord:
 
 		m_record.make_record_bytes(test_values, m_serial)
 		m_new_record.assert_called_once_with(
-			RecordTypes.DNS_RECORD_TYPE_SOA.value, m_serial, ttl=m_record.DEFAULT_TTL
+			RecordTypes.DNS_RECORD_TYPE_SOA.value,
+			m_serial,
+			ttl=m_record.DEFAULT_TTL,
 		)
 		INT_FIELDS = [
 			"dwSerialNo",
@@ -1392,7 +1566,9 @@ class TestLDAPRecord:
 			"nameTarget": f"_ssh._tcp.{LDAP_DOMAIN}.",
 		}
 		m_serial = get_mock_serial()
-		m_record: LDAPRecord = f_record(RecordTypes.DNS_RECORD_TYPE_SRV.value, test_values)
+		m_record: LDAPRecord = f_record(
+			RecordTypes.DNS_RECORD_TYPE_SRV.value, test_values
+		)
 		m_data_struct = mocker.MagicMock(spec=DNS_RPC_RECORD_SRV)
 		m_data_struct: Union[DNS_RPC_RECORD_SRV, MockType]
 		m_data_struct.setField = mocker.Mock(return_value=None)
@@ -1405,7 +1581,9 @@ class TestLDAPRecord:
 
 		m_record.make_record_bytes(test_values, m_serial)
 		m_new_record.assert_called_once_with(
-			RecordTypes.DNS_RECORD_TYPE_SRV.value, m_serial, ttl=m_record.DEFAULT_TTL
+			RecordTypes.DNS_RECORD_TYPE_SRV.value,
+			m_serial,
+			ttl=m_record.DEFAULT_TTL,
 		)
 		INT_FIELDS = [
 			"wPriority",
@@ -1415,7 +1593,9 @@ class TestLDAPRecord:
 		for f in INT_FIELDS:
 			m_data_struct.setField.assert_any_call(f, test_values[f])
 		assert m_data_struct.setField.call_count == len(INT_FIELDS)
-		m_data_struct.addCountName.assert_called_once_with(test_values["nameTarget"])
+		m_data_struct.addCountName.assert_called_once_with(
+			test_values["nameTarget"]
+		)
 
 	def test_make_record_bytes_raises_unsupported(self, mocker):
 		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
@@ -1426,24 +1606,36 @@ class TestLDAPRecord:
 		with pytest.raises(exc_dns.DNSRecordTypeUnsupported):
 			m_record.make_record_bytes({}, serial=1)
 
-	def test_create_raises_type_error(self, f_record_instance_type_a: LDAPRecord):
+	def test_create_raises_type_error(
+		self, f_record_instance_type_a: LDAPRecord
+	):
 		with pytest.raises(TypeError, match="must be a dict"):
 			f_record_instance_type_a.create("a")
 		with pytest.raises(TypeError, match="must be a dict"):
 			f_record_instance_type_a.create(None)
 
 	def test_create_raises_no_serial(
-		self, mocker, f_record_instance_type_a: LDAPRecord, f_record_data_type_a: dict
+		self,
+		mocker,
+		f_record_instance_type_a: LDAPRecord,
+		f_record_data_type_a: dict,
 	):
 		mocker.patch.object(LDAPRecord, "get_serial", side_effect=Exception)
 		with pytest.raises(exc_dns.DNSCouldNotGetSerial):
 			f_record_instance_type_a.create(f_record_data_type_a)
 
 	def test_create_raises_from_make_bytes(
-		self, mocker, f_record_instance_type_a: LDAPRecord, f_record_data_type_a: dict
+		self,
+		mocker,
+		f_record_instance_type_a: LDAPRecord,
+		f_record_data_type_a: dict,
 	):
-		mocker.patch.object(LDAPRecord, "get_serial", return_value=get_mock_serial())
-		mocker.patch.object(LDAPRecord, "make_record_bytes", side_effect=Exception)
+		mocker.patch.object(
+			LDAPRecord, "get_serial", return_value=get_mock_serial()
+		)
+		mocker.patch.object(
+			LDAPRecord, "make_record_bytes", side_effect=Exception
+		)
 		with pytest.raises(exc_dns.DNSRecordCreate):
 			f_record_instance_type_a.create(f_record_data_type_a)
 
@@ -1455,8 +1647,12 @@ class TestLDAPRecord:
 	):
 		m_data_structure = mocker.MagicMock()
 		m_data_structure.getData.side_effect = Exception
-		mocker.patch.object(LDAPRecord, "get_serial", return_value=get_mock_serial())
-		mocker.patch.object(LDAPRecord, "make_record_bytes", return_value=m_data_structure)
+		mocker.patch.object(
+			LDAPRecord, "get_serial", return_value=get_mock_serial()
+		)
+		mocker.patch.object(
+			LDAPRecord, "make_record_bytes", return_value=m_data_structure
+		)
 		with pytest.raises(exc_dns.DNSRecordCreate):
 			f_record_instance_type_a.create(f_record_data_type_a)
 
@@ -1479,8 +1675,12 @@ class TestLDAPRecord:
 		else:
 			del f_record_data_type_a["ttl"]
 
-		mocker.patch("core.models.dns.dnstool.DNS_RECORD", return_value="DNS_RECORD")
-		m_record_to_dict: MockType = mocker.patch("core.models.dns.record_to_dict")
+		mocker.patch(
+			"core.models.dns.dnstool.DNS_RECORD", return_value="DNS_RECORD"
+		)
+		m_record_to_dict: MockType = mocker.patch(
+			"core.models.dns.record_to_dict"
+		)
 		f_record_instance_type_a.raw_entry = None
 		m_serial = get_mock_serial()
 		m_getData_result = b"record_result"
@@ -1493,7 +1693,8 @@ class TestLDAPRecord:
 			LDAPRecord, "make_record_bytes", return_value=m_data_structure
 		)
 		m_node_data = {
-			"objectCategory": "CN=Dns-Node,%s" % f_record_instance_type_a.schema_naming_context,
+			"objectCategory": "CN=Dns-Node,%s"
+			% f_record_instance_type_a.schema_naming_context,
 			"dNSTombstoned": "FALSE",
 			"name": f_record_instance_type_a.name,
 			"dnsRecord": [m_getData_result],
@@ -1523,7 +1724,9 @@ class TestLDAPRecord:
 		f_record_data_type_a: dict,
 	):
 		f_connection.add.side_effect = Exception
-		mocker.patch("core.models.dns.dnstool.DNS_RECORD", return_value="DNS_RECORD")
+		mocker.patch(
+			"core.models.dns.dnstool.DNS_RECORD", return_value="DNS_RECORD"
+		)
 		mocker.patch("core.models.dns.record_to_dict")
 		f_record_instance_type_a.raw_entry = None
 		m_serial = get_mock_serial()
@@ -1531,7 +1734,9 @@ class TestLDAPRecord:
 		m_data_structure = mocker.MagicMock()
 		m_data_structure.getData.return_value = m_getData_result
 		mocker.patch.object(LDAPRecord, "get_serial", return_value=m_serial)
-		mocker.patch.object(LDAPRecord, "make_record_bytes", return_value=m_data_structure)
+		mocker.patch.object(
+			LDAPRecord, "make_record_bytes", return_value=m_data_structure
+		)
 
 		# Do Create
 		with pytest.raises(Exception):
@@ -1543,7 +1748,9 @@ class TestLDAPRecord:
 		f_record_instance_type_a: LDAPRecord,
 		f_record_data_type_a: dict,
 	):
-		mocker.patch("core.models.dns.dnstool.DNS_RECORD", return_value="DNS_RECORD")
+		mocker.patch(
+			"core.models.dns.dnstool.DNS_RECORD", return_value="DNS_RECORD"
+		)
 		mocker.patch.object(LDAPRecord, "record_in_entry", return_value=True)
 		f_record_instance_type_a.raw_entry = {"attributes": {}}
 		m_serial = get_mock_serial()
@@ -1551,7 +1758,9 @@ class TestLDAPRecord:
 		m_data_structure = mocker.MagicMock()
 		m_data_structure.getData.return_value = m_getData_result
 		mocker.patch.object(LDAPRecord, "get_serial", return_value=m_serial)
-		mocker.patch.object(LDAPRecord, "make_record_bytes", return_value=m_data_structure)
+		mocker.patch.object(
+			LDAPRecord, "make_record_bytes", return_value=m_data_structure
+		)
 
 		# Do Create
 		with pytest.raises(exc_dns.DNSRecordExistsConflict):
@@ -1563,19 +1772,27 @@ class TestLDAPRecord:
 		f_record_instance_type_a: LDAPRecord,
 		f_record_data_type_a: dict,
 	):
-		mocker.patch("core.models.dns.dnstool.DNS_RECORD", return_value="DNS_RECORD")
+		mocker.patch(
+			"core.models.dns.dnstool.DNS_RECORD", return_value="DNS_RECORD"
+		)
 		mocker.patch("core.models.dns.record_to_dict")
 		mocker.patch.object(LDAPRecord, "record_in_entry", return_value=False)
 		mocker.patch.object(
-			LDAPRecord, "record_has_collision", side_effect=exc_dns.DNSRecordTypeConflict
+			LDAPRecord,
+			"record_has_collision",
+			side_effect=exc_dns.DNSRecordTypeConflict,
 		)
 		f_record_instance_type_a.raw_entry = {"attributes": {}}
 		m_serial = get_mock_serial()
 		m_getData_result = b"record_result"
 		m_data_structure = mocker.MagicMock()
 		m_data_structure.getData.return_value = m_getData_result
-		mocker.patch.object(f_record_instance_type_a, "get_serial", return_value=m_serial)
-		mocker.patch.object(LDAPRecord, "make_record_bytes", return_value=m_data_structure)
+		mocker.patch.object(
+			f_record_instance_type_a, "get_serial", return_value=m_serial
+		)
+		mocker.patch.object(
+			LDAPRecord, "make_record_bytes", return_value=m_data_structure
+		)
 
 		# Do Create
 		with pytest.raises(exc_dns.DNSRecordTypeConflict):
@@ -1587,18 +1804,28 @@ class TestLDAPRecord:
 		f_record_instance_type_soa: LDAPRecord,
 		f_record_data_type_soa: dict,
 	):
-		mocker.patch("core.models.dns.dnstool.DNS_RECORD", return_value="DNS_RECORD")
+		mocker.patch(
+			"core.models.dns.dnstool.DNS_RECORD", return_value="DNS_RECORD"
+		)
 		mocker.patch("core.models.dns.record_to_dict")
 		mocker.patch.object(LDAPRecord, "record_in_entry", return_value=False)
-		mocker.patch.object(LDAPRecord, "record_has_collision", return_value=False)
-		mocker.patch.object(LDAPRecord, "validate_soa", side_effect=exc_dns.DNSRecordExistsConflict)
+		mocker.patch.object(
+			LDAPRecord, "record_has_collision", return_value=False
+		)
+		mocker.patch.object(
+			LDAPRecord,
+			"validate_soa",
+			side_effect=exc_dns.DNSRecordExistsConflict,
+		)
 		f_record_instance_type_soa.raw_entry = {"attributes": {}}
 		m_serial = get_mock_serial()
 		m_getData_result = b"record_result"
 		m_data_structure = mocker.MagicMock()
 		m_data_structure.getData.return_value = m_getData_result
 		mocker.patch.object(LDAPRecord, "get_serial", return_value=m_serial)
-		mocker.patch.object(LDAPRecord, "make_record_bytes", return_value=m_data_structure)
+		mocker.patch.object(
+			LDAPRecord, "make_record_bytes", return_value=m_data_structure
+		)
 
 		# Do Create
 		with pytest.raises(exc_dns.DNSRecordExistsConflict):
@@ -1611,8 +1838,12 @@ class TestLDAPRecord:
 		f_record_instance_type_a: LDAPRecord,
 		f_record_data_type_a: dict,
 	):
-		mocker.patch("core.models.dns.dnstool.DNS_RECORD", return_value="DNS_RECORD")
-		m_record_to_dict: MockType = mocker.patch("core.models.dns.record_to_dict")
+		mocker.patch(
+			"core.models.dns.dnstool.DNS_RECORD", return_value="DNS_RECORD"
+		)
+		m_record_to_dict: MockType = mocker.patch(
+			"core.models.dns.record_to_dict"
+		)
 		m_record_in_entry: MockType = mocker.patch.object(
 			LDAPRecord, "record_in_entry", return_value=False
 		)
@@ -1634,7 +1865,9 @@ class TestLDAPRecord:
 		# Check fn calls
 		m_get_serial.assert_called_once_with(record_values=f_record_data_type_a)
 		m_make_record_bytes.assert_called_once_with(
-			f_record_data_type_a, ttl=f_record_instance_type_a.DEFAULT_TTL, serial=m_serial
+			f_record_data_type_a,
+			ttl=f_record_instance_type_a.DEFAULT_TTL,
+			serial=m_serial,
 		)
 		m_data_structure.getData.call_count == 2
 		m_record_in_entry.assert_called_once()
@@ -1661,7 +1894,9 @@ class TestLDAPRecord:
 		with pytest.raises(exc_dns.DNSZoneInRecord):
 			m_record.fetch()
 
-	def test_fetch_no_entry_on_server(self, f_connection: Connection, f_dns_zones):
+	def test_fetch_no_entry_on_server(
+		self, f_connection: Connection, f_dns_zones
+	):
 		f_connection.search.return_value = []
 		# Mocks
 		m_record = LDAPRecord(
@@ -1673,9 +1908,7 @@ class TestLDAPRecord:
 			auto_fetch=False,
 		)
 		m_record.dns_zones = f_dns_zones
-		expected_filter = (
-			f"(&(objectClass=dnsNode)(distinguishedName={m_record.distinguished_name}))"
-		)
+		expected_filter = f"(&(objectClass=dnsNode)(distinguishedName={m_record.distinguished_name}))"
 
 		# Assertion
 		assert m_record.fetch() is None
@@ -1686,13 +1919,21 @@ class TestLDAPRecord:
 		)
 
 	def test_fetch(
-		self, mocker, f_connection: Connection, f_dns_zones, f_record_data_type_a_subdomain
+		self,
+		mocker,
+		f_connection: Connection,
+		f_dns_zones,
+		f_record_data_type_a_subdomain,
 	):
 		# Mocks
 		mocker.patch(
-			"core.models.dns.dnstool.DNS_RECORD", return_value=mocker.Mock(spec=DNS_RECORD)
+			"core.models.dns.dnstool.DNS_RECORD",
+			return_value=mocker.Mock(spec=DNS_RECORD),
 		)
-		mocker.patch("core.models.dns.record_to_dict", return_value=f_record_data_type_a_subdomain)
+		mocker.patch(
+			"core.models.dns.record_to_dict",
+			return_value=f_record_data_type_a_subdomain,
+		)
 		m_record = LDAPRecord(
 			connection=f_connection,
 			record_name=f_record_data_type_a_subdomain["name"],
@@ -1719,9 +1960,7 @@ class TestLDAPRecord:
 			}
 		]
 		m_record.dns_zones = f_dns_zones
-		expected_filter = (
-			f"(&(objectClass=dnsNode)(distinguishedName={m_record.distinguished_name}))"
-		)
+		expected_filter = f"(&(objectClass=dnsNode)(distinguishedName={m_record.distinguished_name}))"
 
 		# Assertion
 		assert m_record.fetch() == [f_record_data_type_a_subdomain]
@@ -1742,14 +1981,22 @@ class TestLDAPRecord:
 		),
 	)
 	def test_update(
-		self, mocker, record_values_fixture, request, f_connection: Connection, f_dns_zones
+		self,
+		mocker,
+		record_values_fixture,
+		request,
+		f_connection: Connection,
+		f_dns_zones,
 	):
 		record_values: dict = request.getfixturevalue(record_values_fixture)
 
 		# Old record struct
 		m_old_bytes = b"old_record_bytes"
 		mocker.patch.object(
-			LDAPRecord, "as_bytes", new_callable=mocker.PropertyMock, return_value=m_old_bytes
+			LDAPRecord,
+			"as_bytes",
+			new_callable=mocker.PropertyMock,
+			return_value=m_old_bytes,
 		)
 
 		# Patch Serial
@@ -1765,7 +2012,9 @@ class TestLDAPRecord:
 			record_name=record_values["name"],
 			record_type=record_values["type"],
 			record_zone=LDAP_DOMAIN,
-			record_main_value=record_values[record_type_main_field(record_values["type"])],
+			record_main_value=record_values[
+				record_type_main_field(record_values["type"])
+			],
 			auto_fetch=False,
 		)
 
@@ -1815,10 +2064,12 @@ class TestLDAPRecord:
 
 		f_connection.modify.call_count == 2
 		f_connection.modify.assert_any_call(
-			m_record.distinguished_name, {"dnsRecord": [(MODIFY_DELETE, m_old_bytes)]}
+			m_record.distinguished_name,
+			{"dnsRecord": [(MODIFY_DELETE, m_old_bytes)]},
 		)
 		f_connection.modify.assert_any_call(
-			m_record.distinguished_name, {"dnsRecord": [(MODIFY_ADD, m_new_bytes)]}
+			m_record.distinguished_name,
+			{"dnsRecord": [(MODIFY_ADD, m_new_bytes)]},
 		)
 		assert result == "result"
 
@@ -1838,7 +2089,9 @@ class TestLDAPRecord:
 			record_name=record_values["name"],
 			record_type=record_values["type"],
 			record_zone=LDAP_DOMAIN,
-			record_main_value=record_values[record_type_main_field(record_values["type"])],
+			record_main_value=record_values[
+				record_type_main_field(record_values["type"])
+			],
 			auto_fetch=False,
 		)
 		with pytest.raises(exc_dns.DNSRecordEntryDoesNotExist):
@@ -1859,12 +2112,16 @@ class TestLDAPRecord:
 			record_name=record_values["name"],
 			record_type=record_values["type"],
 			record_zone=LDAP_DOMAIN,
-			record_main_value=record_values[record_type_main_field(record_values["type"])],
+			record_main_value=record_values[
+				record_type_main_field(record_values["type"])
+			],
 			auto_fetch=False,
 		)
 		m_record_struct = mocker.Mock()
 		m_record_struct.getData.return_value = m_old_bytes
-		mocker.patch.object(LDAPRecord, "make_record_bytes", return_value=m_record_struct)
+		mocker.patch.object(
+			LDAPRecord, "make_record_bytes", return_value=m_record_struct
+		)
 		m_record.raw_entry = {
 			"raw_attributes": {"dnsRecord": [m_old_bytes]},
 		}
@@ -1895,7 +2152,10 @@ class TestLDAPRecord:
 		# Patch Old bytes return val
 		m_old_bytes = b"old_record_bytes"
 		mocker.patch.object(
-			LDAPRecord, "as_bytes", new_callable=mocker.PropertyMock, return_value=m_old_bytes
+			LDAPRecord,
+			"as_bytes",
+			new_callable=mocker.PropertyMock,
+			return_value=m_old_bytes,
 		)
 
 		m_record = LDAPRecord(
@@ -1909,11 +2169,17 @@ class TestLDAPRecord:
 		m_new_bytes = b"new_record_bytes"
 		m_new_struct = mocker.Mock()
 		m_new_struct.getData.return_value = m_new_bytes
-		mocker.patch.object(LDAPRecord, "make_record_bytes", return_value=m_new_struct)
+		mocker.patch.object(
+			LDAPRecord, "make_record_bytes", return_value=m_new_struct
+		)
 		m_record.entry = [record_values, conflicting_record]
 		m_record.raw_entry = {"raw_attributes": {"dnsRecord": [m_old_bytes]}}
-		mocker.patch.object(LDAPRecord, "get_serial", return_value=record_values["serial"])
-		mocker.patch.object(LDAPRecord, "record_has_collision", return_value=(True, "log_error"))
+		mocker.patch.object(
+			LDAPRecord, "get_serial", return_value=record_values["serial"]
+		)
+		mocker.patch.object(
+			LDAPRecord, "record_has_collision", return_value=(True, "log_error")
+		)
 
 		with pytest.raises(exc_dns.DNSRecordTypeConflict):
 			m_record.update(
@@ -1935,23 +2201,33 @@ class TestLDAPRecord:
 			record_name=record_values["name"],
 			record_type=record_values["type"],
 			record_zone=LDAP_DOMAIN,
-			record_main_value=record_values[record_type_main_field(record_values["type"])],
+			record_main_value=record_values[
+				record_type_main_field(record_values["type"])
+			],
 			auto_fetch=False,
 		)
 		m_record_struct = mocker.Mock()
 		m_record_struct.getData.return_value = m_old_bytes
 		m_record.entry = [record_values]
 		m_record.raw_entry = {"raw_attributes": {"dnsRecord": [m_old_bytes]}}
-		mocker.patch.object(LDAPRecord, "get_serial", return_value=record_values["serial"])
 		mocker.patch.object(
-			LDAPRecord, "make_record_bytes", side_effect=[m_record_struct, m_new_bytes]
+			LDAPRecord, "get_serial", return_value=record_values["serial"]
+		)
+		mocker.patch.object(
+			LDAPRecord,
+			"make_record_bytes",
+			side_effect=[m_record_struct, m_new_bytes],
 		)
 		mocker.patch.object(LDAPRecord, "record_in_entry", return_value=False)
 		mocker.patch.object(
-			LDAPRecord, "record_has_collision", return_value=(True, "log_error_msg")
+			LDAPRecord,
+			"record_has_collision",
+			return_value=(True, "log_error_msg"),
 		)
 
-		with pytest.raises((exc_dns.DNSRecordExistsConflict, exc_dns.DNSRecordTypeConflict)):
+		with pytest.raises(
+			(exc_dns.DNSRecordExistsConflict, exc_dns.DNSRecordTypeConflict)
+		):
 			m_record.update(
 				new_values=m_new_values,
 				old_values=deepcopy(record_values),
@@ -1963,7 +2239,11 @@ class TestLDAPRecord:
 	# update soa raise record type conflict
 
 	def test_delete_full_entry(
-		self, mocker, f_record_instance_type_a: LDAPRecord, f_connection: Connection, f_dns_zones
+		self,
+		mocker,
+		f_record_instance_type_a: LDAPRecord,
+		f_connection: Connection,
+		f_dns_zones,
 	):
 		m_record_bytes = b"record_a"
 		f_record_instance_type_a.raw_entry = {
@@ -1972,16 +2252,25 @@ class TestLDAPRecord:
 			}
 		}
 		m_as_bytes = mocker.patch.object(
-			LDAPRecord, "as_bytes", new_callable=mocker.PropertyMock, return_value=m_record_bytes
+			LDAPRecord,
+			"as_bytes",
+			new_callable=mocker.PropertyMock,
+			return_value=m_record_bytes,
 		)
 		result = f_record_instance_type_a.delete()
 		f_connection.modify.assert_not_called()
-		f_connection.delete.assert_called_once_with(f_record_instance_type_a.distinguished_name)
+		f_connection.delete.assert_called_once_with(
+			f_record_instance_type_a.distinguished_name
+		)
 		m_as_bytes.assert_called_once()
 		assert result == "result"
 
 	def test_delete_partial_entry(
-		self, mocker, f_record_instance_type_a: LDAPRecord, f_connection: Connection, f_dns_zones
+		self,
+		mocker,
+		f_record_instance_type_a: LDAPRecord,
+		f_connection: Connection,
+		f_dns_zones,
 	):
 		m_record_bytes = b"record_a"
 		f_record_instance_type_a.raw_entry = {
@@ -1990,7 +2279,10 @@ class TestLDAPRecord:
 			}
 		}
 		m_as_bytes = mocker.patch.object(
-			LDAPRecord, "as_bytes", new_callable=mocker.PropertyMock, return_value=m_record_bytes
+			LDAPRecord,
+			"as_bytes",
+			new_callable=mocker.PropertyMock,
+			return_value=m_record_bytes,
 		)
 		result = f_record_instance_type_a.delete()
 		f_connection.delete.assert_not_called()
@@ -2001,7 +2293,9 @@ class TestLDAPRecord:
 		m_as_bytes.call_count == 2
 		assert result == "result"
 
-	@pytest.mark.parametrize("raw_entry_records", ([b"record_a", b"another_record"], [b"record_a"]))
+	@pytest.mark.parametrize(
+		"raw_entry_records", ([b"record_a", b"another_record"], [b"record_a"])
+	)
 	def test_delete_entry_raises(
 		self,
 		mocker,

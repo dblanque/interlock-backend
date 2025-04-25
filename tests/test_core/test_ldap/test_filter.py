@@ -4,7 +4,12 @@ from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
 
 ################################################################################
-from core.ldap.filter import LDAPFilter, LDAPFilterType, encapsulate, is_encapsulated
+from core.ldap.filter import (
+	LDAPFilter,
+	LDAPFilterType,
+	encapsulate,
+	is_encapsulated,
+)
 
 
 @pytest.mark.parametrize(
@@ -61,7 +66,10 @@ def test_encapsulate(value):
 
 
 def test_ldap_filter_equality():
-	assert LDAPFilter.eq("mockAttribute", "mockValue").to_string() == "(mockAttribute=mockValue)"
+	assert (
+		LDAPFilter.eq("mockAttribute", "mockValue").to_string()
+		== "(mockAttribute=mockValue)"
+	)
 
 
 def test_ldap_filter_presence():
@@ -102,7 +110,10 @@ def test_ldap_filter_less_or_equal():
 
 
 def test_ldap_filter_approximate():
-	assert LDAPFilter.approximate("mockAttribute", 1).to_string() == "(mockAttribute~=1)"
+	assert (
+		LDAPFilter.approximate("mockAttribute", 1).to_string()
+		== "(mockAttribute~=1)"
+	)
 
 
 @pytest.mark.parametrize(
@@ -115,11 +126,16 @@ def test_ldap_filter_approximate():
 )
 def test_ldap_filter_and(count: int):
 	r = range(1, count + 1)
-	expected = "".join([f"(mockAttribute{str(i)}=mockValue{str(i)})" for i in r])
+	expected = "".join(
+		[f"(mockAttribute{str(i)}=mockValue{str(i)})" for i in r]
+	)
 	expected = f"(&{expected})"
 	assert (
 		LDAPFilter.and_(
-			*[LDAPFilter.eq(f"mockAttribute{str(i)}", f"mockValue{str(i)}") for i in r]
+			*[
+				LDAPFilter.eq(f"mockAttribute{str(i)}", f"mockValue{str(i)}")
+				for i in r
+			]
 		).to_string()
 		== expected
 	)
@@ -135,11 +151,16 @@ def test_ldap_filter_and(count: int):
 )
 def test_ldap_filter_or(count: int):
 	r = range(1, count + 1)
-	expected = "".join([f"(mockAttribute{str(i)}=mockValue{str(i)})" for i in r])
+	expected = "".join(
+		[f"(mockAttribute{str(i)}=mockValue{str(i)})" for i in r]
+	)
 	expected = f"(|{expected})"
 	assert (
 		LDAPFilter.or_(
-			*[LDAPFilter.eq(f"mockAttribute{str(i)}", f"mockValue{str(i)}") for i in r]
+			*[
+				LDAPFilter.eq(f"mockAttribute{str(i)}", f"mockValue{str(i)}")
+				for i in r
+			]
 		).to_string()
 		== expected
 	)
@@ -184,7 +205,9 @@ def test_parse_simple_filter_raises_invalid_format():
 
 
 def test_parse_complex_filter_and():
-	ldf = LDAPFilter.from_string("(&(mockAttribute1=mockValue1)(mockAttribute2=mockValue2))")
+	ldf = LDAPFilter.from_string(
+		"(&(mockAttribute1=mockValue1)(mockAttribute2=mockValue2))"
+	)
 	assert ldf.type == LDAPFilterType.AND
 	assert ldf.children[0].attribute == "mockAttribute1"
 	assert ldf.children[0].value == "mockValue1"
@@ -219,7 +242,13 @@ def test_to_string_unsupported():
 	"parts",
 	(
 		["part1", "part2", "part3"],  # Wildcard between parts only
-		["", "part1", "part2", "part3", ""],  # Wildcard between parts, at end and at start
+		[
+			"",
+			"part1",
+			"part2",
+			"part3",
+			"",
+		],  # Wildcard between parts, at end and at start
 		["", "part1", "part2", "part3"],  # Wildcard between parts, and at start
 		["part1", "part2", "part3", ""],  # Wildcard between parts, and at end
 	),
@@ -261,12 +290,16 @@ def test_from_string_raises_empty_filter():
 
 def test_parse_next_filter_raises_component_must_start_with_parentheses():
 	with pytest.raises(ValueError, match="must start with"):
-		LDAPFilter.from_string("(&(mockAttribute1=mockValue1)mockAttribute2=mockValue2))")
+		LDAPFilter.from_string(
+			"(&(mockAttribute1=mockValue1)mockAttribute2=mockValue2))"
+		)
 
 
 def test_parse_next_filter_raises_unmatched_parentheses():
 	with pytest.raises(ValueError, match="Unmatched parentheses"):
-		LDAPFilter.from_string("(&(mockAttribute1=mockValue1)(mockAttribute2=mockValue2)")
+		LDAPFilter.from_string(
+			"(&(mockAttribute1=mockValue1)(mockAttribute2=mockValue2)"
+		)
 
 
 def test_parse_complex_filter_raises_requires_a_child():
@@ -275,7 +308,9 @@ def test_parse_complex_filter_raises_requires_a_child():
 
 
 def test_parse_complex_filter_raises_unexpected_characters():
-	with pytest.raises(ValueError, match="Unexpected characters after NOT filter"):
+	with pytest.raises(
+		ValueError, match="Unexpected characters after NOT filter"
+	):
 		LDAPFilter.from_string("(!(mockAttribute1=mockValue1)asd)")
 
 
@@ -293,7 +328,8 @@ def test_parse_complex_filter_raises_requires_children(expr: LDAPFilterType):
 	(
 		(
 			LDAPFilter.and_(
-				LDAPFilter.eq("sAMAccountName", "testuser"), LDAPFilter.eq("objectClass", "person")
+				LDAPFilter.eq("sAMAccountName", "testuser"),
+				LDAPFilter.eq("objectClass", "person"),
 			),
 			"(&(sAMAccountName=testuser)(objectClass=person))",
 		),
@@ -307,7 +343,8 @@ def test_parse_complex_filter_raises_requires_children(expr: LDAPFilterType):
 		),
 		(
 			LDAPFilter.or_(
-				LDAPFilter.eq("sAMAccountName", "testuser"), LDAPFilter.eq("objectClass", "person")
+				LDAPFilter.eq("sAMAccountName", "testuser"),
+				LDAPFilter.eq("objectClass", "person"),
 			),
 			"(|(sAMAccountName=testuser)(objectClass=person))",
 		),

@@ -50,7 +50,9 @@ def get_setting_list(preset_id: int = 1):
 		data[setting_key] = {}
 		data[setting_key]["type"] = setting_type.lower()
 		try:
-			setting_instance = LDAPSetting.objects.get(preset_id=preset_id, name=setting_key)
+			setting_instance = LDAPSetting.objects.get(
+				preset_id=preset_id, name=setting_key
+			)
 		except ObjectDoesNotExist:
 			data[setting_key]["value"] = getattr(defaults, setting_key)
 			if setting_key == "LDAP_AUTH_TLS_VERSION" and isinstance(
@@ -61,13 +63,17 @@ def get_setting_list(preset_id: int = 1):
 
 		if setting_key == "LDAP_AUTH_CONNECTION_PASSWORD":
 			try:
-				data[setting_key]["value"] = aes_decrypt(*setting_instance.value)
+				data[setting_key]["value"] = aes_decrypt(
+					*setting_instance.value
+				)
 			except:
 				data[setting_key]["value"] = ""
 				print("Could not decrypt password")
 				pass
 		else:
 			data[setting_key]["value"] = setting_instance.value
-			if setting_key == "LDAP_AUTH_TLS_VERSION" and isinstance(setting_instance.value, Enum):
+			if setting_key == "LDAP_AUTH_TLS_VERSION" and isinstance(
+				setting_instance.value, Enum
+			):
 				data[setting_key]["value"] = setting_instance.value.name
 	return data

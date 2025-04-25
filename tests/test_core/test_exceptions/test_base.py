@@ -1,5 +1,7 @@
 import pytest
-from core.exceptions.base import CoreException  # Replace `your_module` with the actual module name
+from core.exceptions.base import (
+	CoreException,
+)  # Replace `your_module` with the actual module name
 
 
 def test_init_without_data():

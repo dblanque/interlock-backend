@@ -7,62 +7,68 @@ from core.views.mixins.utils import (
 	net_port_test,
 	recursive_dict_find,
 	uppercase_ldif_identifiers,
-	is_non_str_iterable
+	is_non_str_iterable,
 )
 from core.ldap.defaults import LDAP_LDIF_IDENTIFIERS
 import socket
+
 
 @pytest.fixture
 def f_socket(mocker: MockerFixture):
 	yield mocker.patch("socket.socket")
 
+
 @pytest.fixture
 def f_ldap_entry(mocker: MockerFixture) -> LDAPEntry:
-    m_entry = mocker.MagicMock(spec=LDAPEntry)
+	m_entry = mocker.MagicMock(spec=LDAPEntry)
 
-    single_attr = mocker.Mock(spec=LDAPAttribute)
-    single_attr.value = "mock_value"
-    single_attr.values = ["mock_value"]
+	single_attr = mocker.Mock(spec=LDAPAttribute)
+	single_attr.value = "mock_value"
+	single_attr.values = ["mock_value"]
 
-    multi_attr = mocker.Mock(spec=LDAPAttribute)
-    multi_attr.value = ["a", "b"]
-    multi_attr.values = ["a", "b"]
+	multi_attr = mocker.Mock(spec=LDAPAttribute)
+	multi_attr.value = ["a", "b"]
+	multi_attr.values = ["a", "b"]
 
-    m_entry.single_attr = single_attr
-    m_entry.multi_attr = multi_attr
+	m_entry.single_attr = single_attr
+	m_entry.multi_attr = multi_attr
 
-    return m_entry
+	return m_entry
+
 
 class TestGetLdapAttr:
-    @staticmethod
-    def test_get_existing_single_value_attribute(f_ldap_entry):
-        assert getldapattr(f_ldap_entry, "single_attr") == "mock_value"
+	@staticmethod
+	def test_get_existing_single_value_attribute(f_ldap_entry):
+		assert getldapattr(f_ldap_entry, "single_attr") == "mock_value"
 
-    @staticmethod
-    def test_get_existing_multi_value_attribute(f_ldap_entry):
-        assert getldapattr(f_ldap_entry, "multi_attr") == ["a", "b"]
+	@staticmethod
+	def test_get_existing_multi_value_attribute(f_ldap_entry):
+		assert getldapattr(f_ldap_entry, "multi_attr") == ["a", "b"]
 
-    @staticmethod
-    def test_get_non_existing_attribute_with_default(f_ldap_entry):
-        result = getldapattr(f_ldap_entry, "non_existing", default="default_value")
-        assert result == "default_value"
+	@staticmethod
+	def test_get_non_existing_attribute_with_default(f_ldap_entry):
+		result = getldapattr(
+			f_ldap_entry, "non_existing", default="default_value"
+		)
+		assert result == "default_value"
 
-    @staticmethod
-    def test_get_non_existing_attribute_with_args_default(f_ldap_entry):
-        result = getldapattr(f_ldap_entry, "non_existing", "args_default")
-        assert result == "args_default"
+	@staticmethod
+	def test_get_non_existing_attribute_with_args_default(f_ldap_entry):
+		result = getldapattr(f_ldap_entry, "non_existing", "args_default")
+		assert result == "args_default"
 
-    @staticmethod
-    def test_get_non_existing_attribute_no_default(f_ldap_entry):
-        with pytest.raises(AttributeError, match="has no attribute"):
-            getldapattr(f_ldap_entry, "non_existing")
+	@staticmethod
+	def test_get_non_existing_attribute_no_default(f_ldap_entry):
+		with pytest.raises(AttributeError, match="has no attribute"):
+			getldapattr(f_ldap_entry, "non_existing")
+
 
 class TestNetPortTest:
 	@staticmethod
 	def test_successful_connection(f_socket):
 		mock_instance = f_socket.return_value
 		mock_instance.connect.return_value = None
-		
+
 		result = net_port_test("127.0.0.1", 389)
 		assert result is True
 		mock_instance.connect.assert_called_once_with(("127.0.0.1", 389))
@@ -74,7 +80,7 @@ class TestNetPortTest:
 	def test_failed_connection(f_socket):
 		mock_instance = f_socket.return_value
 		mock_instance.connect.side_effect = socket.error
-		
+
 		result = net_port_test("127.0.0.1", 389)
 		assert result is False
 
@@ -87,15 +93,7 @@ class TestRecursiveDictFind:
 
 	@staticmethod
 	def test_find_nested_key():
-		test_dict = {
-			"a": 1,
-			"b": {
-				"c": 2,
-				"d": {
-					"e": 3
-				}
-			}
-		}
+		test_dict = {"a": 1, "b": {"c": 2, "d": {"e": 3}}}
 		assert recursive_dict_find(test_dict, "e") == 3
 
 	def test_key_not_found(self):
@@ -111,12 +109,12 @@ class TestUppercaseLdifIdentifiers:
 	def test_uppercase_identifiers():
 		test_string = "cn=test,dc=example,dc=com"
 		expected = "CN=test,DC=example,DC=com"
-		
+
 		# Get the actual identifiers from LDAP_LDIF_IDENTIFIERS
 		identifiers = LDAP_LDIF_IDENTIFIERS
 		for ident in identifiers:
 			test_string = test_string.replace(f"{ident.upper()}=", f"{ident}=")
-		
+
 		result = uppercase_ldif_identifiers(test_string)
 		assert result == expected
 
@@ -127,15 +125,18 @@ class TestUppercaseLdifIdentifiers:
 
 class TestIsNonStrIterable:
 	@staticmethod
-	@pytest.mark.parametrize("value,expected", [
-		([1, 2, 3], True),
-		({"a": 1}, True),
-		((1, 2), True),
-		({1, 2}, True),
-		("string", False),
-		(123, False),
-		(True, False),
-		(None, False)
-	])
+	@pytest.mark.parametrize(
+		"value,expected",
+		[
+			([1, 2, 3], True),
+			({"a": 1}, True),
+			((1, 2), True),
+			({1, 2}, True),
+			("string", False),
+			(123, False),
+			(True, False),
+			(None, False),
+		],
+	)
 	def test_various_types(value, expected):
 		assert is_non_str_iterable(value) == expected

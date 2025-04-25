@@ -34,8 +34,11 @@ def get_user_totp_device(user: User, confirmed=None) -> TOTPDevice:
 		if isinstance(device, TOTPDevice):
 			return device
 
+
 TOTP_WITH_LABEL_RE = re.compile(r"^.*totp/.*:.*$")
 TOTP_CAPTURE_RE = re.compile(r"^(.*totp/)(?!.*:)(.*)(\?.*)$")
+
+
 def set_interlock_otp_label(url: str, user: User) -> str:
 	# Example URL
 	# otpauth://totp/dblanque?secret=AKDOIJ2509FGJ934GJ3SRG30JRG3G00G&algorithm=SHA1&digits=6&period=30
@@ -61,14 +64,18 @@ def set_interlock_otp_label(url: str, user: User) -> str:
 
 def get_random_string(length: int) -> str:
 	# With combination of lower and upper case
-	result_str = "".join(random.choice(mod_string.ascii_letters) for i in range(length))
+	result_str = "".join(
+		random.choice(mod_string.ascii_letters) for i in range(length)
+	)
 	return result_str
 
 
 def generate_recovery_codes(amount: int) -> list[str]:
 	codes = []
 	for i in range(amount):
-		codes.append(f"{get_random_string(4)}-{get_random_string(4)}-{get_random_string(4)}")
+		codes.append(
+			f"{get_random_string(4)}-{get_random_string(4)}-{get_random_string(4)}"
+		)
 	return codes
 
 
@@ -100,25 +107,34 @@ def delete_device_totp_for_user(user: User) -> tuple[int, dict[str, int]]:
 	return totp_device.delete()
 
 
-def validate_user_otp(user: User, data: dict, raise_exc=True) -> bool | Exception:
+def validate_user_otp(
+	user: User, data: dict, raise_exc=True
+) -> bool | Exception:
 	"""
 	Returns an Exception on validation failure unless specified.
 	"""
 	device = get_user_totp_device(user)
 
 	if device is None and raise_exc is True:
-		logger.warning("User %s attempted to validate non-existing TOTP Device.", user.username)
+		logger.warning(
+			"User %s attempted to validate non-existing TOTP Device.",
+			user.username,
+		)
 		raise exc_otp.OTPNoDeviceRegistered
 	elif device and device.verify_token(data["totp_code"]):
 		if not device.confirmed:
 			device.confirmed = True
 			device.save()
 			# Successfully confirmed and saved device
-			logger.debug("TOTP Device newly confirmed for user %s", user.username)
+			logger.debug(
+				"TOTP Device newly confirmed for user %s", user.username
+			)
 			return True
 		else:
 			# OTP code has been verified.
-			logger.debug("TOTP Device already confirmed for user %s", user.username)
+			logger.debug(
+				"TOTP Device already confirmed for user %s", user.username
+			)
 			return True
 	elif raise_exc is True:
 		# Code is invalid

@@ -1,7 +1,10 @@
 import pytest
 from pytest_mock import MockType
 from django.db import transaction
-from core.models.interlock_settings import InterlockSetting, INTERLOCK_SETTING_ENABLE_LDAP
+from core.models.interlock_settings import (
+	InterlockSetting,
+	INTERLOCK_SETTING_ENABLE_LDAP,
+)
 from core.models.types.settings import TYPE_BOOL
 from core.models.user import User, USER_TYPE_LDAP
 from core.models.ldap_settings import LDAPPreset
@@ -31,7 +34,10 @@ def mixin():
 def test_user():
 	"""Fixture creating a test user in the database"""
 	return User.objects.create_user(
-		username="testuser", password="testpass", email="test@example.com", user_type=USER_TYPE_LDAP
+		username="testuser",
+		password="testpass",
+		email="test@example.com",
+		user_type=USER_TYPE_LDAP,
 	)
 
 
@@ -54,7 +60,9 @@ def ldap_setting():
 @pytest.fixture
 def ldap_preset():
 	"""Fixture creating LDAP preset in the database"""
-	return LDAPPreset.objects.create(name="test_preset", label="Test Preset", active=True)
+	return LDAPPreset.objects.create(
+		name="test_preset", label="Test Preset", active=True
+	)
 
 
 @pytest.fixture
@@ -105,7 +113,9 @@ class TestLDAPSettingsMixin:
 		User.objects.create(username="testuser", user_type=USER_TYPE_LDAP)
 
 		# Mock LDAP connector to ensure it's not called when LDAP is disabled
-		m_connector = mocker.patch("core.views.mixins.ldap_settings.LDAPConnector")
+		m_connector = mocker.patch(
+			"core.views.mixins.ldap_settings.LDAPConnector"
+		)
 
 		# Execute
 		result = mixin.resync_users(mixin)
@@ -122,7 +132,10 @@ class TestLDAPSettingsMixin:
 		m_ldap_instance = mocker.MagicMock()
 		m_ldap_instance.get_user.return_value = test_user
 
-		mocker.patch("core.views.mixins.ldap_settings.LDAPConnector", return_value=m_connector)
+		mocker.patch(
+			"core.views.mixins.ldap_settings.LDAPConnector",
+			return_value=m_connector,
+		)
 		m_connector.__enter__.return_value = m_ldap_instance
 
 		# Execute
@@ -141,7 +154,10 @@ class TestLDAPSettingsMixin:
 		m_ldap_instance = mocker.MagicMock()
 		m_ldap_instance.get_user.side_effect = Exception("Some LDAP error.")
 
-		mocker.patch("core.views.mixins.ldap_settings.LDAPConnector", return_value=m_connector)
+		mocker.patch(
+			"core.views.mixins.ldap_settings.LDAPConnector",
+			return_value=m_connector,
+		)
 		m_connector.__enter__.return_value = m_ldap_instance
 
 		# Mock logger
@@ -156,16 +172,22 @@ class TestLDAPSettingsMixin:
 		m_logger.warning.assert_called_once()
 		m_logger.exception.assert_called_once()
 
-	def test_resync_users_ldap_setting_missing(self, mocker, mixin: SettingsViewMixin):
+	def test_resync_users_ldap_setting_missing(
+		self, mocker, mixin: SettingsViewMixin
+	):
 		# Ensure setting doesn't exist
-		InterlockSetting.objects.filter(name=INTERLOCK_SETTING_ENABLE_LDAP).delete()
+		InterlockSetting.objects.filter(
+			name=INTERLOCK_SETTING_ENABLE_LDAP
+		).delete()
 
 		# Mock logger
 		m_logger = mocker.MagicMock()
 		mocker.patch("core.views.mixins.ldap_settings.logger", m_logger)
 
 		# Mock LDAP connector to ensure it's not called
-		m_connector = mocker.patch("core.views.mixins.ldap_settings.LDAPConnector")
+		m_connector = mocker.patch(
+			"core.views.mixins.ldap_settings.LDAPConnector"
+		)
 
 		# Execute
 		result = mixin.resync_users()
@@ -177,16 +199,23 @@ class TestLDAPSettingsMixin:
 		)
 		m_connector.assert_not_called()
 
-	def test_resync_users_multiple_users(self, mocker, mixin: SettingsViewMixin, ldap_setting):
+	def test_resync_users_multiple_users(
+		self, mocker, mixin: SettingsViewMixin, ldap_setting
+	):
 		User.objects.create(username="user1", user_type=USER_TYPE_LDAP)
 		User.objects.create(username="user2", user_type=USER_TYPE_LDAP)
 
 		# Mock LDAP connector and operations
 		m_connector = mocker.MagicMock()
 		m_ldap_instance = mocker.MagicMock()
-		m_ldap_instance.get_user.side_effect = lambda username: User.objects.get(username=username)
+		m_ldap_instance.get_user.side_effect = (
+			lambda username: User.objects.get(username=username)
+		)
 
-		mocker.patch("core.views.mixins.ldap_settings.LDAPConnector", return_value=m_connector)
+		mocker.patch(
+			"core.views.mixins.ldap_settings.LDAPConnector",
+			return_value=m_connector,
+		)
 		m_connector.__enter__.return_value = m_ldap_instance
 
 		# Execute
@@ -206,27 +235,37 @@ class TestLDAPSettingsMixin:
 			("MixedCase 123", "mixedcase_123"),
 		),
 	)
-	def test_normalize_preset_name(self, mixin: SettingsViewMixin, test_value, expected):
+	def test_normalize_preset_name(
+		self, mixin: SettingsViewMixin, test_value, expected
+	):
 		assert mixin.normalize_preset_name(test_value) == expected
 
-	def test_get_active_settings_preset_exists(self, mixin: SettingsViewMixin, ldap_preset):
+	def test_get_active_settings_preset_exists(
+		self, mixin: SettingsViewMixin, ldap_preset
+	):
 		preset = mixin.get_active_settings_preset()
 		assert preset.id == ldap_preset.id
 
-	def test_get_active_settings_preset_not_exists(self, mixin: SettingsViewMixin):
+	def test_get_active_settings_preset_not_exists(
+		self, mixin: SettingsViewMixin
+	):
 		assert LDAPPreset.objects.count() == 0
 		preset = mixin.get_active_settings_preset()
 		assert preset.name == "default_preset"
 		assert LDAPPreset.objects.count() == 1
 
 	def test_resync_settings(self, mixin: SettingsViewMixin, mocker):
-		m_resync: MockType = mocker.patch("core.views.mixins.ldap_settings.RuntimeSettings.resync")
+		m_resync: MockType = mocker.patch(
+			"core.views.mixins.ldap_settings.RuntimeSettings.resync"
+		)
 		m_resync_users: MockType = mocker.patch.object(mixin, "resync_users")
 		mixin.resync_settings()
 		m_resync.assert_called_once()
 		m_resync_users.assert_called_once()
 
-	def test_get_admin_status_exists_active(self, mixin: SettingsViewMixin, test_admin_user: User):
+	def test_get_admin_status_exists_active(
+		self, mixin: SettingsViewMixin, test_admin_user: User
+	):
 		status = mixin.get_admin_status()
 		assert status is True
 
@@ -249,13 +288,17 @@ class TestLDAPSettingsMixin:
 		admin = User.objects.get(username="admin")
 		assert admin.deleted is False
 
-	def test_set_admin_status_deactivate(self, mixin: SettingsViewMixin, test_admin_user: User):
+	def test_set_admin_status_deactivate(
+		self, mixin: SettingsViewMixin, test_admin_user: User
+	):
 		with transaction.atomic():
 			mixin.set_admin_status(False)
 		test_admin_user.refresh_from_db()
 		assert test_admin_user.deleted is True
 
-	def test_set_admin_status_with_password(self, mixin: SettingsViewMixin, test_admin_user: User):
+	def test_set_admin_status_with_password(
+		self, mixin: SettingsViewMixin, test_admin_user: User
+	):
 		new_password = "newadminpass"
 		with transaction.atomic():
 			mixin.set_admin_status(True, new_password)
@@ -269,8 +312,12 @@ class TestLDAPSettingsMixin:
 	def test_test_ldap_settings_success(
 		self, mixin: SettingsViewMixin, ldap_test_data: dict, mocker
 	):
-		mocker.patch("core.views.mixins.ldap_settings.net_port_test", return_value=True)
-		m_test_conn = mocker.patch("core.views.mixins.ldap_settings.test_ldap_connection")
+		mocker.patch(
+			"core.views.mixins.ldap_settings.net_port_test", return_value=True
+		)
+		m_test_conn = mocker.patch(
+			"core.views.mixins.ldap_settings.test_ldap_connection"
+		)
 
 		m_conn = mocker.MagicMock()
 		m_conn.result = {"success": True}
@@ -284,15 +331,22 @@ class TestLDAPSettingsMixin:
 	def test_test_ldap_settings_port_unreachable(
 		self, mixin: SettingsViewMixin, ldap_test_data: dict, mocker
 	):
-		mocker.patch("core.views.mixins.ldap_settings.net_port_test", return_value=False)
+		mocker.patch(
+			"core.views.mixins.ldap_settings.net_port_test", return_value=False
+		)
 		with pytest.raises(exc_ldap.PortUnreachable):
 			mixin.test_ldap_settings(ldap_test_data)
 
 	def test_test_ldap_settings_connection_failed(
 		self, mixin: SettingsViewMixin, ldap_test_data: dict, mocker
 	):
-		mocker.patch("core.views.mixins.ldap_settings.net_port_test", return_value=True)
-		mocker.patch("core.views.mixins.ldap_settings.test_ldap_connection", side_effect=Exception)
+		mocker.patch(
+			"core.views.mixins.ldap_settings.net_port_test", return_value=True
+		)
+		mocker.patch(
+			"core.views.mixins.ldap_settings.test_ldap_connection",
+			side_effect=Exception,
+		)
 		with pytest.raises(exc_ldap.CouldNotOpenConnection):
 			mixin.test_ldap_settings(ldap_test_data)
 

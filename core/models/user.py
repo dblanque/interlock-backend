@@ -78,7 +78,9 @@ class BaseUserManager(DjangoBaseUserManager):
 			raise ValueError("Superuser must have is_superuser=True.")
 
 		return self._create_user(
-			DEFAULT_SUPERUSER_USERNAME, DEFAULT_SUPERUSER_PASSWORD, **extra_fields
+			DEFAULT_SUPERUSER_USERNAME,
+			DEFAULT_SUPERUSER_PASSWORD,
+			**extra_fields,
 		)
 
 
@@ -89,7 +91,12 @@ class BaseUser(BaseModel, PermissionsMixin):
 
 	id = models.BigAutoField(primary_key=True)
 	username = models.CharField(
-		_("username"), max_length=128, unique=True, null=False, blank=False, db_index=True
+		_("username"),
+		max_length=128,
+		unique=True,
+		null=False,
+		blank=False,
+		db_index=True,
 	)
 	password = models.CharField(_("password"), max_length=128)
 	last_login = models.DateTimeField(_("last login"), blank=True, null=True)
@@ -184,7 +191,9 @@ class BaseUser(BaseModel, PermissionsMixin):
 		"""
 		Return an HMAC of the password field.
 		"""
-		key_salt = "django.contrib.auth.models.AbstractBaseUser.get_session_auth_hash"
+		key_salt = (
+			"django.contrib.auth.models.AbstractBaseUser.get_session_auth_hash"
+		)
 		return salted_hmac(key_salt, self.password).hexdigest()
 
 	def get_session_auth_fallback_hash(self):
@@ -239,14 +248,27 @@ class User(BaseUser):
 			)
 		]
 
-	first_name = models.CharField(_("First name"), max_length=255, null=True, blank=True)
-	last_name = models.CharField(_("Last name"), max_length=255, null=True, blank=True)
-	dn = models.CharField(_("distinguishedName"), max_length=128, null=True, blank=True)
+	first_name = models.CharField(
+		_("First name"), max_length=255, null=True, blank=True
+	)
+	last_name = models.CharField(
+		_("Last name"), max_length=255, null=True, blank=True
+	)
+	dn = models.CharField(
+		_("distinguishedName"), max_length=128, null=True, blank=True
+	)
 	user_type = models.CharField(
-		_("User Type"), choices=USER_TYPE_CHOICES, null=False, blank=False, default=USER_TYPE_LOCAL
+		_("User Type"),
+		choices=USER_TYPE_CHOICES,
+		null=False,
+		blank=False,
+		default=USER_TYPE_LOCAL,
 	)
 	recovery_codes = ArrayField(
-		models.CharField(max_length=32), verbose_name="Recovery Codes", null=True, blank=True
+		models.CharField(max_length=32),
+		verbose_name="Recovery Codes",
+		null=True,
+		blank=True,
 	)
 	is_enabled = models.BooleanField(null=False, default=True)
 
@@ -254,7 +276,9 @@ class User(BaseUser):
 	ldap_password_aes = models.BinaryField(null=True, blank=True, default=None)
 	# Cipher Text
 	ldap_password_ct = models.BinaryField(null=True, blank=True, default=None)
-	ldap_password_nonce = models.BinaryField(null=True, blank=True, default=None)
+	ldap_password_nonce = models.BinaryField(
+		null=True, blank=True, default=None
+	)
 	ldap_password_tag = models.BinaryField(null=True, blank=True, default=None)
 
 	@property

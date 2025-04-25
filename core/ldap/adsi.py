@@ -26,7 +26,9 @@ LDAP_UF_HOMEDIR_REQUIRED = "LDAP_UF_HOMEDIR_REQUIRED"
 LDAP_UF_LOCKOUT = "LDAP_UF_LOCKOUT"
 LDAP_UF_PASSWD_NOTREQD = "LDAP_UF_PASSWD_NOTREQD"
 LDAP_UF_PASSWD_CANT_CHANGE = "LDAP_UF_PASSWD_CANT_CHANGE"
-LDAP_UF_ENCRYPTED_TEXT_PASSWORD_ALLOWED = "LDAP_UF_ENCRYPTED_TEXT_PASSWORD_ALLOWED"
+LDAP_UF_ENCRYPTED_TEXT_PASSWORD_ALLOWED = (
+	"LDAP_UF_ENCRYPTED_TEXT_PASSWORD_ALLOWED"
+)
 LDAP_UF_NORMAL_ACCOUNT = "LDAP_UF_NORMAL_ACCOUNT"
 LDAP_UF_INTERDOMAIN_TRUST_ACCOUNT = "LDAP_UF_INTERDOMAIN_TRUST_ACCOUNT"
 LDAP_UF_WORKSTATION_TRUST_ACCOUNT = "LDAP_UF_WORKSTATION_TRUST_ACCOUNT"
@@ -39,7 +41,9 @@ LDAP_UF_NOT_DELEGATED = "LDAP_UF_NOT_DELEGATED"
 LDAP_UF_USE_DES_KEY_ONLY = "LDAP_UF_USE_DES_KEY_ONLY"
 LDAP_UF_DONT_REQUIRE_PREAUTH = "LDAP_UF_DONT_REQUIRE_PREAUTH"
 LDAP_UF_PASSWORD_EXPIRED = "LDAP_UF_PASSWORD_EXPIRED"
-LDAP_UF_TRUSTED_TO_AUTHENTICATE_FOR_DELEGATION = "LDAP_UF_TRUSTED_TO_AUTHENTICATE_FOR_DELEGATION"
+LDAP_UF_TRUSTED_TO_AUTHENTICATE_FOR_DELEGATION = (
+	"LDAP_UF_TRUSTED_TO_AUTHENTICATE_FOR_DELEGATION"
+)
 LDAP_UF_NO_AUTH_DATA_REQUIRED = "LDAP_UF_NO_AUTH_DATA_REQUIRED"
 LDAP_UF_PARTIAL_SECRETS_ACCOUNT = "LDAP_UF_PARTIAL_SECRETS_ACCOUNT"
 
@@ -271,7 +275,9 @@ def join_ldap_filter(
 		filter_string = encapsulate(filter_string)
 
 		# Check if filter_string has a matching expression
-		if any(filter_string.startswith(f"({e}") for e in LDAP_FILTER_EXPRESSIONS):
+		if any(
+			filter_string.startswith(f"({e}") for e in LDAP_FILTER_EXPRESSIONS
+		):
 			# Remove encapsulation and get expression
 			pre_existing_expr = filter_string.strip("()")[0]
 
@@ -301,7 +307,9 @@ def join_ldap_filter(
 
 
 def search_filter_from_dict(
-	filter_dict: dict, expression: LDAP_FILTER_EXPRESSION_TYPE = LDAP_FILTER_OR, reverse_key=False
+	filter_dict: dict,
+	expression: LDAP_FILTER_EXPRESSION_TYPE = LDAP_FILTER_OR,
+	reverse_key=False,
 ):
 	"""Generates LDAP Filter String from dictionary with LDAP Attribute value as
 	key and LDAP Attribute key as value (non-unique attribute definitions).
@@ -371,17 +379,27 @@ def list_perms():  # pragma: no cover
 	Prints to console.
 	"""
 	for perm in LDAP_PERMS:
-		print(perm + " = " + LDAP_PERMS[perm]["val_bin"] + ", " + str(LDAP_PERMS[perm]["index"]))
+		print(
+			perm
+			+ " = "
+			+ LDAP_PERMS[perm]["val_bin"]
+			+ ", "
+			+ str(LDAP_PERMS[perm]["index"])
+		)
 
 
-def parse_permissions_int(raw_user_permissions: int | str, user_name: str = None):
+def parse_permissions_int(
+	raw_user_permissions: int | str, user_name: str = None
+):
 	"""
 	Parses a raw LDAP Permission Integer Bitmap to a list.
 	"""
 	try:
 		int(raw_user_permissions)
 	except:
-		raise ValueError("raw_user_permissions can only contain numeric characters.")
+		raise ValueError(
+			"raw_user_permissions can only contain numeric characters."
+		)
 	if isinstance(raw_user_permissions, int) and not all(
 		c in "01" for c in str(raw_user_permissions)
 	):
@@ -393,19 +411,27 @@ def parse_permissions_int(raw_user_permissions: int | str, user_name: str = None
 
 	for n in range(0, 32):  # Loop for each bit in 0-32
 		i += 1
-		if raw_user_permissions[n] == "1":  # If permission matches enter for loop to
+		if (
+			raw_user_permissions[n] == "1"
+		):  # If permission matches enter for loop to
 			# search which one it is in the dictionary
 			for perm_name in LDAP_PERMS:
 				perm_binary = LDAP_PERMS[perm_name]["val_bin"]
 				perm_index = LDAP_PERMS[perm_name]["index"]
 				if perm_index == n:
-					if user_name and isinstance(user_name, str):  # pragma: no cover
+					if user_name and isinstance(
+						user_name, str
+					):  # pragma: no cover
 						logger.debug(f"User: {user_name}")
 					logger.debug(f"Permission Name: {perm_name}")
 					logger.debug(f"Permission Index: {str(perm_index)}")
 					logger.debug(f"Permission Index (From User): {str(n)}")
-					logger.debug(f"Permission Binary Value (From Constant): {perm_binary}")
-					logger.debug(f"Permission Hex Value (From Constant): {bin_as_hex(perm_binary)}")
+					logger.debug(
+						f"Permission Binary Value (From Constant): {perm_binary}"
+					)
+					logger.debug(
+						f"Permission Hex Value (From Constant): {bin_as_hex(perm_binary)}"
+					)
 					permission_list.append(perm_name)
 	if user_name and isinstance(user_name, str):  # pragma: no cover
 		logger.debug(f"Permission List ({user_name}): ")
@@ -417,7 +443,9 @@ def parse_permissions_int(raw_user_permissions: int | str, user_name: str = None
 
 # Lists User permissions (LDAP / AD Servers save them as binary)
 def list_user_perms(
-	user: Union[dict, LDAPEntry], perm_search: str = None, user_is_object: bool = True
+	user: Union[dict, LDAPEntry],
+	perm_search: str = None,
+	user_is_object: bool = True,
 ) -> list | bool:
 	"""
 	### Creates a list of user permissions from raw LDAP Integer Bitmap
@@ -435,12 +463,16 @@ def list_user_perms(
 	if user_is_object is True or isinstance(user, LDAPEntry):
 		user: LDAPEntry
 		if not hasattr(user, "userAccountControl"):
-			raise ValueError("User object does not contain a userAccountControl attribute.")
+			raise ValueError(
+				"User object does not contain a userAccountControl attribute."
+			)
 		uac_value = getldapattr(user, "userAccountControl", None)
 	else:
 		user: dict
 		if not "userAccountControl" in user:
-			raise ValueError("User dictionary does not contain a userAccountControl key.")
+			raise ValueError(
+				"User dictionary does not contain a userAccountControl key."
+			)
 		uac_value = user["userAccountControl"]
 
 	if uac_value is None:
@@ -461,7 +493,9 @@ def list_user_perms(
 
 
 def calc_permissions(
-	permission_list: list, perm_add: Union[list, str] = None, perm_remove: Union[list, str] = None
+	permission_list: list,
+	perm_add: Union[list, str] = None,
+	perm_remove: Union[list, str] = None,
 ):
 	"""
 	### Calculates permissions INT based on a desired array of Permission String Keys
@@ -475,7 +509,9 @@ def calc_permissions(
 		int
 	"""
 	perm_int = 0
-	if not isinstance(permission_list, list) and not isinstance(permission_list, set):
+	if not isinstance(permission_list, list) and not isinstance(
+		permission_list, set
+	):
 		raise TypeError("permission_list must be a list or set.")
 	permission_list = set(permission_list)
 
@@ -483,7 +519,9 @@ def calc_permissions(
 	for perm in permission_list:
 		p_value = int(LDAP_PERMS[perm]["value"])
 		perm_int += p_value
-		logger.debug(f"Permission Value added (cast to string): {perm} = {str(p_value)}")
+		logger.debug(
+			f"Permission Value added (cast to string): {perm} = {str(p_value)}"
+		)
 
 	# Add Permissions to list
 	if perm_add and isinstance(perm_add, list):
@@ -491,11 +529,15 @@ def calc_permissions(
 			if not perm in permission_list:
 				p_value = int(LDAP_PERMS[perm]["value"])
 				perm_int += p_value
-				logger.debug(f"Permission Value added (cast to string): {perm} = {str(p_value)}")
+				logger.debug(
+					f"Permission Value added (cast to string): {perm} = {str(p_value)}"
+				)
 	elif perm_add and not perm_add in permission_list:
 		p_value = int(LDAP_PERMS[perm_add]["value"])
 		perm_int += p_value
-		logger.debug(f"Permission Value added (cast to string): {perm} = {str(p_value)}")
+		logger.debug(
+			f"Permission Value added (cast to string): {perm} = {str(p_value)}"
+		)
 
 	# Remove permissions from list
 	if perm_remove and isinstance(perm_remove, list):
@@ -503,13 +545,19 @@ def calc_permissions(
 			if perm in permission_list:
 				p_value = int(LDAP_PERMS[perm]["value"])
 				perm_int -= p_value
-				logger.debug(f"Permission Value removed (cast to string): {perm} = {str(p_value)}")
+				logger.debug(
+					f"Permission Value removed (cast to string): {perm} = {str(p_value)}"
+				)
 	elif perm_remove and perm_remove in permission_list:
 		p_value = int(LDAP_PERMS[perm_remove]["value"])
 		perm_int -= p_value
-		logger.debug(f"Permission Value removed (cast to string): {perm} = {str(p_value)}")
+		logger.debug(
+			f"Permission Value removed (cast to string): {perm} = {str(p_value)}"
+		)
 
 	# Final Result Log
-	logger.debug(f"calc_permissions - Final User Permissions Value: {str(perm_int)}")
+	logger.debug(
+		f"calc_permissions - Final User Permissions Value: {str(perm_int)}"
+	)
 
 	return int(perm_int)

@@ -144,7 +144,11 @@ RECORD_MAPPINGS = {
 		"fields": ["nameNode"],
 		"multi_record": False,
 	},
-	RecordTypes.DNS_RECORD_TYPE_WINS.value: {"name": "WINS", "class": None, "fields": []},
+	RecordTypes.DNS_RECORD_TYPE_WINS.value: {
+		"name": "WINS",
+		"class": None,
+		"fields": [],
+	},
 	# DEPRECATED BY RFCs
 	RecordTypes.DNS_RECORD_TYPE_MB.value: {
 		"name": "MB",
@@ -203,10 +207,14 @@ def record_to_dict(record: "DNS_RECORD", ts=False):
 	# If the Record Type is Mapped to a Class
 	if record["Type"] in RECORD_MAPPINGS:
 		# Initialize the class with the record Data key
-		data = getattr(thismodule, RECORD_MAPPINGS[record["Type"]]["class"])(record["Data"])
+		data = getattr(thismodule, RECORD_MAPPINGS[record["Type"]]["class"])(
+			record["Data"]
+		)
 
 		# ! Print class ! #
-		logger.debug(getattr(thismodule, RECORD_MAPPINGS[record["Type"]]["class"]))
+		logger.debug(
+			getattr(thismodule, RECORD_MAPPINGS[record["Type"]]["class"])
+		)
 
 		fqdnFields = [
 			"nameNode",
@@ -350,15 +358,21 @@ class DNS_COUNT_NAME(Structure):
 		for i in range(self["LabelCount"]):
 			try:
 				nextlen = unpack("B", self["RawName"][ind : ind + 1])[0]
-				labels.append(self["RawName"][ind + 1 : ind + 1 + nextlen].decode("utf-8"))
+				labels.append(
+					self["RawName"][ind + 1 : ind + 1 + nextlen].decode("utf-8")
+				)
 				ind += nextlen + 1
 			except Exception as e:
 				logger.error("Unable to UNPACK Raw Name in DNS Record")
-				logger.error(f"Length: ({str(type(self['Length']))}): {self['Length']}")
+				logger.error(
+					f"Length: ({str(type(self['Length']))}): {self['Length']}"
+				)
 				logger.error(
 					f"Label Count: ({str(type(self['LabelCount']))}): {self['LabelCount']}"
 				)
-				logger.error(f"Raw Name: ({str(type(self['RawName']))}): {self['RawName']}")
+				logger.error(
+					f"Raw Name: ({str(type(self['RawName']))}): {self['RawName']}"
+				)
 				raise e
 
 		# For the final dot
@@ -376,7 +390,9 @@ class DNS_COUNT_NAME(Structure):
 			label_count = 0
 		new_string = bytes()
 		for i in range(label_count):
-			new_string += pack("B", len(split_string[i])) + (bytes(split_string[i], "utf-8"))
+			new_string += pack("B", len(split_string[i])) + (
+				bytes(split_string[i], "utf-8")
+			)
 
 		# Add 1 to Length as it must include the NULL Terminator Byte
 		self["Length"] = length + 1
@@ -631,7 +647,9 @@ class DNS_RPC_RECORD_TS(Structure):
 
 	def toDatetime(self):
 		microseconds = self["entombedTime"] / 10.0
-		return datetime.datetime(1601, 1, 1) + datetime.timedelta(microseconds=microseconds)
+		return datetime.datetime(1601, 1, 1) + datetime.timedelta(
+			microseconds=microseconds
+		)
 
 
 # TODO

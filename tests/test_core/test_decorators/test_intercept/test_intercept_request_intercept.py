@@ -44,7 +44,9 @@ def test_request_intercept(is_factory, mock_request, logger_path, mocker):
 	assert result == "response"
 
 
-def test_request_intercept_no_query_params_or_data(mock_request, logger_path, mocker):
+def test_request_intercept_no_query_params_or_data(
+	mock_request, logger_path, mocker
+):
 	del mock_request.query_params
 	del mock_request.data
 	m_logger = mocker.patch(logger_path)

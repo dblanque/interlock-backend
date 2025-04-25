@@ -1,5 +1,8 @@
 from rest_framework import serializers
-from core.models.interlock_settings import InterlockSetting, INTERLOCK_SETTING_NAME_CHOICES
+from core.models.interlock_settings import (
+	InterlockSetting,
+	INTERLOCK_SETTING_NAME_CHOICES,
+)
 
 
 class InterlockSettingSerializer(serializers.ModelSerializer):

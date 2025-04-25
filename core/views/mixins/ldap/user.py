@@ -51,7 +51,11 @@ from ldap3.extend import (
 from core.views.mixins.ldap.group import GroupViewMixin
 
 ### Exception Handling
-from core.exceptions import base as exc_base, users as exc_user, ldap as exc_ldap
+from core.exceptions import (
+	base as exc_base,
+	users as exc_user,
+	ldap as exc_ldap,
+)
 import logging
 
 ### Others
@@ -85,7 +89,11 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 	request: Request
 
 	def get_user_object_filter(
-		self, username: str = None, email: str = None, xor=True, match_both=False
+		self,
+		username: str = None,
+		email: str = None,
+		xor=True,
+		match_both=False,
 	):
 		"""Gets LDAP User Object Filter
 
@@ -106,7 +114,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		"""
 		if xor:
 			if (not username and not email) or (username and email):
-				raise ValueError("xor: Username OR Email required, single value allowed.")
+				raise ValueError(
+					"xor: Username OR Email required, single value allowed."
+				)
 			if match_both:
 				raise ValueError("match_both and xor are incompatible options.")
 
@@ -121,7 +131,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		)
 		# Exclude Computer Accounts if settings allow it
 		if RuntimeSettings.EXCLUDE_COMPUTER_ACCOUNTS:
-			class_filter = join_ldap_filter(class_filter, f"objectClass=computer", negate_add=True)
+			class_filter = join_ldap_filter(
+				class_filter, f"objectClass=computer", negate_add=True
+			)
 
 		# User ID Filter Setup
 		id_filter = None
@@ -139,7 +151,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			)
 		return join_ldap_filter(class_filter, id_filter)
 
-	def get_user_entry(self, username=None, email=None, raise_if_not_exists=False):
+	def get_user_entry(
+		self, username=None, email=None, raise_if_not_exists=False
+	):
 		"""Fetch user entry from current ldap connection entries,
 		does not perform an LDAP Search.
 
@@ -154,7 +168,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			ldap3.Entry: User Entry
 		"""
 		if not username and not email:
-			raise ValueError("username or email must be specified in get_user_entry call.")
+			raise ValueError(
+				"username or email must be specified in get_user_entry call."
+			)
 		if not self.ldap_connection.entries:
 			return
 
@@ -200,10 +216,15 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		Returns the matching user entry.
 		"""
 		if not username and not email:
-			raise ValidationError("username or email are required for get_user_object call.")
+			raise ValidationError(
+				"username or email are required for get_user_object call."
+			)
 
 		if not attributes:
-			attributes = [RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"], "distinguishedName"]
+			attributes = [
+				RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
+				"distinguishedName",
+			]
 		if not object_class_filter:
 			object_class_filter = self.get_user_object_filter(
 				username=username, email=email, xor=False
@@ -265,7 +286,11 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		# Remove attributes to return as table headers
 		valid_attributes: list = self.ldap_filter_attr
-		remove_attributes = ["distinguishedName", "userAccountControl", "displayName"]
+		remove_attributes = [
+			"distinguishedName",
+			"userAccountControl",
+			"displayName",
+		]
 		for attr in remove_attributes:
 			if attr in valid_attributes:
 				valid_attributes.remove(attr)
@@ -280,8 +305,13 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 					continue
 				attr_val = getldapattr(user_entry, attr_key)
 
-				if attr_key == RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]:
-					user_dict[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]] = attr_val
+				if (
+					attr_key
+					== RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
+				):
+					user_dict[
+						RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
+					] = attr_val
 					user_dict["username"] = attr_val
 				else:
 					if not attr_val:
@@ -300,7 +330,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				)
 			except Exception as e:
 				logger.exception(e)
-				logger.error(f"Could not get user status for DN: {user_dict['distinguishedName']}")
+				logger.error(
+					f"Could not get user status for DN: {user_dict['distinguishedName']}"
+				)
 
 			user_list.append(user_dict)
 
@@ -326,9 +358,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			if user_path:
 				user_dn = f"CN={user_data['username']},{user_path}"
 			else:
-				user_dn = (
-					f"CN={user_data['username']},CN=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}"
-				)
+				user_dn = f"CN={user_data['username']},CN=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}"
 			user_dn = safe_dn(dn=user_dn)
 		except:
 			raise exc_user.UserDNPathException
@@ -336,19 +366,26 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		parsed_user_attrs = {}
 		permission_list = user_data.pop("permission_list", [])
 		if permission_list and isinstance(permission_list, list):
-			parsed_user_attrs["userAccountControl"] = ldap_adsi.calc_permissions(
-				permission_list=permission_list
+			parsed_user_attrs["userAccountControl"] = (
+				ldap_adsi.calc_permissions(permission_list=permission_list)
 			)
 		else:
-			parsed_user_attrs["userAccountControl"] = ldap_adsi.calc_permissions(
-				[
-					ldap_adsi.LDAP_UF_NORMAL_ACCOUNT,
-				]
+			parsed_user_attrs["userAccountControl"] = (
+				ldap_adsi.calc_permissions(
+					[
+						ldap_adsi.LDAP_UF_NORMAL_ACCOUNT,
+					]
+				)
 			)
-		parsed_user_attrs[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]] = str(
-			user_data["username"]
-		).lower()
-		parsed_user_attrs["objectClass"] = ["top", "person", "organizationalPerson", "user"]
+		parsed_user_attrs[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]] = (
+			str(user_data["username"]).lower()
+		)
+		parsed_user_attrs["objectClass"] = [
+			"top",
+			"person",
+			"organizationalPerson",
+			"user",
+		]
 		parsed_user_attrs["userPrincipalName"] = (
 			f"{user_data['username']}@{RuntimeSettings.LDAP_DOMAIN}"
 		)
@@ -383,13 +420,17 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		logger.debug(f"Creating user in DN Path: {user_dn}")
 		try:
 			self.ldap_connection.add(
-				user_dn, RuntimeSettings.LDAP_AUTH_OBJECT_CLASS, attributes=parsed_user_attrs
+				user_dn,
+				RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
+				attributes=parsed_user_attrs,
 			)
 		except Exception as e:
 			logger.error(e)
 			logger.error(f"Could not create User: {user_dn}")
 			if return_exception:
-				raise exc_user.UserCreate(data={"ldap_response": self.ldap_connection.result})
+				raise exc_user.UserCreate(
+					data={"ldap_response": self.ldap_connection.result}
+				)
 			return None
 
 		DBLogMixin.log(
@@ -478,21 +519,30 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				# Default is 30 Minutes
 				user_data["lockoutTime"] = 30
 			try:
-				new_permissions_int = ldap_adsi.calc_permissions(permission_list)
+				new_permissions_int = ldap_adsi.calc_permissions(
+					permission_list
+				)
 			except:
 				raise exc_user.UserPermissionError
 
 			logger.debug("Located in: %s.update", __name__)
-			logger.debug("New Permission Integer (cast to String): %s", str(new_permissions_int))
+			logger.debug(
+				"New Permission Integer (cast to String): %s",
+				str(new_permissions_int),
+			)
 			user_data["userAccountControl"] = new_permissions_int
 
 		user_country = user_data.get(LDAP_ATTR_COUNTRY, None)
 		if user_country:
 			try:
 				# Set numeric country code (DCC Standard)
-				user_data[LDAP_ATTR_COUNTRY_DCC] = LDAP_COUNTRIES[user_country]["dccCode"]
+				user_data[LDAP_ATTR_COUNTRY_DCC] = LDAP_COUNTRIES[user_country][
+					"dccCode"
+				]
 				# Set ISO Country Code
-				user_data[LDAP_ATTR_COUNTRY_ISO] = LDAP_COUNTRIES[user_country]["isoCode"]
+				user_data[LDAP_ATTR_COUNTRY_ISO] = LDAP_COUNTRIES[user_country][
+					"isoCode"
+				]
 			except Exception as e:
 				logger.exception(e)
 				raise exc_user.UserCountryUpdateError
@@ -512,7 +562,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		# Group Add
 		if groupsToAdd:
-			self.ldap_connection.extend.microsoft.add_members_to_groups(user_dn, groupsToAdd)
+			self.ldap_connection.extend.microsoft.add_members_to_groups(
+				user_dn, groupsToAdd
+			)
 
 		# Group Remove
 		if groupsToRemove:
@@ -549,7 +601,8 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				self.ldap_user_update_keys(
 					user_dn=user_dn,
 					user_data=ldap_user_entry.entry_attributes_as_dict,
-					replace_operation_keys=replace_operation_keys + delete_operation_keys,
+					replace_operation_keys=replace_operation_keys
+					+ delete_operation_keys,
 				)
 			except Exception as e:
 				logger.exception(e)
@@ -581,7 +634,11 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		return self.ldap_connection
 
 	def ldap_set_password(
-		self, user_dn: str, user_pwd_new: str, user_pwd_old: str = None, set_by_admin=False
+		self,
+		user_dn: str,
+		user_pwd_new: str,
+		user_pwd_old: str = None,
+		set_by_admin=False,
 	) -> LDAPConnector:
 		"""Sets the LDAP User's Password with Microsoft Extended LDAP Commands
 		- Microsoft ADDS does not allow password changing without LDAPS
@@ -597,9 +654,13 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			ldap3.Connection
 		"""
 		# Type hinting defs
-		extended_operations: ExtendedOperationsRoot = self.ldap_connection.extend
+		extended_operations: ExtendedOperationsRoot = (
+			self.ldap_connection.extend
+		)
 		eo_standard: StandardExtendedOperations = extended_operations.standard
-		eo_microsoft: MicrosoftExtendedOperations = extended_operations.microsoft
+		eo_microsoft: MicrosoftExtendedOperations = (
+			extended_operations.microsoft
+		)
 
 		if not isinstance(user_dn, str):
 			raise TypeError("user_dn must be of type str.")
@@ -623,7 +684,10 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		try:
 			# If available use standard password extended operation
-			if "1.3.6.1.4.1.4203.1.11.1" in self.ldap_connection.server.info.supported_extensions:
+			if (
+				"1.3.6.1.4.1.4203.1.11.1"
+				in self.ldap_connection.server.info.supported_extensions
+			):
 				return eo_standard.modify_password(user=user_dn, **pwd_kwargs)
 			else:
 				# Otherwise attempt to change password directly with Microsoft Extended Op.
@@ -631,10 +695,15 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		except Exception as e:
 			logger.exception(e)
 			logger.error(f"Could not update password for User DN: {user_dn}")
-			raise exc_user.UserUpdateError(data={"ldap_response": self.ldap_connection.result})
+			raise exc_user.UserUpdateError(
+				data={"ldap_response": self.ldap_connection.result}
+			)
 
 	def ldap_user_exists(
-		self, username: str = None, email: str = None, return_exception: bool = True
+		self,
+		username: str = None,
+		email: str = None,
+		return_exception: bool = True,
 	) -> bool:
 		"""Checks if LDAP User Exists on Directory
 
@@ -655,14 +724,20 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		# Send LDAP Query for user being created to see if it exists
 		if not username and not email:
-			raise ValidationError("username or email args are required for ldap_user_exists call.")
+			raise ValidationError(
+				"username or email args are required for ldap_user_exists call."
+			)
 		ldap_attributes = [
 			RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
 			"distinguishedName",
 			RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"],
 		]
-		self.get_user_object(username=username, email=email, attributes=ldap_attributes)
-		entry_by_username = self.get_user_entry(username=username) if username else None
+		self.get_user_object(
+			username=username, email=email, attributes=ldap_attributes
+		)
+		entry_by_username = (
+			self.get_user_entry(username=username) if username else None
+		)
 		entry_by_email = self.get_user_entry(email=email) if email else None
 
 		# If entries is not falsy, return Exception or True
@@ -678,10 +753,14 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 					return True
 		return False
 
-	def ldap_user_fetch(self, user_search, return_entry = False) -> dict:
-		self.ldap_filter_object = self.get_user_object_filter(username=user_search)
+	def ldap_user_fetch(self, user_search, return_entry=False) -> dict:
+		self.ldap_filter_object = self.get_user_object_filter(
+			username=user_search
+		)
 		if not self.ldap_filter_attr:
-			self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings).get_fetch_attrs()
+			self.ldap_filter_attr = self.filter_attr_builder(
+				RuntimeSettings
+			).get_fetch_attrs()
 
 		ldap_object_options: LDAPObjectOptions = {
 			"connection": self.ldap_connection,
@@ -709,15 +788,20 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				if memberOf:
 					if isinstance(memberOf, (list, tuple, set)):
 						for _group in memberOf:
-							memberOfObjects.append(self.get_group_attributes(_group))
+							memberOfObjects.append(
+								self.get_group_attributes(_group)
+							)
 					else:
-						memberOfObjects.append(self.get_group_attributes(memberOf))
+						memberOfObjects.append(
+							self.get_group_attributes(memberOf)
+						)
 
 			### Also add default Users Group to be available as Selectable PID
 			if "primaryGroupID" in self.ldap_filter_attr:
 				_primary_group_id = user_dict["primaryGroupID"]
 				if not any(
-					_g.get("objectRid", None) == _primary_group_id for _g in memberOfObjects
+					_g.get("objectRid", None) == _primary_group_id
+					for _g in memberOfObjects
 				):
 					memberOfObjects.append(
 						GroupViewMixin.get_group_by_rid(_primary_group_id)
@@ -735,11 +819,16 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			# Check if user is disabled
 			try:
 				user_dict["is_enabled"] = not ldap_adsi.list_user_perms(
-					user=user_entry, perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE
+					user=user_entry,
+					perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE,
 				)
 			except Exception as e:
 				logger.exception(e)
-				logger.error(user_dict.get("distinguishedName", "No Distinguished Name available."))
+				logger.error(
+					user_dict.get(
+						"distinguishedName", "No Distinguished Name available."
+					)
+				)
 
 			# Build permissions list
 			try:
@@ -747,12 +836,18 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				user_dict["permission_list"] = user_permissions
 			except Exception as e:
 				logger.exception(e)
-				logger.error(user_dict.get("distinguishedName", "No Distinguished Name available."))
+				logger.error(
+					user_dict.get(
+						"distinguishedName", "No Distinguished Name available."
+					)
+				)
 
 		if "sAMAccountType" in self.ldap_filter_attr:
 			# Replace sAMAccountType Value with String
 			user_account_type = int(user_dict["sAMAccountType"])
-			user_dict["sAMAccountType"] = LDAPAccountTypes(user_account_type).name
+			user_dict["sAMAccountType"] = LDAPAccountTypes(
+				user_account_type
+			).name
 
 		# Validate data
 		serializer = LDAPUserSerializer(data=user_dict)
@@ -760,7 +855,12 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		# Parse dates to LDAP Format (Front-end requirement)
 		_result = serializer.validated_data.copy()
-		for fld in ["whenCreated", "whenChanged", "lastLogonTimestamp", "accountExpires"]:
+		for fld in [
+			"whenCreated",
+			"whenChanged",
+			"lastLogonTimestamp",
+			"accountExpires",
+		]:
 			if fld in _result:
 				_result[fld] = _result[fld].strftime(LDAP_DATE_FORMAT)
 
@@ -768,9 +868,13 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			return user_obj.entry
 		return _result
 
-	def ldap_user_change_status(self, username: str, enabled: bool) -> Connection:
+	def ldap_user_change_status(
+		self, username: str, enabled: bool
+	) -> Connection:
 		self.ldap_filter_object = self.get_user_object_filter(username=username)
-		user_entry = self.get_user_object(username=username, attributes=self.ldap_filter_attr)
+		user_entry = self.get_user_object(
+			username=username, attributes=self.ldap_filter_attr
+		)
 		permission_list = ldap_adsi.list_user_perms(user=user_entry)
 
 		if user_entry.entry_dn == RuntimeSettings.LDAP_AUTH_CONNECTION_USER_DN:
@@ -779,7 +883,8 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		try:
 			if enabled is True:
 				new_permissions = ldap_adsi.calc_permissions(
-					permission_list, perm_remove=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE
+					permission_list,
+					perm_remove=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE,
 				)
 			else:
 				new_permissions = ldap_adsi.calc_permissions(
@@ -790,7 +895,8 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			raise exc_user.UserPermissionError
 
 		self.ldap_connection.modify(
-			user_entry.entry_dn, {"userAccountControl": [(MODIFY_REPLACE, [new_permissions])]}
+			user_entry.entry_dn,
+			{"userAccountControl": [(MODIFY_REPLACE, [new_permissions])]},
 		)
 
 		try:
@@ -815,7 +921,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 	def ldap_user_unlock(self, username: str) -> Connection:
 		user_entry = self.get_user_object(username=username)
 
-		self.ldap_connection.extend.microsoft.unlock_account(user=user_entry.entry_dn)
+		self.ldap_connection.extend.microsoft.unlock_account(
+			user=user_entry.entry_dn
+		)
 		DBLogMixin.log(
 			user=self.request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
@@ -831,7 +939,9 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		try:
 			self.ldap_connection.delete(user_entry.entry_dn)
 		except Exception as e:
-			raise exc_base.CoreException(data={"ldap_response": self.ldap_connection.result})
+			raise exc_base.CoreException(
+				data={"ldap_response": self.ldap_connection.result}
+			)
 
 		DBLogMixin.log(
 			user=self.request.user.id,

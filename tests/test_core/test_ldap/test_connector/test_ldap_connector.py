@@ -3,9 +3,16 @@ from pytest_mock import MockType
 from core.ldap.connector import LDAPConnector, sync_user_relations
 from ldap3.core.exceptions import LDAPException
 from core.ldap.adsi import join_ldap_filter, LDAP_FILTER_OR
-from ldap3 import SUBTREE as ldap3_SUBTREE, ALL_ATTRIBUTES as ldap3_ALL_ATTRIBUTES
+from ldap3 import (
+	SUBTREE as ldap3_SUBTREE,
+	ALL_ATTRIBUTES as ldap3_ALL_ATTRIBUTES,
+)
 from core.exceptions.ldap import CouldNotOpenConnection
-from core.models.choices.log import LOG_ACTION_OPEN, LOG_ACTION_CLOSE, LOG_CLASS_CONN
+from core.models.choices.log import (
+	LOG_ACTION_OPEN,
+	LOG_ACTION_CLOSE,
+	LOG_CLASS_CONN,
+)
 from core.models.user import USER_TYPE_LDAP
 from inspect import getfullargspec
 from copy import deepcopy
@@ -24,7 +31,9 @@ def f_ldap_connector(
 ):
 	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
 	mocker.patch("core.ldap.connector.ldap3.Server", return_value=f_server)
-	mocker.patch("core.ldap.connector.ldap3.ServerPool", return_value=f_server_pool)
+	mocker.patch(
+		"core.ldap.connector.ldap3.ServerPool", return_value=f_server_pool
+	)
 	mocker.patch("core.ldap.connector.ldap3.Tls", return_value=f_tls)
 	mocker.patch("core.ldap.connector.aes_decrypt", return_value="somepassword")
 	connector = LDAPConnector(user=f_user)
@@ -42,7 +51,9 @@ def f_ldap_connector(
 	),
 	ids=lambda x: "Is authenticating" if x else "Is not authenticating",
 )
-def test_enter_context_manager(authenticating, mocker, f_user, f_runtime_settings):
+def test_enter_context_manager(
+	authenticating, mocker, f_user, f_runtime_settings
+):
 	# Mock RuntimeSettings
 	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
 	mocker.patch("core.ldap.connector.aes_decrypt", return_value="somepassword")
@@ -148,8 +159,12 @@ def test_init_with_valid_user(
 	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
 
 	# Mock ldap3.Connection
-	mocker.patch("core.ldap.connector.ldap3.Connection", return_value=f_ldap_connection)
-	mocker.patch("core.ldap.connector.ldap3.ServerPool", return_value=f_server_pool)
+	mocker.patch(
+		"core.ldap.connector.ldap3.Connection", return_value=f_ldap_connection
+	)
+	mocker.patch(
+		"core.ldap.connector.ldap3.ServerPool", return_value=f_server_pool
+	)
 	mocker.patch("core.ldap.connector.ldap3.Tls", return_value=f_tls)
 	mocker.patch("core.ldap.connector.aes_decrypt", return_value="somepassword")
 
@@ -180,7 +195,9 @@ def test_init_with_invalid_user_dn(mocker, f_runtime_settings):
 	m_user.user_type = USER_TYPE_LDAP
 
 	# Test with no user
-	with pytest.raises(ValueError, match="No user_dn was provided for LDAP Connector."):
+	with pytest.raises(
+		ValueError, match="No user_dn was provided for LDAP Connector."
+	):
 		LDAPConnector(user=m_user)
 
 
@@ -201,7 +218,9 @@ def tls_version_str(f_runtime_settings):
 		"tls_version_str",
 	),
 )
-def test_log_init(tls_version, mocker, f_ldap_connector, f_runtime_settings, request):
+def test_log_init(
+	tls_version, mocker, f_ldap_connector, f_runtime_settings, request
+):
 	_tls_version = request.getfixturevalue(tls_version)
 	m_logger: MockType = mocker.patch("core.ldap.connector.logger")
 	m_logger_debug: MockType = m_logger.debug
@@ -218,15 +237,25 @@ def test_log_init(tls_version, mocker, f_ldap_connector, f_runtime_settings, req
 	ids=lambda x: "TLS Enabled" if x else "Plain Connection",
 )
 def test_bind_success(
-	use_tls, mocker, f_user, f_runtime_settings, f_ldap_connection, f_server_pool, f_tls
+	use_tls,
+	mocker,
+	f_user,
+	f_runtime_settings,
+	f_ldap_connection,
+	f_server_pool,
+	f_tls,
 ):
 	# Mock RuntimeSettings
 	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
 	f_runtime_settings.LDAP_AUTH_USE_TLS = use_tls
 
 	# Mock ldap3.Connection
-	mocker.patch("core.ldap.connector.ldap3.Connection", return_value=f_ldap_connection)
-	mocker.patch("core.ldap.connector.ldap3.ServerPool", return_value=f_server_pool)
+	mocker.patch(
+		"core.ldap.connector.ldap3.Connection", return_value=f_ldap_connection
+	)
+	mocker.patch(
+		"core.ldap.connector.ldap3.ServerPool", return_value=f_server_pool
+	)
 	mocker.patch("core.ldap.connector.ldap3.Tls", return_value=f_tls)
 	mocker.patch("core.ldap.connector.aes_decrypt", return_value="somepassword")
 
@@ -254,8 +283,12 @@ def test_bind_connection_raises_ldap_exception(
 	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
 
 	# Patch connector classes
-	mocker.patch("core.ldap.connector.ldap3.Connection", side_effect=LDAPException)
-	mocker.patch("core.ldap.connector.ldap3.ServerPool", return_value=f_server_pool)
+	mocker.patch(
+		"core.ldap.connector.ldap3.Connection", side_effect=LDAPException
+	)
+	mocker.patch(
+		"core.ldap.connector.ldap3.ServerPool", return_value=f_server_pool
+	)
 	mocker.patch("core.ldap.connector.ldap3.Tls", return_value=f_tls)
 	mocker.patch("core.ldap.connector.aes_decrypt", return_value="somepassword")
 
@@ -279,8 +312,12 @@ def test_bind_raises_ldap_exception(
 
 	# Patch connector classes
 	f_ldap_connection.bind.side_effect = LDAPException
-	mocker.patch("core.ldap.connector.ldap3.Connection", return_value=f_ldap_connection)
-	mocker.patch("core.ldap.connector.ldap3.ServerPool", return_value=f_server_pool)
+	mocker.patch(
+		"core.ldap.connector.ldap3.Connection", return_value=f_ldap_connection
+	)
+	mocker.patch(
+		"core.ldap.connector.ldap3.ServerPool", return_value=f_server_pool
+	)
 	mocker.patch("core.ldap.connector.ldap3.Tls", return_value=f_tls)
 	mocker.patch("core.ldap.connector.aes_decrypt", return_value="somepassword")
 
@@ -303,7 +340,9 @@ def test_rebind_success(
 	f_ldap_connection,
 ):
 	# Patch connector classes
-	mocker.patch("core.ldap.connector.ldap3.Connection.rebind", return_value="result")
+	mocker.patch(
+		"core.ldap.connector.ldap3.Connection.rebind", return_value="result"
+	)
 	f_ldap_connection.result = "result"
 
 	result = f_ldap_connector.rebind(f_user.dn, "somepassword")
@@ -320,11 +359,16 @@ def test_rebind_password_exception(
 	f_ldap_connector,
 ):
 	# Patch connector classes
-	mocker.patch("core.ldap.connector.ldap3.Connection.rebind", return_value="result")
+	mocker.patch(
+		"core.ldap.connector.ldap3.Connection.rebind", return_value="result"
+	)
 	f_ldap_connection.result = "result"
 
 	f_ldap_connector.connection = f_ldap_connection
-	with pytest.raises(ValueError, match="Password length smaller than one, unbinding connection."):
+	with pytest.raises(
+		ValueError,
+		match="Password length smaller than one, unbinding connection.",
+	):
 		f_ldap_connector.rebind(f_user.dn, None)
 
 
@@ -348,7 +392,9 @@ def test_get_user_success(
 	f_ldap_connector,
 ):
 	# Patch connector classes
-	mocker.patch("core.ldap.connector.ldap3.Connection", return_value=f_ldap_connection)
+	mocker.patch(
+		"core.ldap.connector.ldap3.Connection", return_value=f_ldap_connection
+	)
 	mocker.patch("core.ldap.connector.aes_decrypt", return_value="somepassword")
 
 	m_get_or_create_user: MockType = mocker.patch.object(
@@ -375,12 +421,16 @@ def test_get_user_success(
 	m_get_or_create_user.assert_called_once_with(f_ldap_connection.response[0])
 
 
-def test_get_user_failure(mocker, f_ldap_connector, f_runtime_settings, f_ldap_connection):
+def test_get_user_failure(
+	mocker, f_ldap_connector, f_runtime_settings, f_ldap_connection
+):
 	# Mock RuntimeSettings
 	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
 
 	# Patch connector classes
-	mocker.patch("core.ldap.connector.ldap3.Connection", return_value=f_ldap_connection)
+	mocker.patch(
+		"core.ldap.connector.ldap3.Connection", return_value=f_ldap_connection
+	)
 	mocker.patch("core.ldap.connector.aes_decrypt", return_value="somepassword")
 
 	# Mock connection.search
@@ -425,7 +475,9 @@ def f_empty_user_data(mocker):
 	),
 	ids=lambda x: "User Created" if x else "User Updated",
 )
-def test_get_or_create_user(created, f_ldap_connector, f_user_data, f_user, mocker):
+def test_get_or_create_user(
+	created, f_ldap_connector, f_user_data, f_user, mocker
+):
 	# Mock dependencies
 	m_user_model = mocker.MagicMock()
 	m_user_model.objects.update_or_create.return_value = (f_user, created)
@@ -435,11 +487,14 @@ def test_get_or_create_user(created, f_ldap_connector, f_user_data, f_user, mock
 	m_sync_func = mocker.MagicMock()
 
 	# Patch dependencies
-	mocker.patch("core.ldap.connector.get_user_model", return_value=m_user_model)
+	mocker.patch(
+		"core.ldap.connector.get_user_model", return_value=m_user_model
+	)
 	mocker.patch("core.ldap.connector.import_func", return_value=m_clean_func)
 	mocker.patch("core.ldap.connector.sync_user_relations", m_sync_func)
 	mocker.patch(
-		"core.ldap.connector.getfullargspec", return_value=getfullargspec(sync_user_relations)
+		"core.ldap.connector.getfullargspec",
+		return_value=getfullargspec(sync_user_relations),
 	)
 
 	# Execute
@@ -457,7 +512,9 @@ def test_get_or_create_user(created, f_ldap_connector, f_user_data, f_user, mock
 		f_user.save.assert_called_once()
 
 
-def test_get_or_create_user_empty_attributes(f_ldap_connector, f_empty_user_data, mocker):
+def test_get_or_create_user_empty_attributes(
+	f_ldap_connector, f_empty_user_data, mocker
+):
 	# Mock logger
 	m_logger = mocker.patch("core.ldap.connector.logger")
 
@@ -469,10 +526,14 @@ def test_get_or_create_user_empty_attributes(f_ldap_connector, f_empty_user_data
 	m_logger.warning.assert_called_once_with("LDAP user attributes empty")
 
 
-def test_get_or_create_user_invalid_sync_args(f_ldap_connector, f_user, f_user_data, mocker):
+def test_get_or_create_user_invalid_sync_args(
+	f_ldap_connector, f_user, f_user_data, mocker
+):
 	m_user_model = mocker.MagicMock()
 	m_user_model.objects.update_or_create.return_value = (f_user, True)
-	mocker.patch("core.ldap.connector.get_user_model", return_value=m_user_model)
+	mocker.patch(
+		"core.ldap.connector.get_user_model", return_value=m_user_model
+	)
 
 	# Setup mock sync function with unexpected argument
 	m_sync_func = mocker.MagicMock()

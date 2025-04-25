@@ -54,7 +54,9 @@ class SID(object):
 
 		if not isinstance(sid_byte_array, (bytes, bytearray)):
 			if sid_byte_array is None:
-				raise ValueError("sid_byte_array must be a byte array or bytes.")
+				raise ValueError(
+					"sid_byte_array must be a byte array or bytes."
+				)
 			else:
 				_msg = f"Unhandled type for SID Object Initialization ({type(sid_byte_array).__name__})."
 				logger.error(_msg)
@@ -68,7 +70,9 @@ class SID(object):
 		self.revision_level = self.sid_byte_array[0]
 		self.subauthority_count = self.sid_byte_array[1]
 		# 6 bytes - Identifier Authority
-		self.identifier_authority = self._unpack_bytes_big_endian(self.sid_byte_array[2:8])
+		self.identifier_authority = self._unpack_bytes_big_endian(
+			self.sid_byte_array[2:8]
+		)
 		self.subauthorities = []
 
 		logger.debug("SID Revision Level Byte")
@@ -116,7 +120,9 @@ class SID(object):
 		:return: SID string in standard format
 		"""
 		logger.debug("SID Revision Level: " + str(self.revision_level))
-		logger.debug("SID Identifier Authority: " + str(self.identifier_authority))
+		logger.debug(
+			"SID Identifier Authority: " + str(self.identifier_authority)
+		)
 		logger.debug("SID Subauthorities: " + str(self.subauthorities))
 		sid = "S-{0}-{1}".format(self.revision_level, self.subauthority_count)
 		for rid in self.subauthorities:

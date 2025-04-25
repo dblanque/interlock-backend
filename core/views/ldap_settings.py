@@ -43,7 +43,10 @@ from core.views.mixins.ldap_settings import SettingsViewMixin
 from core.views.base import BaseViewSet
 
 ### Serializers
-from core.serializers.ldap_settings import LDAPSettingSerializer, LDAPPresetSerializer
+from core.serializers.ldap_settings import (
+	LDAPSettingSerializer,
+	LDAPPresetSerializer,
+)
 from core.serializers.interlock_settings import InterlockSettingSerializer
 
 ### REST Framework
@@ -76,7 +79,12 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		presets = []
 		for p in LDAPPreset.objects.all():
 			presets.append(
-				{"name": p.name, "id": p.id, "label": p.label, "active": p.active or False}
+				{
+					"name": p.name,
+					"id": p.id,
+					"label": p.label,
+					"active": p.active or False,
+				}
 			)
 
 		DBLogMixin.log(
@@ -146,7 +154,9 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		preset = {"name": preset_name, "label": preset_label}
 		serializer = LDAPPresetSerializer(data=preset)
 		if not serializer.is_valid():
-			raise exc_set.SettingPresetSerializerError(data={"errors": serializer.errors})
+			raise exc_set.SettingPresetSerializerError(
+				data={"errors": serializer.errors}
+			)
 		LDAPPreset.objects.create(**preset)
 
 		return Response(data={"code": code, "code_msg": "ok"})
@@ -181,7 +191,9 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			raise exc_set.SettingPresetNotExists
 		with transaction.atomic():
 			active_preset = self.get_active_settings_preset()
-			active_preset.active = None  # Don't set this to False, DB Constraints
+			active_preset.active = (
+				None  # Don't set this to False, DB Constraints
+			)
 			active_preset.save()
 			inactive_preset = LDAPPreset.objects.get(id=preset_id)
 			inactive_preset.active = True
@@ -212,7 +224,9 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			}
 		)
 		if not serializer.is_valid():
-			raise exc_set.SettingPresetSerializerError(data={"errors": serializer.errors})
+			raise exc_set.SettingPresetSerializerError(
+				data={"errors": serializer.errors}
+			)
 		preset.label = serializer.data["label"]
 		preset.name = serializer.data["name"]
 		preset.save()
@@ -254,10 +268,16 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			param_value: dict
 			for param_name, param_value in local_settings.items():
 				if not param_name in INTERLOCK_SETTING_MAP:
-					raise exc_set.SettingTypeDoesNotMatch(data={"field": param_name})
+					raise exc_set.SettingTypeDoesNotMatch(
+						data={"field": param_name}
+					)
 				param_type = INTERLOCK_SETTING_MAP[param_name]
 				param_value = param_value.pop("value")
-				kwdata = {"name": param_name, "type": param_type.lower(), "value": param_value}
+				kwdata = {
+					"name": param_name,
+					"type": param_type.lower(),
+					"value": param_value,
+				}
 
 				serializer = InterlockSettingSerializer(data=kwdata)
 				if not serializer.is_valid():
@@ -266,7 +286,9 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 					)
 
 				try:
-					setting_instance = InterlockSetting.objects.get(name=param_name)
+					setting_instance = InterlockSetting.objects.get(
+						name=param_name
+					)
 					for attr in kwdata:
 						setattr(setting_instance, attr, kwdata[attr])
 					setting_instance.save()
@@ -275,15 +297,21 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 			for param_name, param_value in ldap_settings.items():
 				if not param_name in LDAP_SETTING_MAP:
-					raise exc_set.SettingTypeDoesNotMatch(data={"field": param_name})
+					raise exc_set.SettingTypeDoesNotMatch(
+						data={"field": param_name}
+					)
 				param_type = LDAP_SETTING_MAP[param_name]
 				param_value = param_value.pop("value")
 
 				is_default = False
 				if param_name == "LDAP_AUTH_TLS_VERSION":
-					is_default = getattr(ssl, param_value) == getattr(defaults, param_name, None)
+					is_default = getattr(ssl, param_value) == getattr(
+						defaults, param_name, None
+					)
 				else:
-					is_default = param_value == getattr(defaults, param_name, None)
+					is_default = param_value == getattr(
+						defaults, param_name, None
+					)
 
 				if is_default:
 					try:
@@ -310,7 +338,10 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 					serializer = LDAPSettingSerializer(data=kwdata)
 					if not serializer.is_valid():
 						raise exc_set.SettingSerializerError(
-							data={"key": param_name, "errors": serializer.errors}
+							data={
+								"key": param_name,
+								"errors": serializer.errors,
+							}
 						)
 
 					try:
@@ -391,7 +422,10 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		for param_name, param_data in data.items():
 			param_type = LDAP_SETTING_MAP[param_name].lower()
 			if param_type.upper() in LDAP_SETTINGS_CHOICES_MAP:
-				if param_data["value"] not in LDAP_SETTINGS_CHOICES_MAP[param_type.upper()]:
+				if (
+					param_data["value"]
+					not in LDAP_SETTINGS_CHOICES_MAP[param_type.upper()]
+				):
 					raise exc_set.SettingTypeDoesNotMatch({"field": param_type})
 
 		data = self.test_ldap_settings(data)

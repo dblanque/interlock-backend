@@ -41,7 +41,9 @@ def add_fields_from_dict(
 				if setting_key in args_pass:
 					field_args = args_pass[setting_key]
 
-				cls.add_to_class(field_name, field_class(*field_args, **field_kwargs))
+				cls.add_to_class(
+					field_name, field_class(*field_args, **field_kwargs)
+				)
 
 			elif isinstance(setting_fields, tuple):
 				for fld in setting_fields:
@@ -55,7 +57,9 @@ def add_fields_from_dict(
 					if fld in args_pass:
 						field_args = args_pass[fld]
 
-					cls.add_to_class(field_name, field_class(*field_args, **field_kwargs))
+					cls.add_to_class(
+						field_name, field_class(*field_args, **field_kwargs)
+					)
 		return cls
 
 	return decorator
@@ -64,10 +68,18 @@ def add_fields_from_dict(
 class BaseSettingsPreset(BaseModel):
 	id = models.BigAutoField(verbose_name=_("id"), primary_key=True)
 	name = models.CharField(
-		verbose_name=_("name"), unique=True, null=False, blank=False, max_length=128
+		verbose_name=_("name"),
+		unique=True,
+		null=False,
+		blank=False,
+		max_length=128,
 	)
-	label = models.CharField(verbose_name=_("label"), blank=False, null=False, max_length=64)
-	active = models.BooleanField(verbose_name=_("active"), unique=True, null=True)
+	label = models.CharField(
+		verbose_name=_("label"), blank=False, null=False, max_length=64
+	)
+	active = models.BooleanField(
+		verbose_name=_("active"), unique=True, null=True
+	)
 
 	class Meta:
 		abstract = True
@@ -80,13 +92,18 @@ class BaseSetting(BaseModel):
 	setting_fields = BASE_SETTING_FIELDS
 	id = models.BigAutoField(verbose_name=_("id"), primary_key=True)
 	type = models.CharField(
-		verbose_name=_("type"), choices=BASE_SETTING_TYPE_CHOICES, null=False, blank=False
+		verbose_name=_("type"),
+		choices=BASE_SETTING_TYPE_CHOICES,
+		null=False,
+		blank=False,
 	)
 
 	def _validate_value(self, choice_type, choice_field):
 		_v = getattr(self, make_field_db_name(choice_field))
 		if _v is None:
-			raise ValidationError(f"{choice_type} cannot be null when type is {self.type}.")
+			raise ValidationError(
+				f"{choice_type} cannot be null when type is {self.type}."
+			)
 
 	def clean(self):
 		if not self.type or len(self.type) <= 0:
@@ -124,7 +141,9 @@ class BaseSetting(BaseModel):
 			setattr(self, make_field_db_name(value_fields), v)
 		elif isinstance(value_fields, tuple):
 			if isinstance(v, str):
-				raise ValueError("Value must be a tuple with the same length as the value fields.")
+				raise ValueError(
+					"Value must be a tuple with the same length as the value fields."
+				)
 			for index, field in enumerate(value_fields):
 				if isinstance(v, Iterable):
 					setattr(self, make_field_db_name(field), v[index])
@@ -136,7 +155,9 @@ class BaseSetting(BaseModel):
 	@value.setter
 	def value(self, v):
 		if not self.type or len(self.type) <= 0:
-			raise ValidationError("Type is required for BaseSetting based models.")
+			raise ValidationError(
+				"Type is required for BaseSetting based models."
+			)
 		# Set unrelated value fields to None
 		for field in self.setting_fields.values():
 			self._set_value(None, value_fields=field)

@@ -20,7 +20,9 @@ def m_nested_group_dn():
 		("user_dn", []),  # Bad type for group_dn
 	),
 )
-def test_recursive_member_search_type_errors(user_dn, group_dn, f_ldap_connection):
+def test_recursive_member_search_type_errors(
+	user_dn, group_dn, f_ldap_connection
+):
 	with pytest.raises(TypeError):
 		recursive_member_search(user_dn, f_ldap_connection, group_dn)
 
@@ -32,7 +34,9 @@ def test_recursive_member_search_type_errors(user_dn, group_dn, f_ldap_connectio
 		("user_dn", ""),  # Zero length group_dn
 	),
 )
-def test_recursive_member_search_len_errors(user_dn, group_dn, f_ldap_connection):
+def test_recursive_member_search_len_errors(
+	user_dn, group_dn, f_ldap_connection
+):
 	with pytest.raises(ValueError):
 		recursive_member_search(user_dn, f_ldap_connection, group_dn)
 
@@ -48,7 +52,10 @@ def test_recursive_member_search_direct(
 	m_entry.objectClass = "group"
 	m_entry.member = [f_user_dn]
 	f_ldap_connection.entries = [m_entry]
-	assert recursive_member_search(f_user_dn, f_ldap_connection, m_group_dn) is True
+	assert (
+		recursive_member_search(f_user_dn, f_ldap_connection, m_group_dn)
+		is True
+	)
 
 
 def test_recursive_member_search_nested(
@@ -66,7 +73,10 @@ def test_recursive_member_search_nested(
 	m_entry_nested.objectClass = "group"
 	m_entry_nested.member = [f_user_dn]
 	f_ldap_connection.entries = [m_entry, m_entry_nested]
-	assert recursive_member_search(f_user_dn, f_ldap_connection, m_group_dn) is True
+	assert (
+		recursive_member_search(f_user_dn, f_ldap_connection, m_group_dn)
+		is True
+	)
 
 
 def test_recursive_member_search_not_in_member(
@@ -80,7 +90,10 @@ def test_recursive_member_search_not_in_member(
 	m_entry.objectClass = "group"
 	m_entry.member = []
 	f_ldap_connection.entries = [m_entry]
-	assert recursive_member_search(f_user_dn, f_ldap_connection, m_group_dn) is False
+	assert (
+		recursive_member_search(f_user_dn, f_ldap_connection, m_group_dn)
+		is False
+	)
 
 
 def test_recursive_member_search_verify_filter(

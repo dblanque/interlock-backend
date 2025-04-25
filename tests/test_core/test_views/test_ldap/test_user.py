@@ -12,7 +12,9 @@ from core.models.interlock_settings import (
 @pytest.fixture(autouse=True)
 def f_interlock_ldap_enabled():
 	# Fake LDAP Enabled
-	InterlockSetting.objects.create(name=INTERLOCK_SETTING_ENABLE_LDAP, type=TYPE_BOOL, value=True)
+	InterlockSetting.objects.create(
+		name=INTERLOCK_SETTING_ENABLE_LDAP, type=TYPE_BOOL, value=True
+	)
 
 
 @pytest.mark.django_db
@@ -24,7 +26,9 @@ class TestLDAPUserViewSet:
 			("normal_user_client", status.HTTP_403_FORBIDDEN),
 		),
 	)
-	def test_list_users_success(self, user_client_fixture, expected_code, mocker, request):
+	def test_list_users_success(
+		self, user_client_fixture, expected_code, mocker, request
+	):
 		"""Test successful user listing"""
 		client = request.getfixturevalue(user_client_fixture)
 
@@ -36,10 +40,14 @@ class TestLDAPUserViewSet:
 
 		# Patch the LDAPConnector context manager
 		m_connector = mocker.patch("core.views.ldap.user.LDAPConnector")
-		m_connector.return_value.__enter__.return_value.connection = mocker.MagicMock()
+		m_connector.return_value.__enter__.return_value.connection = (
+			mocker.MagicMock()
+		)
 
 		# Patch the ldap_user_list method to return our mock data
-		mocker.patch.object(UserViewLDAPMixin, "ldap_user_list", return_value=m_ldap_users)
+		mocker.patch.object(
+			UserViewLDAPMixin, "ldap_user_list", return_value=m_ldap_users
+		)
 
 		# Make API call
 		response = client.get("/api/ldap/users/")
@@ -59,7 +67,10 @@ class TestLDAPUserViewSet:
 	def test_list_users_ldap_error(self, admin_user_client, mocker):
 		"""Test LDAP connection failure"""
 		# Mock LDAPConnector to raise an exception
-		mocker.patch("core.views.ldap.user.LDAPConnector.bind", side_effect=CouldNotOpenConnection)
+		mocker.patch(
+			"core.views.ldap.user.LDAPConnector.bind",
+			side_effect=CouldNotOpenConnection,
+		)
 
 		response = admin_user_client.get("/api/ldap/users/")
 		assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE

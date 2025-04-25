@@ -15,7 +15,10 @@ from rest_framework import viewsets
 
 ### Core
 #### Models
-from core.models.interlock_settings import InterlockSetting, INTERLOCK_SETTING_ENABLE_LDAP
+from core.models.interlock_settings import (
+	InterlockSetting,
+	INTERLOCK_SETTING_ENABLE_LDAP,
+)
 from core.models.user import User
 from core.models.ldap_settings import LDAPPreset
 
@@ -26,7 +29,11 @@ from core.exceptions import ldap as exc_ldap
 from core.views.mixins.utils import net_port_test
 
 ### Others
-from core.ldap.connector import test_ldap_connection, LDAPConnector, LDAPConnectionOptions
+from core.ldap.connector import (
+	test_ldap_connection,
+	LDAPConnector,
+	LDAPConnectionOptions,
+)
 from interlock_backend.settings import BASE_DIR, DEFAULT_SUPERUSER_USERNAME
 from core.config.runtime import RuntimeSettings
 from django.core.exceptions import ObjectDoesNotExist
@@ -40,7 +47,9 @@ DEFAULT_PRESET_NAME = "default_preset"
 
 class SettingsViewMixin(viewsets.ViewSetMixin):
 	def create_default_preset(self):
-		LDAPPreset.objects.create(name=DEFAULT_PRESET_NAME, label="Default Preset", active=True)
+		LDAPPreset.objects.create(
+			name=DEFAULT_PRESET_NAME, label="Default Preset", active=True
+		)
 
 	def remove_default_preset(self):
 		qs = LDAPPreset.objects.filter(name=DEFAULT_PRESET_NAME)
@@ -50,11 +59,15 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 	def resync_users(self) -> None:
 		# If LDAP is not enable, do not resync users.
 		try:
-			ldap_enabled = InterlockSetting.objects.get(name=INTERLOCK_SETTING_ENABLE_LDAP)
+			ldap_enabled = InterlockSetting.objects.get(
+				name=INTERLOCK_SETTING_ENABLE_LDAP
+			)
 			if not ldap_enabled.value:
 				return None
 		except:
-			logger.warning(f"Could not fetch {INTERLOCK_SETTING_ENABLE_LDAP} from Database.")
+			logger.warning(
+				f"Could not fetch {INTERLOCK_SETTING_ENABLE_LDAP} from Database."
+			)
 			return None
 
 		ldc_opts = LDAPConnectionOptions()
@@ -91,7 +104,9 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 	def get_admin_status(self):
 		userQuerySet = User.objects.filter(username=DEFAULT_SUPERUSER_USERNAME)
 		if userQuerySet.count() > 0:
-			status = userQuerySet.get(username=DEFAULT_SUPERUSER_USERNAME).deleted
+			status = userQuerySet.get(
+				username=DEFAULT_SUPERUSER_USERNAME
+			).deleted
 			return not status
 		else:
 			return False
@@ -100,7 +115,9 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 	def set_admin_status(self, status: bool, password=None):
 		if not isinstance(status, bool):
 			raise TypeError("status must be of type bool.")
-		userQuerySet = User.objects.get_full_queryset().filter(username=DEFAULT_SUPERUSER_USERNAME)
+		userQuerySet = User.objects.get_full_queryset().filter(
+			username=DEFAULT_SUPERUSER_USERNAME
+		)
 		if status and userQuerySet.count() == 0:
 			defaultAdmin: User = User.objects.create_default_superuser()
 
@@ -115,7 +132,9 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 
 	def test_ldap_settings(self, data):
 		ldapAuthConnectionUser = data["LDAP_AUTH_CONNECTION_USER_DN"]["value"]
-		ldapAuthConnectionPassword = data["LDAP_AUTH_CONNECTION_PASSWORD"]["value"]
+		ldapAuthConnectionPassword = data["LDAP_AUTH_CONNECTION_PASSWORD"][
+			"value"
+		]
 		ldapAuthURL = data["LDAP_AUTH_URL"]["value"]
 		ldapAuthConnectTimeout = int(data["LDAP_AUTH_CONNECT_TIMEOUT"]["value"])
 		ldapAuthReceiveTimeout = int(data["LDAP_AUTH_RECEIVE_TIMEOUT"]["value"])
