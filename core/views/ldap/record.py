@@ -26,7 +26,6 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
-from core.utils.dnstool import record_to_dict
 from core.decorators.login import auth_required, admin_required
 from core.ldap.connector import LDAPConnector
 import logging
