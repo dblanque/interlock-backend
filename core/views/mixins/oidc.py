@@ -189,8 +189,8 @@ class OidcAuthorizeMixin:
 				if timezone.make_aware(datetime.now()) < consent.expires_at:
 					return False
 
-			timedelta_consent_given = timezone.make_aware(datetime.now()) - consent.date_given
 			# Don't require consent if it was given within the last minute.
+			timedelta_consent_given = timezone.make_aware(datetime.now()) - consent.date_given
 			if timedelta_consent_given < timedelta(minutes=1):
 				return False
 		return True
