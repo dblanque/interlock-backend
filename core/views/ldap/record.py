@@ -104,6 +104,7 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 		user: User = request.user
 		data: dict = request.data
 		code = 0
+		result = None
 		record_delete = data.get("record", None)
 		multi_record_delete = data.get("records", None)
 
@@ -125,7 +126,7 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 				validated_record_data = self.validate_record(
 					record_data=record_delete
 				)
-				result = self.delete_record(validated_record_data)
+				result = self.delete_record(record_data=validated_record_data)
 			# Multi Record Delete
 			if multi_record_delete:
 				result = []
@@ -138,6 +139,6 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 						record_data=_record
 					)
 
-					result.append(self.delete_record(validated_record_data))
+					result.append(self.delete_record(record_data=validated_record_data))
 
 		return Response(data={"code": code, "code_msg": "ok", "data": result})
