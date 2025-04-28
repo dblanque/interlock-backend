@@ -96,7 +96,11 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 
 		if INTERLOCK_DEBUG:
 			data["debug"] = INTERLOCK_DEBUG
-		return Response(data={"code": code, "code_msg": "ok", "details": data})
+		return Response(data={
+			"code": code,
+			"code_msg": "ok",
+			"details": data
+		})
 
 	@action(detail=False, methods=["post"])
 	@auth_required
@@ -435,7 +439,11 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 				log_target=target_zone,
 			)
 
-		return Response(data={"code": code, "code_msg": "ok", "result": result})
+		return Response(data={
+			"code": code,
+			"code_msg": "ok",
+			"result": result
+		})
 
 	@action(detail=False, methods=["post"])
 	@auth_required
