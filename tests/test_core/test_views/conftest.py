@@ -34,10 +34,12 @@ excluded_from_ldap = (
 )
 @pytest.fixture(
     params=[
-        p for p in g_all_endpoints._pytestfixturefunction.params  # Access underlying params
-        if p[0] not in excluded_from_ldap  # Filter condition
+		# Access underlying params
+        p for p in g_all_endpoints._pytestfixturefunction.params
+		# Filter condition
+        if p[0] not in excluded_from_ldap
     ],
-    ids=lambda x: f"{x[1].upper()}: {x[0]} returns Teapot"  # Custom IDs for filtered set
+    ids=lambda x: f"{x[1].upper()}: {x[0]} returns Teapot"
 )
 def g_ldap_domain_endpoints(request: FixtureRequest):
     return request.param
@@ -48,10 +50,12 @@ excluded_from_auth = (
 )
 @pytest.fixture(
     params=[
-        p for p in g_all_endpoints._pytestfixturefunction.params  # Access underlying params
-        if p[0] not in excluded_from_auth  # Filter condition
+		# Access underlying params
+        p for p in g_all_endpoints._pytestfixturefunction.params
+		# Filter condition
+        if p[0] not in excluded_from_auth
     ],
-    ids=lambda x: f"{x[1].upper()}: {x[0]} returns Forbidden"  # Custom IDs for filtered set
+    ids=lambda x: f"{x[1].upper()}: {x[0]} returns Forbidden"
 )
 def g_authenticated_endpoints(request: FixtureRequest):
     return request.param
