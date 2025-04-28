@@ -39,7 +39,7 @@ excluded_from_ldap = (
 		# Filter condition
         if p[0] not in excluded_from_ldap
     ],
-    ids=lambda x: f"{x[1].upper()}: {x[0]} returns Teapot"
+    ids=lambda x: f"{x[1].upper()}: {x[0]} (LDAP Required)"
 )
 def g_ldap_domain_endpoints(request: FixtureRequest):
     return request.param
@@ -55,7 +55,7 @@ excluded_from_auth = (
 		# Filter condition
         if p[0] not in excluded_from_auth
     ],
-    ids=lambda x: f"{x[1].upper()}: {x[0]} returns Forbidden"
+    ids=lambda x: f"{x[1].upper()}: {x[0]} (Auth. Required)"
 )
 def g_authenticated_endpoints(request: FixtureRequest):
     return request.param
