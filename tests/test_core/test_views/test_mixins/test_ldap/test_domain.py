@@ -387,6 +387,10 @@ class TestInsertZone:
 			("127.0.0.1", None),
 			(None, "::1"),
 		),
+		ids=[
+			"IPv4 Zone Insertion",
+			"IPv6 Zone Insertion",
+		]
 	)
 	def test_success(
 		mocker: MockerFixture,
