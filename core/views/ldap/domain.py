@@ -13,22 +13,14 @@ from core.models.interlock_settings import (
 	InterlockSetting,
 	INTERLOCK_SETTING_ENABLE_LDAP,
 )
-from core.models.dns import LDAPDNS, LDAPRecord
-from core.models.types.ldap_dns_record import RecordTypes
 from core.models.user import User
-from core.models.choices.log import (
-	LOG_ACTION_READ,
-	LOG_ACTION_CREATE,
-	LOG_ACTION_DELETE,
-	LOG_CLASS_DNSZ,
-)
 
 ### ViewSets
 from core.views.base import BaseViewSet
 
 ### Exceptions
 from django.core.exceptions import ObjectDoesNotExist
-from core.exceptions import ldap as exc_ldap, dns as exc_dns
+from core.exceptions import dns as exc_dns
 
 ### Mixins
 from core.views.mixins.ldap.domain import DomainViewMixin
@@ -36,30 +28,20 @@ from core.views.mixins.ldap.domain import DomainViewMixin
 ### REST Framework
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.request import Request
 
 ### Others
-from core.ldap.filter import LDAPFilter
+from core.ldap import defaults
+from core.config.runtime import RuntimeSettings
+from core.models.validators.ldap import domain_validator
 from core.decorators.login import auth_required, admin_required
-from core.models.validators.ldap import (
-	domain_validator,
-	ipv4_validator,
-	ipv6_validator,
-)
 from core.decorators.intercept import ldap_backend_intercept
 from interlock_backend.settings import DEBUG as INTERLOCK_DEBUG
-from core.utils import dnstool
-from core.utils.dnstool import record_to_dict
-import ldap3
-from core.config.runtime import RuntimeSettings
-from core.ldap import defaults
-from core.ldap.connector import LDAPConnector
-from rest_framework.request import Request
 import logging
 ################################################################################
 
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
-
 
 class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 	@action(detail=False, methods=["get"])
@@ -104,123 +86,15 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 	@ldap_backend_intercept
 	def zones(self, request: Request):
 		user: User = request.user
-		code = 0
 		request_data: dict = request.data
-		response_data = {}
 
-		# Set zone_filter
-		request_filter: dict = request_data.get("filter", None)
-		if request_filter:
-			if not "dnsZone" in request_filter:
-				raise exc_dns.DNSZoneNotInRequest
-
-			zone_filter: str = request_filter.get("dnsZone")
-			if not isinstance(zone_filter, str):
-				zone_filter = None
-
-		if zone_filter:
-			target_zone = zone_filter.replace(" ", "")
-		else:
-			target_zone = RuntimeSettings.LDAP_DOMAIN
-
-		# Open LDAP Connection
-		with LDAPConnector(user) as ldc:
-			ldap_connection = ldc.connection
-
-			response_data["headers"] = [
-				# 'displayName', # Custom Header, attr not in LDAP
-				"name",
-				"value",
-				"ttl",
-				"typeName",
-				"serial",
-				# 'ts',
-			]
-
-			search_filter = LDAPFilter.eq("objectClass", "dnsNode").to_string()
-			attributes = ["dnsRecord", "dNSTombstoned", "name"]
-
-			dns_object = LDAPDNS(ldap_connection)
-			dns_zones = dns_object.dns_zones
-			forest_zones = dns_object.forest_zones
-
-			search_target = "DC=%s,%s" % (target_zone, dns_object.dns_root)
-			try:
-				ldap_connection.search(
-					search_base=search_target,
-					search_filter=search_filter,
-					attributes=attributes,
-				)
-			except Exception as e:
-				logger.exception(e)
-				logger.error(search_target)
-				logger.error(search_filter)
-
-			result = []
-
-			excludeEntries = ["ForestDnsZones", "DomainDnsZones"]
-
-			if not ldap_connection.response:
-				raise exc_dns.DNSListEmpty
-
-			record_id = 0
-			for entry in ldap_connection.response:
-				# Set Record Name
-				record_index = 0
-				record_name = entry["raw_attributes"]["name"][0]
-				record_name = record_name.decode("utf-8")
-				orig_name = record_name
-				if record_name != "@":
-					record_name += "." + target_zone
-				else:
-					record_name = target_zone
-				logger.debug(f"{__name__} [DEBUG] - {record_name}")
-
-				# Set Record Data
-				for record in entry["raw_attributes"]["dnsRecord"]:
-					dr = dnstool.DNS_RECORD(record)
-					record_dict = record_to_dict(
-						dr, entry["attributes"]["dNSTombstoned"]
-					)
-					record_dict["id"] = record_id
-					record_dict["index"] = record_index
-					record_dict["displayName"] = record_name
-					record_dict["name"] = orig_name
-					record_dict["ttl"] = dr.__getTTL__()
-					record_dict["distinguishedName"] = entry["dn"]
-					logger.debug(
-						f"{__name__} [DEBUG] - Record: {record_name}, Starts With Underscore: {record_name.startswith('_')}, Exclude Entry: {record_name in excludeEntries}"
-					)
-					logger.debug(f"{__name__} [DEBUG] - {dr}")
-					if (
-						not record_name.startswith("_")
-						and orig_name not in excludeEntries
-					):
-						result.append(record_dict)
-					record_id += 1
-					record_index += 1
-
-					for i in range(len(dns_zones)):
-						zoneName = dns_zones[i]
-						if zoneName == "RootDNSServers":
-							dns_zones[i] = "Root DNS Servers"
-
-					DBLogMixin.log(
-						user=request.user.id,
-						operation_type=LOG_ACTION_READ,
-						log_target_class=LOG_CLASS_DNSZ,
-						log_target=target_zone,
-					)
-
-					response_data["dnsZones"] = dns_zones
-					response_data["forestZones"] = forest_zones
-					response_data["records"] = result
-					response_data["legacy"] = (
-						RuntimeSettings.LDAP_DNS_LEGACY or False
-					)
+		response_data = self.get_zone_records(
+			user=user,
+			request_data=request_data
+		)
 
 		return Response(
-			data={"code": code, "code_msg": "ok", "data": response_data}
+			data={"code": 0, "code_msg": "ok", "data": response_data}
 		)
 
 	@action(detail=False, methods=["post"])
@@ -229,213 +103,11 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 	@ldap_backend_intercept
 	def insert(self, request: Request):
 		user: User = request.user
-		data = {}
-		code = 0
 		request_data: dict = request.data
-		result = {}
-		new_zone_serial = self.create_initial_serial()
-		default_ttl = 900
 
-		target_zone: str = request_data.get("dnsZone", None)
-		if not target_zone:
-			raise exc_dns.DNSZoneNotInRequest
+		result = self.insert_zone(user=user, request_data=request_data)
 
-		target_zone = target_zone.lower()
-		if domain_validator(target_zone) != True:
-			data = {"dnsZone": target_zone}
-			raise exc_dns.DNSFieldValidatorFailed(data=data)
-
-		if (
-			target_zone == RuntimeSettings.LDAP_DOMAIN
-			or target_zone == "RootDNSServers"
-		):
-			raise exc_dns.DNSZoneNotDeletable
-
-		# Open LDAP Connection
-		with LDAPConnector(user) as ldc:
-			connection = ldc.connection
-			dns_list = LDAPDNS(connection)
-			dns_zones = dns_list.dns_zones
-			forest_zones = dns_list.forest_zones
-
-			if target_zone in dns_zones:
-				raise exc_dns.DNSZoneExists
-
-			zone_to_create_dns = "DC=%s,%s" % (target_zone, dns_list.dns_root)
-			zone_to_create_forest = "DC=_msdcs.%s,%s" % (
-				target_zone,
-				dns_list.forest_root,
-			)
-			forest_dc = "_msdcs.%s" % (target_zone)
-
-			attributes_dns = {}
-			attributes_dns["dc"] = target_zone
-
-			attributes_forest = {}
-			attributes_forest["dc"] = forest_dc
-
-			connection.add(
-				dn=zone_to_create_dns,
-				object_class=["dnsZone", "top"],
-				attributes=attributes_dns,
-			)
-			create_result = connection.result
-
-			connection.add(
-				dn=zone_to_create_forest,
-				object_class=["dnsZone", "top"],
-				attributes=attributes_forest,
-			)
-			result_forest = connection.result
-
-			current_ldap_server = connection.server_pool.get_current_server(
-				connection
-			)
-			current_ldap_server_ip = current_ldap_server.host
-
-			# Create Start of Authority
-			record_soa = LDAPRecord(
-				connection=connection,
-				record_name="@",
-				record_zone=target_zone,
-				record_type=RecordTypes.DNS_RECORD_TYPE_SOA.value,
-				record_main_value=f"ns.{target_zone}.",
-			)
-			values_soa = {
-				"ttl": default_ttl,
-				"serial": new_zone_serial,
-				# SOA Specific
-				"dwSerialNo": new_zone_serial,
-				"dwRefresh": 900,
-				"dwRetry": 600,
-				"dwExpire": 86400,
-				"dwMinimumTtl": default_ttl,
-				"namePrimaryServer": f"ns.{target_zone}.",
-				"zoneAdminEmail": f"hostmaster.{target_zone}",
-			}
-			record_soa.create(values=values_soa)
-
-			result_record_soa = connection.result
-
-			ipv4 = False
-			ipv6 = False
-			if ipv4_validator(current_ldap_server_ip):
-				ipv4 = True
-			elif ipv6_validator(current_ldap_server_ip):
-				ipv6 = True
-
-			# LDAP Server IP Address
-			if ipv4:
-				values_a = {
-					"address": current_ldap_server_ip,
-					"ttl": default_ttl,
-					"serial": new_zone_serial,
-				}
-				record_a = LDAPRecord(
-					connection=connection,
-					record_name="@",
-					record_zone=target_zone,
-					record_type=RecordTypes.DNS_RECORD_TYPE_A.value,
-					record_main_value=current_ldap_server_ip,
-				)
-				record_a.create(values=values_a)
-
-				result_record_a = connection.result
-
-				values_a_ns = {
-					"address": current_ldap_server_ip,
-					"ttl": default_ttl,
-					"serial": new_zone_serial,
-				}
-				record_a_to_ns = LDAPRecord(
-					connection=connection,
-					record_name="ns1",
-					record_zone=target_zone,
-					record_type=RecordTypes.DNS_RECORD_TYPE_A.value,
-					record_main_value=current_ldap_server_ip,
-				)
-				record_a_to_ns.create(values=values_a_ns)
-
-				result_record_a_to_ns = connection.result
-			elif ipv6:
-				values_aaaa = {
-					"address": current_ldap_server_ip,
-					"ttl": default_ttl,
-					"serial": new_zone_serial,
-				}
-				record_aaaa = LDAPRecord(
-					connection=connection,
-					record_name="@",
-					record_zone=target_zone,
-					record_type=RecordTypes.DNS_RECORD_TYPE_AAAA.value,
-					record_main_value=current_ldap_server_ip,
-				)
-				record_aaaa.create(values=values_aaaa)
-
-				aaaa_record_result = connection.result
-
-				values_aaaa_ns = {
-					"address": current_ldap_server_ip,
-					"ttl": default_ttl,
-					"serial": new_zone_serial,
-				}
-				record_aaaa_to_ns = LDAPRecord(
-					connection=connection,
-					record_name="ns1",
-					record_zone=target_zone,
-					record_type=RecordTypes.DNS_RECORD_TYPE_AAAA.value,
-					record_main_value=current_ldap_server_ip,
-				)
-				record_aaaa_to_ns.create(values=values_aaaa_ns)
-
-				aaaa_to_ns_record_result = connection.result
-
-			# NS Record Creation
-			values_ns = {
-				"nameNode": f"ns1.{target_zone}.",
-				"ttl": 3600,
-				"serial": new_zone_serial,
-			}
-			record_a_to_ns = LDAPRecord(
-				connection=connection,
-				record_name="@",
-				record_zone=target_zone,
-				record_type=RecordTypes.DNS_RECORD_TYPE_NS.value,
-				record_main_value=f"ns1.{target_zone}.",
-			)
-			record_a_to_ns.create(values=values_ns)
-
-			result_record_a_to_ns = connection.result
-
-			connection.unbind()
-
-			result = {
-				"dns": create_result,
-				"forest": result_forest,
-				"soa": result_record_soa,
-				"ns": result_record_a_to_ns,
-			}
-
-			if ipv4:
-				result.update(
-					{"a_ns": result_record_a_to_ns, "a": result_record_a}
-				)
-			elif ipv6:
-				result.update(
-					{
-						"aaaa_ns": aaaa_to_ns_record_result,
-						"aaaa": aaaa_record_result,
-					}
-				)
-
-			DBLogMixin.log(
-				user=request.user.id,
-				operation_type=LOG_ACTION_CREATE,
-				log_target_class=LOG_CLASS_DNSZ,
-				log_target=target_zone,
-			)
-
-		return Response(data={"code": code, "code_msg": "ok", "result": result})
+		return Response(data={"code": 0, "code_msg": "ok", "result": result})
 
 	@action(detail=False, methods=["post"])
 	@auth_required
@@ -464,56 +136,10 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 		):
 			raise exc_dns.DNSZoneNotDeletable
 
-		# Open LDAP Connection
-		with LDAPConnector(user) as ldc:
-			ldap_connection = ldc.connection
-			dns_object = LDAPDNS(ldap_connection)
-			dns_zones = dns_object.dns_zones
-			forest_zones = dns_object.forest_zones
-
-			if target_zone not in dns_zones:
-				raise exc_dns.DNSZoneDoesNotExist
-
-			zone_to_delete_dn = "DC=%s,%s" % (target_zone, dns_object.dns_root)
-			zone_to_delete_forest_dn = "DC=_msdcs.%s,%s" % (
-				target_zone,
-				dns_object.forest_root,
-			)
-			forest_dc = "_msdcs.%s" % (target_zone)
-
-			attributes_dns = {}
-			attributes_dns["dc"] = target_zone
-
-			attributes_forest = {}
-			attributes_forest["dc"] = forest_dc
-
-			search_target = "DC=%s,%s" % (target_zone, dns_object.dns_root)
-			search_filter = LDAPFilter.eq("objectClass", "dnsNode").to_string()
-			attributes = ["dnsRecord", "dNSTombstoned", "name"]
-			records = ldap_connection.extend.standard.paged_search(
-				search_base=search_target,
-				search_filter=search_filter,
-				search_scope=ldap3.LEVEL,
-				attributes=attributes,
-			)
-
-			for r in list(records):
-				ldap_connection.delete(r["dn"])
-
-			ldap_connection.delete(dn=zone_to_delete_dn)
-			result_zone = ldap_connection.result
-
-			ldap_connection.delete(dn=zone_to_delete_forest_dn)
-			result_forest = ldap_connection.result
-
-			ldap_connection.unbind()
-
-			DBLogMixin.log(
-				user=request.user.id,
-				operation_type=LOG_ACTION_DELETE,
-				log_target_class=LOG_CLASS_DNSZ,
-				log_target=target_zone,
-			)
+		result_zone, result_forest = self.delete_zone(
+			user=user,
+			target_zone=target_zone
+		)
 
 		return Response(
 			data={
