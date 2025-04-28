@@ -43,6 +43,7 @@ from core.ldap.filter import LDAPFilter
 from core.ldap.connector import LDAPConnector
 
 ### Others
+from copy import deepcopy
 from core.type_hints.connector import LDAPConnectionProtocol
 from core.config.runtime import RuntimeSettings
 from core.views.mixins.logs import LogMixin
@@ -206,6 +207,130 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 		)
 		return response_data
 
+	def insert_soa(
+		connection: LDAPConnectionProtocol,
+		target_zone: str,
+		ttl: int,
+		serial: int
+	):
+		# Create Start of Authority
+		record_soa = LDAPRecord(
+			connection=connection,
+			record_name="@",
+			record_zone=target_zone,
+			record_type=RecordTypes.DNS_RECORD_TYPE_SOA.value,
+			record_main_value=f"ns.{target_zone}.",
+		)
+		record_soa.create(values={
+			"ttl": ttl,
+			"serial": serial,
+			# SOA Specific
+			"dwSerialNo": serial,
+			"dwRefresh": 900,
+			"dwRetry": 600,
+			"dwExpire": 86400,
+			"dwMinimumTtl": ttl,
+			"namePrimaryServer": f"ns.{target_zone}.",
+			"zoneAdminEmail": f"hostmaster.{target_zone}",
+		})
+		return deepcopy(connection.result)
+
+	def insert_nameserver_a(
+		connection: LDAPConnectionProtocol,
+		target_zone: str,
+		ip_address: str,
+		ttl: int,
+		serial: int
+	):
+		a_record = LDAPRecord(
+			connection=connection,
+			record_name="@",
+			record_zone=target_zone,
+			record_type=RecordTypes.DNS_RECORD_TYPE_A.value,
+			record_main_value=ip_address,
+		)
+		a_record.create(values={
+			"address": ip_address,
+			"ttl": ttl,
+			"serial": serial,
+		})
+		a_record_result = deepcopy(connection.result)
+
+		ns_record_a = LDAPRecord(
+			connection=connection,
+			record_name="ns1",
+			record_zone=target_zone,
+			record_type=RecordTypes.DNS_RECORD_TYPE_A.value,
+			record_main_value=ip_address,
+		)
+		ns_record_a.create(values={
+			"address": ip_address,
+			"ttl": ttl,
+			"serial": serial,
+		})
+		a_to_ns_record_result = deepcopy(connection.result)
+
+		return a_record_result, a_to_ns_record_result
+
+	def insert_nameserver_aaaa(
+		connection: LDAPConnectionProtocol,
+		target_zone: str,
+		ip_address: str,
+		ttl: int,
+		serial: int
+	):
+		aaaa_record = LDAPRecord(
+			connection=connection,
+			record_name="@",
+			record_zone=target_zone,
+			record_type=RecordTypes.DNS_RECORD_TYPE_AAAA.value,
+			record_main_value=ip_address,
+		)
+		aaaa_record.create(values={
+			"address": ip_address,
+			"ttl": ttl,
+			"serial": serial,
+		})
+		aaaa_record_result = deepcopy(connection.result)
+
+		ns_record_aaaa = LDAPRecord(
+			connection=connection,
+			record_name="ns1",
+			record_zone=target_zone,
+			record_type=RecordTypes.DNS_RECORD_TYPE_AAAA.value,
+			record_main_value=ip_address,
+		)
+		ns_record_aaaa.create(values={
+			"address": ip_address,
+			"ttl": ttl,
+			"serial": serial,
+		})
+		aaaa_to_ns_record_result = deepcopy(connection.result)
+
+		return aaaa_record_result, aaaa_to_ns_record_result
+
+	def insert_nameserver_ns(
+		connection: LDAPConnectionProtocol,
+		target_zone: str,
+		ttl: int,
+		serial: int
+	):
+		# NS Record Creation
+		record_ns = LDAPRecord(
+			connection=connection,
+			record_name="@",
+			record_zone=target_zone,
+			record_type=RecordTypes.DNS_RECORD_TYPE_NS.value,
+			record_main_value=f"ns1.{target_zone}.",
+		)
+		record_ns.create(values={
+			"nameNode": f"ns1.{target_zone}.",
+			"ttl": ttl,
+			"serial": serial,
+		})
+		return deepcopy(connection.result)
+
+
 	def insert_zone(self, user: User, request_data: dict) -> dict:
 		result = {}
 		new_zone_serial = self.create_initial_serial()
@@ -232,71 +357,51 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			connection = ldc.connection
 			dns_list = LDAPDNS(connection)
 			dns_zones = dns_list.dns_zones
-			forest_zones = dns_list.forest_zones
 
 			if target_zone in dns_zones:
 				raise exc_dns.DNSZoneExists
 
-			zone_to_create_dns = "DC=%s,%s" % (target_zone, dns_list.dns_root)
-			zone_to_create_forest = "DC=_msdcs.%s,%s" % (
-				target_zone,
-				dns_list.forest_root,
-			)
-			forest_dc = "_msdcs.%s" % (target_zone)
-
-			attributes_dns = {}
-			attributes_dns["dc"] = target_zone
-
-			attributes_forest = {}
-			attributes_forest["dc"] = forest_dc
+			####################################################################
+			################### Create DNS and Forest Zones ####################
+			####################################################################
+			zone_to_create_dns = f"DC={target_zone},{dns_list.dns_root}"
+			zone_to_create_forest = f"DC=_msdcs.{target_zone},{dns_list.forest_root}"
+			forest_dc = f"_msdcs.{target_zone}"
 
 			connection.add(
 				dn=zone_to_create_dns,
 				object_class=["dnsZone", "top"],
-				attributes=attributes_dns,
+				attributes={"dc": target_zone},
 			)
-			create_result = connection.result
+			create_result = deepcopy(connection.result)
 
 			connection.add(
 				dn=zone_to_create_forest,
 				object_class=["dnsZone", "top"],
-				attributes=attributes_forest,
+				attributes={"dc":forest_dc},
 			)
-			result_forest = connection.result
+			result_forest = deepcopy(connection.result)
+			####################################################################
 
+			# Obtain current LDAP Server IP
 			current_ldap_server = connection.server_pool.get_current_server(
 				connection
 			)
 			current_ldap_server_ip = current_ldap_server.host
 
-			# Create Start of Authority
-			record_soa = LDAPRecord(
-				connection=connection,
-				record_name="@",
-				record_zone=target_zone,
-				record_type=RecordTypes.DNS_RECORD_TYPE_SOA.value,
-				record_main_value=f"ns.{target_zone}.",
+			####################################################################
+			############## Insert Zone Start of Authority Record ###############
+			####################################################################
+			result_record_soa = self.insert_soa(
+				connection=self.connection,
+				target_zone=target_zone,
+				ttl=default_ttl,
+				serial=new_zone_serial,
 			)
-			values_soa = {
-				"ttl": default_ttl,
-				"serial": new_zone_serial,
-				# SOA Specific
-				"dwSerialNo": new_zone_serial,
-				"dwRefresh": 900,
-				"dwRetry": 600,
-				"dwExpire": 86400,
-				"dwMinimumTtl": default_ttl,
-				"namePrimaryServer": f"ns.{target_zone}.",
-				"zoneAdminEmail": f"hostmaster.{target_zone}",
-			}
-			record_soa.create(values=values_soa)
-
-			result_record_soa = connection.result
-
-			ipv4 = False
-			ipv6 = False
+			####################################################################
 
 			# Check if server is ipv4
+			ipv4 = False
 			try:
 				ipv4_validator(current_ldap_server_ip)
 				ipv4 = True
@@ -304,105 +409,51 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 				pass
 
 			# Check if server is ipv6
+			ipv6 = False
 			try:
 				ipv6_validator(current_ldap_server_ip)
 				ipv6 = True
 			except:
 				pass
 
-			# LDAP Server IP Address
+			####################################################################
+			######## Insert Nameserver and corresponding A/AAAA Record #########
+			####################################################################
 			if ipv4:
-				values_a = {
-					"address": current_ldap_server_ip,
-					"ttl": default_ttl,
-					"serial": new_zone_serial,
-				}
-				record_a = LDAPRecord(
-					connection=connection,
-					record_name="@",
-					record_zone=target_zone,
-					record_type=RecordTypes.DNS_RECORD_TYPE_A.value,
-					record_main_value=current_ldap_server_ip,
+				a_record_result, a_to_ns_record_result = self.insert_nameserver_a(
+					connection=self.connection,
+					target_zone=target_zone,
+					ip_address=current_ldap_server_ip,
+					ttl=default_ttl,
+					serial=new_zone_serial,
 				)
-				record_a.create(values=values_a)
-
-				result_record_a = connection.result
-
-				values_a_ns = {
-					"address": current_ldap_server_ip,
-					"ttl": default_ttl,
-					"serial": new_zone_serial,
-				}
-				record_a_to_ns = LDAPRecord(
-					connection=connection,
-					record_name="ns1",
-					record_zone=target_zone,
-					record_type=RecordTypes.DNS_RECORD_TYPE_A.value,
-					record_main_value=current_ldap_server_ip,
-				)
-				record_a_to_ns.create(values=values_a_ns)
-
-				result_record_a_to_ns = connection.result
 			elif ipv6:
-				values_aaaa = {
-					"address": current_ldap_server_ip,
-					"ttl": default_ttl,
-					"serial": new_zone_serial,
-				}
-				record_aaaa = LDAPRecord(
-					connection=connection,
-					record_name="@",
-					record_zone=target_zone,
-					record_type=RecordTypes.DNS_RECORD_TYPE_AAAA.value,
-					record_main_value=current_ldap_server_ip,
+				aaaa_record_result, aaaa_to_ns_record_result = self.insert_nameserver_aaaa(
+					connection=self.connection,
+					target_zone=target_zone,
+					ip_address=current_ldap_server_ip,
+					ttl=default_ttl,
+					serial=new_zone_serial,
 				)
-				record_aaaa.create(values=values_aaaa)
 
-				aaaa_record_result = connection.result
-
-				values_aaaa_ns = {
-					"address": current_ldap_server_ip,
-					"ttl": default_ttl,
-					"serial": new_zone_serial,
-				}
-				record_aaaa_to_ns = LDAPRecord(
-					connection=connection,
-					record_name="ns1",
-					record_zone=target_zone,
-					record_type=RecordTypes.DNS_RECORD_TYPE_AAAA.value,
-					record_main_value=current_ldap_server_ip,
-				)
-				record_aaaa_to_ns.create(values=values_aaaa_ns)
-
-				aaaa_to_ns_record_result = connection.result
-
-			# NS Record Creation
-			values_ns = {
-				"nameNode": f"ns1.{target_zone}.",
-				"ttl": 3600,
-				"serial": new_zone_serial,
-			}
-			record_a_to_ns = LDAPRecord(
-				connection=connection,
-				record_name="@",
-				record_zone=target_zone,
-				record_type=RecordTypes.DNS_RECORD_TYPE_NS.value,
-				record_main_value=f"ns1.{target_zone}.",
+			result_record_ns = self.insert_nameserver_ns(
+				connection=self.connection,
+				target_zone=target_zone,
+				ttl=3600 if default_ttl < 3600 else default_ttl,
+				serial=new_zone_serial,
 			)
-			record_a_to_ns.create(values=values_ns)
-
-			result_record_a_to_ns = connection.result
+			####################################################################
 
 			result = {
 				"dns": create_result,
 				"forest": result_forest,
 				"soa": result_record_soa,
-				"ns": result_record_a_to_ns,
+				"ns": result_record_ns,
 			}
 
 			if ipv4:
 				result.update(
-					{"a_ns": result_record_a_to_ns, "a": result_record_a}
+					{"a_ns": a_to_ns_record_result, "a": a_record_result}
 				)
 			elif ipv6:
 				result.update(
@@ -426,7 +477,6 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			ldap_connection = ldc.connection
 			dns_object = LDAPDNS(ldap_connection)
 			dns_zones = dns_object.dns_zones
-			forest_zones = dns_object.forest_zones
 
 			if target_zone not in dns_zones:
 				raise exc_dns.DNSZoneDoesNotExist
@@ -436,15 +486,8 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 				target_zone,
 				dns_object.forest_root,
 			)
-			forest_dc = "_msdcs.%s" % (target_zone)
 
-			attributes_dns = {}
-			attributes_dns["dc"] = target_zone
-
-			attributes_forest = {}
-			attributes_forest["dc"] = forest_dc
-
-			search_target = "DC=%s,%s" % (target_zone, dns_object.dns_root)
+			search_target = f"DC={target_zone},{dns_object.dns_root}"
 			search_filter = LDAPFilter.eq("objectClass", "dnsNode").to_string()
 			attributes = ["dnsRecord", "dNSTombstoned", "name"]
 			records = ldap_connection.extend.standard.paged_search(
@@ -458,10 +501,10 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 				ldap_connection.delete(r["dn"])
 
 			ldap_connection.delete(dn=zone_to_delete_dn)
-			result_zone = ldap_connection.result
+			result_zone = deepcopy(ldap_connection.result)
 
 			ldap_connection.delete(dn=zone_to_delete_forest_dn)
-			result_forest = ldap_connection.result
+			result_forest = deepcopy(ldap_connection.result)
 
 		DBLogMixin.log(
 			user=user.id,
