@@ -50,12 +50,20 @@ from core.config.runtime import RuntimeSettings
 from core.views.mixins.logs import LogMixin
 import logging
 from datetime import datetime
+from ldap3 import Entry as LDAPEntry
 ################################################################################
 logger = logging.getLogger(__name__)
 DBLogMixin = LogMixin()
 
 
 class DomainViewMixin(viewsets.ViewSetMixin):
+	connection: LDAPConnectionProtocol = None
+
+	def has_connection(self, raise_exception = True):
+		if not self.connection and raise_exception:
+			raise Exception("LDAP Connection must be bound in Mixin Class.")
+		else:
+			return self.connection
 
 	def create_initial_serial(self, as_epoch_serial=True) -> int:
 		"""Returns new epoch DNS Zone serial by default, or int"""
@@ -64,9 +72,7 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 		return 1
 
 	def get_zone_soa(self, zone):
-		self.connection: LDAPConnectionProtocol
-		if not self.connection:
-			raise Exception("LDAP Connection must be bound in Mixin Class.")
+		self.has_connection()
 
 		self.soa_object = LDAPRecord(
 			connection=self.connection,
@@ -96,7 +102,7 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
-			ldap_connection = ldc.connection
+			self.connection = ldc.connection
 
 			response_data["headers"] = [
 				# 'displayName', # Custom Header, attr not in LDAP
@@ -111,13 +117,13 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			search_filter = LDAPFilter.eq("objectClass", "dnsNode").to_string()
 			attributes = ["dnsRecord", "dNSTombstoned", "name"]
 
-			dns_object = LDAPDNS(ldap_connection)
+			dns_object = LDAPDNS(self.connection)
 			dns_zones = dns_object.dns_zones
 			forest_zones = dns_object.forest_zones
 
 			search_target = f"DC={target_zone},{dns_object.dns_root}"
 			try:
-				ldap_connection.search(
+				self.connection.search(
 					search_base=search_target,
 					search_filter=search_filter,
 					attributes=attributes,
@@ -131,12 +137,12 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			result = []
 			exclude_entries = ["ForestDnsZones", "DomainDnsZones"]
 
-			if not ldap_connection.response:
+			if not self.connection.response and not self.connection.entries:
 				raise exc_dns.DNSListEmpty
 
 		record_id = 0
 		# This was changed from ldap_connection.response to .entries
-		for entry in ldap_connection.entries:
+		for entry in self.connection.entries:
 				# Set Record Name
 			record_index = 0
 			record_name: bytes = getldapattrvalue(entry, "name")
@@ -202,14 +208,15 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 
 	def insert_soa(
 		self,
-		connection: LDAPConnectionProtocol,
 		target_zone: str,
 		ttl: int,
 		serial: int
 	):
+		self.has_connection()
+
 		# Create Start of Authority
 		record_soa = LDAPRecord(
-			connection=connection,
+			connection=self.connection,
 			record_name="@",
 			record_zone=target_zone,
 			record_type=RecordTypes.DNS_RECORD_TYPE_SOA.value,
@@ -227,18 +234,19 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			"namePrimaryServer": f"ns.{target_zone}.",
 			"zoneAdminEmail": f"hostmaster.{target_zone}",
 		})
-		return deepcopy(connection.result)
+		return deepcopy(self.connection.result)
 
 	def insert_nameserver_a(
 		self,
-		connection: LDAPConnectionProtocol,
 		target_zone: str,
 		ip_address: str,
 		ttl: int,
 		serial: int
 	):
+		self.has_connection()
+
 		a_record = LDAPRecord(
-			connection=connection,
+			connection=self.connection,
 			record_name="@",
 			record_zone=target_zone,
 			record_type=RecordTypes.DNS_RECORD_TYPE_A.value,
@@ -249,10 +257,10 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			"ttl": ttl,
 			"serial": serial,
 		})
-		a_record_result = deepcopy(connection.result)
+		a_record_result = deepcopy(self.connection.result)
 
 		ns_record_a = LDAPRecord(
-			connection=connection,
+			connection=self.connection,
 			record_name="ns1",
 			record_zone=target_zone,
 			record_type=RecordTypes.DNS_RECORD_TYPE_A.value,
@@ -263,20 +271,21 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			"ttl": ttl,
 			"serial": serial,
 		})
-		a_to_ns_record_result = deepcopy(connection.result)
+		a_to_ns_record_result = deepcopy(self.connection.result)
 
 		return a_record_result, a_to_ns_record_result
 
 	def insert_nameserver_aaaa(
 		self,
-		connection: LDAPConnectionProtocol,
 		target_zone: str,
 		ip_address: str,
 		ttl: int,
 		serial: int
 	):
+		self.has_connection()
+
 		aaaa_record = LDAPRecord(
-			connection=connection,
+			connection=self.connection,
 			record_name="@",
 			record_zone=target_zone,
 			record_type=RecordTypes.DNS_RECORD_TYPE_AAAA.value,
@@ -287,10 +296,10 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			"ttl": ttl,
 			"serial": serial,
 		})
-		aaaa_record_result = deepcopy(connection.result)
+		aaaa_record_result = deepcopy(self.connection.result)
 
 		ns_record_aaaa = LDAPRecord(
-			connection=connection,
+			connection=self.connection,
 			record_name="ns1",
 			record_zone=target_zone,
 			record_type=RecordTypes.DNS_RECORD_TYPE_AAAA.value,
@@ -301,20 +310,21 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			"ttl": ttl,
 			"serial": serial,
 		})
-		aaaa_to_ns_record_result = deepcopy(connection.result)
+		aaaa_to_ns_record_result = deepcopy(self.connection.result)
 
 		return aaaa_record_result, aaaa_to_ns_record_result
 
 	def insert_nameserver_ns(
 		self,
-		connection: LDAPConnectionProtocol,
 		target_zone: str,
 		ttl: int,
 		serial: int
 	):
+		self.has_connection()
+
 		# NS Record Creation
 		record_ns = LDAPRecord(
-			connection=connection,
+			connection=self.connection,
 			record_name="@",
 			record_zone=target_zone,
 			record_type=RecordTypes.DNS_RECORD_TYPE_NS.value,
@@ -325,7 +335,7 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			"ttl": ttl,
 			"serial": serial,
 		})
-		return deepcopy(connection.result)
+		return deepcopy(self.connection.result)
 
 
 	def insert_zone(self, user: User, target_zone: str) -> dict:
@@ -335,8 +345,8 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
-			connection = ldc.connection
-			dns_list = LDAPDNS(connection)
+			self.connection = ldc.connection
+			dns_list = LDAPDNS(self.connection)
 			dns_zones = dns_list.dns_zones
 
 			if target_zone in dns_zones:
@@ -349,31 +359,30 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			zone_to_create_forest = f"DC=_msdcs.{target_zone},{dns_list.forest_root}"
 			forest_dc = f"_msdcs.{target_zone}"
 
-			connection.add(
+			self.connection.add(
 				dn=zone_to_create_dns,
 				object_class=["dnsZone", "top"],
 				attributes={"dc": target_zone},
 			)
-			create_result = deepcopy(connection.result)
+			create_result = deepcopy(self.connection.result)
 
-			connection.add(
+			self.connection.add(
 				dn=zone_to_create_forest,
 				object_class=["dnsZone", "top"],
 				attributes={"dc":forest_dc},
 			)
-			result_forest = deepcopy(connection.result)
+			result_forest = deepcopy(self.connection.result)
 			####################################################################
 
 			# Obtain current LDAP Server IP
-			current_ldap_server = connection.server_pool\
-				.get_current_server(connection)
+			current_ldap_server = self.connection.server_pool\
+				.get_current_server(self.connection)
 			current_ldap_server_ip = current_ldap_server.host
 
 			####################################################################
 			############## Insert Zone Start of Authority Record ###############
 			####################################################################
 			result_record_soa = self.insert_soa(
-				connection=connection,
 				target_zone=target_zone,
 				ttl=default_ttl,
 				serial=new_zone_serial,
@@ -401,7 +410,6 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			####################################################################
 			if ipv4:
 				a_record_result, a_to_ns_record_result = self.insert_nameserver_a(
-					connection=connection,
 					target_zone=target_zone,
 					ip_address=current_ldap_server_ip,
 					ttl=default_ttl,
@@ -409,7 +417,6 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 				)
 			elif ipv6:
 				aaaa_record_result, aaaa_to_ns_record_result = self.insert_nameserver_aaaa(
-					connection=connection,
 					target_zone=target_zone,
 					ip_address=current_ldap_server_ip,
 					ttl=default_ttl,
@@ -417,7 +424,6 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 				)
 
 			result_record_ns = self.insert_nameserver_ns(
-				connection=connection,
 				target_zone=target_zone,
 				ttl=3600 if default_ttl < 3600 else default_ttl,
 				serial=new_zone_serial,
@@ -454,8 +460,8 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 	def delete_zone(self, user: User, target_zone: str) -> tuple[str, str]:
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
-			ldap_connection = ldc.connection
-			dns_object = LDAPDNS(ldap_connection)
+			self.connection = ldc.connection
+			dns_object = LDAPDNS(self.connection)
 			dns_zones = dns_object.dns_zones
 
 			if target_zone not in dns_zones:
@@ -469,22 +475,22 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 
 			search_target = f"DC={target_zone},{dns_object.dns_root}"
 			search_filter = LDAPFilter.eq("objectClass", "dnsNode").to_string()
-			attributes = ["dnsRecord", "dNSTombstoned", "name"]
-			records = ldap_connection.extend.standard.paged_search(
+			records = self.connection.extend.standard.paged_search(
 				search_base=search_target,
 				search_filter=search_filter,
 				search_scope=ldap3_LEVEL,
-				attributes=attributes,
+				attributes=["dnsRecord", "dNSTombstoned", "name"],
 			)
 
-			for r in list(records):
-				ldap_connection.delete(r["dn"])
+			for _record in list(records):
+				_record: LDAPEntry
+				self.connection.delete(dn=_record.entry_dn)
 
-			ldap_connection.delete(dn=zone_to_delete_dn)
-			result_zone = deepcopy(ldap_connection.result)
+			self.connection.delete(dn=zone_to_delete_dn)
+			result_zone = deepcopy(self.connection.result)
 
-			ldap_connection.delete(dn=zone_to_delete_forest_dn)
-			result_forest = deepcopy(ldap_connection.result)
+			self.connection.delete(dn=zone_to_delete_forest_dn)
+			result_forest = deepcopy(self.connection.result)
 
 		DBLogMixin.log(
 			user=user.id,
