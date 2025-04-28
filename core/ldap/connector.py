@@ -16,6 +16,7 @@ from enum import Enum
 
 # LDAP
 import ldap3
+from core.type_hints.connector import LDAPConnectionProtocol
 from django_python3_ldap.utils import import_func
 from core.ldap.filter import LDAPFilter
 from core.exceptions import ldap as exc_ldap
@@ -62,7 +63,7 @@ logger = logging.getLogger(__name__)
 
 
 def recursive_member_search(
-	user_dn: str, connection: ldap3.Connection, group_dn: str
+	user_dn: str, connection: LDAPConnectionProtocol, group_dn: str
 ):
 	# Type checks
 	if not isinstance(user_dn, str):
@@ -215,7 +216,7 @@ class LDAPConnectionOptions(TypedDict):
 
 
 class LDAPConnector(object):
-	connection: ldap3.Connection = None
+	connection: LDAPConnectionProtocol = None
 	log_debug_prefix = "[DEBUG - LDAPConnector] | "
 	_entered = False
 
