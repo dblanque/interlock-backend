@@ -81,17 +81,12 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 			data["debug"] = INTERLOCK_DEBUG
 		return Response(data={"code": code, "code_msg": "ok", "details": data})
 
-	@action(detail=False, methods=["post"])
-	@auth_required
-	@admin_required
-	@ldap_backend_intercept
-	def zones(self, request: Request):
-		user: User = request.user
-		request_data: dict = request.data
+
+	def validate_zones_filter(self, data: dict) -> str:
 		zone_filter = None
 
 		# Set zone_filter
-		request_filter: dict = request_data.get("filter", None)
+		request_filter: dict = data.get("filter", None)
 		if request_filter or isinstance(request_filter, dict):
 			if not "dnsZone" in request_filter:
 				raise exc_dns.DNSZoneNotInRequest
@@ -110,8 +105,20 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 					raise exc_dns.DNSFieldValidatorFailed(data={"dnsZone": target_zone})
 		else:
 			target_zone = RuntimeSettings.LDAP_DOMAIN
+		return target_zone
 
-		response_data=self.get_zone_records(user=user, target_zone=target_zone)
+	@action(detail=False, methods=["post"])
+	@auth_required
+	@admin_required
+	@ldap_backend_intercept
+	def zones(self, request: Request):
+		user: User = request.user
+		request_data: dict = request.data
+		target_zone = self.validate_zones_filter(data=request_data)
+		response_data=self.get_zone_records(
+			user = user,
+			target_zone = target_zone
+		)
 
 		return Response(
 			data={"code": 0, "code_msg": "ok", "data": response_data}
