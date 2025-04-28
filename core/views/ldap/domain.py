@@ -53,6 +53,7 @@ import ldap3
 from core.config.runtime import RuntimeSettings
 from core.ldap import defaults
 from core.ldap.connector import LDAPConnector
+from rest_framework.request import Request
 import logging
 ################################################################################
 
@@ -63,7 +64,7 @@ logger = logging.getLogger(__name__)
 class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 	@action(detail=False, methods=["get"])
 	@auth_required
-	def details(self, request):
+	def details(self, request: Request):
 		_username_identifier = RuntimeSettings.LDAP_AUTH_USERNAME_IDENTIFIER
 		data = {
 			"realm": "",
@@ -101,21 +102,26 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def zones(self, request):
+	def zones(self, request: Request):
 		user: User = request.user
 		code = 0
 		request_data: dict = request.data
 		response_data = {}
 
-		if "filter" in request_data:
-			if "dnsZone" in request_data["filter"]:
-				zone_filter = str(request_data["filter"]["dnsZone"]).replace(" ", "")
-			else:
+		# Set zone_filter
+		request_filter: dict = request_data.get("filter", None)
+		if request_filter:
+			if not "dnsZone" in request_filter:
 				raise exc_dns.DNSZoneNotInRequest
 
-		if zone_filter is not None:
-			if zone_filter == "" or len(zone_filter) == 0:
+			zone_filter: str = request_filter.get("dnsZone")
+			if not isinstance(zone_filter, str):
 				zone_filter = None
+
+		if zone_filter:
+			target_zone = zone_filter.replace(" ", "")
+		else:
+			target_zone = RuntimeSettings.LDAP_DOMAIN
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
@@ -138,10 +144,6 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 			dns_zones = dns_object.dns_zones
 			forest_zones = dns_object.forest_zones
 
-			if zone_filter is not None:
-				target_zone = zone_filter
-			else:
-				target_zone = RuntimeSettings.LDAP_DOMAIN
 			search_target = "DC=%s,%s" % (target_zone, dns_object.dns_root)
 			try:
 				ldap_connection.search(
@@ -229,7 +231,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def insert(self, request):
+	def insert(self, request: Request):
 		user: User = request.user
 		data = {}
 		code = 0
@@ -443,7 +445,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def delete(self, request):
+	def delete(self, request: Request):
 		user: User = request.user
 		data = {}
 		code = 0
