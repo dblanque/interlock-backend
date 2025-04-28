@@ -143,6 +143,8 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 						record_data=_record
 					)
 
-					result.append(self.delete_record(record_data=validated_record_data))
+					result.append(
+						self.delete_record(record_data=validated_record_data)
+					)
 
 		return Response(data={"code": code, "code_msg": "ok", "data": result})

@@ -60,6 +60,7 @@ class UserSerializer(serializers.ModelSerializer):
 				return False
 		return True
 
+
 class LDAPUserSerializer(serializers.Serializer):
 	name = serializers.CharField(required=False)
 	distinguishedName = serializers.CharField(required=False)

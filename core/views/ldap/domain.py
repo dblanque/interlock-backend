@@ -220,11 +220,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 					)
 
 		return Response(
-			data={
-				"code": code,
-				"code_msg": "ok",
-				"data": response_data
-			}
+			data={"code": code, "code_msg": "ok", "data": response_data}
 		)
 
 	@action(detail=False, methods=["post"])

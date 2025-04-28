@@ -12,6 +12,7 @@ from core.models.types.ldap_dns_record import RecordTypes
 from core.models.dns import LDAPRecord
 import logging
 from datetime import datetime
+
 ################################################################################
 logger = logging.getLogger(__name__)
 

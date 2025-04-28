@@ -47,6 +47,7 @@ def disabled_user(user_factory):
 	"""Regular user instance without admin privileges"""
 	return user_factory(is_enabled=False)
 
+
 @pytest.fixture
 def normal_user(user_factory):
 	"""Regular user instance without admin privileges"""
@@ -62,8 +63,11 @@ def admin_user(user_factory):
 class DisabledApiClient(Protocol):
 	def __call__(self) -> APIClient: ...
 
+
 @pytest.fixture
-def disabled_user_client(disabled_user, api_client: APIClient) -> DisabledApiClient:
+def disabled_user_client(
+	disabled_user, api_client: APIClient
+) -> DisabledApiClient:
 	"""Authenticated API client for normal user"""
 	api_client.post(
 		"/api/token/",
@@ -74,8 +78,10 @@ def disabled_user_client(disabled_user, api_client: APIClient) -> DisabledApiCli
 	)
 	return api_client
 
+
 class NormalApiClient(Protocol):
 	def __call__(self) -> APIClient: ...
+
 
 @pytest.fixture
 def normal_user_client(normal_user, api_client: APIClient) -> NormalApiClient:
@@ -92,6 +98,7 @@ def normal_user_client(normal_user, api_client: APIClient) -> NormalApiClient:
 
 class AdminApiClient(Protocol):
 	def __call__(self) -> APIClient: ...
+
 
 @pytest.fixture
 def admin_user_client(admin_user, api_client: APIClient) -> AdminApiClient:
