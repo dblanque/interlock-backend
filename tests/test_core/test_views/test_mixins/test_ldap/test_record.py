@@ -26,7 +26,7 @@ from core.models.choices.log import (
 	LOG_CLASS_DNSR,
 )
 from datetime import datetime
-from core.models.dns import record_type_main_field
+from core.models.dns import record_type_main_field, DATE_FMT
 
 
 @pytest.fixture
@@ -52,7 +52,7 @@ def f_log_mixin(mocker):
 def fc_record_serial_epoch():
 	def maker(sequence: int = 1):
 		return int(
-			datetime.today().strftime("%Y%m%d") + str(sequence).rjust(2, "0")
+			datetime.today().strftime(DATE_FMT) + str(sequence).rjust(2, "0")
 		)
 
 	return maker
