@@ -2334,3 +2334,6 @@ class TestLDAPRecord:
 		f_record_instance_type_a.raw_entry = test_value
 		with pytest.raises(exc_dns.DNSRecordEntryDoesNotExist):
 			f_record_instance_type_a.delete()
+
+def test_date_fmt():
+	assert DATE_FMT == "%Y%m%d"
