@@ -14,7 +14,7 @@ from core.models.types.ldap_dns_record import RecordTypes
 from ldap3 import LEVEL as ldap3_LEVEL
 
 ### Models
-from core.models.dns import LDAPDNS, LDAPRecord
+from core.models.dns import LDAPDNS, LDAPRecord, DATE_FMT
 from core.models.user import User
 from core.models.validators.ldap import (
 	domain_validator,
@@ -60,7 +60,7 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 	def create_initial_serial(self, as_epoch_serial=True) -> int:
 		"""Returns new epoch DNS Zone serial by default, or int"""
 		if as_epoch_serial:
-			return int(datetime.today().strftime("%Y%m%d") + "01")
+			return int(datetime.today().strftime(DATE_FMT) + "01")
 		return 1
 
 	def get_zone_soa(self, zone):
