@@ -214,19 +214,142 @@ class TestRecordTemplateInsertions:
 
 	def test_insert_ns_a(
 		self,
+		mocker: MockerFixture,
 		f_domain_mixin: DomainViewMixin,
+		f_runtime_settings: RuntimeSettingsSingleton,
 	):
-		pass
+		m_address = "127.0.0.1"
+		f_domain_mixin.connection.result = "mock_result"
+		m_ldap_record_a = mocker.Mock()
+		m_ldap_record_ns = mocker.Mock()
+		m_ldap_record = mocker.patch(
+			"core.views.mixins.ldap.domain.LDAPRecord",
+			side_effect=[m_ldap_record_a, m_ldap_record_ns]
+		)
+		result = f_domain_mixin.insert_nameserver_a(
+			connection=f_domain_mixin.connection,
+			ip_address=m_address,
+			target_zone=f_runtime_settings.LDAP_DOMAIN,
+			ttl=180,
+			serial=1,
+		)
+
+		# Assertions
+		m_ldap_record.call_count == 2
+		m_ldap_record.assert_any_call(
+			connection=f_domain_mixin.connection,
+			record_name="@",
+			record_zone=f_runtime_settings.LDAP_DOMAIN,
+			record_type=RecordTypes.DNS_RECORD_TYPE_A.value,
+			record_main_value=m_address,
+		)
+		m_ldap_record_a.create.assert_called_once_with(
+		values={
+			"address": m_address,
+			"ttl": 180,
+			"serial": 1,
+			}
+		)
+		m_ldap_record.assert_any_call(
+			connection=f_domain_mixin.connection,
+			record_name="ns1",
+			record_zone=f_runtime_settings.LDAP_DOMAIN,
+			record_type=RecordTypes.DNS_RECORD_TYPE_A.value,
+			record_main_value=m_address,
+		)
+		m_ldap_record_ns.create.assert_called_once_with(
+		values={
+			"address": m_address,
+			"ttl": 180,
+			"serial": 1,
+			}
+		)
+		assert result[0] == "mock_result"
+		assert result[1] == "mock_result"
 
 	def test_insert_ns_aaaa(
 		self,
+		mocker: MockerFixture,
 		f_domain_mixin: DomainViewMixin,
+		f_runtime_settings: RuntimeSettingsSingleton,
 	):
-		pass
+		m_address = "::1"
+		f_domain_mixin.connection.result = "mock_result"
+		m_ldap_record_aaaa = mocker.Mock()
+		m_ldap_record_ns = mocker.Mock()
+		m_ldap_record = mocker.patch(
+			"core.views.mixins.ldap.domain.LDAPRecord",
+			side_effect=[m_ldap_record_aaaa, m_ldap_record_ns]
+		)
+		result = f_domain_mixin.insert_nameserver_aaaa(
+			connection=f_domain_mixin.connection,
+			ip_address=m_address,
+			target_zone=f_runtime_settings.LDAP_DOMAIN,
+			ttl=180,
+			serial=1,
+		)
+
+		# Assertions
+		m_ldap_record.call_count == 2
+		m_ldap_record.assert_any_call(
+			connection=f_domain_mixin.connection,
+			record_name="@",
+			record_zone=f_runtime_settings.LDAP_DOMAIN,
+			record_type=RecordTypes.DNS_RECORD_TYPE_AAAA.value,
+			record_main_value=m_address,
+		)
+		m_ldap_record_aaaa.create.assert_called_once_with(
+		values={
+			"address": m_address,
+			"ttl": 180,
+			"serial": 1,
+			}
+		)
+		m_ldap_record.assert_any_call(
+			connection=f_domain_mixin.connection,
+			record_name="ns1",
+			record_zone=f_runtime_settings.LDAP_DOMAIN,
+			record_type=RecordTypes.DNS_RECORD_TYPE_AAAA.value,
+			record_main_value=m_address,
+		)
+		m_ldap_record_ns.create.assert_called_once_with(
+		values={
+			"address": m_address,
+			"ttl": 180,
+			"serial": 1,
+			}
+		)
+		assert result[0] == "mock_result"
+		assert result[1] == "mock_result"
 
 	def test_insert_ns(
 		self,
 		f_domain_mixin: DomainViewMixin,
+		f_runtime_settings: RuntimeSettingsSingleton,
+		fc_ldap_record,
 	):
-		pass
+		f_domain_mixin.connection.result = "mock_result"
+		m_ldap_record, m_ldap_record_instance = fc_ldap_record()
+		result = f_domain_mixin.insert_nameserver_ns(
+			connection=f_domain_mixin.connection,
+			target_zone=f_runtime_settings.LDAP_DOMAIN,
+			ttl=180,
+			serial=1,
+		)
 
+		# Assertions
+		m_ldap_record.assert_called_once_with(
+			connection=f_domain_mixin.connection,
+			record_name="@",
+			record_zone=f_runtime_settings.LDAP_DOMAIN,
+			record_type=RecordTypes.DNS_RECORD_TYPE_NS.value,
+			record_main_value=f"ns1.{f_runtime_settings.LDAP_DOMAIN}.",
+		)
+		m_ldap_record_instance.create.assert_called_once_with(
+			values={
+			"nameNode": f"ns1.{f_runtime_settings.LDAP_DOMAIN}.",
+			"ttl": 180,
+			"serial": 1,
+			}
+		)
+		assert result == "mock_result"
