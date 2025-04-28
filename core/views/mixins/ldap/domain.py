@@ -56,7 +56,6 @@ DBLogMixin = LogMixin()
 
 
 class DomainViewMixin(viewsets.ViewSetMixin):
-	connection: LDAPConnectionProtocol
 
 	def create_initial_serial(self, as_epoch_serial=True) -> int:
 		"""Returns new epoch DNS Zone serial by default, or int"""
@@ -65,6 +64,10 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 		return 1
 
 	def get_zone_soa(self, zone):
+		self.connection: LDAPConnectionProtocol
+		if not self.connection:
+			raise Exception("LDAP Connection must be bound in Mixin Class.")
+
 		self.soa_object = LDAPRecord(
 			connection=self.connection,
 			record_name="@",
