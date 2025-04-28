@@ -362,16 +362,15 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			####################################################################
 
 			# Obtain current LDAP Server IP
-			current_ldap_server = connection.server_pool.get_current_server(
-				connection
-			)
+			current_ldap_server = connection.server_pool\
+				.get_current_server(connection)
 			current_ldap_server_ip = current_ldap_server.host
 
 			####################################################################
 			############## Insert Zone Start of Authority Record ###############
 			####################################################################
 			result_record_soa = self.insert_soa(
-				connection=self.connection,
+				connection=connection,
 				target_zone=target_zone,
 				ttl=default_ttl,
 				serial=new_zone_serial,
@@ -399,7 +398,7 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			####################################################################
 			if ipv4:
 				a_record_result, a_to_ns_record_result = self.insert_nameserver_a(
-					connection=self.connection,
+					connection=connection,
 					target_zone=target_zone,
 					ip_address=current_ldap_server_ip,
 					ttl=default_ttl,
@@ -407,7 +406,7 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 				)
 			elif ipv6:
 				aaaa_record_result, aaaa_to_ns_record_result = self.insert_nameserver_aaaa(
-					connection=self.connection,
+					connection=connection,
 					target_zone=target_zone,
 					ip_address=current_ldap_server_ip,
 					ttl=default_ttl,
@@ -415,7 +414,7 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 				)
 
 			result_record_ns = self.insert_nameserver_ns(
-				connection=self.connection,
+				connection=connection,
 				target_zone=target_zone,
 				ttl=3600 if default_ttl < 3600 else default_ttl,
 				serial=new_zone_serial,
