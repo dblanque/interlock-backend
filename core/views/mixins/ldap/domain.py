@@ -10,10 +10,19 @@
 from rest_framework import viewsets
 from core.models.types.ldap_dns_record import RecordTypes
 from core.models.dns import LDAPRecord
+import logging
+from datetime import datetime
 ################################################################################
+logger = logging.getLogger(__name__)
 
 
 class DomainViewMixin(viewsets.ViewSetMixin):
+	def create_initial_serial(self, as_epoch_serial=True) -> int:
+		"""Returns new epoch DNS Zone serial by default, or int"""
+		if as_epoch_serial:
+			return int(datetime.today().strftime("%Y%m%d") + "01")
+		return 1
+
 	def get_zone_soa(self, zone):
 		self.soa_object = LDAPRecord(
 			connection=self.connection,
