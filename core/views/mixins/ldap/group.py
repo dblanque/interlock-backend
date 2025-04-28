@@ -60,7 +60,7 @@ from core.exceptions import (
 ### Others
 from rest_framework.request import Request
 from ldap3.utils.dn import safe_dn, safe_rdn
-from core.views.mixins.utils import getldapattr
+from core.views.mixins.utils import getldapattrvalue
 from typing import List, TypedDict, Required, NotRequired, Literal
 from django.db import transaction
 import logging
@@ -221,16 +221,16 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				# Parse Group Type
 				if attr_key == "groupType":
 					group_dict[attr_key] = self.get_group_types(
-						group_type=int(getldapattr(group_entry, attr_key))
+						group_type=int(getldapattrvalue(group_entry, attr_key))
 					)
 				# Do the standard for every other key
 				elif attr_key in headers:
-					group_dict[attr_key] = getldapattr(
+					group_dict[attr_key] = getldapattrvalue(
 						group_entry, attr_key, None
 					)
 
 			# Check if group has Members
-			if getldapattr(group_entry, "member", None):
+			if getldapattrvalue(group_entry, "member", None):
 				group_dict["hasMembers"] = True
 			else:
 				group_dict["hasMembers"] = False
@@ -269,7 +269,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			if not attr_key in headers:
 				continue
 
-			attr_value = getldapattr(ldap_group_entry, attr_key, None)
+			attr_value = getldapattrvalue(ldap_group_entry, attr_key, None)
 			# Parse Group Type
 			if attr_key == "groupType":
 				group_type = int(attr_value)

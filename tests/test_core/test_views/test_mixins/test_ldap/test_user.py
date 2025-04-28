@@ -7,7 +7,7 @@ from rest_framework.serializers import ValidationError
 from core.models.user import User
 from typing import Union
 from ldap3 import MODIFY_DELETE, MODIFY_REPLACE
-from core.views.mixins.utils import getldapattr
+from core.views.mixins.utils import getldapattrvalue
 from datetime import datetime
 from core.models.choices.log import (
 	LOG_ACTION_DELETE,
@@ -166,7 +166,7 @@ def f_ldap_object(mocker):
 		m_ldap_object.entry = entry
 		m_ldap_object.attributes = {}
 		for attr in entry.entry_attributes:
-			m_ldap_object.attributes[attr] = getldapattr(entry, attr)
+			m_ldap_object.attributes[attr] = getldapattrvalue(entry, attr)
 		return m_ldap_object
 
 	return maker
@@ -692,7 +692,7 @@ class TestUserViewLDAPMixin:
 				LDAP_ATTR_FIRST_NAME: [
 					(
 						MODIFY_REPLACE,
-						[getldapattr(m_entry, LDAP_ATTR_FIRST_NAME)],
+						[getldapattrvalue(m_entry, LDAP_ATTR_FIRST_NAME)],
 					)
 				]
 			},
@@ -809,7 +809,7 @@ class TestUserViewLDAPMixin:
 		m_user_cls.objects.get.return_value = m_django_user
 
 		# Test
-		username = getldapattr(
+		username = getldapattrvalue(
 			m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
 		)
 		result = f_user_mixin.ldap_user_update(
@@ -845,7 +845,7 @@ class TestUserViewLDAPMixin:
 		)
 		mocker.patch("core.ldap.adsi.calc_permissions", side_effect=Exception)
 
-		username = getldapattr(
+		username = getldapattrvalue(
 			m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
 		)
 		with pytest.raises(exc_user.UserPermissionError):
@@ -868,7 +868,7 @@ class TestUserViewLDAPMixin:
 			f_user_mixin, "get_user_object", return_value=m_entry
 		)
 
-		username = getldapattr(
+		username = getldapattrvalue(
 			m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
 		)
 		with pytest.raises(exc_user.UserCountryUpdateError):
@@ -891,7 +891,7 @@ class TestUserViewLDAPMixin:
 			f_user_mixin, "get_user_object", return_value=m_entry
 		)
 
-		username = getldapattr(
+		username = getldapattrvalue(
 			m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
 		)
 		with pytest.raises(exc_user.BadGroupSelection):
@@ -920,7 +920,7 @@ class TestUserViewLDAPMixin:
 			"Update failed"
 		)
 
-		username = getldapattr(
+		username = getldapattrvalue(
 			m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
 		)
 		with pytest.raises(exc_user.UserUpdateError):
@@ -1308,7 +1308,7 @@ class TestUserViewLDAPMixin:
 			user=1,
 			operation_type=LOG_ACTION_READ,
 			log_target_class=LOG_CLASS_USER,
-			log_target=getldapattr(
+			log_target=getldapattrvalue(
 				m_user_entry,
 				f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"],
 			),

@@ -59,7 +59,7 @@ from core.exceptions import (
 import logging
 
 ### Others
-from core.views.mixins.utils import getldapattr
+from core.views.mixins.utils import getldapattrvalue
 from ldap3.utils.dn import safe_dn
 from core.constants.user import UserViewsetFilterAttributeBuilder
 from core.ldap.constants import (
@@ -179,15 +179,15 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			entry: LDAPEntry
 			if username and email:
 				if (
-					getldapattr(entry, _username_field) == username
-					and getldapattr(entry, _email_field) == email
+					getldapattrvalue(entry, _username_field) == username
+					and getldapattrvalue(entry, _email_field) == email
 				):
 					return entry
 			elif username:
-				if getldapattr(entry, _username_field) == username:
+				if getldapattrvalue(entry, _username_field) == username:
 					return entry
 			elif email:
-				if getldapattr(entry, _email_field) == email:
+				if getldapattrvalue(entry, _email_field) == email:
 					return entry
 		if raise_if_not_exists:
 			raise exc_user.UserEntryNotFound
@@ -302,7 +302,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			for attr_key in user_entry.entry_attributes:
 				if attr_key not in valid_attributes:
 					continue
-				attr_val = getldapattr(user_entry, attr_key)
+				attr_val = getldapattrvalue(user_entry, attr_key)
 
 				if (
 					attr_key
@@ -475,7 +475,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			if isinstance(user_data, dict):
 				_value = user_data.get(_key, None)
 			elif isinstance(user_data, LDAPEntry):
-				_value = getldapattr(user_data, _key)
+				_value = getldapattrvalue(user_data, _key)
 			if _value is None:
 				continue
 			if not isinstance(_value, list):

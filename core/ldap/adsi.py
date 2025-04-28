@@ -14,7 +14,7 @@
 from core.config.runtime import RuntimeSettings
 from typing import Union, Literal, TypedDict, Required
 from ldap3 import Entry as LDAPEntry
-from core.views.mixins.utils import getldapattr
+from core.views.mixins.utils import getldapattrvalue
 from core.ldap.filter import encapsulate
 import logging
 
@@ -466,7 +466,7 @@ def list_user_perms(
 			raise ValueError(
 				"User object does not contain a userAccountControl attribute."
 			)
-		uac_value = getldapattr(user, "userAccountControl", None)
+		uac_value = getldapattrvalue(user, "userAccountControl", None)
 	else:
 		user: dict
 		if not "userAccountControl" in user:

@@ -25,7 +25,7 @@ from ldap3 import (
 from typing import TypedDict, Iterable
 from typing_extensions import Required, NotRequired
 from logging import getLogger
-from core.views.mixins.utils import getldapattr
+from core.views.mixins.utils import getldapattrvalue
 
 ################################################################################
 logger = getLogger()
@@ -191,11 +191,11 @@ class LDAPObject:
 		self.attributes["name"] = distinguished_name.split(",")[0].split("=")[1]
 		self.attributes["distinguishedName"] = distinguished_name
 		self.attributes["type"] = (
-			getldapattr(self.entry, "objectCategory")
+			getldapattrvalue(self.entry, "objectCategory")
 			.split(",")[0]
 			.split("=")[1]
 		)
-		entry_object_classes: LDAPAttribute = getldapattr(
+		entry_object_classes: LDAPAttribute = getldapattrvalue(
 			self.entry, "objectClass", []
 		)
 		if (
@@ -207,7 +207,7 @@ class LDAPObject:
 		for attr_key in self.ldap_attrs:
 			if not hasattr(self.entry, attr_key):
 				continue
-			attr_value = getldapattr(self.entry, attr_key)
+			attr_value = getldapattrvalue(self.entry, attr_key)
 
 			if attr_key == self.username_identifier:
 				self.attributes[attr_key] = attr_value

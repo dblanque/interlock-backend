@@ -3,7 +3,7 @@ import pytest
 from pytest_mock import MockerFixture
 from ldap3 import Entry as LDAPEntry, Attribute as LDAPAttribute
 from core.views.mixins.utils import (
-	getldapattr,
+	getldapattrvalue,
 	net_port_test,
 	recursive_dict_find,
 	uppercase_ldif_identifiers,
@@ -39,28 +39,28 @@ def f_ldap_entry(mocker: MockerFixture) -> LDAPEntry:
 class TestGetLdapAttr:
 	@staticmethod
 	def test_get_existing_single_value_attribute(f_ldap_entry):
-		assert getldapattr(f_ldap_entry, "single_attr") == "mock_value"
+		assert getldapattrvalue(f_ldap_entry, "single_attr") == "mock_value"
 
 	@staticmethod
 	def test_get_existing_multi_value_attribute(f_ldap_entry):
-		assert getldapattr(f_ldap_entry, "multi_attr") == ["a", "b"]
+		assert getldapattrvalue(f_ldap_entry, "multi_attr") == ["a", "b"]
 
 	@staticmethod
 	def test_get_non_existing_attribute_with_default(f_ldap_entry):
-		result = getldapattr(
+		result = getldapattrvalue(
 			f_ldap_entry, "non_existing", default="default_value"
 		)
 		assert result == "default_value"
 
 	@staticmethod
 	def test_get_non_existing_attribute_with_args_default(f_ldap_entry):
-		result = getldapattr(f_ldap_entry, "non_existing", "args_default")
+		result = getldapattrvalue(f_ldap_entry, "non_existing", "args_default")
 		assert result == "args_default"
 
 	@staticmethod
 	def test_get_non_existing_attribute_no_default(f_ldap_entry):
 		with pytest.raises(AttributeError, match="has no attribute"):
-			getldapattr(f_ldap_entry, "non_existing")
+			getldapattrvalue(f_ldap_entry, "non_existing")
 
 
 class TestNetPortTest:

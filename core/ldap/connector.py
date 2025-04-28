@@ -50,6 +50,7 @@ from interlock_backend.encrypt import aes_encrypt, aes_decrypt
 
 # Libs
 from inspect import getfullargspec
+from core.views.mixins.utils import getldapattr
 import ssl
 import logging
 import sys
@@ -87,12 +88,14 @@ def recursive_member_search(
 		attributes=["member", "objectClass", "distinguishedName"],
 	)
 	for e in connection.entries:
-		if "group" in e.objectClass:
+		e_object_classes = getldapattr(e, "objectClass")
+		if "group" in e_object_classes.values:
+			e_member = getldapattr(e, "member")
 			# Check if member in group directly
-			if user_dn in e.member:
+			if user_dn in e_member.values:
 				return True
 			# Check if member in nested groups
-			for dn in e.member:
+			for dn in e_member.values:
 				# Avoid infinite self recursion
 				# (should not be possible to be a member of itself, but regardless)
 				if group_dn == dn:

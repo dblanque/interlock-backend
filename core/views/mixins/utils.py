@@ -14,19 +14,19 @@ from ldap3 import Entry as LDAPEntry, Attribute as LDAPAttribute
 
 
 @overload
-def getldapattr(entry: LDAPEntry, attr: str, /) -> str | Iterable | Any: ...
+def getldapattrvalue(entry: LDAPEntry, attr: str, /) -> str | Iterable | Any: ...
 
 
 @overload
-def getldapattr(
+def getldapattrvalue(
 	entry: LDAPEntry, attr: str, /, default=None
 ) -> str | Iterable | Any: ...
 
 
-def getldapattr(
+def getldapattrvalue(
 	entry: LDAPEntry, attr: str, /, *args, **kwargs
 ) -> str | Iterable | Any:
-	"""Get LDAP Attribute with optional default
+	"""Get LDAP Attribute Value with optional default
 
 	Args:
 		entry (LDAPEntry): LDAP Entry to get the attribute from.
@@ -46,6 +46,33 @@ def getldapattr(
 			return args[0]
 		raise e
 
+
+@overload
+def getldapattr(entry: LDAPEntry, attr: str, /) -> LDAPAttribute: ...
+
+
+@overload
+def getldapattr(
+	entry: LDAPEntry, attr: str, /, default=None
+) -> LDAPAttribute: ...
+
+def getldapattr(entry: LDAPEntry, attr: str, /, *args, **kwargs) -> LDAPAttribute:
+	"""Get LDAP Attribute Abstract Object
+
+	Args:
+		entry (LDAPEntry): LDAP Entry to get the attribute from.
+		attr (str): Attribute key.
+		default: Optional. Returned when entry getattr fails.
+
+	Returns:
+		ldap3.Attribute: LDAP3 Attribute Abstract Object.
+	"""
+	if len(args) > 0:
+		return getattr(entry, attr, args[0])
+	elif "default" in kwargs:
+		return getattr(entry, attr, kwargs["default"])
+	else:
+		return getattr(entry, attr)
 
 def net_port_test(ip, port, timeout=5):
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
