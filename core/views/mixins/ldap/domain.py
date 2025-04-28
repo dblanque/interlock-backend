@@ -43,6 +43,7 @@ from core.ldap.filter import LDAPFilter
 from core.ldap.connector import LDAPConnector
 
 ### Others
+from core.type_hints.connector import LDAPConnectionProtocol
 from core.config.runtime import RuntimeSettings
 from core.views.mixins.logs import LogMixin
 import logging
@@ -53,6 +54,8 @@ DBLogMixin = LogMixin()
 
 
 class DomainViewMixin(viewsets.ViewSetMixin):
+	connection: LDAPConnectionProtocol
+
 	def create_initial_serial(self, as_epoch_serial=True) -> int:
 		"""Returns new epoch DNS Zone serial by default, or int"""
 		if as_epoch_serial:
