@@ -6,9 +6,55 @@ from core.ldap.defaults import LDAP_DOMAIN
 import pytest
 from typing import Protocol
 from rest_framework import status
+from pytest import FixtureRequest
 
 User = get_user_model()
 
+@pytest.fixture(
+	params=[
+		# LDAP Domain
+		("/api/ldap/domain/details/", "get"),
+		("/api/ldap/domain/zones/", "post"),
+		("/api/ldap/domain/insert/", "post"),
+		("/api/ldap/domain/delete/", "post"),
+		# LDAP Record
+		("/api/ldap/record/insert/", "post"),
+		("/api/ldap/record/update/", "put"),
+		("/api/ldap/record/delete/", "post"),
+	],
+	ids=lambda x: f"{x[1].upper()}: {x[0]}"
+)
+def g_all_endpoints(request: FixtureRequest):
+	"""Returns tuple of (endpoint, method)"""
+	return request.param
+
+# Filtered fixture - only LDAP domain endpoints
+excluded_from_ldap = (
+	"/api/ldap/domain/details/",
+)
+@pytest.fixture(
+    params=[
+        p for p in g_all_endpoints._pytestfixturefunction.params  # Access underlying params
+        if p[0] not in excluded_from_ldap  # Filter condition
+    ],
+    ids=lambda x: f"{x[1].upper()}: {x[0]} returns Teapot"  # Custom IDs for filtered set
+)
+def g_ldap_domain_endpoints(request: FixtureRequest):
+    return request.param
+
+# Filtered fixture - only LDAP domain endpoints
+excluded_from_auth = (
+	"/api/ldap/domain/details/",
+)
+@pytest.fixture(
+    params=[
+        p for p in g_all_endpoints._pytestfixturefunction.params  # Access underlying params
+        if p[0] not in excluded_from_auth  # Filter condition
+    ],
+    ids=lambda x: f"{x[1].upper()}: {x[0]} returns Forbidden"  # Custom IDs for filtered set
+)
+def g_authenticated_endpoints(request: FixtureRequest):
+    return request.param
 
 @pytest.fixture
 def api_client():
