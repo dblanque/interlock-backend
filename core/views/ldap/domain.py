@@ -64,6 +64,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 		except ObjectDoesNotExist:
 			ldap_enabled = False
 
+		# Add realm, name and basedn only if it's not the default value
 		_settings_for_frontend = (
 			("realm", "LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN"),
 			("name", "LDAP_DOMAIN"),
@@ -74,7 +75,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 				_runtime_value = getattr(RuntimeSettings, setting_key, None)
 				_default_value = getattr(defaults, setting_key, None)
 				if _runtime_value != _default_value:
-					data[response_key] = _runtime_value or ""
+					data[response_key] = _runtime_value
 
 		if INTERLOCK_DEBUG:
 			data["debug"] = INTERLOCK_DEBUG
@@ -87,11 +88,30 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 	def zones(self, request: Request):
 		user: User = request.user
 		request_data: dict = request.data
+		zone_filter = None
 
-		response_data = self.get_zone_records(
-			user=user,
-			request_data=request_data
-		)
+		# Set zone_filter
+		request_filter: dict = request_data.get("filter", None)
+		if request_filter or isinstance(request_filter, dict):
+			if not "dnsZone" in request_filter:
+				raise exc_dns.DNSZoneNotInRequest
+
+			zone_filter: str = request_filter.get("dnsZone", None)
+			if not isinstance(zone_filter, str):
+				zone_filter = None
+
+		if zone_filter:
+			target_zone = zone_filter.replace(" ", "")
+			target_zone = target_zone.lower()
+			if target_zone:
+				try:
+					domain_validator(target_zone)
+				except Exception as e:
+					raise exc_dns.DNSFieldValidatorFailed(data={"dnsZone": target_zone})
+		else:
+			target_zone = RuntimeSettings.LDAP_DOMAIN
+
+		response_data=self.get_zone_records(user=user, target_zone=target_zone)
 
 		return Response(
 			data={"code": 0, "code_msg": "ok", "data": response_data}

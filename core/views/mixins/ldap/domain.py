@@ -87,28 +87,8 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 		except Exception as e:
 			print(e)
 
-	def get_zone_records(self, user: User, request_data: dict) -> dict:
+	def get_zone_records(self, user: User, target_zone: str) -> dict:
 		response_data = {}
-
-		# Set zone_filter
-		request_filter: dict = request_data.get("filter", None)
-		if request_filter:
-			if not "dnsZone" in request_filter:
-				raise exc_dns.DNSZoneNotInRequest
-
-			zone_filter: str = request_filter.get("dnsZone")
-			if not isinstance(zone_filter, str):
-				zone_filter = None
-
-		if zone_filter:
-			target_zone = zone_filter.replace(" ", "")
-			target_zone = target_zone.lower()
-			try:
-				domain_validator(target_zone)
-			except Exception as e:
-				raise exc_dns.DNSFieldValidatorFailed(data={"dnsZone": target_zone})
-		else:
-			target_zone = RuntimeSettings.LDAP_DOMAIN
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
