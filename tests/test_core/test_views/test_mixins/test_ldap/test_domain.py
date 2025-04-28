@@ -10,7 +10,12 @@ from core.ldap.defaults import LDAP_DOMAIN
 from core.views.mixins.ldap.domain import DomainViewMixin
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from core.views.mixins.logs import LogMixin
-from core.models.choices.log import LOG_ACTION_READ, LOG_CLASS_DNSZ
+from core.models.choices.log import (
+	LOG_ACTION_READ,
+	LOG_ACTION_CREATE,
+	LOG_CLASS_DNSZ
+)
+from core.exceptions import dns as exc_dns
 from datetime import datetime
 from typing import Protocol
 from core.models.dns import RecordTypes
@@ -353,3 +358,151 @@ class TestRecordTemplateInsertions:
 			}
 		)
 		assert result == "mock_result"
+
+class TestInsertZone:
+	@staticmethod
+	def test_raises_zone_exists(
+		mocker: MockerFixture,
+		admin_user: User,
+		f_domain_mixin: DomainViewMixin,
+		f_ldap_connector: LDAPConnector,
+		f_runtime_settings: RuntimeSettingsSingleton
+	):
+		m_ldap_dns_instance = mocker.Mock()
+		m_ldap_dns_instance.dns_zones = [f_runtime_settings.LDAP_DOMAIN]
+		mocker.patch(
+			"core.views.mixins.ldap.domain.LDAPDNS",
+			return_value=m_ldap_dns_instance
+		)
+		with pytest.raises(exc_dns.DNSZoneExists):
+			f_domain_mixin.insert_zone(
+				user=admin_user,
+				target_zone=f_runtime_settings.LDAP_DOMAIN
+			)
+
+	@staticmethod
+	@pytest.mark.parametrize(
+		"ipv4_address, ipv6_address",
+		(
+			("127.0.0.1", None),
+			(None, "::1"),
+		),
+	)
+	def test_success(
+		mocker: MockerFixture,
+		ipv4_address: str,
+		ipv6_address: str,
+		admin_user: User,
+		f_domain_mixin: DomainViewMixin,
+		f_ldap_connector: LDAPConnector,
+		f_runtime_settings: RuntimeSettingsSingleton,
+		f_log_mixin: LogMixin,
+	):
+		# Mock Data
+		m_ldap_dns_instance = mocker.Mock()
+		m_dns_root = "fake_root"
+		m_forest_root = "fake_forest_root"
+		m_ldap_dns_instance.dns_root = m_dns_root
+		m_ldap_dns_instance.forest_root = m_forest_root
+		m_ldap_dns_instance.dns_zones = ["RootDNSServers"]
+		m_ldap_dns = mocker.patch(
+			"core.views.mixins.ldap.domain.LDAPDNS",
+			return_value=m_ldap_dns_instance
+		)
+		# Patch Mixin Methods
+		m_create_initial_serial = mocker.patch.object(
+			f_domain_mixin,
+			"create_initial_serial",
+			return_value=1
+		)
+		m_insert_soa = mocker.patch.object(
+			f_domain_mixin,
+			"insert_soa",
+			return_value="result_soa"
+		)
+		m_insert_ns_a = mocker.patch.object(
+			f_domain_mixin,
+			"insert_nameserver_a",
+			return_value=("result_a", "result_ns_aaaa")
+		)
+		m_insert_ns_aaaa = mocker.patch.object(
+			f_domain_mixin,
+			"insert_nameserver_aaaa",
+			return_value=("result_aaaa", "result_ns_aaaa")
+		)
+		m_insert_ns = mocker.patch.object(
+			f_domain_mixin,
+			"insert_nameserver_ns",
+			return_value="result_ns"
+		)
+		# Mock LDAP Server IP
+		m_ldap_server = mocker.Mock()
+		m_ldap_server.host = ipv4_address if ipv4_address else ipv6_address
+		f_ldap_connector.connection.server_pool.get_current_server.return_value = m_ldap_server
+
+		# Execution
+		result = f_domain_mixin.insert_zone(
+			user=admin_user,
+			target_zone=f_runtime_settings.LDAP_DOMAIN
+		)
+
+		# Assertions
+		f_ldap_connector.connection.add.call_count == 2	
+		f_ldap_connector.connection.add.assert_any_call(
+			dn=f"DC={f_runtime_settings.LDAP_DOMAIN},{m_dns_root}",
+			object_class=["dnsZone", "top"],
+			attributes={"dc": f_runtime_settings.LDAP_DOMAIN},
+		)
+		f_ldap_connector.connection.add.assert_any_call(
+			dn=f"DC=_msdcs.{f_runtime_settings.LDAP_DOMAIN},{m_forest_root}",
+			object_class=["dnsZone", "top"],
+			attributes={"dc": f"_msdcs.{f_runtime_settings.LDAP_DOMAIN}"},
+		)
+		f_ldap_connector.connection\
+			.server_pool.get_current_server.assert_called_once_with(
+				f_ldap_connector.connection
+			)
+
+		# Check Record Insertions
+		m_insert_soa.assert_called_once_with(
+			connection=f_ldap_connector.connection,
+			target_zone=f_runtime_settings.LDAP_DOMAIN,
+			ttl=900,
+			serial=1,
+		)
+		if ipv4_address:
+			m_insert_ns_a.assert_called_once_with(
+				connection=f_ldap_connector.connection,
+				target_zone=f_runtime_settings.LDAP_DOMAIN,
+				ip_address=ipv4_address,
+				ttl=900,
+				serial=1,
+			)
+		elif ipv6_address:
+			m_insert_ns_aaaa.assert_called_once_with(
+				connection=f_ldap_connector.connection,
+				target_zone=f_runtime_settings.LDAP_DOMAIN,
+				ip_address=ipv6_address,
+				ttl=900,
+				serial=1,
+			)
+		m_insert_ns.assert_called_once_with(
+			connection=f_ldap_connector.connection,
+			target_zone=f_runtime_settings.LDAP_DOMAIN,
+			ttl=3600,
+			serial=1,
+		)
+		f_log_mixin.log.assert_called_once_with(
+			user=admin_user.id,
+			operation_type=LOG_ACTION_CREATE,
+			log_target_class=LOG_CLASS_DNSZ,
+			log_target=f_runtime_settings.LDAP_DOMAIN,
+		)
+		for k in ("soa", "dns", "forest",):
+			assert k in result
+		if ipv4_address:
+			assert "a" in result
+			assert "a_ns" in result
+		elif ipv6_address:
+			assert "aaaa" in result
+			assert "aaaa_ns" in result
