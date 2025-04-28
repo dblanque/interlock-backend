@@ -311,26 +311,10 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 		return deepcopy(connection.result)
 
 
-	def insert_zone(self, user: User, request_data: dict) -> dict:
+	def insert_zone(self, user: User, target_zone: str) -> dict:
 		result = {}
 		new_zone_serial = self.create_initial_serial()
 		default_ttl = 900
-
-		target_zone: str = request_data.get("dnsZone", None)
-		if not target_zone:
-			raise exc_dns.DNSZoneNotInRequest
-
-		target_zone = target_zone.lower()
-		try:
-			domain_validator(target_zone)
-		except:
-			raise exc_dns.DNSFieldValidatorFailed(data={"dnsZone": target_zone})
-
-		if (
-			target_zone == RuntimeSettings.LDAP_DOMAIN
-			or target_zone == "RootDNSServers"
-		):
-			raise exc_dns.DNSZoneNotDeletable
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:

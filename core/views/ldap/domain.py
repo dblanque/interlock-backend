@@ -83,6 +83,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 
 
 	def validate_zones_filter(self, data: dict) -> str:
+		"""Validate Zones Filter for zones fetching endpoint"""
 		zone_filter = None
 
 		# Set zone_filter
@@ -96,7 +97,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 				zone_filter = None
 
 		if zone_filter:
-			target_zone = zone_filter.replace(" ", "")
+			target_zone = zone_filter.replace(" ", "").strip()
 			target_zone = target_zone.lower()
 			if target_zone:
 				try:
@@ -132,7 +133,23 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 		user: User = request.user
 		request_data: dict = request.data
 
-		result = self.insert_zone(user=user, request_data=request_data)
+		target_zone: str = request_data.get("dnsZone", None)
+		if not target_zone or not isinstance(target_zone, str):
+			raise exc_dns.DNSZoneNotInRequest
+		target_zone = target_zone.lower()
+
+		try:
+			domain_validator(target_zone)
+		except:
+			raise exc_dns.DNSFieldValidatorFailed(data={"dnsZone": target_zone})
+
+		if (
+			target_zone.lower() == RuntimeSettings.LDAP_DOMAIN.lower()
+			or target_zone.lower() == "RootDNSServers".lower()
+		):
+			raise exc_dns.DNSZoneExists
+
+		result = self.insert_zone(user=user, target_zone=target_zone)
 
 		return Response(data={"code": 0, "code_msg": "ok", "result": result})
 
@@ -142,24 +159,23 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 	@ldap_backend_intercept
 	def delete(self, request: Request):
 		user: User = request.user
-		data = {}
-		code = 0
 		request_data: dict = request.data
 		result_zone = None
 		result_forest = None
 
-		if "dnsZone" not in request_data:
+		target_zone: str = request_data.get("dnsZone", None)
+		if not target_zone or not isinstance(target_zone, str):
 			raise exc_dns.DNSZoneNotInRequest
-		else:
-			target_zone = request_data["dnsZone"].lower()
+		target_zone = target_zone.lower()
 
-		if domain_validator(target_zone) != True:
-			data = {"dnsZone": target_zone}
-			raise exc_dns.DNSFieldValidatorFailed(data=data)
+		try:
+			domain_validator(target_zone)
+		except:
+			raise exc_dns.DNSFieldValidatorFailed(data={"dnsZone": target_zone})
 
 		if (
-			target_zone == RuntimeSettings.LDAP_DOMAIN
-			or target_zone == "RootDNSServers"
+			target_zone.lower() == RuntimeSettings.LDAP_DOMAIN.lower()
+			or target_zone.lower() == "RootDNSServers".lower()
 		):
 			raise exc_dns.DNSZoneNotDeletable
 
@@ -170,7 +186,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 
 		return Response(
 			data={
-				"code": code,
+				"code": 0,
 				"code_msg": "ok",
 				"result": {
 					"dns": result_zone,

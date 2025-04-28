@@ -10,6 +10,7 @@ from core.views.ldap.domain import LDAPDomainViewSet
 from rest_framework.test import APIClient
 from rest_framework.response import Response
 from rest_framework import status
+from core.models.validators.ldap import domain_validator
 
 @pytest.fixture
 def f_runtime_settings(
@@ -92,6 +93,8 @@ class TestDetailsEndpoint:
 
 
 class TestZonesEndpoint:
+	endpoint = "/api/ldap/domain/zones/"
+
 	@staticmethod
 	@pytest.mark.parametrize(
 		"domain, expects_default, expected_domain",
@@ -181,7 +184,154 @@ class TestZonesEndpoint:
 		assert response.data.get("code") == "dns_zone_missing"
 
 class TestInsertEndpoint:
-	pass
+	endpoint = "/api/ldap/domain/insert/"
+
+	def test_raises_no_target_zone(self, admin_user_client: APIClient):
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={},
+			format="json"
+		)
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert response.data.get("code") == "dns_zone_missing"
+
+	@pytest.mark.parametrize(
+		"bad_value",
+		(
+			"example.",
+			"example!@#",
+			"bad.example.com.",
+		),
+	)
+	def test_validation_raises(
+		self,
+		mocker: MockerFixture,
+		bad_value: str,
+		admin_user_client: APIClient
+	):
+		m_insert_zone = mocker.patch.object(LDAPDomainViewSet, "insert_zone", return_value="mock_result")
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={"dnsZone": bad_value},
+			format="json"
+		)
+		m_insert_zone.assert_not_called()
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert response.data.get("code") == "dns_field_validator_failed"
+
+	@pytest.mark.parametrize(
+		"bad_value",
+		(
+			"+f_runtime_settings.LDAP_DOMAIN",
+			"RootDNSServers",
+		),
+	)
+	def test_validation_raises_zone_exists(
+		self,
+		mocker: MockerFixture,
+		bad_value: str,
+		admin_user_client: APIClient,
+		request: FixtureRequest
+	):
+		if bad_value.startswith("+"):
+			bad_value_split = bad_value.split(".")
+			bad_value_fixture = request.getfixturevalue(bad_value_split[0][1:])
+			bad_value = getattr(bad_value_fixture, bad_value_split[1])
+		m_insert_zone = mocker.patch.object(LDAPDomainViewSet, "insert_zone", return_value="mock_result")
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={"dnsZone": bad_value},
+			format="json"
+		)
+		m_insert_zone.assert_not_called()
+		assert response.status_code == status.HTTP_409_CONFLICT
+		assert response.data.get("code") == "dns_zone_exists"
+
+	def test_success(
+		self,
+		mocker: MockerFixture,
+		admin_user: User,
+		admin_user_client: APIClient,
+	):
+		m_insert_zone = mocker.patch.object(LDAPDomainViewSet, "insert_zone", return_value="mock_result")
+		m_domain_validator = mocker.patch("core.views.ldap.domain.domain_validator", wraps=domain_validator)
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={"dnsZone": "example.org"},
+			format="json"
+		)
+		m_insert_zone.assert_called_once_with(
+			user=admin_user, target_zone="example.org")
+		m_domain_validator.assert_called_once_with("example.org")
+		assert response.status_code == status.HTTP_200_OK
 
 class TestDeleteEndpoint:
-	pass
+	endpoint = "/api/ldap/domain/delete/"
+
+	def test_raises_no_target_zone(self, admin_user_client: APIClient):
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={},
+			format="json"
+		)
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert response.data.get("code") == "dns_zone_missing"
+
+	@pytest.mark.parametrize(
+		"bad_value",
+		(
+			"example.",
+			"example!@#",
+			"bad.example.com.",
+		),
+	)
+	def test_validation_raises(self, mocker: MockerFixture, bad_value: str, admin_user_client: APIClient):
+		m_delete_zone = mocker.patch.object(LDAPDomainViewSet, "delete_zone", return_value="mock_result")
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={"dnsZone": bad_value},
+			format="json"
+		)
+		m_delete_zone.assert_not_called()
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert response.data.get("code") == "dns_field_validator_failed"
+
+	@pytest.mark.parametrize(
+		"bad_value",
+		(
+			"+f_runtime_settings.LDAP_DOMAIN",
+			"RootDNSServers",
+		),
+	)
+	def test_validation_raises_zone_exists(self, mocker: MockerFixture, bad_value: str, admin_user_client: APIClient, request: FixtureRequest):
+		if bad_value.startswith("+"):
+			bad_value_split = bad_value.split(".")
+			bad_value_fixture = request.getfixturevalue(bad_value_split[0][1:])
+			bad_value = getattr(bad_value_fixture, bad_value_split[1])
+		m_delete_zone = mocker.patch.object(LDAPDomainViewSet, "delete_zone", return_value="mock_result")
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={"dnsZone": bad_value},
+			format="json"
+		)
+		m_delete_zone.assert_not_called()
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert response.data.get("code") == "dns_zone_not_deletable"
+
+	def test_success(
+		self,
+		mocker: MockerFixture,
+		admin_user: User,
+		admin_user_client: APIClient,
+	):
+		m_delete_zone = mocker.patch.object(LDAPDomainViewSet, "delete_zone", return_value=("mock_zone_result","mock_forest_result"))
+		m_domain_validator = mocker.patch("core.views.ldap.domain.domain_validator", wraps=domain_validator)
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={"dnsZone": "example.org"},
+			format="json"
+		)
+		m_delete_zone.assert_called_once_with(
+			user=admin_user, target_zone="example.org")
+		m_domain_validator.assert_called_once_with("example.org")
+		assert response.status_code == status.HTTP_200_OK
