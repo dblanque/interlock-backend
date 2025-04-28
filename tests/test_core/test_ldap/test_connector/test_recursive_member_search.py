@@ -1,4 +1,8 @@
+########################### Standard Pytest Imports ############################
 import pytest
+from pytest import FixtureRequest
+from pytest_mock import MockerFixture, MockType
+################################################################################
 from core.ldap.defaults import LDAP_AUTH_SEARCH_BASE
 from core.ldap.connector import recursive_member_search
 
@@ -46,11 +50,17 @@ def test_recursive_member_search_direct(
 	f_ldap_connection,
 	f_user_dn,
 	m_group_dn,
-	mocker,
+	mocker: MockerFixture,
 ):
 	m_entry = mocker.MagicMock()
-	m_entry.objectClass = "group"
-	m_entry.member = [f_user_dn]
+	# Mock objectClass ldap attr
+	m_object_classes = mocker.Mock()
+	m_object_classes.values = ["group"]
+	m_entry.objectClass = m_object_classes
+	# mock member ldap attr
+	m_member = mocker.Mock()
+	m_member.values = [f_user_dn]
+	m_entry.member = m_member
 	f_ldap_connection.entries = [m_entry]
 	assert (
 		recursive_member_search(f_user_dn, f_ldap_connection, m_group_dn)
@@ -64,14 +74,28 @@ def test_recursive_member_search_nested(
 	f_user_dn,
 	m_group_dn,
 	m_nested_group_dn,
-	mocker,
+	mocker: MockerFixture,
 ):
+	# Mock Parent Entry
 	m_entry = mocker.MagicMock()
-	m_entry.objectClass = "group"
-	m_entry.member = [m_nested_group_dn]
+	# Mock objectClass ldap attr
+	m_object_classes = mocker.Mock()
+	m_object_classes.values = ["group"]
+	m_entry.objectClass = m_object_classes
+	# mock member ldap attr
+	m_member = mocker.Mock()
+	m_member.values = [m_nested_group_dn]
+	m_entry.member = m_member
+
+	# Mock Nested Entry
 	m_entry_nested = mocker.MagicMock()
-	m_entry_nested.objectClass = "group"
-	m_entry_nested.member = [f_user_dn]
+	# Mock objectClass ldap attr
+	m_entry_nested.objectClass = m_object_classes
+	# mock member ldap attr
+	m_member_nested = mocker.Mock()
+	m_member_nested.values = [f_user_dn]
+	m_entry_nested.member = m_member_nested
+
 	f_ldap_connection.entries = [m_entry, m_entry_nested]
 	assert (
 		recursive_member_search(f_user_dn, f_ldap_connection, m_group_dn)
@@ -84,11 +108,17 @@ def test_recursive_member_search_not_in_member(
 	f_ldap_connection,
 	f_user_dn,
 	m_group_dn,
-	mocker,
+	mocker: MockerFixture,
 ):
 	m_entry = mocker.MagicMock()
-	m_entry.objectClass = "group"
-	m_entry.member = []
+	# Mock objectClass ldap attr
+	m_object_classes = mocker.Mock()
+	m_object_classes.values = ["group"]
+	m_entry.objectClass = m_object_classes
+	# mock member ldap attr
+	m_member = mocker.Mock()
+	m_member.values = []
+	m_entry.member = m_member
 	f_ldap_connection.entries = [m_entry]
 	assert (
 		recursive_member_search(f_user_dn, f_ldap_connection, m_group_dn)
@@ -104,8 +134,14 @@ def test_recursive_member_search_verify_filter(
 	mocker,
 ):
 	m_entry = mocker.MagicMock()
-	m_entry.objectClass = "group"
-	m_entry.member = []
+	# Mock objectClass ldap attr
+	m_object_classes = mocker.Mock()
+	m_object_classes.values = ["group"]
+	m_entry.objectClass = m_object_classes
+	# mock member ldap attr
+	m_member = mocker.Mock()
+	m_member.values = []
+	m_entry.member = m_member
 	f_ldap_connection.entries = [m_entry]
 
 	recursive_member_search(f_user_dn, f_ldap_connection, m_group_dn)
