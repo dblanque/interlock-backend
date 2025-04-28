@@ -423,7 +423,7 @@ class TestInsertZone:
 		m_insert_ns_a = mocker.patch.object(
 			f_domain_mixin,
 			"insert_nameserver_a",
-			return_value=("result_a", "result_ns_aaaa")
+			return_value=("result_a", "result_ns_a")
 		)
 		m_insert_ns_aaaa = mocker.patch.object(
 			f_domain_mixin,
@@ -500,9 +500,11 @@ class TestInsertZone:
 		)
 		for k in ("soa", "dns", "forest",):
 			assert k in result
+		assert result["soa"] == "result_soa"
+		assert result["ns"] == "result_ns"
 		if ipv4_address:
-			assert "a" in result
-			assert "a_ns" in result
+			assert result["a"] == "result_a"
+			assert result["a_ns"] == "result_ns_a"
 		elif ipv6_address:
-			assert "aaaa" in result
-			assert "aaaa_ns" in result
+			assert result["aaaa"] == "result_aaaa"
+			assert result["aaaa_ns"] == "result_ns_aaaa"
