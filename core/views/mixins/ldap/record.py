@@ -98,6 +98,7 @@ class DNSRecordMixin(DomainViewMixin):
 
 		# Check that it's not modifying Root DNS Server data
 		if record_data["zone"].lower() in [
+			"rootdnsservers",
 			"root dns servers",
 			"root",
 			"root.",

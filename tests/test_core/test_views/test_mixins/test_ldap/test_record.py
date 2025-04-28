@@ -296,6 +296,7 @@ def test_validate_record_raises_soa_not_root(
 @pytest.mark.parametrize(
 	"bad_zone",
 	(
+		"RootDNSServers",
 		"Root DNS Servers",
 		"root dns servers",
 		"@",
