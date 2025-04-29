@@ -257,11 +257,11 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			if int(data_settings["LDAP_LOG_MAX"]["value"]) > 10000:
 				raise exc_set.SettingLogMaxLimit
 
-		adminEnabled = data_settings.pop("DEFAULT_ADMIN_ENABLED")
-		adminPassword = data_settings.pop("DEFAULT_ADMIN_PWD")
+		admin_enabled = data_settings.pop("DEFAULT_ADMIN_ENABLED")
+		admin_password = data_settings.pop("DEFAULT_ADMIN_PWD")
 		local_settings: dict = data_settings.pop("local")
 		ldap_settings: dict = data_settings.pop("ldap")
-		self.set_admin_status(status=adminEnabled, password=adminPassword)
+		self.set_admin_status(status=admin_enabled, password=admin_password)
 
 		with transaction.atomic():
 			param_name: str
