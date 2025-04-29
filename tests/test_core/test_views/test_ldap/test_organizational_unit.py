@@ -6,11 +6,14 @@ from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from core.models.user import User
 from core.views.ldap.organizational_unit import LDAPOrganizationalUnitViewSet
 from core.models.choices.log import (
+	LOG_ACTION_CREATE,
+	LOG_ACTION_DELETE,
 	LOG_ACTION_READ,
 	LOG_CLASS_LDAP,
 	LOG_CLASS_OU,
 	LOG_TARGET_ALL,
 )
+from logging import Logger
 from core.views.mixins.logs import LogMixin
 from tests.test_core.type_hints import LDAPConnectorMock
 from rest_framework.test import APIClient
@@ -22,6 +25,12 @@ def f_log_mixin(mocker: MockerFixture):
 	m_log_mixin = mocker.Mock(name="f_log_mixin")
 	mocker.patch("core.views.ldap.organizational_unit.DBLogMixin", m_log_mixin)
 	return m_log_mixin
+
+@pytest.fixture(autouse=True)
+def f_logger(mocker: MockerFixture) -> Logger:
+	m_logger = mocker.Mock(name="m_logger")
+	mocker.patch("core.views.ldap.organizational_unit.logger", m_logger)
+	return m_logger
 
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector) -> MockType:
@@ -350,6 +359,173 @@ class TestRename:
 
 class TestInsert:
 	endpoint = "/api/ldap/ou/insert/"
+
+	def test_raises_bad_request_no_object(
+		self,
+		admin_user_client: APIClient,
+		f_ldap_connector: LDAPConnectorMock,
+	):
+		# Execute
+		response: Response = admin_user_client.post(self.endpoint, data={})
+		f_ldap_connector.connection.add.assert_not_called()
+		f_ldap_connector.cls_mock.assert_not_called()
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert "ldapObject dict is required in data" in response.data.get("detail")
+
+	@pytest.mark.parametrize(
+		"object_type",
+		(
+			"some_bad_type",
+			None
+		),
+	)
+	def test_raises_bad_request_on_type(
+		self,
+		object_type: str,
+		admin_user_client: APIClient,
+		f_ldap_connector: LDAPConnectorMock,
+	):
+		# Execute
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={
+				"ldapObject":{
+					"name": "mock_name",
+					"path": "mock_path",
+					"type": object_type,
+				}
+			},
+			format="json"
+		)
+		f_ldap_connector.connection.add.assert_not_called()
+		f_ldap_connector.cls_mock.assert_not_called()
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert "object type must be one of" in response.data.get("detail")
+
+	@pytest.mark.parametrize(
+		"field_to_test",
+		(
+			"name",
+			"path",
+			"type",
+		),
+	)
+	def test_raises_missing_field(
+		self,
+		field_to_test: str,
+		admin_user_client: APIClient,
+		f_ldap_connector: LDAPConnectorMock,
+	):
+		m_data = {
+			"name": "mock_name",
+			"path": "mock_path",
+			"type": "mock_type",
+		}
+		del m_data[field_to_test]
+
+		# Execute
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={"ldapObject": m_data},
+			format="json"
+		)
+		f_ldap_connector.connection.add.assert_not_called()
+		f_ldap_connector.cls_mock.assert_not_called()
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert response.data.get("field") == field_to_test
+
+	@pytest.mark.parametrize(
+		"ldap_result_description, expected_code",
+		(
+			("genericException", status.HTTP_500_INTERNAL_SERVER_ERROR),
+			("entryAlreadyExists", status.HTTP_409_CONFLICT),
+		),
+	)
+	def test_ldap_add_raises(
+		self,
+		mocker: MockerFixture,
+		ldap_result_description: str,
+		expected_code: int,
+		admin_user: User,
+		admin_user_client: APIClient,
+		f_ldap_connector: LDAPConnectorMock,
+		f_log_mixin: LogMixin,
+		f_logger: Logger,
+	):
+		m_result = mocker.Mock(name="mock_result")
+		m_result.description = ldap_result_description
+		f_ldap_connector.connection.result = m_result
+		f_ldap_connector.connection.add.side_effect = Exception
+
+		# Execute
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={"ldapObject": {
+					"name": "mock_name",
+					"path": "mock_path",
+					"type": "ou",
+				}
+			},
+			format="json"
+		)
+
+		# Assertions
+		f_ldap_connector.cls_mock.assert_called_once_with(admin_user)
+		f_ldap_connector.connection.add.assert_called_once()
+		f_log_mixin.log.assert_not_called()
+		f_logger.exception.assert_called_once()
+		f_logger.error.assert_called_once()
+		assert response.status_code == expected_code
+
+	@pytest.mark.parametrize(
+		"object_type",
+		(
+			"ou",
+			"computer",
+			"printer",
+		),
+	)
+	def test_success(
+		self,
+		object_type: str,
+		admin_user: User,
+		admin_user_client: APIClient,
+		f_ldap_connector: LDAPConnectorMock,
+		f_log_mixin: LogMixin,
+	):
+		m_name = "mock_name"
+		m_path = "mock_path"
+		m_ldap_object = {
+			"name": m_name,
+			"path": m_path,
+			"type": object_type,
+		}
+		prefix = "OU" if object_type == "ou" else "CN"
+		expected_attrs = {"name": m_name}
+		if object_type == "ou":
+			expected_attrs["ou"] = m_name
+
+		# Execute
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={"ldapObject": m_ldap_object},
+			format="json"
+		)
+
+		# Assertions
+		f_ldap_connector.cls_mock.assert_called_once_with(admin_user)
+		f_ldap_connector.connection.add.assert_called_once_with(
+			dn=f"{prefix}={m_name},{m_path}",
+			object_class=object_type if object_type != "ou" else "organizationalUnit",
+			attributes=expected_attrs,
+		)
+		f_log_mixin.log.assert_called_once_with(
+			user=admin_user.id,
+			operation_type=LOG_ACTION_CREATE,
+			log_target_class=LOG_CLASS_OU,
+			log_target=m_name,
+		)
+		assert response.status_code == status.HTTP_200_OK
 
 class TestDelete:
 	endpoint = "/api/ldap/ou/delete/"
