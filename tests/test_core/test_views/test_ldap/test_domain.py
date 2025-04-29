@@ -20,22 +20,20 @@ def f_runtime_settings(
 	mocker.patch("core.views.ldap.domain.RuntimeSettings", g_runtime_settings)
 	return g_runtime_settings
 
-@pytest.fixture
-def f_viewset():
-	return LDAPDomainViewSet()
-
 @pytest.fixture(autouse=True)
 def f_interlock_ldap_enabled(g_interlock_ldap_enabled):
 	return g_interlock_ldap_enabled
 
 class TestDetailsEndpoint:
-	@staticmethod
+	endpoint = "/api/ldap/domain/details/"
+
 	def test_success_with_defaults(
+		self,
 		mocker: MockerFixture,
 		admin_user_client: APIClient,
 	):
 		mocker.patch("core.views.ldap.domain.INTERLOCK_DEBUG", False)
-		response: Response = admin_user_client.get("/api/ldap/domain/details/")
+		response: Response = admin_user_client.get(self.endpoint)
 		details: dict = response.data.get("details")
 		assert response.status_code == status.HTTP_200_OK
 		assert details.get("realm") == ""
@@ -44,16 +42,15 @@ class TestDetailsEndpoint:
 		assert details.get("user_selector") == "sAMAccountName"
 		assert not details.get("debug", None)
 
-	@staticmethod
-	def test_success_with_debug(mocker: MockerFixture, admin_user_client: APIClient):
+	def test_success_with_debug(self, mocker: MockerFixture, admin_user_client: APIClient):
 		mocker.patch("core.views.ldap.domain.INTERLOCK_DEBUG", True)
-		response: Response = admin_user_client.get("/api/ldap/domain/details/")
+		response: Response = admin_user_client.get(self.endpoint)
 		details: dict = response.data.get("details")
 		assert response.status_code == status.HTTP_200_OK
 		assert details.get("debug") == True
 
-	@staticmethod
 	def test_success(
+		self,
 		mocker: MockerFixture,
 		f_runtime_settings: RuntimeSettingsSingleton,
 		admin_user_client: APIClient,
@@ -66,7 +63,7 @@ class TestDetailsEndpoint:
 		f_runtime_settings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN = m_realm
 		f_runtime_settings.LDAP_AUTH_SEARCH_BASE = m_search
 
-		response: Response = admin_user_client.get("/api/ldap/domain/details/")
+		response: Response = admin_user_client.get(self.endpoint)
 		details: dict = response.data.get("details")
 		assert response.status_code == status.HTTP_200_OK
 		assert details.get("name") == m_domain
@@ -75,14 +72,14 @@ class TestDetailsEndpoint:
 		assert details.get("user_selector") == "sAMAccountName"
 		assert not details.get("debug", None)
 
-	@staticmethod
 	def test_without_interlock_ldap_setting(
+		self,
 		mocker: MockerFixture,
 		admin_user_client: APIClient,
 	):
 		mocker.patch("core.views.ldap.domain.INTERLOCK_DEBUG", False)
 		InterlockSetting.objects.filter(name=INTERLOCK_SETTING_ENABLE_LDAP).delete()
-		response: Response = admin_user_client.get("/api/ldap/domain/details/")
+		response: Response = admin_user_client.get(self.endpoint)
 		details: dict = response.data.get("details")
 		assert response.status_code == status.HTTP_200_OK
 		assert details.get("realm") == ""
@@ -95,7 +92,6 @@ class TestDetailsEndpoint:
 class TestZonesEndpoint:
 	endpoint = "/api/ldap/domain/zones/"
 
-	@staticmethod
 	@pytest.mark.parametrize(
 		"domain, expects_default, expected_domain",
 		(
@@ -104,6 +100,7 @@ class TestZonesEndpoint:
 		),
 	)
 	def test_success(
+		self,
 		domain: str,
 		expects_default: bool,
 		expected_domain: str,
@@ -119,7 +116,7 @@ class TestZonesEndpoint:
 			"dnsZone": domain
 		}}
 		response: Response = admin_user_client.post(
-			"/api/ldap/domain/zones/",
+			self.endpoint,
 			data=m_data,
 			format="json"
 		)
@@ -137,7 +134,6 @@ class TestZonesEndpoint:
 		assert response.status_code == status.HTTP_200_OK
 		assert data == m_result
 
-	@staticmethod
 	@pytest.mark.parametrize(
 		"bad_value",
 		(
@@ -146,6 +142,7 @@ class TestZonesEndpoint:
 		),
 	)
 	def test_raises_bad_domain(
+		self,
 		bad_value: str,
 		mocker: MockerFixture,
 		admin_user_client: APIClient,
@@ -157,7 +154,7 @@ class TestZonesEndpoint:
 			"dnsZone": bad_value
 		}}
 		response: Response = admin_user_client.post(
-			"/api/ldap/domain/zones/",
+			self.endpoint,
 			data=m_data,
 			format="json"
 		)
@@ -165,8 +162,8 @@ class TestZonesEndpoint:
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert response.data.get("code") == "dns_field_validator_failed"
 
-	@staticmethod
 	def test_raises_domain_not_in_request(
+		self,
 		mocker: MockerFixture,
 		admin_user_client: APIClient,
 	):
@@ -175,7 +172,7 @@ class TestZonesEndpoint:
 			LDAPDomainViewSet, "get_zone_records", return_value=m_result)
 		m_data = {"filter":{}}
 		response: Response = admin_user_client.post(
-			"/api/ldap/domain/zones/",
+			self.endpoint,
 			data=m_data,
 			format="json"
 		)
