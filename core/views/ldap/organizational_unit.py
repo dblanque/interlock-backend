@@ -41,6 +41,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
+from rest_framework import status
 from time import perf_counter
 from core.ldap.filter import LDAPFilter
 from core.ldap.connector import LDAPConnector
@@ -296,27 +297,26 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		if not ldap_object:
 			raise exc_base.BadRequest(data={"detail":"ldapObject dict is required in data."})
 
-		# Validate object type
-		if ldap_object.get("type", None) not in ("ou", "computer", "printer",):
-			raise exc_base.BadRequest(data={"detail":"object type must be one of (ou, computer, printer)."})
-
 		fields = ("name", "path", "type",)
 		for _fld in fields:
 			if _fld not in ldap_object:
 				logger.error(_fld + " not in LDAP Object.")
-				logger.error(data)
 				raise exc_ou.MissingField(data={"field": _fld})
 
 		object_name: str = ldap_object["name"]
 		object_path: str = ldap_object["path"]
 		object_type: str = ldap_object["type"]
 
+		# Validate object type
+		if ldap_object.get("type") not in ("ou", "computer", "printer",):
+			raise exc_base.BadRequest(data={"detail":"object type must be one of (ou, computer, printer)."})
+
 		attributes = {"name": object_name}
 
 		if not object_type or object_type.lower() == "ou":
 			object_dn = f"OU={object_name},{object_path}"
 			object_type = "organizationalUnit"
-			attributes["ou"] = ldap_object["ou"]
+			attributes["ou"] = ldap_object.get("ou", object_name)
 		else:
 			object_dn = f"CN={object_name},{object_path}"
 
@@ -326,22 +326,26 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 
 			try:
 				self.ldap_connection.add(
-					object_dn, object_type, attributes=attributes
+					dn=object_dn,
+					object_class=object_type,
+					attributes=attributes,
 				)
 			except Exception as e:
 				logger.exception(e)
 				logger.error(f"Could not Add LDAP Object: {object_dn}")
-				logger.error(ldap_object)
-				data = {
-					"ldap_response": self.ldap_connection.result,
+				result_description = getattr(
+					self.ldap_connection.result,
+					"description",
+					"unhandledLdapException"
+				)
+				code = status.HTTP_500_INTERNAL_SERVER_ERROR
+				if result_description.lower() == "entryalreadyexists":
+					code = status.HTTP_409_CONFLICT
+				raise exc_ou.OUCreate(data={
+					"ldap_response": result_description,
 					"ldapObject": object_name,
-				}
-				if (
-					self.ldap_connection.result.description
-					== "entryAlreadyExists"
-				):
-					data["code"] = 409
-				raise exc_ou.OUCreate(data=data)
+					"code": code,
+				})
 
 		DBLogMixin.log(
 			user=user.id,
