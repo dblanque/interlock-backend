@@ -5,6 +5,7 @@ from inspect import getmembers, isroutine
 from core.ldap import defaults as ldap_defaults
 from core.ldap.connector import LDAPConnector
 from typing import Protocol
+from tests.test_core.type_hints import LDAPConnectorMock
 from core.models.interlock_settings import (
 	InterlockSetting,
 	INTERLOCK_SETTING_ENABLE_LDAP,
@@ -53,7 +54,7 @@ class ConnectorFactory(Protocol):
 		use_spec=False,
 		mock_enter: MockType = None,
 		mock_exit: MockType = None,
-	) -> LDAPConnector | MockType: ...
+	) -> LDAPConnectorMock: ...
 
 
 @pytest.fixture
