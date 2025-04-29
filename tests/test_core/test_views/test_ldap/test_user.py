@@ -1,8 +1,6 @@
 ########################### Standard Pytest Imports ############################
 import pytest
-from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
-
 ################################################################################
 from rest_framework.response import Response
 from rest_framework import status

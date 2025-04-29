@@ -1,7 +1,6 @@
 ########################### Standard Pytest Imports ############################
 import pytest
 from pytest_mock import MockerFixture, MockType
-
 ################################################################################
 from core.views.ldap.record import LDAPRecordViewSet
 from rest_framework.test import APIClient
