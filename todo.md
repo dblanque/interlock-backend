@@ -1,6 +1,7 @@
 ## 2025/04/29
 * Add serializer to ldap user viewset endpoints
 * Add serializer to ldap group viewset endpoints
+* Add serializer to ldap ou viewset endpoints
 
 # To test manually
 * Add OIDC Consent Features <t>
