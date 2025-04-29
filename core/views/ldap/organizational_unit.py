@@ -370,25 +370,31 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		code_msg = "ok"
 		data = request.data
 
+		object_name = data.get("name")
+		object_dn = data.get("distinguishedName", None)
+		if not object_dn:
+			raise exc_ldap.LDAPObjectDoesNotExist
+
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			object_dn = data["distinguishedName"]
-
-			if not object_dn:
-				raise exc_ldap.LDAPObjectDoesNotExist
 			try:
-				self.ldap_connection.delete(object_dn)
+				self.ldap_connection.delete(dn=object_dn)
 			except Exception as e:
 				logger.exception(e)
 				logger.error(f"Could not delete LDAP Object: {object_dn}")
-				data = {"ldap_response": self.ldap_connection.result}
-				raise exc_base.CoreException(data=data)
+				raise exc_base.LDAPBackendException(data={
+					"ldap_response": getattr(
+						self.ldap_connection.result,
+						"description",
+						"unhandledLdapException"
+					)
+				})
 
 		DBLogMixin.log(
 			user=user.id,
 			operation_type=LOG_ACTION_DELETE,
 			log_target_class=LOG_CLASS_LDAP,
-			log_target=data["name"],
+			log_target=object_name,
 		)
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
