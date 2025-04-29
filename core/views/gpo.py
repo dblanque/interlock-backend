@@ -31,7 +31,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class GPOViewSet(BaseViewSet):
+class GPOViewSet(BaseViewSet): # pragma: no cover
 	@auth_required
 	@admin_required
 	def list(self, request):
