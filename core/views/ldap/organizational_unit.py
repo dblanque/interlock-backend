@@ -44,7 +44,6 @@ from rest_framework.decorators import action
 from time import perf_counter
 from core.ldap.filter import LDAPFilter
 from core.ldap.connector import LDAPConnector
-from core.ldap.adsi import search_filter_from_dict
 from core.decorators.login import auth_required, admin_required
 from core.decorators.intercept import ldap_backend_intercept
 from core.config.runtime import RuntimeSettings
