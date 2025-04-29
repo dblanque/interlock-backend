@@ -1,9 +1,8 @@
 ########################### Standard Pytest Imports ############################
 import pytest
-from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
-
 ################################################################################
+from tests.test_core.type_hints import LDAPConnectorMock
 from core.views.mixins.ldap.user import UserViewLDAPMixin
 from core.models.application import Application, ApplicationSecurityGroup
 from core.models.user import User, USER_TYPE_LDAP, USER_TYPE_LOCAL
@@ -16,13 +15,12 @@ from core.constants.oidc import (
 	OIDC_PROMPT_CONSENT,
 	OIDC_PROMPT_SELECT_ACCOUNT,
 	OIDC_ATTRS,
-	OIDC_COOKIE_VUE_REDIRECT,
 	OIDC_COOKIE_VUE_LOGIN,
 	OIDC_COOKIE_VUE_ABORT,
 	QK_ERROR,
 	QK_ERROR_DETAIL,
 )
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpResponse
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from datetime import datetime, timedelta
@@ -35,7 +33,6 @@ from core.views.mixins.oidc import (
 	CustomScopeClaims,
 )
 from oidc_provider.models import Client, UserConsent
-from core.ldap.connector import LDAPConnector
 from django.http import QueryDict
 from typing import Protocol
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
@@ -509,7 +506,7 @@ class TestUserCanAccessApp:
 		mocker: MockerFixture,
 		f_authorize_mixin: OidcAuthorizeMixin,
 		f_user_ldap: MockType,
-		f_ldap_connector,
+		f_ldap_connector: LDAPConnectorMock,
 		f_application: MockType,
 		f_application_group: MockType,
 	) -> None:
@@ -544,7 +541,7 @@ class TestUserCanAccessApp:
 		f_user_ldap: MockType,
 		f_application: MockType,
 		f_security_group: MockType,
-		f_ldap_connector: LDAPConnector,
+		f_ldap_connector: LDAPConnectorMock,
 	) -> None:
 		f_authorize_mixin.application = f_application
 		mocker.patch(
@@ -569,7 +566,7 @@ class TestUserCanAccessApp:
 		f_user_ldap: MockType,
 		f_application: MockType,
 		f_security_group: MockType,
-		f_ldap_connector: LDAPConnector,
+		f_ldap_connector: LDAPConnectorMock,
 	):
 		f_authorize_mixin.application = f_application
 		mocker.patch(
