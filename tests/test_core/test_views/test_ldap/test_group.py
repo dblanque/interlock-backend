@@ -1,10 +1,8 @@
 ########################### Standard Pytest Imports ############################
 import pytest
-from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
 ################################################################################
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
-from core.ldap.connector import LDAPConnector
 from core.views.ldap.group import LDAPGroupsViewSet
 from rest_framework.test import APIClient
 from rest_framework.response import Response
