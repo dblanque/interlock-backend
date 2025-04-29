@@ -26,7 +26,7 @@ from interlock_backend.settings import LOG_FILE_FOLDER
 logger = logging.getLogger(__name__)
 
 
-class TestViewSet(BaseViewSet):
+class TestViewSet(BaseViewSet): # pragma: no cover
 	@auth_required
 	@admin_required
 	def list(self, request, pk=None):
