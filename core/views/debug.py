@@ -30,7 +30,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class DebugViewSet(BaseViewSet):
+class DebugViewSet(BaseViewSet): # pragma: no cover
 	@auth_required
 	@admin_required
 	def list(self, request):
