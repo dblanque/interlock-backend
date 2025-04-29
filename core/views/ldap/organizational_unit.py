@@ -138,13 +138,14 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		code = 0
 		code_msg = "ok"
 
-		data_filter: dict = data.get("filter", None)
+		data_filter: dict = data.get("filter", {})
 		data_filter_use_defaults = (
 			data_filter.pop("use_defaults", None) if data_filter else None
 		)
 		try:
 			ldap_filter_object = self.process_ldap_filter(
-				data_filter, default_filter=data_filter_use_defaults
+				data_filter=data_filter,
+				default_filter=data_filter_use_defaults
 			).to_string()
 		except Exception as e:
 			logger.exception(e)
@@ -220,9 +221,16 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		code = 0
 		code_msg = "ok"
 
-		ldap_object = data["ldapObject"]
-		ldap_path = ldap_object["destination"]
-		distinguished_name = ldap_object["distinguishedName"]
+		ldap_object: dict = data.get("ldapObject", {})
+		if not ldap_object:
+			raise exc_base.BadRequest(data={"detail":"ldapObject dict is required in data."})
+		ldap_path: str = ldap_object.get("destination", None)
+		distinguished_name: str = ldap_object.get("distinguishedName", None)
+
+		if not ldap_path:
+			raise exc_base.BadRequest(data={"detail":"destination is required."})
+		if not distinguished_name:
+			raise exc_base.BadRequest(data={"detail":"distinguishedName is required."})
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
@@ -249,9 +257,16 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		code = 0
 		code_msg = "ok"
 
-		ldap_object = data["ldapObject"]
-		distinguished_name = ldap_object["distinguishedName"]
-		new_rdn = ldap_object["newRDN"]
+		ldap_object: dict = data.get("ldapObject", {})
+		if not ldap_object:
+			raise exc_base.BadRequest(data={"detail":"ldapObject dict is required in data."})
+		distinguished_name: str = ldap_object.get("distinguishedName", None)
+		new_rdn: str = ldap_object.get("newRDN", None)
+
+		if not distinguished_name:
+			raise exc_base.BadRequest(data={"detail":"distinguishedName is required."})
+		if not new_rdn:
+			raise exc_base.BadRequest(data={"detail":"newRDN is required."})
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
