@@ -292,14 +292,20 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		code = 0
 		code_msg = "ok"
 
-		ldap_object = data["ldapObject"]
+		ldap_object: dict = data.get("ldapObject", {})
+		if not ldap_object:
+			raise exc_base.BadRequest(data={"detail":"ldapObject dict is required in data."})
 
-		fields = ["name", "path", "type"]
-		for f in fields:
-			if f not in ldap_object:
-				logger.error(f + " not in LDAP Object")
+		# Validate object type
+		if ldap_object.get("type", None) not in ("ou", "computer", "printer",):
+			raise exc_base.BadRequest(data={"detail":"object type must be one of (ou, computer, printer)."})
+
+		fields = ("name", "path", "type",)
+		for _fld in fields:
+			if _fld not in ldap_object:
+				logger.error(_fld + " not in LDAP Object.")
 				logger.error(data)
-				raise exc_ou.MissingField
+				raise exc_ou.MissingField(data={"field": _fld})
 
 		object_name: str = ldap_object["name"]
 		object_path: str = ldap_object["path"]
@@ -308,12 +314,11 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		attributes = {"name": object_name}
 
 		if not object_type or object_type.lower() == "ou":
-			object_dn = "OU=" + object_name + "," + object_path
-			object_main = ldap_object["ou"]
+			object_dn = f"OU={object_name},{object_path}"
 			object_type = "organizationalUnit"
-			attributes["ou"] = object_main
+			attributes["ou"] = ldap_object["ou"]
 		else:
-			object_dn = "CN=" + object_name + "," + object_path
+			object_dn = f"CN={object_name},{object_path}"
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
