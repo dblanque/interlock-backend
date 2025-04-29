@@ -529,3 +529,62 @@ class TestInsert:
 
 class TestDelete:
 	endpoint = "/api/ldap/ou/delete/"
+
+	def test_raises_not_exists(
+		self,
+		admin_user_client: APIClient,
+		f_ldap_connector: LDAPConnectorMock,
+	):
+		# Execute
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={"distinguishedName": None},
+			format="json"
+		)
+		f_ldap_connector.cls_mock.assert_not_called()
+		assert response.status_code == status.HTTP_409_CONFLICT
+		assert response.data.get("code") == "ldap_obj_doesnt_exist"
+
+	def test_raises_ldap_exc(
+		self,
+		mocker: MockerFixture,
+		admin_user: User,
+		admin_user_client: APIClient,
+		f_ldap_connector: LDAPConnectorMock,
+	):
+		f_ldap_connector.connection.result = mocker.Mock(name="mock_result")
+		f_ldap_connector.connection.result.description = "someDescription"
+		f_ldap_connector.connection.delete.side_effect = Exception
+
+		# Execute
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={"distinguishedName": "mock_dn"},
+			format="json"
+		)
+		f_ldap_connector.connection.delete.assert_called_once_with(dn="mock_dn")
+		f_ldap_connector.cls_mock.assert_called_once_with(admin_user)
+		assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+
+	def test_success(
+		self,
+		admin_user: User,
+		admin_user_client: APIClient,
+		f_ldap_connector: LDAPConnectorMock,
+		f_log_mixin: LogMixin,
+	):
+		# Execute
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={"name":"mock_name","distinguishedName": "mock_dn"},
+			format="json"
+		)
+		f_ldap_connector.connection.delete.assert_called_once_with(dn="mock_dn")
+		f_ldap_connector.cls_mock.assert_called_once_with(admin_user)
+		f_log_mixin.log.assert_called_once_with(
+			user=admin_user.id,
+			operation_type=LOG_ACTION_DELETE,
+			log_target_class=LOG_CLASS_LDAP,
+			log_target="mock_name",
+		)
+		assert response.status_code == status.HTTP_200_OK
