@@ -25,16 +25,16 @@ def f_interlock_ldap_enabled(g_interlock_ldap_enabled):
 
 
 class TestInsert:
-	@staticmethod
-	def test_record_not_in_request(admin_user_client: APIClient):
+	endpoint = "/api/ldap/record/insert/"
+
+	def test_record_not_in_request(self, admin_user_client: APIClient):
 		response: Response = admin_user_client.post(
-			"/api/ldap/record/insert/", data={}
+			self.endpoint, data={}
 		)
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert response.data["code"] == "dns_record_not_in_request"
 
-	@staticmethod
-	def test_successful(mocker: MockerFixture, admin_user_client: APIClient):
+	def test_successful(self, mocker: MockerFixture, admin_user_client: APIClient):
 		m_request_record = {"some_record_attr": "some_value"}
 		m_valid_record = {"some_record_attr": "some_value"}
 		m_return_record = {"some_record_result": "some_value"}
@@ -46,7 +46,7 @@ class TestInsert:
 		)
 		mocker.patch.object(LDAPRecordViewSet, "create_record", m_create_record)
 		response: Response = admin_user_client.post(
-			"/api/ldap/record/insert/",
+			self.endpoint,
 			data={"record": m_request_record},
 			format="json",
 		)
@@ -57,28 +57,27 @@ class TestInsert:
 
 
 class TestUpdate:
-	@staticmethod
-	def test_old_record_not_in_request(admin_user_client: APIClient):
+	endpoint = "/api/ldap/record/update/"
+
+	def test_old_record_not_in_request(self, admin_user_client: APIClient):
 		response: Response = admin_user_client.put(
-			"/api/ldap/record/update/",
+			self.endpoint,
 			data={"record": {"some": "record"}},
 			format="json",
 		)
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert response.data["code"] == "dns_record_not_in_request"
 
-	@staticmethod
-	def test_record_not_in_request(admin_user_client: APIClient):
+	def test_record_not_in_request(self, admin_user_client: APIClient):
 		response: Response = admin_user_client.put(
-			"/api/ldap/record/update/",
+			self.endpoint,
 			data={"old_record": {"some": "record"}},
 			format="json",
 		)
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert response.data["code"] == "dns_record_not_in_request"
 
-	@staticmethod
-	def test_successful(mocker: MockerFixture, admin_user_client: APIClient):
+	def test_successful(self, mocker: MockerFixture, admin_user_client: APIClient):
 		# Mocked Request Data
 		m_request_record = {"some_record_attr": "some_value"}
 		m_request_old_record = {"some_record_attr": "some_old_value"}
@@ -97,7 +96,7 @@ class TestUpdate:
 		)
 		mocker.patch.object(LDAPRecordViewSet, "update_record", m_update_record)
 		response: Response = admin_user_client.put(
-			"/api/ldap/record/update/",
+			self.endpoint,
 			data={
 				"record": m_request_record,
 				"oldRecord": m_request_old_record,
@@ -115,18 +114,17 @@ class TestUpdate:
 
 
 class TestDelete:
-	@staticmethod
-	def test_record_not_in_request(admin_user_client: APIClient):
+	endpoint = "/api/ldap/record/delete/"
+	def test_record_not_in_request(self, admin_user_client: APIClient):
 		response: Response = admin_user_client.post(
-			"/api/ldap/record/delete/", data={}
+			self.endpoint, data={}
 		)
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert response.data["code"] == "dns_record_not_in_request"
 
-	@staticmethod
-	def test_overlapping_operations_raises(admin_user_client: APIClient):
+	def test_overlapping_operations_raises(self, admin_user_client: APIClient):
 		response: Response = admin_user_client.post(
-			"/api/ldap/record/delete/",
+			self.endpoint,
 			data={
 				"record": {"some": "record"},
 				"records": [{"some": "record"}],
@@ -136,8 +134,8 @@ class TestDelete:
 		assert response.status_code == status.HTTP_409_CONFLICT
 		assert response.data["code"] == "dns_record_operation_conflict"
 
-	@staticmethod
 	def test_successful_single(
+		self,
 		mocker: MockerFixture, admin_user_client: APIClient
 	):
 		m_request_record = {"some_record_attr": "some_value"}
@@ -150,7 +148,7 @@ class TestDelete:
 		)
 		mocker.patch.object(LDAPRecordViewSet, "delete_record", m_delete_record)
 		response: Response = admin_user_client.post(
-			"/api/ldap/record/delete/",
+			self.endpoint,
 			data={"record": m_request_record},
 			format="json",
 		)
@@ -159,9 +157,10 @@ class TestDelete:
 		assert response.status_code == status.HTTP_200_OK
 		assert response.data["data"] == "connection_result"
 
-	@staticmethod
 	def test_successful_multi(
-		mocker: MockerFixture, admin_user_client: APIClient
+		self,
+		mocker: MockerFixture,
+		admin_user_client: APIClient,
 	):
 		m_request_record_1 = {"raw_attr_1": "raw_v"}
 		m_request_record_2 = {"raw_attr_2": "raw_v"}
@@ -179,7 +178,7 @@ class TestDelete:
 		)
 		mocker.patch.object(LDAPRecordViewSet, "delete_record", m_delete_record)
 		response: Response = admin_user_client.post(
-			"/api/ldap/record/delete/",
+			self.endpoint,
 			data={"records": [m_request_record_1, m_request_record_2]},
 			format="json",
 		)
@@ -192,38 +191,36 @@ class TestDelete:
 		assert response.status_code == status.HTTP_200_OK
 		assert response.data["data"] == ["record_result_1", "record_result_2"]
 
-	@staticmethod
-	def test_successful_single_raises_malformed(admin_user_client: APIClient):
+	def test_successful_single_raises_malformed(self, admin_user_client: APIClient):
 		m_request_record = ["some_record_attr", "some_value"]
 
 		response: Response = admin_user_client.post(
-			"/api/ldap/record/delete/",
+			self.endpoint,
 			data={"record": m_request_record},
 			format="json",
 		)
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert response.data["code"] == "dns_record_data_malformed"
 
-	@staticmethod
 	def test_successful_multi_raises_malformed_parent(
+		self,
 		admin_user_client: APIClient,
 	):
 		m_request_records = 1
 
 		response: Response = admin_user_client.post(
-			"/api/ldap/record/delete/",
+			self.endpoint,
 			data={"records": m_request_records},
 			format="json",
 		)
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert response.data["code"] == "dns_record_data_malformed"
 
-	@staticmethod
-	def test_successful_multi_raises_malformed(admin_user_client: APIClient):
+	def test_successful_multi_raises_malformed(self, admin_user_client: APIClient):
 		m_request_records = ["some_record_attr", "some_value"]
 
 		response: Response = admin_user_client.post(
-			"/api/ldap/record/delete/",
+			self.endpoint,
 			data={"records": m_request_records},
 			format="json",
 		)
