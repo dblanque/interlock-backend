@@ -13,10 +13,14 @@ from core.models.user import User
 ### Mixins
 from core.views.mixins.ldap.group import GroupViewMixin
 
+### Exceptions
+from core.exceptions import groups as exc_groups, base as exc_base
+
 ### ViewSets
 from core.views.base import BaseViewSet
 
 ### REST Framework
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
@@ -39,7 +43,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def list(self, request):
+	def list(self, request: Request):
 		user: User = request.user
 		data = []
 		code = 0
@@ -49,12 +53,10 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
-			self.ldap_filter_object = LDAPFilter.eq(
-				"objectClass", "group"
-			).to_string()
-			self.ldap_filter_attr = self.filter_attr_builder(
-				RuntimeSettings
-			).get_list_filter()
+			self.ldap_filter_object = LDAPFilter.eq("objectClass", "group") \
+				.to_string()
+			self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings) \
+				.get_list_filter()
 
 			data, valid_attributes = self.list_groups()
 
@@ -71,20 +73,21 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def fetch(self, request):
+	def fetch(self, request: Request):
 		user: User = request.user
-		data = []
 		code = 0
 		code_msg = "ok"
 
 		########################################################################
-		group_search = request.data["group"]
-		group_object_class = "group"
+		group_search = request.data.get("group", None)
+		if not group_search:
+			raise exc_groups.GroupDistinguishedNameMissing
+
 		self.ldap_filter_attr = self.filter_attr_builder(
 			RuntimeSettings
 		).get_fetch_filter()
 		self.ldap_filter_object = LDAPFilter.and_(
-			LDAPFilter.eq("objectClass", group_object_class),
+			LDAPFilter.eq("objectClass", "group"),
 			LDAPFilter.eq("distinguishedName", group_search),
 		).to_string()
 		########################################################################
@@ -107,30 +110,47 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def insert(self, request):
+	def insert(self, request: Request):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
 		data = request.data
 
+		# Get Group Data
+		group_data: dict = data.get("group", None)
+		if not group_data or not isinstance(group_data, dict):
+			raise exc_base.BadRequest(
+				data={
+					"detail":"group dict is required"
+				}
+			)
+
+		# Get Group CN
+		group_cn = group_data.get("cn", None)
+		if not group_cn or not isinstance(group_cn, str):
+			raise exc_base.BadRequest(
+				data={
+					"detail":"group dict should have a cn key containing the Group Common Name."
+				}
+			)
+
+		# Filter to check Group doesn't exist check with CN, and user field
+		self.ldap_filter_object = LDAPFilter.or_(
+			LDAPFilter.eq("cn", group_cn),
+			LDAPFilter.eq(
+				RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
+				group_cn,
+			),
+		).to_string()
+
+		# Send LDAP Query for user being created to see if it exists
+		self.ldap_filter_attr = self.filter_attr_builder(
+			RuntimeSettings
+		).get_insert_filter()
+
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-
-			group_data = data["group"]
-			# Make sure Group doesn't exist check with CN and authUserField
-			self.ldap_filter_object = LDAPFilter.or_(
-				LDAPFilter.eq("cn", group_data["cn"]),
-				LDAPFilter.eq(
-					RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
-					group_data["cn"],
-				),
-			).to_string()
-
-			# Send LDAP Query for user being created to see if it exists
-			self.ldap_filter_attr = self.filter_attr_builder(
-				RuntimeSettings
-			).get_insert_filter()
 			self.create_group(group_data=group_data)
 
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
@@ -138,17 +158,24 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def update(self, request, pk=None):
+	def update(self, request: Request, pk=None):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
 		data = request.data
 
+		group_data = data.get("group", None)
+		if not group_data or not isinstance(group_data, dict):
+			raise exc_base.BadRequest(
+				data={
+					"detail":"group dict is required"
+				}
+			)
+		self.ldap_filter_attr = list(group_data.keys())
+
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			group_data = data["group"]
-			self.ldap_filter_attr = list(group_data.keys())
 			self.update_group(group_data=group_data)
 
 		return Response(data={"code": code, "code_msg": code_msg})
@@ -157,12 +184,18 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def delete(self, request, pk=None):
+	def delete(self, request: Request, pk=None):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
 		data = request.data
-		group_data = data["group"]
+		group_data = data.get("group", None)
+		if not group_data or not isinstance(group_data, dict):
+			raise exc_base.BadRequest(
+				data={
+					"detail":"group dict is required"
+				}
+			)
 
 		self.ldap_filter_attr = ["cn", "groupType"]
 
