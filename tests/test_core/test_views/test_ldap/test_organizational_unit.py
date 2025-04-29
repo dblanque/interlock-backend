@@ -24,3 +24,21 @@ def f_runtime_settings(
 @pytest.fixture(autouse=True)
 def f_interlock_ldap_enabled(g_interlock_ldap_enabled):
 	return g_interlock_ldap_enabled
+
+class TestList:
+	endpoint = "/api/ldap/ou/"
+
+class TestDirtree:
+	endpoint = "/api/ldap/ou/dirtree/"
+
+class TestMove:
+	endpoint = "/api/ldap/ou/move/"
+
+class TestRename:
+	endpoint = "/api/ldap/ou/rename/"
+
+class TestInsert:
+	endpoint = "/api/ldap/ou/insert/"
+
+class TestDelete:
+	endpoint = "/api/ldap/ou/delete/"
