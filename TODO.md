@@ -1,6 +1,8 @@
 ## 2025/04/29
-* Map User LDAP fields to local django standards
-* Map Group LDAP Fields to local django standards
+* Map User LDAP fields to local django standards?
+	* may involve massive front-end modification
+* Map Group LDAP Fields to local django standards?
+	* may involve massive front-end modification
 * Add serializer to ldap user viewset endpoints
 * Add serializer to ldap group viewset endpoints
 * Add serializer to ldap ou viewset endpoints
