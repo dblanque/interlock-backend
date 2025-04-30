@@ -181,9 +181,9 @@ LDAP_DIRTREE_ATTRIBUTES = list(
 		LDAP_ATTR_POSTAL_CODE,
 		LDAP_ATTR_CITY,  # Local / City
 		LDAP_ATTR_STATE,  # State/Province
-		LDAP_ATTR_COUNTRY,  # INT
+		LDAP_ATTR_COUNTRY,  # Full Country Name
 		LDAP_ATTR_COUNTRY_DCC,  # 2 Letter Code for Country
-		LDAP_ATTR_COUNTRY_ISO,  # Full Country Name
+		LDAP_ATTR_COUNTRY_ISO,  # Numeric ISO Code for Country
 		LDAP_ATTR_WEBSITE,
 		LDAP_ATTR_UPN,
 		LDAP_ATTR_UAC,  # Permission ACLs
