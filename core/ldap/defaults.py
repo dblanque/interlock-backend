@@ -3,13 +3,13 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: interlock_backend.ldap.defaults
+# Module: core.ldap.defaults
 
 ### LDAP SETTINGS
 # ! You also have to add the settings to the following files:
 # core.models.ldap_settings
 # core.models.ldap_settings_db
-# interlock_backend.ldap.defaults	<------------ You're Here
+# core.ldap.defaults	<------------ You're Here
 
 # If this is set to True then the LDAP Connector will not attempt
 # to decrypt your LDAP Bind Password
@@ -111,9 +111,8 @@ LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN = "EXAMPLE"
 # This is used when the local Interlock Admin is logged in.
 LDAP_AUTH_CONNECTION_USER_DN = "CN=Administrator,CN=Users,DC=example,DC=com"
 
-LDAP_AUTH_CONNECTION_USERNAME = LDAP_AUTH_CONNECTION_USER_DN.split(",")[
-	0
-].split("CN=")[1]
+LDAP_AUTH_CONNECTION_USERNAME = LDAP_AUTH_CONNECTION_USER_DN.split(",")[0]\
+	.split("CN=")[1]
 LDAP_AUTH_CONNECTION_PASSWORD = None
 
 # Set connection/receive timeouts (in seconds) on the underlying `ldap3` library.
@@ -121,6 +120,8 @@ LDAP_AUTH_CONNECT_TIMEOUT = 10
 LDAP_AUTH_RECEIVE_TIMEOUT = 10
 
 ADMIN_GROUP_TO_SEARCH = "CN=Administrators,CN=Builtin,DC=example,DC=com"
+
+# TODO - remove this
 LDAP_DIRTREE_OU_FILTER = {
 	"organizationalUnit": "objectCategory",
 	"top": "objectCategory",
