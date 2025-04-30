@@ -70,18 +70,21 @@ class UserSerializer(serializers.ModelSerializer):
 				return False
 		return True
 
-
 class LDAPUserSerializer(serializers.Serializer):
 	name = serializers.CharField(required=False)
+	# Distinguished Name
 	distinguishedName = serializers.CharField(required=False)
 	type = serializers.CharField(required=False)
 	# First Name
 	givenName = serializers.CharField(required=False)
 	# Last Name
 	sn = serializers.CharField(required=False)
+	# Username
 	sAMAccountName = serializers.CharField(required=False)
 	username = serializers.CharField(required=False)
+	# Email
 	mail = serializers.CharField(required=False)
+	# Postal Code
 	postalCode = serializers.CharField(required=False)
 	# City
 	l = serializers.CharField(required=False)
