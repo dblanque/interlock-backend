@@ -352,12 +352,13 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		"""
 		# TODO Check by authUsernameIdentifier and CN
 		# TODO Add customizable default user path
+		user_username = user_data.pop("username")
 		try:
 			user_path = user_data.pop("path", None)
 			if user_path:
-				user_dn = f"CN={user_data['username']},{user_path}"
+				user_dn = f"CN={user_username},{user_path}"
 			else:
-				user_dn = f"CN={user_data['username']},CN=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}"
+				user_dn = f"CN={user_username},CN=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}"
 			user_dn = safe_dn(dn=user_dn)
 		except:
 			raise exc_user.UserDNPathException
@@ -377,7 +378,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				)
 			)
 		parsed_user_attrs[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]] = (
-			str(user_data["username"]).lower()
+			str(user_username).lower()
 		)
 		parsed_user_attrs["objectClass"] = [
 			"top",
@@ -386,7 +387,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			"user",
 		]
 		parsed_user_attrs["userPrincipalName"] = (
-			f"{user_data['username']}@{RuntimeSettings.LDAP_DOMAIN}"
+			f"{user_username}@{RuntimeSettings.LDAP_DOMAIN}"
 		)
 
 		if not exclude_keys:
@@ -399,8 +400,11 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				"username",  # LDAP Uses sAMAccountName
 			]
 
+		for key in exclude_keys:
+			user_data.pop(key, None)
+
 		for key in user_data:
-			if key in exclude_keys or len(str(user_data[key])) <= 0:
+			if len(str(user_data[key])) <= 0:
 				continue
 
 			logger.debug("Key in data: " + key)
@@ -436,7 +440,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 			user=self.request.user.id,
 			operation_type=LOG_ACTION_CREATE,
 			log_target_class=LOG_CLASS_USER,
-			log_target=user_data["username"],
+			log_target=user_username,
 		)
 
 		return user_dn
