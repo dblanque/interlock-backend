@@ -142,6 +142,11 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code_msg = "ok"
 		data: dict = request.data
 
+		# Validate user data
+		serializer = self.serializer_cls(data=data)
+		serializer.validate()
+		data = serializer.validated_data
+
 		if "username" not in data:
 			raise exc_base.MissingDataKey(data={"key": "username"})
 
@@ -245,11 +250,6 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code = 0
 		code_msg = "ok"
 
-		# Validate user data
-		serializer = self.serializer_cls(data=data)
-		serializer.validate()
-		data = serializer.validated_data
-
 		for required_key in ["username", "enabled"]:
 			if required_key not in data:
 				raise BadRequest
@@ -285,11 +285,6 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code = 0
 		code_msg = "ok"
 		data = request.data
-
-		# Validate user data
-		serializer = self.serializer_cls(data=data)
-		serializer.validate()
-		data = serializer.validated_data
 
 		if not isinstance(data, dict):
 			raise exc_base.CoreException
@@ -335,11 +330,6 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code_msg = "ok"
 		data = request.data
 		ldap_user_search = None
-
-		# Validate user data
-		serializer = self.serializer_cls(data=data)
-		serializer.validate()
-		data = serializer.validated_data
 
 		# Get username from data
 		username = data.get("username", None)
@@ -395,11 +385,6 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code = 0
 		code_msg = "ok"
 		data = request.data
-
-		# Validate user data
-		serializer = self.serializer_cls(data=data)
-		serializer.validate()
-		data = serializer.validated_data
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
