@@ -1,5 +1,8 @@
+########################### Standard Pytest Imports ############################
 import pytest
-from pytest_mock import MockType
+from pytest import FixtureRequest
+from pytest_mock import MockerFixture, MockType
+################################################################################
 from core.ldap.security_identifier import SID
 from core.models.ldap_object import (
 	LDAPObject,
@@ -11,14 +14,18 @@ from core.models.ldap_object import (
 from core.views.mixins.utils import is_non_str_iterable
 from copy import deepcopy
 from ldap3 import Attribute as LDAPAttribute
+from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 
+@pytest.fixture(autouse=True)
+def f_runtime_settings(mocker: MockerFixture, g_runtime_settings: RuntimeSettingsSingleton):
+	return mocker.patch("core.models.ldap_object.RuntimeSettings", g_runtime_settings)
 
 @pytest.fixture
-def f_object_args(f_connection, g_runtime_settings) -> LDAPObjectOptions:
+def f_object_args(f_connection, f_runtime_settings: RuntimeSettingsSingleton) -> LDAPObjectOptions:
 	def maker(**kwargs):
 		return {
 			"connection": f_connection,
-			"dn": f"cn=testobject,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
+			"dn": f"cn=testobject,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
 			**kwargs,
 		}
 
@@ -26,18 +33,18 @@ def f_object_args(f_connection, g_runtime_settings) -> LDAPObjectOptions:
 
 
 @pytest.fixture
-def f_object_attrs_user(g_runtime_settings) -> dict:
+def f_object_attrs_user(f_runtime_settings: RuntimeSettingsSingleton) -> dict:
 	def maker():
 		return {
 			"name": "Test User",
-			"distinguishedName": f"CN=Test User,OU=Administrators,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
+			"distinguishedName": f"CN=Test User,OU=Administrators,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
 			"type": "Person",
 			"givenName": "Test",
 			"sn": "User",
 			"displayName": "Test User",
 			"sAMAccountName": "testuser",
 			"username": "testuser",
-			"mail": f"testuser@{g_runtime_settings.LDAP_DOMAIN}",
+			"mail": f"testuser@{f_runtime_settings.LDAP_DOMAIN}",
 			"telephoneNumber": "+5491112345678",
 			"streetAddress": "Street Address Example",
 			"postalCode": "POSTALCODE",
@@ -46,36 +53,36 @@ def f_object_attrs_user(g_runtime_settings) -> dict:
 			"countryCode": 32,
 			"co": "Argentina",
 			"c": "AR",
-			"wWWHomePage": f"https://{g_runtime_settings.LDAP_DOMAIN}",
-			"userPrincipalName": f"testuser@{g_runtime_settings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN}",
+			"wWWHomePage": f"https://{f_runtime_settings.LDAP_DOMAIN}",
+			"userPrincipalName": f"testuser@{f_runtime_settings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN}",
 			"userAccountControl": 66048,
 			"primaryGroupID": 513,
 			"whenCreated": "fake_creation_date",
 			"whenChanged": "fake_changed_date",
 			"objectClass": ["top", "person", "organizationalPerson", "user"],
-			"objectCategory": f"CN=Person,CN=Schema,CN=Configuration,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
+			"objectCategory": f"CN=Person,CN=Schema,CN=Configuration,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
 			"objectSid": b"\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00\x11^\xb3\x83j\x06\x94\x00\x80\xdbi\xaaQ\x04\x00\x00",
 			"objectRid": 1105,
 			"lastLogon": "fake_logon_date",
 			"badPwdCount": 0,
 			"pwdLastSet": "fake_pwd_last_set",
 			"sAMAccountType": 805306368,
-			"memberOf": f"CN=Administrators,CN=Builtin,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
+			"memberOf": f"CN=Administrators,CN=Builtin,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
 		}
 
 	return maker
 
 
 @pytest.fixture
-def f_object_attrs_group(g_runtime_settings) -> dict:
+def f_object_attrs_group(f_runtime_settings: RuntimeSettingsSingleton) -> dict:
 	def maker():
 		return {
 			"name": "Test Group",
-			"distinguishedName": f"cn=Test Group,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
+			"distinguishedName": f"cn=Test Group,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
 			"type": "Group",
 			"objectSid": b"\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00\x11^\xb3\x83j\x06\x94\x00\x80\xdbi\xaaR\x04\x00\x00",
 			"objectRid": 1106,
-			"objectCategory": f"CN=Group,CN=Schema,CN=Configuration,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
+			"objectCategory": f"CN=Group,CN=Schema,CN=Configuration,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
 			"objectClass": ["top", "group"],
 		}
 
@@ -120,7 +127,7 @@ class FakeUserEntry:
 
 
 @pytest.fixture
-def f_object_entry_user(f_object_attrs_user, mocker):
+def f_object_entry_user(f_object_attrs_user, mocker: MockerFixture):
 	def maker(attrs=None, **kwargs):
 		if not attrs:
 			attrs = {}
@@ -145,7 +152,7 @@ def f_object_entry_user(f_object_attrs_user, mocker):
 
 
 @pytest.fixture
-def f_object_entry_group(f_object_attrs_group, mocker):
+def f_object_entry_group(f_object_attrs_group, mocker: MockerFixture):
 	def maker(attrs=None, **kwargs):
 		if not attrs:
 			attrs = {}
@@ -191,7 +198,7 @@ def test_init_raises_kwarg_exception(object_args, expected_exc_msg_match):
 	ids=lambda x: "With auto_fetch" if x else "Without auto_fetch",
 )
 def test_init(
-	mocker, f_connection, g_runtime_settings, auto_fetch, f_object_args
+	mocker: MockerFixture, f_connection, f_runtime_settings: RuntimeSettingsSingleton, auto_fetch, f_object_args
 ):
 	object_args: LDAPObjectOptions = f_object_args()
 	m_set_kwargs: MockType = mocker.patch.object(LDAPObject, "__set_kwargs__")
@@ -202,22 +209,22 @@ def test_init(
 	object_args.pop("connection")
 	assert m_ldap_object.entry == None
 	assert m_ldap_object.attributes == None
-	assert m_ldap_object.name == g_runtime_settings.LDAP_AUTH_SEARCH_BASE
-	assert m_ldap_object.search_base == g_runtime_settings.LDAP_AUTH_SEARCH_BASE
+	assert m_ldap_object.name == f_runtime_settings.LDAP_AUTH_SEARCH_BASE
+	assert m_ldap_object.search_base == f_runtime_settings.LDAP_AUTH_SEARCH_BASE
 	assert m_ldap_object.connection == f_connection
 	assert (
 		m_ldap_object.username_identifier
-		== g_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
+		== f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
 	)
 	assert m_ldap_object.excluded_ldap_attrs == []
 	assert m_ldap_object.required_ldap_attrs == DEFAULT_REQUIRED_LDAP_ATTRS
 	assert m_ldap_object.container_types == DEFAULT_CONTAINER_TYPES
 	assert m_ldap_object.user_types == DEFAULT_USER_TYPES
-	dirtree_attrs = g_runtime_settings.LDAP_DIRTREE_ATTRIBUTES + [
-		g_runtime_settings.LDAP_AUTH_USER_FIELDS["username"],
+	dirtree_attrs = f_runtime_settings.LDAP_DIRTREE_ATTRIBUTES + [
+		f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"],
 		"username",
 	]
-	assert m_ldap_object.ldap_attrs == list(set(dirtree_attrs))
+	assert list(set(m_ldap_object.ldap_attrs)) == list(set(dirtree_attrs))
 	assert (
 		m_ldap_object.ldap_filter
 		== f"(distinguishedName={object_args.get('dn')})"
@@ -230,7 +237,7 @@ def test_init(
 
 
 def test_dunder_set_kwargs(
-	mocker, f_connection, g_runtime_settings, f_object_args
+	mocker: MockerFixture, f_connection, f_object_args
 ):
 	object_args: LDAPObjectOptions = f_object_args()
 	mocker.patch.object(LDAPObject, "__fetch_object__")
@@ -284,7 +291,7 @@ def test_dunder_get__methods(mocker, get_name_args):
 
 
 def test_dunder_fetch_object_returns_none_on_empty_response(
-	f_connection, g_runtime_settings, f_object_args
+	f_connection, f_object_args
 ):
 	object_args: LDAPObjectOptions = f_object_args()
 	m_ldap_object = LDAPObject(**object_args)
@@ -306,7 +313,7 @@ def test_dunder_fetch_object_returns_none_on_empty_response(
 	),
 )
 def test_dunder_fetch_object(
-	test_entry, request, f_connection, g_runtime_settings, f_object_args
+	test_entry, request: FixtureRequest, f_connection, f_object_args
 ):
 	m_entry = request.getfixturevalue(test_entry)()
 	f_connection.entries = [m_entry]
@@ -326,7 +333,6 @@ def test_dunder_fetch_object_removes_empty_string(
 	f_object_attrs_user,
 	f_object_entry_user,
 	f_connection,
-	g_runtime_settings,
 	f_object_args,
 ):
 	m_entry = f_object_entry_user(attrs={"objectRid": ""})
@@ -357,7 +363,6 @@ def test_dunder_fetch_object_marks_builtin(
 	object_classes,
 	f_object_entry_user,
 	f_connection,
-	g_runtime_settings,
 	f_object_args,
 ):
 	m_entry: dict = f_object_entry_user(attrs={"objectClass": object_classes})
@@ -379,7 +384,6 @@ def test_dunder_fetch_object_successful_user_fetch(
 	f_object_entry_user,
 	f_object_attrs_user,
 	f_connection,
-	g_runtime_settings,
 ):
 	# Setup
 	object_args: LDAPObjectOptions = f_object_args()
