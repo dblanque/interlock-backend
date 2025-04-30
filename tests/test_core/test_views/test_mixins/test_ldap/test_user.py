@@ -589,7 +589,7 @@ class TestUserViewLDAPMixin:
 			"core.views.mixins.ldap.user.safe_dn", side_effect=Exception
 		)
 		with pytest.raises(exc_user.UserDNPathException):
-			f_user_mixin.ldap_user_insert(user_data={})
+			f_user_mixin.ldap_user_insert(user_data={"username":"testuser"})
 
 	def test_ldap_user_insert_raises_add_exc(
 		self, f_user_mixin: UserViewLDAPMixin
