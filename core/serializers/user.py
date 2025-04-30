@@ -86,7 +86,11 @@ FIELD_VALIDATORS = {
 	LDAP_ATTR_COUNTRY: None,  # country
 }
 class UserSerializer(serializers.ModelSerializer):
-	passwordConfirm = serializers.CharField(required=False)
+	passwordConfirm = serializers.CharField(
+		required=False,
+		write_only=True,
+		allow_blank=True,
+	)
 
 	class Meta:
 		model = User
@@ -98,23 +102,29 @@ class UserSerializer(serializers.ModelSerializer):
 			"password",
 			"passwordConfirm",
 		)
+		extra_kwargs = {
+			'password': {'write_only': True}  # Also hide password in responses
+		}
 
-	def validate_password_confirm(self, data: dict = None, raise_exc=True):
-		if not data:
-			if not hasattr(self, "data"):
-				return False
-			else:
-				data = self.data
-		_pwd: str = data.pop("password", None)
-		_pwd_confirm: str = data.pop("passwordConfirm", None)
-		if not _pwd:
-			raise serializers.ValidationError(f"Missing password field.")
-		if _pwd != _pwd_confirm:
-			if raise_exc is True:
-				raise serializers.ValidationError("Passwords do not match.")
-			else:
-				return False
-		return True
+	def validate(self, data: dict):
+		"""Handle password confirmation validation"""
+		password = data.get('password', None)
+		password_confirm = data.get('passwordConfirm', None)
+
+		# Only validate if password is being set/changed
+		if password is not None:
+			if password_confirm is None:
+				raise serializers.ValidationError(
+					{"passwordConfirm": "Password confirmation is required when setting password"}
+				)
+			if password != password_confirm:
+				raise serializers.ValidationError(
+					{"passwordConfirm": "Passwords do not match"}
+				)
+
+		# Remove passwordConfirm from data as it's not a model field
+		data.pop('passwordConfirm', None)
+		return data
 
 class LDAPUserSerializer(serializers.Serializer):
 	name = serializers.CharField(required=False)

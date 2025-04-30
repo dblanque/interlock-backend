@@ -98,8 +98,6 @@ class UserViewSet(BaseViewSet):
 
 		if not serializer.is_valid():
 			raise BadRequest(data={"errors": serializer.errors})
-		elif not serializer.validate_password_confirm():
-			raise exc_user.UserPasswordsDontMatch
 		else:
 			serialized_data = serializer.data
 			password = serialized_data.pop("password")
@@ -257,9 +255,9 @@ class UserViewSet(BaseViewSet):
 				raise BadRequest(
 					data={"errors": f"Must contain field {field}."}
 				)
-		if not self.serializer_class().validate_password_confirm(data):
-			raise exc_user.UserPasswordsDontMatch
 		user_instance = User.objects.get(id=pk)
+		serializer = self.serializer_class(data=data, partial=True)
+		serializer.is_valid()
 		user_instance.set_password(data["password"])
 		user_instance.save()
 
@@ -291,8 +289,9 @@ class UserViewSet(BaseViewSet):
 				raise BadRequest(
 					data={"errors": f"Must contain field {field}."}
 				)
-		if not self.serializer_class().validate_password_confirm(data):
-			raise exc_user.UserPasswordsDontMatch
+
+		serializer = self.serializer_class(data=data, partial=True)
+		serializer.is_valid()
 		user.set_password(data["password"])
 		user.save()
 

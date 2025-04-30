@@ -1,7 +1,8 @@
 ########################### Standard Pytest Imports ############################
 import pytest
 ################################################################################
-from core.serializers.user import LDAPUserSerializer
+from core.serializers.user import LDAPUserSerializer, UserSerializer
+from rest_framework.serializers import ValidationError
 from core.ldap.constants import (
 	LDAP_ATTR_DN,
 	LDAP_ATTR_USERNAME_SAMBA_ADDS,
@@ -21,6 +22,42 @@ from core.ldap.adsi import (
 	LDAP_UF_NORMAL_ACCOUNT,
 	LDAP_UF_DONT_EXPIRE_PASSWD,
 )
+
+@pytest.mark.django_db
+def test_validate_password_confirm():
+	serializer = UserSerializer(
+		data={
+			"password":"a",
+			"passwordConfirm":"a"
+		},
+		partial=True
+	)
+	assert serializer.is_valid()
+
+@pytest.mark.django_db
+def test_validate_password_confirm_raises_password_mismatch():
+	serializer = UserSerializer(
+		data={
+			"password":"a",
+			"passwordConfirm":"b"
+		},
+		partial=True
+	)
+	with pytest.raises(ValidationError) as e:
+		serializer.is_valid(raise_exception=True)
+	assert e.value.detail.get("passwordConfirm")
+
+@pytest.mark.django_db
+def test_validate_password_confirm_raises_field_missing():
+	serializer = UserSerializer(
+		data={
+			"password":"a",
+		},
+		partial=True
+	)
+	with pytest.raises(ValidationError) as e:
+		serializer.is_valid(raise_exception=True)
+	assert e.value.detail.get("passwordConfirm")
 
 @pytest.mark.parametrize(
 	"test_data",
