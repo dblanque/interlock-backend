@@ -1,6 +1,9 @@
 import re
+from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from core.models.application import User
+from ldap3.utils.dn import parse_dn
+from django.core.validators import validate_email
 from core.ldap.constants import (
 	LDAP_DATE_FORMAT,
 	LOCAL_ATTR_USERNAME,
@@ -17,12 +20,31 @@ from core.ldap.constants import (
 	LDAP_ATTR_STATE,
 	LDAP_ATTR_COUNTRY,
 )
+from core.ldap.countries import LDAP_COUNTRIES
+from core.ldap.adsi import LDAP_PERMS
 
-def ldap_user_validator(value):
-	def has_invalid_chars(s):
-		return re.match(r'.*[\]\["\:\;\|\=\+\*\?\<\>\/\\\,]', s) != None
+def ldap_user_validator(v: str):
+	def has_invalid_chars(s: str):
+		return re.match(r'.*[\]\["\:\;\|\=\+\*\?\<\>\/\\\,]', s) is not None
+	return not has_invalid_chars(v)
 
-	return not has_invalid_chars(value)
+def ldap_user_validator_serializer(v: str):
+	if not ldap_user_validator(v):
+		raise ValidationError("Username contains invalid characters.")
+
+def dn_validator_serializer(v: str):
+	try:
+		parse_dn(v)
+	except:
+		raise ValidationError("Could not parse Distinguished Name.")
+	
+def country_validator_serializer(v: str):
+	if not v in LDAP_COUNTRIES:
+		raise ValidationError("Invalid country name.")
+	
+def ldap_permission_validator_serializer(v: str):
+	if not v in LDAP_PERMS.keys():
+		raise ValidationError(f"LDAP Permission is invalid ({v}).")
 
 FIELD_VALIDATORS = {
 	LOCAL_ATTR_USERNAME: ldap_user_validator,  # username
@@ -75,27 +97,28 @@ class LDAPUserSerializer(serializers.Serializer):
 	password = serializers.CharField(required=False)
 
 	# Distinguished Name
-	distinguishedName = serializers.CharField(required=False)
+	distinguishedName = serializers.CharField(required=False, validators=[dn_validator_serializer])
 	type = serializers.CharField(required=False)
 	# First Name
 	givenName = serializers.CharField(required=False)
 	# Last Name
 	sn = serializers.CharField(required=False)
 	# Username
-	sAMAccountName = serializers.CharField(required=False)
-	username = serializers.CharField(required=False)
+	sAMAccountName = serializers.CharField(required=False, min_length=1, max_length=21, validators=[ldap_user_validator_serializer])
+	username = serializers.CharField(required=False, min_length=1, max_length=21, validators=[ldap_user_validator_serializer])
 	# Email
-	mail = serializers.CharField(required=False)
+	mail = serializers.CharField(required=False, validators=[validate_email])
+	email = serializers.CharField(required=False, validators=[validate_email])
 	# Postal Code
 	postalCode = serializers.CharField(required=False)
 	# City
 	l = serializers.CharField(required=False)
 	# Country Name
-	co = serializers.CharField(required=False)
+	co = serializers.CharField(required=False, validators=[country_validator_serializer])
 	# Number Code for Country
 	countryCode = serializers.IntegerField(required=False)
 	# Two letter Country Code
-	c = serializers.CharField(max_length=2, required=False)
+	c = serializers.CharField(max_length=3, required=False)
 	userPrincipalName = serializers.CharField(required=False)
 	userAccountControl = serializers.IntegerField(required=False)
 	whenCreated = serializers.DateTimeField(
@@ -129,4 +152,4 @@ class LDAPUserSerializer(serializers.Serializer):
 	sAMAccountType = serializers.CharField(required=False)
 	memberOfObjects = serializers.ListField(required=False)
 	is_enabled = serializers.BooleanField(required=False)
-	permission_list = serializers.ListField(required=False)
+	permission_list = serializers.ListField(required=False, child=serializers.CharField(validators=[ldap_permission_validator_serializer]))
