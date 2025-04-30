@@ -1,34 +1,44 @@
 import re
 from rest_framework import serializers
 from core.models.application import User
-from core.ldap.constants import LDAP_DATE_FORMAT
-
-FIELD_VALIDATORS = {
-	"username": "ldap_user",  # username
-	"password": None,  # password
-	"mail": None,  # email
-	"givenName": None,  # first_name
-	"sn": None,  # last_name
-	"initials": None,  # initials
-	"telephoneNumber": None,  # phone_number
-	"wWWHomePage": None,  # webpage
-	"streetAddress": None,  # street_address
-	"postalCode": None,  # postal_code
-	"l": None,  # town
-	"st": None,  # state_province
-	"co": None,  # country
-}
-
-ldap_user_pattern = r'.*[\]\["\:\;\|\=\+\*\?\<\>\/\\\,]'
-
+from core.ldap.constants import (
+	LDAP_DATE_FORMAT,
+	LOCAL_ATTR_USERNAME,
+	LOCAL_ATTR_PASSWORD,
+	LDAP_ATTR_EMAIL,
+	LDAP_ATTR_FIRST_NAME,
+	LDAP_ATTR_LAST_LOGIN,
+	LDAP_ATTR_INITIALS,
+	LDAP_ATTR_PHONE,
+	LDAP_ATTR_WEBSITE,
+	LDAP_ATTR_ADDRESS,
+	LDAP_ATTR_POSTAL_CODE,
+	LDAP_ATTR_CITY,
+	LDAP_ATTR_STATE,
+	LDAP_ATTR_COUNTRY,
+)
 
 def ldap_user_validator(value):
-	def containsInvalidChars(s):
-		return re.match(ldap_user_pattern, s) != None
+	def has_invalid_chars(s):
+		return re.match(r'.*[\]\["\:\;\|\=\+\*\?\<\>\/\\\,]', s) != None
 
-	return not containsInvalidChars(value)
+	return not has_invalid_chars(value)
 
-
+FIELD_VALIDATORS = {
+	LOCAL_ATTR_USERNAME: ldap_user_validator,  # username
+	LOCAL_ATTR_PASSWORD: None,  # password
+	LDAP_ATTR_EMAIL: None,  # email
+	LDAP_ATTR_FIRST_NAME: None,  # first_name
+	LDAP_ATTR_LAST_LOGIN: None,  # last_name
+	LDAP_ATTR_INITIALS: None,  # initials
+	LDAP_ATTR_PHONE: None,  # phone_number
+	LDAP_ATTR_WEBSITE: None,  # webpage
+	LDAP_ATTR_ADDRESS: None,  # street_address
+	LDAP_ATTR_POSTAL_CODE: None,  # postal_code
+	LDAP_ATTR_CITY: None,  # town
+	LDAP_ATTR_STATE: None,  # state_province
+	LDAP_ATTR_COUNTRY: None,  # country
+}
 class UserSerializer(serializers.ModelSerializer):
 	passwordConfirm = serializers.CharField(required=False)
 

@@ -33,6 +33,7 @@ from core.models.choices.log import (
 from core.views.mixins.ldap.user import UserViewMixin, UserViewLDAPMixin
 
 ### Serializers / Validators
+from core.serializers.user import LDAPUserSerializer
 from core.serializers import user as UserValidators
 
 ### ViewSets
@@ -69,6 +70,7 @@ logger = logging.getLogger(__name__)
 # TODO - Make decorator that checks user type being correct (ldap or django/local)
 class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	queryset = User.objects.all()
+	serializer_cls = LDAPUserSerializer
 
 	@auth_required
 	@admin_required
@@ -183,6 +185,11 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code_msg = "ok"
 		data: dict = request.data
 
+		# Validate user data
+		serializer = self.serializer_cls(data=data)
+		serializer.validate()
+		data = serializer.validated_data
+
 		######################## Set LDAP Attributes ###########################
 		self.ldap_filter_attr = self.filter_attr_builder(
 			RuntimeSettings
@@ -238,6 +245,11 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code = 0
 		code_msg = "ok"
 
+		# Validate user data
+		serializer = self.serializer_cls(data=data)
+		serializer.validate()
+		data = serializer.validated_data
+
 		for required_key in ["username", "enabled"]:
 			if required_key not in data:
 				raise BadRequest
@@ -273,6 +285,11 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code = 0
 		code_msg = "ok"
 		data = request.data
+
+		# Validate user data
+		serializer = self.serializer_cls(data=data)
+		serializer.validate()
+		data = serializer.validated_data
 
 		if not isinstance(data, dict):
 			raise exc_base.CoreException
@@ -318,6 +335,11 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code_msg = "ok"
 		data = request.data
 		ldap_user_search = None
+
+		# Validate user data
+		serializer = self.serializer_cls(data=data)
+		serializer.validate()
+		data = serializer.validated_data
 
 		# Get username from data
 		username = data.get("username", None)
@@ -374,6 +396,11 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code_msg = "ok"
 		data = request.data
 
+		# Validate user data
+		serializer = self.serializer_cls(data=data)
+		serializer.validate()
+		data = serializer.validated_data
+
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
@@ -419,8 +446,8 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				raise e
 
 		user_headers = data["headers"]
-		user_list = data["users"]
-		user_path = data["path"]
+		user_list: list = data["users"]
+		user_path: str = data["path"]
 		user_placeholder_password = None
 		header_mapping = data["mapping"]
 
@@ -467,11 +494,9 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 			for f in row.keys():
 				if f in UserValidators.FIELD_VALIDATORS:
-					if UserValidators.FIELD_VALIDATORS[f] is not None:
-						validator = (
-							UserValidators.FIELD_VALIDATORS[f] + "_validator"
-						)
-						if getattr(UserValidators, validator)(row[f]) == False:
+					validator = UserValidators.FIELD_VALIDATORS[f]
+					if validator and callable(validator):
+						if not validator(row[f]):
 							if len(user_list) > 1:
 								failed_users.append(
 									{
