@@ -28,23 +28,28 @@ def ldap_user_validator(v: str):
 		return re.match(r'.*[\]\["\:\;\|\=\+\*\?\<\>\/\\\,]', s) is not None
 	return not has_invalid_chars(v)
 
-def ldap_user_validator_serializer(v: str):
+def ldap_user_validator_se(v: str):
 	if not ldap_user_validator(v):
 		raise ValidationError("Username contains invalid characters.")
+	return v
 
-def dn_validator_serializer(v: str):
+def dn_validator_se(v: str):
 	try:
 		parse_dn(v)
 	except:
 		raise ValidationError("Could not parse Distinguished Name.")
+	return v
 	
-def country_validator_serializer(v: str):
+def country_validator_se(v: str):
 	if not v in LDAP_COUNTRIES:
 		raise ValidationError("Invalid country name.")
+	return v
 	
-def ldap_permission_validator_serializer(v: str):
+def ldap_permission_validator_se(v: str):
 	if not v in LDAP_PERMS.keys():
 		raise ValidationError(f"LDAP Permission is invalid ({v}).")
+	return v
+
 
 FIELD_VALIDATORS = {
 	LOCAL_ATTR_USERNAME: ldap_user_validator,  # username
@@ -97,15 +102,15 @@ class LDAPUserSerializer(serializers.Serializer):
 	password = serializers.CharField(required=False)
 
 	# Distinguished Name
-	distinguishedName = serializers.CharField(required=False, validators=[dn_validator_serializer])
+	distinguishedName = serializers.CharField(required=False, validators=[dn_validator_se])
 	type = serializers.CharField(required=False)
 	# First Name
 	givenName = serializers.CharField(required=False)
 	# Last Name
 	sn = serializers.CharField(required=False)
 	# Username
-	sAMAccountName = serializers.CharField(required=False, min_length=1, max_length=21, validators=[ldap_user_validator_serializer])
-	username = serializers.CharField(required=False, min_length=1, max_length=21, validators=[ldap_user_validator_serializer])
+	sAMAccountName = serializers.CharField(required=False, min_length=1, max_length=21, validators=[ldap_user_validator_se])
+	username = serializers.CharField(required=False, min_length=1, max_length=21, validators=[ldap_user_validator_se])
 	# Email
 	mail = serializers.CharField(required=False, validators=[validate_email])
 	email = serializers.CharField(required=False, validators=[validate_email])
@@ -114,7 +119,7 @@ class LDAPUserSerializer(serializers.Serializer):
 	# City
 	l = serializers.CharField(required=False)
 	# Country Name
-	co = serializers.CharField(required=False, validators=[country_validator_serializer])
+	co = serializers.ListField(required=False, validators=[country_validator_se])
 	# Number Code for Country
 	countryCode = serializers.IntegerField(required=False)
 	# Two letter Country Code
@@ -150,6 +155,9 @@ class LDAPUserSerializer(serializers.Serializer):
 	objectSid = serializers.CharField(required=False)
 	objectRid = serializers.IntegerField(required=False)
 	sAMAccountType = serializers.CharField(required=False)
-	memberOfObjects = serializers.ListField(required=False)
+	memberOfObjects = serializers.ListField(required=False, child=serializers.CharField(validators=[dn_validator_se]))
 	is_enabled = serializers.BooleanField(required=False)
-	permission_list = serializers.ListField(required=False, child=serializers.CharField(validators=[ldap_permission_validator_serializer]))
+	permission_list = serializers.ListField(
+		required=False,
+		child=serializers.CharField(validators=[ldap_permission_validator_se])
+	)
