@@ -3,6 +3,17 @@
 # Global
 LDAP_DATE_FORMAT = "%Y%m%d%H%M%S.%fZ"
 
+LDAP_ESCAPE_REQUIRED_CHARS = (
+	"+",
+	";",
+	",",
+	"\\",
+	"\"",
+	"<",
+	">",
+	"#",
+)
+
 # LDAP Attributes
 LDAP_ATTR_PASSWORD = "unicodePwd"
 LDAP_ATTR_FIRST_NAME = "givenName"
