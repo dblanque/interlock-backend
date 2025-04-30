@@ -3,8 +3,7 @@
 # Global
 LDAP_DATE_FORMAT = "%Y%m%d%H%M%S.%fZ"
 
-# Attributes
-LOCAL_ATTR_PASSWORD = "password"
+# LDAP Attributes
 LDAP_ATTR_PASSWORD = "unicodePwd"
 LDAP_ATTR_FIRST_NAME = "givenName"
 LDAP_ATTR_LAST_NAME = "sn"
@@ -36,3 +35,46 @@ LDAP_ATTR_OBJECT_SECURITY_IDENTIFIER = "objectSid"
 LDAP_ATTR_ACCOUNT_TYPE = "sAMAccountType"
 LDAP_ATTR_USER_GROUPS = "memberOf"
 LDAP_ATTR_INITIALS = "initials"
+
+# LOCAL Attributes
+LOCAL_ATTR_USERNAME = "username"
+LOCAL_ATTR_PASSWORD = "password"
+LOCAL_ATTR_FIRST_NAME = "first_name"
+LOCAL_ATTR_LAST_NAME = "last_name"
+LOCAL_ATTR_FULL_NAME = "full_name"
+LOCAL_ATTR_INITIALS = "initials"
+LOCAL_ATTR_PHONE = "phone"
+LOCAL_ATTR_EMAIL = "email"
+LOCAL_ALIASES = {
+	LDAP_ATTR_PASSWORD: LOCAL_ATTR_PASSWORD,
+	LDAP_ATTR_FIRST_NAME: LOCAL_ATTR_FIRST_NAME,
+	LDAP_ATTR_LAST_NAME: LOCAL_ATTR_LAST_NAME,
+	LDAP_ATTR_FULL_NAME: LOCAL_ATTR_FULL_NAME,
+	LDAP_ATTR_INITIALS: LOCAL_ATTR_INITIALS,
+	LDAP_ATTR_USERNAME_SAMBA_ADDS: LOCAL_ATTR_USERNAME,
+	LDAP_ATTR_EMAIL: LOCAL_ATTR_EMAIL,
+	LDAP_ATTR_PHONE: LOCAL_ATTR_PHONE,
+	LDAP_ATTR_ADDRESS: "street_address",
+	LDAP_ATTR_POSTAL_CODE: "postal_code",
+	LDAP_ATTR_CITY: "city",
+	LDAP_ATTR_STATE: "state_province",
+	LDAP_ATTR_COUNTRY: "country_name",
+	LDAP_ATTR_COUNTRY_DCC: "country_code_dcc",
+	LDAP_ATTR_COUNTRY_ISO: "country_code_iso",
+	LDAP_ATTR_WEBSITE: "website",
+	LDAP_ATTR_DN: "distinguished_name",
+	LDAP_ATTR_UPN: "user_principal_name",
+	LDAP_ATTR_UAC: "user_account_control",
+	LDAP_ATTR_CREATED: "created_at",
+	LDAP_ATTR_MODIFIED: "modified_at",
+	LDAP_ATTR_LAST_LOGIN: "last_login_win32",
+	LDAP_ATTR_BAD_PWD_COUNT: "bad_password_count",
+	LDAP_ATTR_PWD_SET_AT: "password_set_at",
+	LDAP_ATTR_PRIMARY_GROUP_ID: "primary_group_id",
+	LDAP_ATTR_OBJECT_CLASS: "object_class",
+	LDAP_ATTR_OBJECT_CATEGORY: "object_category",
+	LDAP_ATTR_OBJECT_RELATIVE_IDENTIFIER: "object_relative_id",
+	LDAP_ATTR_OBJECT_SECURITY_IDENTIFIER: "object_security_id",
+	LDAP_ATTR_ACCOUNT_TYPE: "account_type",
+	LDAP_ATTR_USER_GROUPS: "groups",
+}
