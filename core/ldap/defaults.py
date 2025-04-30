@@ -4,6 +4,38 @@
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
 # Module: core.ldap.defaults
+from core.ldap.constants import (
+	LDAP_ATTR_USERNAME_SAMBA_ADDS,
+	LDAP_ATTR_FIRST_NAME,
+	LDAP_ATTR_LAST_NAME,
+	LDAP_ATTR_FULL_NAME,
+	LDAP_ATTR_EMAIL,
+	LDAP_ATTR_PHONE,
+	LDAP_ATTR_ADDRESS,
+	LDAP_ATTR_POSTAL_CODE,
+	LDAP_ATTR_CITY,
+	LDAP_ATTR_STATE,
+	LDAP_ATTR_COUNTRY,
+	LDAP_ATTR_COUNTRY_DCC,
+	LDAP_ATTR_COUNTRY_ISO,
+	LDAP_ATTR_WEBSITE,
+	LDAP_ATTR_UPN,
+	LDAP_ATTR_UAC,
+	LDAP_ATTR_CREATED,
+	LDAP_ATTR_MODIFIED,
+	LDAP_ATTR_LAST_LOGIN,
+	LDAP_ATTR_BAD_PWD_COUNT,
+	LDAP_ATTR_PWD_SET_AT,
+	LDAP_ATTR_PRIMARY_GROUP_ID,
+	LDAP_ATTR_OBJECT_CLASS,
+	LDAP_ATTR_OBJECT_CATEGORY,
+	LDAP_ATTR_ACCOUNT_TYPE,
+	LDAP_ATTR_COMMON_NAME,
+	LDAP_ATTR_GROUP_MEMBERS,
+	LDAP_ATTR_GROUP_TYPE,
+	LDAP_ATTR_DISTINGUISHED_NAME,
+	LDAP_ATTR_OBJECT_SECURITY_IDENTIFIER,
+)
 
 ### LDAP SETTINGS
 # ! You also have to add the settings to the following files:
@@ -54,22 +86,22 @@ EXCLUDE_COMPUTER_ACCOUNTS = True
 DISABLE_SETTING_OVERRIDES = False
 
 # Change in OpenLDAP
-LDAP_OU_FIELD = "sAMAccountName"
-LDAP_GROUP_FIELD = "sAMAccountName"
+LDAP_OU_FIELD = LDAP_ATTR_USERNAME_SAMBA_ADDS
+LDAP_GROUP_FIELD = LDAP_ATTR_USERNAME_SAMBA_ADDS
 
 # User model fields mapped to the LDAP
 # attributes that represent them.
 LDAP_AUTH_USER_FIELDS = {
-	"username": "sAMAccountName",
-	"first_name": "givenName",
-	"last_name": "sn",
-	"email": "mail",
-	"dn": "distinguishedName",
+	"username": LDAP_ATTR_USERNAME_SAMBA_ADDS,
+	"first_name": LDAP_ATTR_FIRST_NAME,
+	"last_name": LDAP_ATTR_LAST_NAME,
+	"email": LDAP_ATTR_EMAIL,
+	"dn": LDAP_ATTR_DISTINGUISHED_NAME,
 }
 
 # Normalize to the standard LDAP string if it's sAMAccountName just in case
-if str(LDAP_AUTH_USER_FIELDS["username"]).lower() == "samaccountname":
-	LDAP_AUTH_USERNAME_IDENTIFIER = "sAMAccountName"
+if str(LDAP_AUTH_USER_FIELDS["username"]).lower() == LDAP_ATTR_USERNAME_SAMBA_ADDS.lower():
+	LDAP_AUTH_USERNAME_IDENTIFIER = LDAP_ATTR_USERNAME_SAMBA_ADDS
 else:
 	LDAP_AUTH_USERNAME_IDENTIFIER = LDAP_AUTH_USER_FIELDS["username"]
 
@@ -140,37 +172,37 @@ LDAP_DIRTREE_CN_FILTER = {
 LDAP_DIRTREE_ATTRIBUTES = list(
 	{
 		# User Attrs
-		"givenName",
-		"sn",
-		"displayName",
-		"mail",
-		"telephoneNumber",
-		"streetAddress",
-		"postalCode",
-		"l",  # Local / City
-		"st",  # State/Province
-		"countryCode",  # INT
-		"co",  # 2 Letter Code for Country
-		"c",  # Full Country Name
-		"wWWHomePage",
-		"userPrincipalName",
-		"userAccountControl",  # Permission ACLs
-		"whenCreated",
-		"whenChanged",
-		"lastLogon",
-		"badPwdCount",
-		"pwdLastSet",
-		"primaryGroupID",
-		"objectClass",
-		"objectCategory",
-		"sAMAccountType",
+		LDAP_ATTR_FIRST_NAME,
+		LDAP_ATTR_LAST_NAME,
+		LDAP_ATTR_FULL_NAME,
+		LDAP_ATTR_EMAIL,
+		LDAP_ATTR_PHONE,
+		LDAP_ATTR_ADDRESS,
+		LDAP_ATTR_POSTAL_CODE,
+		LDAP_ATTR_CITY,  # Local / City
+		LDAP_ATTR_STATE,  # State/Province
+		LDAP_ATTR_COUNTRY,  # INT
+		LDAP_ATTR_COUNTRY_DCC,  # 2 Letter Code for Country
+		LDAP_ATTR_COUNTRY_ISO,  # Full Country Name
+		LDAP_ATTR_WEBSITE,
+		LDAP_ATTR_UPN,
+		LDAP_ATTR_UAC,  # Permission ACLs
+		LDAP_ATTR_CREATED,
+		LDAP_ATTR_MODIFIED,
+		LDAP_ATTR_LAST_LOGIN,
+		LDAP_ATTR_BAD_PWD_COUNT,
+		LDAP_ATTR_PWD_SET_AT,
+		LDAP_ATTR_PRIMARY_GROUP_ID,
+		LDAP_ATTR_OBJECT_CLASS,
+		LDAP_ATTR_OBJECT_CATEGORY,
+		LDAP_ATTR_ACCOUNT_TYPE,
 		# Group Attrs
-		"cn",
-		"member",
-		"groupType",
+		LDAP_ATTR_COMMON_NAME,
+		LDAP_ATTR_GROUP_MEMBERS,
+		LDAP_ATTR_GROUP_TYPE,
 		# User & Group Attrs
-		"distinguishedName",
-		"objectSid",
+		LDAP_ATTR_DISTINGUISHED_NAME,
+		LDAP_ATTR_OBJECT_SECURITY_IDENTIFIER,
 	}
 )
 
