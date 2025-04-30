@@ -158,7 +158,8 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		# Validate user data
 		serializer = self.serializer_cls(data=data)
-		serializer.is_valid()
+		if not serializer.is_valid():
+			raise BadRequest(data={"errors": serializer.errors})
 		data = serializer.validated_data
 
 		# Open LDAP Connection
@@ -215,7 +216,8 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		# Validate user data
 		serializer = self.serializer_cls(data=data)
-		serializer.is_valid()
+		if not serializer.is_valid():
+			raise BadRequest(data={"errors": serializer.errors})
 		data = serializer.validated_data
 
 		# Open LDAP Connection
@@ -514,9 +516,18 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 					skipped_users.append(row[mapped_user_key])
 					continue
 
+				# Serializer validation
 				serializer = self.serializer_cls(data=row)
-				serializer.is_valid()
+				if not serializer.is_valid():
+					failed_users.append(
+						{
+							"username": row[mapped_user_key],
+							"stage": "serializer_validation",
+						}
+					)
+					continue
 				_validated_row = serializer.validated_data
+
 				user_dn = self.ldap_user_insert(
 					user_data=_validated_row,
 					exclude_keys=EXCLUDE_KEYS,
@@ -604,7 +615,8 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		# Validate data
 		serializer = self.serializer_cls(data=data["values"])
-		serializer.is_valid()
+		if not serializer.is_valid():
+			raise BadRequest(data={"errors": serializer.errors})
 		validated_values = serializer.validated_data
 
 		# Open LDAP Connection
