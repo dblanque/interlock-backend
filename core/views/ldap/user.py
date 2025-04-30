@@ -158,7 +158,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		# Validate user data
 		serializer = self.serializer_cls(data=data)
-		serializer.validate()
+		serializer.is_valid()
 		data = serializer.validated_data
 
 		# Open LDAP Connection
@@ -215,7 +215,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		# Validate user data
 		serializer = self.serializer_cls(data=data)
-		serializer.validate()
+		serializer.is_valid()
 		data = serializer.validated_data
 
 		# Open LDAP Connection
@@ -515,7 +515,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 					continue
 
 				serializer = self.serializer_cls(data=row)
-				serializer.validate()
+				serializer.is_valid()
 				_validated_row = serializer.validated_data
 				user_dn = self.ldap_user_insert(
 					user_data=_validated_row,
@@ -604,7 +604,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		# Validate data
 		serializer = self.serializer_cls(data=data["values"])
-		serializer.validate()
+		serializer.is_valid()
 		validated_values = serializer.validated_data
 
 		# Open LDAP Connection
