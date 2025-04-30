@@ -25,7 +25,7 @@ from core.ldap.adsi import LDAP_PERMS
 
 def ldap_user_validator(v: str):
 	def has_invalid_chars(s: str):
-		return re.match(r'.*[\]\["\:\;\|\=\+\*\?\<\>\/\\\,]', s) is not None
+		return re.match(r'.*[\.\@\]\["\:\;\|\=\+\*\?\<\>\/\\\,]', s) is not None
 	return not has_invalid_chars(v)
 
 def ldap_user_validator_se(v: str):
@@ -39,17 +39,36 @@ def dn_validator_se(v: str):
 	except:
 		raise ValidationError("Could not parse Distinguished Name.")
 	return v
-	
-def country_validator_se(v: str):
-	if not v in LDAP_COUNTRIES:
+
+def country_validator(v: str):
+	if not v.strip().lower() in [c.lower() for c in LDAP_COUNTRIES.keys()]:
 		raise ValidationError("Invalid country name.")
 	return v
-	
-def ldap_permission_validator_se(v: str):
+
+def country_dcc_validator(v: int):
+	try:
+		for codes in LDAP_COUNTRIES.values():
+			if int(codes.get("dccCode")) == v:
+				return v
+	except:
+		pass
+	raise ValidationError(f"Country DCC code ({v}) not found.")
+
+def country_iso_validator(v: str):
+	if len(v) > 2:
+		raise ValidationError("Country ISO code cannot be longer than 2 chars.")
+	try:
+		for codes in LDAP_COUNTRIES.values():
+			if codes.get("isoCode") == v:
+				return v
+	except:
+		pass
+	raise ValidationError(f"Country DCC code ({v}) not found.")
+
+def ldap_permission_validator(v: str):
 	if not v in LDAP_PERMS.keys():
 		raise ValidationError(f"LDAP Permission is invalid ({v}).")
 	return v
-
 
 FIELD_VALIDATORS = {
 	LOCAL_ATTR_USERNAME: ldap_user_validator,  # username
@@ -105,25 +124,38 @@ class LDAPUserSerializer(serializers.Serializer):
 	distinguishedName = serializers.CharField(required=False, validators=[dn_validator_se])
 	type = serializers.CharField(required=False)
 	# First Name
-	givenName = serializers.CharField(required=False)
+	givenName = serializers.CharField(
+		allow_blank=True,
+		required=False,
+	)
 	# Last Name
-	sn = serializers.CharField(required=False)
+	sn = serializers.CharField(
+		allow_blank=True,
+		required=False,
+	)
 	# Username
 	sAMAccountName = serializers.CharField(required=False, min_length=1, max_length=21, validators=[ldap_user_validator_se])
 	username = serializers.CharField(required=False, min_length=1, max_length=21, validators=[ldap_user_validator_se])
 	# Email
-	mail = serializers.CharField(required=False, validators=[validate_email])
+	mail = serializers.CharField(
+		allow_blank=True,
+		required=False,
+		validators=[validate_email]
+	)
 	email = serializers.CharField(required=False, validators=[validate_email])
 	# Postal Code
 	postalCode = serializers.CharField(required=False)
 	# City
 	l = serializers.CharField(required=False)
 	# Country Name
-	co = serializers.ListField(required=False, validators=[country_validator_se])
+	co = serializers.CharField(
+		required=False,
+		validators=[country_validator]
+	)
 	# Number Code for Country
-	countryCode = serializers.IntegerField(required=False)
+	countryCode = serializers.IntegerField(required=False, validators=[country_dcc_validator])
 	# Two letter Country Code
-	c = serializers.CharField(max_length=3, required=False)
+	c = serializers.CharField(max_length=3, required=False, validators=[country_iso_validator])
 	userPrincipalName = serializers.CharField(required=False)
 	userAccountControl = serializers.IntegerField(required=False)
 	whenCreated = serializers.DateTimeField(
@@ -150,7 +182,7 @@ class LDAPUserSerializer(serializers.Serializer):
 	badPwdCount = serializers.IntegerField(required=False)
 	pwdLastSet = serializers.IntegerField(required=False)
 	primaryGroupID = serializers.IntegerField(required=False)
-	objectClass = serializers.ListField(required=False)
+	objectClass = serializers.ListField(required=False, child=serializers.CharField())
 	objectCategory = serializers.CharField(required=False)
 	objectSid = serializers.CharField(required=False)
 	objectRid = serializers.IntegerField(required=False)
@@ -159,5 +191,5 @@ class LDAPUserSerializer(serializers.Serializer):
 	is_enabled = serializers.BooleanField(required=False)
 	permission_list = serializers.ListField(
 		required=False,
-		child=serializers.CharField(validators=[ldap_permission_validator_se])
+		child=serializers.CharField(validators=[ldap_permission_validator])
 	)
