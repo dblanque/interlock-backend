@@ -256,9 +256,13 @@ class UserViewSet(BaseViewSet):
 					data={"errors": f"Must contain field {field}."}
 				)
 		user_instance = User.objects.get(id=pk)
+
+		# Validate Data
 		serializer = self.serializer_class(data=data, partial=True)
-		serializer.is_valid()
-		user_instance.set_password(data["password"])
+		if not serializer.is_valid():
+			raise BadRequest(data={"errors": serializer.errors})
+
+		user_instance.set_password(serializer.validated_data["password"])
 		user_instance.save()
 
 		DBLogMixin.log(
@@ -290,9 +294,12 @@ class UserViewSet(BaseViewSet):
 					data={"errors": f"Must contain field {field}."}
 				)
 
+		# Validate Data
 		serializer = self.serializer_class(data=data, partial=True)
-		serializer.is_valid()
-		user.set_password(data["password"])
+		if not serializer.is_valid():
+			raise BadRequest(data={"errors": serializer.errors})
+
+		user.set_password(serializer.validated_data["password"])
 		user.save()
 
 		DBLogMixin.log(
