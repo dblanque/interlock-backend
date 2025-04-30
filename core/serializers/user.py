@@ -187,7 +187,7 @@ class LDAPUserSerializer(serializers.Serializer):
 	objectSid = serializers.CharField(required=False)
 	objectRid = serializers.IntegerField(required=False)
 	sAMAccountType = serializers.CharField(required=False)
-	memberOfObjects = serializers.ListField(required=False, child=serializers.CharField(validators=[dn_validator_se]))
+	memberOfObjects = serializers.ListField(required=False, child=serializers.DictField())
 	is_enabled = serializers.BooleanField(required=False)
 	permission_list = serializers.ListField(
 		required=False,
