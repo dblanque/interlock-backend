@@ -30,15 +30,14 @@ LDAP_ATTR_PWD_SET_AT = "pwdLastSet"
 LDAP_ATTR_PRIMARY_GROUP_ID = "primaryGroupID"
 LDAP_ATTR_OBJECT_CLASS = "objectClass"
 LDAP_ATTR_OBJECT_CATEGORY = "objectCategory"
-LDAP_ATTR_OBJECT_RELATIVE_IDENTIFIER = "objectRid"
-LDAP_ATTR_OBJECT_SECURITY_IDENTIFIER = "objectSid"
+LDAP_ATTR_RELATIVE_ID = "objectRid"
+LDAP_ATTR_SECURITY_ID = "objectSid"
 LDAP_ATTR_ACCOUNT_TYPE = "sAMAccountType"
 LDAP_ATTR_USER_GROUPS = "memberOf"
 LDAP_ATTR_INITIALS = "initials"
 LDAP_ATTR_COMMON_NAME = "cn"
 LDAP_ATTR_GROUP_MEMBERS = "member"
 LDAP_ATTR_GROUP_TYPE = "groupType"
-LDAP_ATTR_DISTINGUISHED_NAME = "distinguishedName"
 
 # LOCAL Attributes
 LOCAL_ATTR_USERNAME = "username"
@@ -77,8 +76,8 @@ LOCAL_ALIASES = {
 	"primary_group_id": LDAP_ATTR_PRIMARY_GROUP_ID,
 	"object_class": LDAP_ATTR_OBJECT_CLASS,
 	"object_category": LDAP_ATTR_OBJECT_CATEGORY,
-	"object_relative_id": LDAP_ATTR_OBJECT_RELATIVE_IDENTIFIER,
-	"object_security_id": LDAP_ATTR_OBJECT_SECURITY_IDENTIFIER,
+	"object_relative_id": LDAP_ATTR_RELATIVE_ID,
+	"object_security_id": LDAP_ATTR_SECURITY_ID,
 	"account_type": LDAP_ATTR_ACCOUNT_TYPE,
 	"groups": LDAP_ATTR_USER_GROUPS,
 }

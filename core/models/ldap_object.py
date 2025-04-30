@@ -11,11 +11,27 @@
 from django.utils.translation import gettext_lazy as _
 
 ### Interlock
+from core.ldap.constants import (
+	LDAP_ATTR_COUNTRY_DCC,
+	LDAP_ATTR_UAC,
+	LDAP_ATTR_LAST_LOGIN,
+	LDAP_ATTR_BAD_PWD_COUNT,
+	LDAP_ATTR_PWD_SET_AT,
+	LDAP_ATTR_PRIMARY_GROUP_ID,
+	LDAP_ATTR_SECURITY_ID,
+	LDAP_ATTR_RELATIVE_ID,
+	LDAP_ATTR_DN,
+	LDAP_ATTR_OBJECT_CATEGORY,
+	LDAP_ATTR_OBJECT_CLASS,
+	LOCAL_ATTR_USERNAME,
+	LDAP_ATTR_COMMON_NAME,
+)
 from core.config.runtime import RuntimeSettings
 from core.ldap.adsi import LDAP_BUILTIN_OBJECTS, join_ldap_filter
 from core.ldap.security_identifier import SID
 
 ### Others
+from core.ldap.filter import LDAPFilter
 from ldap3 import (
 	Connection,
 	Entry as LDAPEntry,
@@ -44,7 +60,6 @@ class LDAPObjectOptions(TypedDict):
 	ldap_filter: NotRequired[str]
 
 
-# DEFAULT_EXCLUDED_LDAP_ATTRS = ["objectGUID", "objectSid"]
 DEFAULT_REQUIRED_LDAP_ATTRS = [
 	"distinguishedName",
 	"objectCategory",
@@ -94,13 +109,13 @@ class LDAPObject:
 	username_identifier: str
 
 	INT_FIELDS = [
-		"countryCode",
-		"userAccountControl",
-		"lastLogon",
-		"badPwdCount",
-		"pwdLastSet",
-		"primaryGroupID",
-		"objectRid",
+		LDAP_ATTR_COUNTRY_DCC,
+		LDAP_ATTR_UAC,
+		LDAP_ATTR_LAST_LOGIN,
+		LDAP_ATTR_BAD_PWD_COUNT,
+		LDAP_ATTR_PWD_SET_AT,
+		LDAP_ATTR_PRIMARY_GROUP_ID,
+		LDAP_ATTR_RELATIVE_ID,
 	]
 
 	def __init__(self, auto_fetch=True, **kwargs: LDAPObjectOptions) -> None:
@@ -121,9 +136,10 @@ class LDAPObject:
 		self.user_types = DEFAULT_USER_TYPES
 		self.ldap_attrs = RuntimeSettings.LDAP_DIRTREE_ATTRIBUTES
 		if "dn" in kwargs:
-			self.ldap_filter = join_ldap_filter(
-				None, f"distinguishedName={str(kwargs['dn'])}"
-			)
+			self.ldap_filter = LDAPFilter.eq(
+				LDAP_ATTR_DN,
+				str(kwargs['dn']),
+			).to_string()
 
 		self.__set_kwargs__(kwargs)
 
@@ -191,12 +207,12 @@ class LDAPObject:
 		self.attributes["name"] = distinguished_name.split(",")[0].split("=")[1]
 		self.attributes["distinguishedName"] = distinguished_name
 		self.attributes["type"] = (
-			getldapattrvalue(self.entry, "objectCategory")
+			getldapattrvalue(self.entry, LDAP_ATTR_OBJECT_CATEGORY)
 			.split(",")[0]
 			.split("=")[1]
 		)
 		entry_object_classes: LDAPAttribute = getldapattrvalue(
-			self.entry, "objectClass", []
+			self.entry, LDAP_ATTR_OBJECT_CLASS, []
 		)
 		if (
 			self.attributes["name"] in LDAP_BUILTIN_OBJECTS
@@ -211,12 +227,12 @@ class LDAPObject:
 
 			if attr_key == self.username_identifier:
 				self.attributes[attr_key] = attr_value
-				self.attributes["username"] = attr_value
-			elif attr_key == "cn" and "group" in entry_object_classes:
+				self.attributes[LOCAL_ATTR_USERNAME] = attr_value
+			elif attr_key == LDAP_ATTR_COMMON_NAME and "group" in entry_object_classes:
 				self.attributes[attr_key] = attr_value
 				self.attributes["groupname"] = attr_value
 			elif (
-				attr_key == "objectSid"
+				attr_key == LDAP_ATTR_SECURITY_ID
 				and self.__get_common_name__(distinguished_name).lower()
 				!= "builtin"
 			):
@@ -225,8 +241,8 @@ class LDAPObject:
 					sid = SID(getattr(self.entry, attr_key))
 					sid = sid.__str__()
 					rid = int(sid.split("-")[-1])
-					self.attributes["objectSid"] = sid
-					self.attributes["objectRid"] = rid
+					self.attributes[LDAP_ATTR_SECURITY_ID] = sid
+					self.attributes[LDAP_ATTR_RELATIVE_ID] = rid
 				except Exception as e:
 					logger.error(
 						"Could not translate SID Byte Array for "
