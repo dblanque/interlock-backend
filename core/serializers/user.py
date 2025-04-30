@@ -72,6 +72,8 @@ class UserSerializer(serializers.ModelSerializer):
 
 class LDAPUserSerializer(serializers.Serializer):
 	name = serializers.CharField(required=False)
+	password = serializers.CharField(required=False)
+
 	# Distinguished Name
 	distinguishedName = serializers.CharField(required=False)
 	type = serializers.CharField(required=False)

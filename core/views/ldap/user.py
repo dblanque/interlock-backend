@@ -142,11 +142,6 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code_msg = "ok"
 		data: dict = request.data
 
-		# Validate user data
-		serializer = self.serializer_cls(data=data)
-		serializer.validate()
-		data = serializer.validated_data
-
 		if "username" not in data:
 			raise exc_base.MissingDataKey(data={"key": "username"})
 
@@ -189,11 +184,6 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code = 0
 		code_msg = "ok"
 		data: dict = request.data
-
-		# Validate user data
-		serializer = self.serializer_cls(data=data)
-		serializer.validate()
-		data = serializer.validated_data
 
 		######################## Set LDAP Attributes ###########################
 		self.ldap_filter_attr = self.filter_attr_builder(
