@@ -1,7 +1,5 @@
 ########################### Standard Pytest Imports ############################
 import pytest
-from pytest import FixtureRequest
-from pytest_mock import MockerFixture, MockType
 ################################################################################
 from core.serializers.user import LDAPUserSerializer
 from core.ldap.constants import (
@@ -20,7 +18,6 @@ from core.ldap.constants import (
 	LOCAL_ATTR_USERNAME,
 )
 from core.ldap.adsi import (
-	LDAP_UF_ACCOUNT_DISABLE,
 	LDAP_UF_NORMAL_ACCOUNT,
 	LDAP_UF_DONT_EXPIRE_PASSWD,
 )
