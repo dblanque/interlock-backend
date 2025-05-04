@@ -6,7 +6,7 @@ class LDAPGroupSerializer(serializers.Serializer):
 	# Common Name
 	cn = serializers.CharField(required=False)
 	# Distinguished Name
-	distinguishedName = DistinguishedNameField
+	distinguishedName = DistinguishedNameField()
 	# Mail
 	mail = serializers.CharField(
 		allow_blank=True,

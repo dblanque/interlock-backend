@@ -91,7 +91,7 @@ class LDAPUserSerializer(serializers.Serializer):
 	password = serializers.CharField(required=False)
 
 	# Distinguished Name
-	distinguishedName = DistinguishedNameField
+	distinguishedName = DistinguishedNameField()
 	type = serializers.CharField(required=False)
 	# First Name
 	givenName = serializers.CharField(
@@ -167,5 +167,5 @@ class LDAPUserSerializer(serializers.Serializer):
 		required=False,
 		child=serializers.CharField(validators=[ldap_permission_validator])
 	)
-	groupsToAdd = serializers.ListField(child=DistinguishedNameField)
-	groupsToRemove = serializers.ListField(child=DistinguishedNameField)
+	groupsToAdd = serializers.ListField(required=False, child=DistinguishedNameField())
+	groupsToRemove = serializers.ListField(required=False, child=DistinguishedNameField())

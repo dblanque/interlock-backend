@@ -52,4 +52,10 @@ def ldap_permission_validator(v: str):
 		raise ValidationError(f"LDAP Permission is invalid ({v}).")
 	return v
 
-DistinguishedNameField = serializers.CharField(required=False, validators=[dn_validator_se])
+class DistinguishedNameField(serializers.CharField):
+	def __init__(self, **kwargs):
+		if not "required" in kwargs:
+			kwargs["required"] = False
+		if not "validators" in kwargs:
+			kwargs["validators"] = [dn_validator_se]
+		super().__init__(**kwargs)
