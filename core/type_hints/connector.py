@@ -1,4 +1,4 @@
-from ldap3 import Connection, Server, ServerPool, Entry
+from ldap3 import Connection, Server, ServerPool, Entry, DsaInfo
 from ldap3.extend import (
 	ExtendedOperationsRoot,
 	MicrosoftExtendedOperations,
@@ -11,6 +11,7 @@ class LDAPConnectionProtocol(Connection):
 	entries: list[Entry] | None
 	extend: "LDAPExtendedOperations"
 	server_pool: "LDAPServerPool"
+	server: "LDAPServer"
 
 class LDAPExtendedOperations(ExtendedOperationsRoot):
 	microsoft: MicrosoftExtendedOperations
@@ -24,4 +25,4 @@ class LDAPServerPool(ServerPool):
 	def get_current_server(self, connection) -> "LDAPServer": ...
 
 class LDAPServer(Server):
-	pass
+	info: DsaInfo
