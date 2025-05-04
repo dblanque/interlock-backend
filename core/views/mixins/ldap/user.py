@@ -65,10 +65,14 @@ from ldap3.utils.dn import safe_dn
 from core.constants.user import UserViewsetFilterAttributeBuilder
 from core.ldap.constants import (
 	LDAP_DATE_FORMAT,
+	LDAP_ATTR_DN,
+	LDAP_ATTR_OBJECT_CLASS,
 	LDAP_ATTR_COUNTRY,
 	LDAP_ATTR_COUNTRY_DCC,
 	LDAP_ATTR_COUNTRY_ISO,
+	LDAP_ATTR_SECURITY_ID,
 )
+from core.ldap.filter import LDAPFilter
 from rest_framework.serializers import ValidationError
 from core.ldap.countries import LDAP_COUNTRIES
 ################################################################################
@@ -127,26 +131,31 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 		# Class Filter Setup
 		class_filter = join_ldap_filter(
-			None, f"objectClass={RuntimeSettings.LDAP_AUTH_OBJECT_CLASS}"
+			None,
+			f"{LDAP_ATTR_OBJECT_CLASS}={RuntimeSettings.LDAP_AUTH_OBJECT_CLASS}"
 		)
 		# Exclude Computer Accounts if settings allow it
 		if RuntimeSettings.EXCLUDE_COMPUTER_ACCOUNTS:
 			class_filter = join_ldap_filter(
-				class_filter, f"objectClass=computer", negate_add=True
+				class_filter,
+				f"{LDAP_ATTR_OBJECT_CLASS}=computer",
+				negate_add=True,
 			)
 
 		# User ID Filter Setup
 		id_filter = None
 		if username:
+			_username_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
 			id_filter = join_ldap_filter(
 				id_filter,
-				f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS['username']}={username}",
+				f"{_username_field}={username}",
 				expression=id_filter_op,
 			)
 		if email:
+			_email_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"]
 			id_filter = join_ldap_filter(
 				id_filter,
-				f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS['email']}={email}",
+				f"{_email_field}={email}",
 				expression=id_filter_op,
 			)
 		return join_ldap_filter(class_filter, id_filter)
@@ -223,7 +232,7 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		if not attributes:
 			attributes = [
 				RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
-				"distinguishedName",
+				LDAP_ATTR_DN,
 			]
 		if not object_class_filter:
 			object_class_filter = self.get_user_object_filter(
@@ -239,15 +248,22 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 
 	def get_group_attributes(self, group_dn, filter_id=None, filter_class=None):
 		if filter_id is None:
-			filter_id = "distinguishedName=" + group_dn
+			filter_id = LDAPFilter.eq(LDAP_ATTR_DN, group_dn)
 		if filter_class is None:
-			filter_class = "objectClass=group"
-		object_class_filter = join_ldap_filter(None, filter_class)
-		object_class_filter = join_ldap_filter(object_class_filter, filter_id)
+			filter_class = LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "group")
+		
+		# Merge with AND expression if both filters exist.
+		if filter_id and filter_class:
+			object_class_filter = LDAPFilter.and_(filter_id, filter_class)
+		elif filter_id:
+			object_class_filter = filter_id
+		elif filter_class:
+			object_class_filter = filter_class
+
 		group = LDAPObject(
 			connection=self.ldap_connection,
-			ldap_filter=object_class_filter,
-			ldap_attrs=["objectSid"],
+			ldap_filter=object_class_filter.to_string(),
+			ldap_attrs=[LDAP_ATTR_SECURITY_ID],
 		)
 		return group.attributes
 
@@ -262,12 +278,16 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 		# Exclude Computer Accounts if settings allow it
 		if RuntimeSettings.EXCLUDE_COMPUTER_ACCOUNTS:
 			self.ldap_filter_object = ldap_adsi.join_ldap_filter(
-				self.ldap_filter_object, "objectClass=computer", negate_add=True
+				self.ldap_filter_object,
+				f"{LDAP_ATTR_OBJECT_CLASS}=computer",
+				negate_add=True,
 			)
 
 		# Exclude Contacts
 		self.ldap_filter_object = ldap_adsi.join_ldap_filter(
-			self.ldap_filter_object, "objectClass=contact", negate_add=True
+			self.ldap_filter_object,
+			f"{LDAP_ATTR_OBJECT_CLASS}=contact",
+			negate_add=True,
 		)
 
 		self.ldap_connection.search(
