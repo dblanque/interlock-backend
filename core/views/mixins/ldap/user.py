@@ -59,6 +59,7 @@ from core.exceptions import (
 import logging
 
 ### Others
+from core.type_hints.connector import LDAPConnectionProtocol
 from core.views.mixins.utils import getldapattrvalue
 from ldap3.utils.dn import safe_dn
 from core.constants.user import UserViewsetFilterAttributeBuilder
@@ -81,7 +82,7 @@ class UserViewMixin(viewsets.ViewSetMixin):
 
 
 class UserViewLDAPMixin(viewsets.ViewSetMixin):
-	ldap_connection: Connection = None
+	ldap_connection: LDAPConnectionProtocol = None
 	ldap_filter_object = None
 	ldap_filter_attr = None
 	filter_attr_builder = UserViewsetFilterAttributeBuilder
