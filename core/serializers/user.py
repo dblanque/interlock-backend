@@ -167,3 +167,5 @@ class LDAPUserSerializer(serializers.Serializer):
 		required=False,
 		child=serializers.CharField(validators=[ldap_permission_validator])
 	)
+	groupsToAdd = serializers.ListField(child=DistinguishedNameField)
+	groupsToRemove = serializers.ListField(child=DistinguishedNameField)
