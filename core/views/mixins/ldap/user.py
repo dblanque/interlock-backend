@@ -552,28 +552,28 @@ class UserViewLDAPMixin(viewsets.ViewSetMixin):
 				raise exc_user.UserCountryUpdateError
 
 		# Catch rare front-end mutation exception
-		groupsToAdd = user_data.pop("groupsToAdd", None)
-		groupsToRemove = user_data.pop("groupsToRemove", None)
+		groups_to_add = user_data.pop("groupsToAdd", None)
+		groups_to_remove = user_data.pop("groupsToRemove", None)
 		# De-duplicate group ops
-		if groupsToAdd:
-			groupsToAdd = set(groupsToAdd)
-		if groupsToRemove:
-			groupsToRemove = set(groupsToRemove)
+		if groups_to_add:
+			groups_to_add = set(groups_to_add)
+		if groups_to_remove:
+			groups_to_remove = set(groups_to_remove)
 
-		if groupsToAdd and groupsToRemove:
-			if groupsToAdd == groupsToRemove:
+		if groups_to_add and groups_to_remove:
+			if groups_to_add == groups_to_remove:
 				raise exc_user.BadGroupSelection
 
 		# Group Add
-		if groupsToAdd:
+		if groups_to_add:
 			self.ldap_connection.extend.microsoft.add_members_to_groups(
-				user_dn, groupsToAdd
+				user_dn, groups_to_add
 			)
 
 		# Group Remove
-		if groupsToRemove:
+		if groups_to_remove:
 			self.ldap_connection.extend.microsoft.remove_members_from_groups(
-				user_dn, groupsToRemove
+				user_dn, groups_to_remove
 			)
 
 		user_data.pop(RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"], None)
