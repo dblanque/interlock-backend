@@ -1,8 +1,6 @@
-import re
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from core.models.application import User
-from ldap3.utils.dn import parse_dn
 from django.core.validators import validate_email
 from core.ldap.constants import (
 	LDAP_DATE_FORMAT,
