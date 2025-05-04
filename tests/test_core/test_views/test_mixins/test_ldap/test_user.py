@@ -364,7 +364,7 @@ class TestUserViewLDAPMixin:
 		result = f_user_mixin.get_group_attributes(group_dn=f_group_dn)
 		m_ldap_object.assert_called_once_with(
 			connection=f_user_mixin.ldap_connection,
-			ldap_filter=f"({LDAP_FILTER_AND}(objectClass=group)(distinguishedName={f_group_dn}))",
+			ldap_filter=f"({LDAP_FILTER_AND}(distinguishedName={f_group_dn})(objectClass=group))",
 			ldap_attrs=["objectSid"],
 		)
 		assert result == m_group_attrs
