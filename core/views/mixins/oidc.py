@@ -40,7 +40,7 @@ from oidc_provider.models import Client, UserConsent
 from oidc_provider.lib.claims import ScopeClaims, STANDARD_CLAIMS
 
 # Mixins
-from core.views.mixins.ldap.user import UserViewLDAPMixin
+from core.views.mixins.ldap.user import LDAPUserMixin
 
 # Time
 from datetime import datetime, timedelta
@@ -74,7 +74,7 @@ def get_user_groups(user: User) -> list:
 	elif user.user_type == USER_TYPE_LDAP:
 		with LDAPConnector(force_admin=True) as ldc:
 			groups = []
-			user_mixin = UserViewLDAPMixin()
+			user_mixin = LDAPUserMixin()
 			user_mixin.ldap_filter_attr = ["memberOf"]
 			user_mixin.ldap_connection = ldc.connection
 			ldap_user: dict = user_mixin.ldap_user_fetch(
@@ -87,7 +87,7 @@ def get_user_groups(user: User) -> list:
 		return []
 
 
-class CustomScopeClaims(ScopeClaims, UserViewLDAPMixin):
+class CustomScopeClaims(ScopeClaims, LDAPUserMixin):
 	def setup(self):  # pragma: no cover
 		# Define which claims are included for each scope
 		self.claims = {

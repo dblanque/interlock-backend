@@ -80,7 +80,7 @@ from core.ldap.countries import LDAP_COUNTRIES
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
-class UserViewLDAPMixin(viewsets.ViewSetMixin):
+class LDAPUserMixin(viewsets.ViewSetMixin):
 	ldap_connection: LDAPConnectionProtocol = None
 	ldap_filter_object = None
 	ldap_filter_attr = None

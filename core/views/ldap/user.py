@@ -30,7 +30,7 @@ from core.models.choices.log import (
 )
 
 ### Mixins
-from core.views.mixins.ldap.user import UserViewLDAPMixin
+from core.views.mixins.ldap.user import LDAPUserMixin
 
 ### Serializers / Validators
 from core.serializers.user import LDAPUserSerializer
@@ -71,7 +71,7 @@ logger = logging.getLogger(__name__)
 
 # TODO - Make decorator that checks user existence both in LDAP and Django
 # TODO - Make decorator that checks user type being correct (ldap or django/local)
-class LDAPUserViewSet(BaseViewSet, UserViewLDAPMixin):
+class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 	queryset = User.objects.all()
 	serializer_cls = LDAPUserSerializer
 

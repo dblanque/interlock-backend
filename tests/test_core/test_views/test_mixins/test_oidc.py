@@ -3,7 +3,7 @@ import pytest
 from pytest_mock import MockerFixture, MockType
 ################################################################################
 from tests.test_core.type_hints import LDAPConnectorMock
-from core.views.mixins.ldap.user import UserViewLDAPMixin
+from core.views.mixins.ldap.user import LDAPUserMixin
 from core.models.application import Application, ApplicationSecurityGroup
 from core.models.user import User, USER_TYPE_LDAP, USER_TYPE_LOCAL
 from core.views.mixins.oidc import get_user_groups
@@ -237,7 +237,7 @@ def test_get_user_groups_ldap_user(
 	m_ldap_user_attrs = {
 		"memberOfObjects": [{"distinguishedName": "some_group_dn"}]
 	}
-	m_ldap_user_mixin: UserViewLDAPMixin = mocker.MagicMock()
+	m_ldap_user_mixin: LDAPUserMixin = mocker.MagicMock()
 	m_ldap_user_mixin.ldap_user_fetch.return_value = m_ldap_user_attrs
 	mocker.patch(
 		"core.views.mixins.oidc.UserViewLDAPMixin",
