@@ -336,7 +336,131 @@ class TestInsert:
 		m_ldap_set_password.assert_not_called()
 
 class TestUpdate:
-	endpoint = "/api/ldap/users/"
+	endpoint = "/api/ldap/users/update/"
+
+	def test_success(
+		self,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+		f_runtime_settings: RuntimeSettingsSingleton,
+	):
+		m_perm_list = [
+			LDAP_UF_DONT_EXPIRE_PASSWD,
+			LDAP_UF_NORMAL_ACCOUNT,
+		]
+		m_data = {
+			LOCAL_ATTR_USERNAME: "testuser",
+			"path":"OU=mock ou,DC=example,DC=com",
+			LDAP_ATTR_EMAIL: f"testuser@{f_runtime_settings.LDAP_DOMAIN}",
+			LDAP_ATTR_FIRST_NAME: "Test",
+			LDAP_ATTR_LAST_NAME: "User",
+			"permission_list": m_perm_list
+		}
+		expected_m_data = m_data.copy()
+		expected_m_data.pop("path", None)
+		expected_m_data.pop("permission_list", None)
+		expected_m_data.pop(LOCAL_ATTR_USERNAME, None)
+
+		m_ldap_user_exists = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_exists",
+			return_value=True,
+		)
+		m_ldap_user_update = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_update"
+		)
+
+		# Exec
+		response: Response = admin_user_client.put(
+			self.endpoint,
+			data=m_data,
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_200_OK
+		m_ldap_user_exists.assert_any_call(
+			username=m_data.get(LOCAL_ATTR_USERNAME),
+			return_exception=False,
+		)
+		m_ldap_user_exists.assert_any_call(
+			email=m_data.get(LDAP_ATTR_EMAIL),
+		)
+		m_ldap_user_update.assert_called_once_with(
+			username=m_data.get(LOCAL_ATTR_USERNAME),
+			user_data=expected_m_data,
+			permission_list=m_perm_list
+		)
+	
+	def test_raises_serializer_bad_request(
+		self,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		m_data = {
+			LOCAL_ATTR_USERNAME: "testuser",
+			"path":"OU=mock ou,DC=example,DC=com",
+			"permission_list": [
+				"some_bad_perm"
+			]
+		}
+		expected_m_data = m_data.copy()
+		expected_m_data.pop("path", None)
+		expected_m_data.pop("permission_list", None)
+
+		m_ldap_user_exists = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_exists",
+		)
+		m_ldap_user_update = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_update"
+		)
+
+		# Exec
+		response: Response = admin_user_client.put(
+			self.endpoint,
+			data=m_data,
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		m_ldap_user_exists.assert_not_called()
+		m_ldap_user_update.assert_not_called()
+	
+	def test_raises_user_does_not_exist(
+		self,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		m_data = {
+			LOCAL_ATTR_USERNAME: "testuser",
+			"path":"OU=mock ou,DC=example,DC=com",
+		}
+		expected_m_data = m_data.copy()
+		expected_m_data.pop("path", None)
+		expected_m_data.pop("permission_list", None)
+
+		m_ldap_user_exists = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_exists",
+			return_value=False
+		)
+		m_ldap_user_update = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_update"
+		)
+
+		# Exec
+		response: Response = admin_user_client.put(
+			self.endpoint,
+			data=m_data,
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_404_NOT_FOUND
+		m_ldap_user_exists.call_count == 1
+		m_ldap_user_update.assert_not_called()
 
 class TestChangeStatus:
 	endpoint = "/api/ldap/users/change_status/"
