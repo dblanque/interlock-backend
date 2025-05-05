@@ -93,4 +93,5 @@ LOCAL_ATTRS_MAP = {
 	"object_security_id": LDAP_ATTR_SECURITY_ID,
 	"account_type": LDAP_ATTR_ACCOUNT_TYPE,
 	"groups": LDAP_ATTR_USER_GROUPS,
+	"members": LDAP_ATTR_GROUP_MEMBERS,
 }
