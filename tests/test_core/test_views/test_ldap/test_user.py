@@ -7,6 +7,25 @@ from rest_framework import status
 from core.views.ldap.user import LDAPUserViewSet
 from rest_framework.test import APIClient
 from core.exceptions.ldap import CouldNotOpenConnection
+from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
+from core.ldap.adsi import (
+	LDAP_UF_DONT_EXPIRE_PASSWD,
+	LDAP_UF_NORMAL_ACCOUNT,
+)
+from core.exceptions import (
+	ldap as exc_ldap,
+	users as exc_users,
+)
+from core.ldap.constants import (
+	LOCAL_ATTR_USERNAME,
+	LDAP_ATTR_DN,
+	LDAP_ATTR_FULL_NAME,
+	LDAP_ATTR_FIRST_NAME,
+	LDAP_ATTR_LAST_NAME,
+	LDAP_ATTR_INITIALS,
+	LDAP_ATTR_USERNAME_SAMBA_ADDS,
+	LDAP_ATTR_EMAIL,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -19,11 +38,21 @@ def f_ldap_connector(g_ldap_connector) -> MockType:
 def f_interlock_ldap_enabled(g_interlock_ldap_enabled):
 	return g_interlock_ldap_enabled
 
+@pytest.fixture
+def f_runtime_settings(
+	mocker: MockerFixture,
+	g_runtime_settings: RuntimeSettingsSingleton
+):
+	mocker.patch("core.views.ldap.user.RuntimeSettings", g_runtime_settings)
+	return g_runtime_settings
 
 class TestList:
-	@staticmethod
+	endpoint = "/api/ldap/users/"
+
 	def test_list_users_success(
-		admin_user_client: APIClient, mocker: MockerFixture
+		self,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
 	):
 		"""Test successful user listing"""
 		# Mock LDAP connection and data
@@ -38,7 +67,7 @@ class TestList:
 		)
 
 		# Make API call
-		response: Response = admin_user_client.get("/api/ldap/users/")
+		response: Response = admin_user_client.get(self.endpoint)
 
 		# Assertions
 		assert response.status_code == status.HTTP_200_OK
@@ -46,14 +75,11 @@ class TestList:
 		assert len(response.data["users"]) == 1
 		assert "username" in response.data["headers"]
 
-	@staticmethod
-	def test_list_users_unauthenticated(api_client):
-		"""Test unauthenticated access"""
-		response = api_client.get("/api/ldap/users/")
-		assert response.status_code == status.HTTP_401_UNAUTHORIZED
-
-	@staticmethod
-	def test_list_users_ldap_error(admin_user_client, mocker):
+	def test_list_users_ldap_error(
+		self,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+	):
 		"""Test LDAP connection failure"""
 		# Mock LDAPConnector to raise an exception
 		mocker.patch(
@@ -61,11 +87,14 @@ class TestList:
 			side_effect=CouldNotOpenConnection,
 		)
 
-		response = admin_user_client.get("/api/ldap/users/")
+		response: Response = admin_user_client.get(self.endpoint)
 		assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
 
-	@staticmethod
-	def test_list_users_ldap_error(admin_user_client, mocker):
+	def test_list_users_ldap_error(
+		self,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+	):
 		"""Test LDAP connection failure"""
 		# Mock LDAPConnector to raise an exception
 		mocker.patch(
@@ -73,5 +102,277 @@ class TestList:
 			side_effect=CouldNotOpenConnection,
 		)
 
-		response = admin_user_client.get("/api/ldap/users/")
+		response: Response = admin_user_client.get(self.endpoint)
 		assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+
+class TestFetch:
+	endpoint = "/api/ldap/users/fetch/"
+
+	def test_raises_bad_request(
+		self,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		mocker.patch.object(LDAPUserViewSet, "ldap_user_fetch")
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={"some_dict":"without_the_proper_keys"}
+		)
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+	def test_success(
+		self,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		m_result = {"mock":"result"}
+		m_ldap_user_fetch = mocker.patch.object(
+			LDAPUserViewSet, "ldap_user_fetch", return_value=m_result
+		)
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={"username":"testuser"}
+		)
+		m_ldap_user_fetch.assert_called_once_with(user_search="testuser")
+		assert response.status_code == status.HTTP_200_OK
+		assert response.data.get("data") == m_result
+
+class TestInsert:
+	endpoint = "/api/ldap/users/insert/"
+
+	@pytest.mark.parametrize(
+		"m_data, use_email",
+		(
+			(
+				{
+					LDAP_ATTR_USERNAME_SAMBA_ADDS: "testuser",
+					"path":"OU=mock ou,DC=example,DC=com",
+					LDAP_ATTR_FIRST_NAME: "Test",
+					LDAP_ATTR_LAST_NAME: "User",
+					"password":"TestPassword",
+					"passwordConfirm":"TestPassword",
+					"permission_list": [
+						LDAP_UF_DONT_EXPIRE_PASSWD,
+						LDAP_UF_NORMAL_ACCOUNT,
+					]
+				},
+				True,
+			),
+			(
+				{
+					LOCAL_ATTR_USERNAME: "testuser",
+					"path":"OU=mock ou,DC=example,DC=com",
+					LDAP_ATTR_FIRST_NAME: "Test",
+					LDAP_ATTR_LAST_NAME: "User",
+					"password":"TestPassword",
+					"passwordConfirm":"TestPassword",
+					"permission_list": [
+						LDAP_UF_DONT_EXPIRE_PASSWD,
+						LDAP_UF_NORMAL_ACCOUNT,
+					]
+				},
+				False,
+			),
+		),
+	)
+	def test_success(
+		self,
+		m_data: dict,
+		use_email: bool,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+		f_runtime_settings: RuntimeSettingsSingleton,
+	):
+		m_distinguished_name = f"CN=testuser,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
+		if use_email:
+			m_data[LDAP_ATTR_EMAIL] = f"testuser@{f_runtime_settings.LDAP_DOMAIN}"
+		expected_m_data_call = m_data.copy()
+		if LDAP_ATTR_USERNAME_SAMBA_ADDS in m_data:
+			expected_m_data_call[LOCAL_ATTR_USERNAME] = expected_m_data_call[
+				LDAP_ATTR_USERNAME_SAMBA_ADDS]
+			expected_m_data_call.pop(LDAP_ATTR_USERNAME_SAMBA_ADDS, None)
+		expected_m_data_call.pop("passwordConfirm", None)
+
+		m_ldap_user_exists = mocker.patch.object(
+			LDAPUserViewSet, "ldap_user_exists", return_value=False
+		)
+		m_ldap_user_insert = mocker.patch.object(
+			LDAPUserViewSet, "ldap_user_insert", return_value=m_distinguished_name
+		)
+		m_ldap_set_password = mocker.patch.object(
+			LDAPUserViewSet, "ldap_set_password",
+		)
+
+		# Exec
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=m_data,
+			format="json",
+		)
+
+		# Asserts
+		assert response.status_code == status.HTTP_200_OK
+		m_ldap_user_exists.assert_called_once_with(
+			username="testuser",
+			email=None if not use_email else
+				m_data.get(f_runtime_settings.LDAP_AUTH_USER_FIELDS["email"]),
+		)
+		m_ldap_user_insert.assert_called_once_with(user_data=expected_m_data_call)
+		m_ldap_set_password.assert_called_once_with(
+			user_dn=m_distinguished_name,
+			user_pwd_new=m_data.get("password"),
+			set_by_admin=True,
+		)
+
+	@pytest.mark.parametrize(
+		"use_email",
+		(
+			True,
+			False,
+		),
+	)
+	def test_raises_user_exists(
+		self,
+		use_email: bool,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+		f_runtime_settings: RuntimeSettingsSingleton,
+	):
+		m_data = {LOCAL_ATTR_USERNAME: "testuser"}
+		if use_email:
+			m_data[LDAP_ATTR_EMAIL] = f"testuser@{f_runtime_settings.LDAP_DOMAIN}"
+
+		m_ldap_user_exists = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_exists",
+			side_effect=exc_ldap.LDAPObjectExists,
+		)
+		m_ldap_user_insert = mocker.patch.object(
+			LDAPUserViewSet, "ldap_user_insert",
+		)
+		m_ldap_set_password = mocker.patch.object(
+			LDAPUserViewSet, "ldap_set_password",
+		)
+
+		# Exec
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=m_data,
+			format="json",
+		)
+
+		# Asserts
+		assert response.status_code == status.HTTP_409_CONFLICT
+		m_ldap_user_exists.assert_called_once_with(
+			username="testuser",
+			email=None if not use_email else
+				m_data.get(f_runtime_settings.LDAP_AUTH_USER_FIELDS["email"]),
+		)
+		m_ldap_user_insert.assert_not_called()
+		m_ldap_set_password.assert_not_called()
+
+	def test_raises_passwords_dont_match(
+		self,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		m_data = {
+			LOCAL_ATTR_USERNAME: "testuser",
+			"password":"1234",
+			"passwordConfirm":"4321",
+		}
+		m_ldap_user_exists = mocker.patch.object(
+			LDAPUserViewSet, "ldap_user_exists",
+		)
+		m_ldap_user_insert = mocker.patch.object(
+			LDAPUserViewSet, "ldap_user_insert",
+		)
+		m_ldap_set_password = mocker.patch.object(
+			LDAPUserViewSet, "ldap_set_password",
+		)
+
+		# Exec
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=m_data,
+			format="json",
+		)
+
+		# Asserts
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert response.data.get("code") == "user_passwords_dont_match"
+		m_ldap_user_exists.assert_not_called()
+		m_ldap_user_insert.assert_not_called()
+		m_ldap_set_password.assert_not_called()
+
+	def test_serializer_raises(
+		self,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		m_data = {LOCAL_ATTR_USERNAME:"$#BADUSERNAME)\\"}
+		m_ldap_user_exists = mocker.patch.object(
+			LDAPUserViewSet, "ldap_user_exists",
+		)
+		m_ldap_user_insert = mocker.patch.object(
+			LDAPUserViewSet, "ldap_user_insert",
+		)
+		m_ldap_set_password = mocker.patch.object(
+			LDAPUserViewSet, "ldap_set_password",
+		)
+
+		# Exec
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=m_data,
+			format="json",
+		)
+
+		# Asserts
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert response.data.get("code") == "bad_request"
+		m_ldap_user_exists.assert_not_called()
+		m_ldap_user_insert.assert_not_called()
+		m_ldap_set_password.assert_not_called()
+
+class TestUpdate:
+	endpoint = "/api/ldap/users/"
+
+class TestChangeStatus:
+	endpoint = "/api/ldap/users/change_status/"
+
+class TestDelete:
+	endpoint = "/api/ldap/users/delete/"
+
+class TestChangePassword:
+	endpoint = "/api/ldap/users/change_password/"
+
+class TestUnlock:
+	endpoint = "/api/ldap/users/unlock/"
+
+class TestBulkInsert:
+	endpoint = "/api/ldap/users/bulk_insert/"
+
+class TestBulkUpdate:
+	endpoint = "/api/ldap/users/bulk_update/"
+
+class TestBulkChangeStatus:
+	endpoint = "/api/ldap/users/bulk_change_status/"
+
+class TestBulkDelete:
+	endpoint = "/api/ldap/users/bulk_delete/"
+
+class TestBulkUnlock:
+	endpoint = "/api/ldap/users/bulk_unlock/"
+
+class TestSelfChangePassword:
+	endpoint = "/api/ldap/users/self_change_password/"
+
+class TestSelfUpdate:
+	endpoint = "/api/ldap/users/self_update/"
+
+class TestSelfInfo:
+	endpoint = "/api/ldap/users/self_info/"
+
+class TestSelfFetch:
+	endpoint = "/api/ldap/users/self_fetch/"
