@@ -50,6 +50,7 @@ from core.ldap.constants import (
 	LDAP_ATTR_SECURITY_ID,
 	LDAP_ATTR_RELATIVE_ID,
 	LDAP_ATTR_GROUP_TYPE,
+	LOCAL_LDAP_ATTR_GROUP_SCOPE,
 )
 from core.models.choices.log import (
 	LOG_ACTION_CREATE,
@@ -233,7 +234,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 			for attr_key in group_entry.entry_attributes:
 				# Parse Group Type
-				if attr_key == "groupType":
+				if attr_key == LDAP_ATTR_GROUP_TYPE:
 					group_dict[attr_key] = self.get_group_types(
 						group_type=int(getldapattrvalue(group_entry, attr_key))
 					)
@@ -381,7 +382,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		# Change group type if necessary
 		group_type = group_data.pop(LDAP_ATTR_GROUP_TYPE, None)
-		group_scope = group_data.pop("groupScope", None)
+		group_scope = group_data.pop(LOCAL_LDAP_ATTR_GROUP_SCOPE, None)
 		if (group_type is not None and group_scope is None) or (
 			group_type is None and group_scope is not None
 		):
@@ -486,7 +487,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				self.ldap_connection.modify(
 					distinguished_name,
 					{
-						"groupType": [
+						LDAP_ATTR_GROUP_TYPE: [
 							(MODIFY_REPLACE, [intermediate_group_type])
 						]
 					},
@@ -494,12 +495,12 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				# Change to Target Scope (Global or Domain Local)
 				self.ldap_connection.modify(
 					distinguished_name,
-					{"groupType": [(MODIFY_REPLACE, [new_group_type])]},
+					{LDAP_ATTR_GROUP_TYPE: [(MODIFY_REPLACE, [new_group_type])]},
 				)
 			else:
 				self.ldap_connection.modify(
 					distinguished_name,
-					{"groupType": [(MODIFY_REPLACE, [new_group_type])]},
+					{LDAP_ATTR_GROUP_TYPE: [(MODIFY_REPLACE, [new_group_type])]},
 				)
 
 	def update_group(self, group_data: GroupDict):
@@ -576,8 +577,8 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 					raise exc_groups.BadMemberSelection
 
 		# Change group type if necessary
-		group_type = group_data.pop("groupType", None)
-		group_scope = group_data.pop("groupScope", None)
+		group_type = group_data.pop(LDAP_ATTR_GROUP_TYPE, None)
+		group_scope = group_data.pop(LOCAL_LDAP_ATTR_GROUP_SCOPE, None)
 		if (group_type is not None and group_scope is None) or (
 			group_type is None and group_scope is not None
 		):
@@ -596,7 +597,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 					LDAP_GROUP_TYPE_MAPPING[group_type]
 					+ LDAP_GROUP_SCOPE_MAPPING[group_scope]
 				),
-				old_group_type=int(fetched_group_attrs["groupType"]),
+				old_group_type=int(fetched_group_attrs[LDAP_ATTR_GROUP_TYPE]),
 			)
 
 		# Update EMAIL Attr if any
@@ -675,7 +676,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			raise exc_ldap.DistinguishedNameValidationError
 
 		group_types = self.get_group_types(
-			group_type=int(fetched_group_attrs["groupType"])
+			group_type=int(fetched_group_attrs[LDAP_ATTR_GROUP_TYPE])
 		)
 		if (
 			LDAPGroupTypes.TYPE_SYSTEM.name in group_types
