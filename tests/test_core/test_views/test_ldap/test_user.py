@@ -10,8 +10,10 @@ from core.exceptions.ldap import CouldNotOpenConnection
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from core.ldap.adsi import (
 	LDAP_UF_DONT_EXPIRE_PASSWD,
+	LDAP_UF_ACCOUNT_DISABLE,
 	LDAP_UF_NORMAL_ACCOUNT,
 )
+from core.models.user import User, USER_TYPE_LDAP
 from core.exceptions import (
 	ldap as exc_ldap,
 	users as exc_users,
@@ -392,6 +394,39 @@ class TestUpdate:
 			permission_list=m_perm_list
 		)
 	
+	def test_raises_anti_lockout(
+		self,
+		admin_user: User,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		m_data = {
+			LOCAL_ATTR_USERNAME: admin_user.username,
+			"permission_list":[LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_NORMAL_ACCOUNT]
+		}
+
+		m_ldap_user_exists = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_exists",
+		)
+		m_ldap_user_update = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_update"
+		)
+
+		# Exec
+		response: Response = admin_user_client.put(
+			self.endpoint,
+			data=m_data,
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert response.data.get("code") == "user_anti_lockout"
+		m_ldap_user_exists.assert_not_called()
+		m_ldap_user_update.assert_not_called()
+		
+
 	@pytest.mark.parametrize(
 		"bad_key, bad_value",
 		(
@@ -431,7 +466,7 @@ class TestUpdate:
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		m_ldap_user_exists.assert_not_called()
 		m_ldap_user_update.assert_not_called()
-	
+
 	def test_raises_user_does_not_exist(
 		self,
 		admin_user_client: APIClient,
@@ -469,8 +504,182 @@ class TestUpdate:
 class TestChangeStatus:
 	endpoint = "/api/ldap/users/change_status/"
 
+	@pytest.mark.parametrize(
+		"enabled",
+		(
+			True,
+			False,
+		),
+	)
+	def test_success(
+		self,
+		enabled: bool,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		m_change_status = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_change_status"
+		)
+		m_data = {"username": "someotheruser", "enabled": enabled}
+
+		# Exec
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=m_data,
+			format="json",
+		)
+		assert response.status_code == status.HTTP_200_OK
+		m_change_status.assert_called_once_with(
+			username=m_data["username"],
+			enabled=enabled,
+		)
+
+	@pytest.mark.parametrize(
+		"delete_key",
+		(
+			LOCAL_ATTR_USERNAME,
+			"enabled",
+		),
+	)
+	def test_missing_key_raises(
+		self,
+		delete_key: str,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		m_change_status = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_change_status"
+		)
+		m_data = {"username": "testuser", "enabled": True}
+		m_data.pop(delete_key, None)
+
+		# Exec
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=m_data,
+			format="json",
+		)
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		m_change_status.assert_not_called()
+
+	def test_raises_anti_lockout(
+		self,
+		admin_user: User,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		m_change_status = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_change_status"
+		)
+		m_data = {"username": admin_user.username, "enabled": True}
+
+		# Exec
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=m_data,
+			format="json",
+		)
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert response.data.get("code") == "user_anti_lockout"
+		m_change_status.assert_not_called()
+
 class TestDelete:
 	endpoint = "/api/ldap/users/delete/"
+
+	@pytest.mark.django_db
+	def test_success(
+		self,
+		user_factory,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		m_username = "someotheruser"
+		m_user: User = user_factory(
+			username=m_username,
+			email=f"{m_username}@example.com",
+			user_type=USER_TYPE_LDAP
+		)
+		m_ldap_user_exists = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_exists",
+			return_value=True
+		)
+		m_ldap_user_delete = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_delete"
+		)
+
+		# Exec
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={"username": m_username},
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_200_OK
+		assert not User.objects.filter(username=m_user.username).exists()
+		m_ldap_user_exists.assert_called_once_with(
+			username=m_user.username,
+			return_exception=False
+		)
+		m_ldap_user_delete.assert_called_once_with(username=m_user.username)
+
+	def test_raises_bad_request(
+		self,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		m_ldap_user_exists = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_exists",
+			return_value=True
+		)
+		m_ldap_user_delete = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_delete"
+		)
+
+		# Exec
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={},
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		m_ldap_user_exists.assert_not_called()
+		m_ldap_user_delete.assert_not_called()
+
+	def test_raises_anti_lockout(
+		self,
+		admin_user: User,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		m_ldap_user_exists = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_exists",
+			return_value=True
+		)
+		m_ldap_user_delete = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_delete"
+		)
+
+		# Exec
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={LOCAL_ATTR_USERNAME: admin_user.username},
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert response.data.get("code") == "user_anti_lockout"
+		m_ldap_user_exists.assert_not_called()
+		m_ldap_user_delete.assert_not_called()
 
 class TestChangePassword:
 	endpoint = "/api/ldap/users/change_password/"
