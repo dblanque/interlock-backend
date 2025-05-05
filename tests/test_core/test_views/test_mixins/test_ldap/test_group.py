@@ -15,6 +15,20 @@ from core.ldap.types.group import (
 	MAPPED_GROUP_SCOPE_GLOBAL,
 	MAPPED_GROUP_SCOPE_UNIVERSAL,
 )
+from core.ldap.constants import (
+	LDAP_ATTR_COMMON_NAME,
+	LDAP_ATTR_DN,
+	LDAP_ATTR_GROUP_TYPE,
+	LDAP_ATTR_FIRST_NAME,
+	LDAP_ATTR_LAST_NAME,
+	LOCAL_LDAP_ATTR_GROUP_SCOPE,
+	LDAP_ATTR_GROUP_MEMBERS,
+	LDAP_ATTR_EMAIL,
+	LDAP_ATTR_OBJECT_CLASS,
+	LDAP_ATTR_OBJECT_CATEGORY,
+	LDAP_ATTR_SECURITY_ID,
+	LDAP_ATTR_RELATIVE_ID,
+)
 from core.exceptions import (
 	ldap as exc_ldap,
 	groups as exc_groups,
@@ -165,24 +179,24 @@ def fc_group_entry(
 		mock.entry_attributes = []
 		mock.entry_attributes_as_dict = {}
 		attrs = {
-			"distinguishedName": f"CN={groupname},OU=Groups,{f_ldap_search_base}",
-			"member": [],
-			"cn": groupname,
-			"groupType": -LDAPGroupTypes.TYPE_SECURITY.value
+			LDAP_ATTR_DN: f"CN={groupname},OU=Groups,{f_ldap_search_base}",
+			LDAP_ATTR_GROUP_MEMBERS: [],
+			LDAP_ATTR_COMMON_NAME: groupname,
+			LDAP_ATTR_GROUP_TYPE: -LDAPGroupTypes.TYPE_SECURITY.value
 			+ LDAPGroupTypes.SCOPE_GLOBAL.value,
-			"objectSid": f_sid_1,
+			LDAP_ATTR_SECURITY_ID: f_sid_1,
 			"mail": f"mock@{f_ldap_domain}",
 		} | kwargs
 		for k, v in attrs.items():
 			m_attr = mocker.Mock()
 			m_attr.value = v
 			m_attr.values = [v]
-			if k == "objectSid":
+			if k == LDAP_ATTR_SECURITY_ID:
 				m_attr.raw_values = [v]
 			setattr(mock, k, m_attr)
 			mock.entry_attributes_as_dict[k] = [v]
 			mock.entry_attributes.append(k)
-		mock.entry_dn = attrs["distinguishedName"]
+		mock.entry_dn = attrs[LDAP_ATTR_DN]
 		return mock
 
 	return maker
@@ -369,10 +383,10 @@ class TestGetGroupByRid:
 		# Mock result LDAPObject
 		m_group_entry = fc_group_entry()
 		m_ldap_object = mocker.Mock()
-		m_sid = SID(getattr(m_group_entry, "objectSid"))
+		m_sid = SID(getattr(m_group_entry, LDAP_ATTR_SECURITY_ID))
 		m_ldap_object.attributes = {
-			"distinguishedName": m_group_entry.entry_dn,
-			"objectSid": m_sid,
+			LDAP_ATTR_DN: m_group_entry.entry_dn,
+			LDAP_ATTR_SECURITY_ID: m_sid,
 		}
 		mocker.patch(
 			"core.views.mixins.ldap.group.LDAPObject",
@@ -389,7 +403,7 @@ class TestGetGroupByRid:
 			search_base=f_runtime_settings.LDAP_AUTH_SEARCH_BASE,
 			search_filter="(objectClass=group)",
 			search_scope=SUBTREE,
-			attributes=["objectSid", "distinguishedName"],
+			attributes=[LDAP_ATTR_SECURITY_ID, LDAP_ATTR_DN],
 		)
 		if should_return_group_entry:
 			assert isinstance(result, dict)
@@ -403,12 +417,12 @@ class TestGroupMixinCRUD:
 		fc_group_entry, f_group_mixin: GroupViewMixin, f_log_mixin: LogMixin
 	):
 		f_group_mixin.ldap_filter_attr = [
-			"cn",
-			"distinguishedName",
-			"groupType",
-			"member",
+			LDAP_ATTR_COMMON_NAME,
+			LDAP_ATTR_DN,
+			LDAP_ATTR_GROUP_TYPE,
+			LDAP_ATTR_GROUP_MEMBERS,
 		]
-		f_group_mixin.ldap_filter_object = LDAPFilter.eq("objectClass", "group")
+		f_group_mixin.ldap_filter_object = LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "group")
 		m_group_1: LDAPEntry = fc_group_entry(groupname="Test Group 1")
 		m_group_2: LDAPEntry = fc_group_entry(
 			groupname="Test Group 2",
@@ -417,17 +431,17 @@ class TestGroupMixinCRUD:
 		)
 		f_group_mixin.ldap_connection.entries = [m_group_1, m_group_2]
 		groups, headers = f_group_mixin.list_groups()
-		assert headers == ["cn", "groupType", "hasMembers"]
+		assert headers == [LDAP_ATTR_COMMON_NAME, LDAP_ATTR_GROUP_TYPE, "hasMembers"]
 		assert len(groups) == 2
-		assert groups[0].get("distinguishedName") == m_group_1.entry_dn
-		assert groups[1].get("distinguishedName") == m_group_2.entry_dn
+		assert groups[0].get(LDAP_ATTR_DN) == m_group_1.entry_dn
+		assert groups[1].get(LDAP_ATTR_DN) == m_group_2.entry_dn
 		assert groups[0].get("hasMembers") is False
 		assert groups[1].get("hasMembers") is True
-		assert groups[0].get("groupType") == [
+		assert groups[0].get(LDAP_ATTR_GROUP_TYPE) == [
 			LDAPGroupTypes.TYPE_SECURITY.name,
 			LDAPGroupTypes.SCOPE_GLOBAL.name,
 		]
-		assert groups[1].get("groupType") == [
+		assert groups[1].get(LDAP_ATTR_GROUP_TYPE) == [
 			LDAPGroupTypes.TYPE_DISTRIBUTION.name,
 			LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.name,
 		]
@@ -455,12 +469,12 @@ class TestGroupMixinCRUD:
 		)
 		f_group_mixin.ldap_connection.entries = [m_group_entry]
 		f_group_mixin.ldap_filter_attr = [
-			"cn",
-			"mail",
-			"member",
-			"distinguishedName",
-			"groupType",
-			"objectSid",
+			LDAP_ATTR_COMMON_NAME,
+			LDAP_ATTR_EMAIL,
+			LDAP_ATTR_GROUP_MEMBERS,
+			LDAP_ATTR_DN,
+			LDAP_ATTR_GROUP_TYPE,
+			LDAP_ATTR_SECURITY_ID,
 		]
 		f_group_mixin.ldap_filter_object = (
 			f"(&(objectClass=group)(distinguishedName={m_group_entry}))"
@@ -484,26 +498,26 @@ class TestGroupMixinCRUD:
 				"connection": f_group_mixin.ldap_connection,
 				"dn": m_member_dn,
 				"ldap_attrs": [
-					"cn",
-					"distinguishedName",
+					LDAP_ATTR_COMMON_NAME,
+					LDAP_ATTR_DN,
 					f_auth_field_username,
-					"givenName",
-					"sn",
-					"objectCategory",
-					"objectClass",
+					LDAP_ATTR_FIRST_NAME,
+					LDAP_ATTR_LAST_NAME,
+					LDAP_ATTR_OBJECT_CATEGORY,
+					LDAP_ATTR_OBJECT_CLASS,
 				],
 			}
 		)
 		assert isinstance(group, dict)
-		assert group.get("cn") == m_common_name
-		assert group.get("mail") == f"mock@{f_ldap_domain}"
-		assert group.get("member") == [m_ldap_user_attrs]
-		assert group.get("groupType") == [
+		assert group.get(LDAP_ATTR_COMMON_NAME) == m_common_name
+		assert group.get(LDAP_ATTR_EMAIL) == f"mock@{f_ldap_domain}"
+		assert group.get(LDAP_ATTR_GROUP_MEMBERS) == [m_ldap_user_attrs]
+		assert group.get(LDAP_ATTR_GROUP_TYPE) == [
 			LDAPGroupTypes.TYPE_SECURITY.name,
 			LDAPGroupTypes.SCOPE_GLOBAL.name,
 		]
 		assert (
-			group.get("objectSid")
+			group.get(LDAP_ATTR_SECURITY_ID)
 			== "S-1-5-21-2209570321-9700970-2859064192-1159"
 		)
 		f_log_mixin.log.assert_called_once_with(
@@ -513,26 +527,26 @@ class TestGroupMixinCRUD:
 			log_target=m_common_name,
 		)
 		assert set(headers) == {
-			"cn",
-			"mail",
-			"member",
-			"groupType",
-			"objectSid",
+			LDAP_ATTR_COMMON_NAME,
+			LDAP_ATTR_EMAIL,
+			LDAP_ATTR_GROUP_MEMBERS,
+			LDAP_ATTR_GROUP_TYPE,
+			LDAP_ATTR_SECURITY_ID,
 		}
 
 	@pytest.mark.parametrize(
 		"p_group_data",
 		(
 			{
-				"cn": "Test Group",
-				"groupType": 1,  # Mapped to Security
-				"groupScope": 1,  # Mapped to Domain Local
+				LDAP_ATTR_COMMON_NAME: "Test Group",
+				LDAP_ATTR_GROUP_TYPE: 1,  # Mapped to Security
+				LOCAL_LDAP_ATTR_GROUP_SCOPE: 1,  # Mapped to Domain Local
 				"membersToAdd": ["mock_user_dn"],
 			},
 			{
-				"cn": "Test Group",
-				"groupType": 1,  # Mapped to Security
-				"groupScope": 1,  # Mapped to Domain Local
+				LDAP_ATTR_COMMON_NAME: "Test Group",
+				LDAP_ATTR_GROUP_TYPE: 1,  # Mapped to Security
+				LOCAL_LDAP_ATTR_GROUP_SCOPE: 1,  # Mapped to Domain Local
 			},
 		),
 	)
@@ -553,22 +567,22 @@ class TestGroupMixinCRUD:
 		)
 
 		f_group_mixin.ldap_connection.entries = []
-		m_common_name = p_group_data["cn"]
+		m_common_name = p_group_data[LDAP_ATTR_COMMON_NAME]
 		m_path = f"OU=Groups,{f_ldap_search_base}"
 		m_group_data = p_group_data.copy()
 		m_group_data["path"] = m_path
 		# Mock expected
 		expected_group_attrs = m_group_data.copy()
 		expected_group_attrs[f_auth_field_username] = expected_group_attrs[
-			"cn"
+			LDAP_ATTR_COMMON_NAME
 		].lower()
-		expected_group_attrs["groupType"] = (
+		expected_group_attrs[LDAP_ATTR_GROUP_TYPE] = (
 			-LDAPGroupTypes.TYPE_SECURITY.value
 			+ LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
 		)
 		expected_group_attrs.pop("path", None)
 		expected_group_attrs.pop("membersToAdd", None)
-		expected_group_attrs.pop("groupScope", None)
+		expected_group_attrs.pop(LOCAL_LDAP_ATTR_GROUP_SCOPE, None)
 
 		assert (
 			f_group_mixin.create_group(group_data=m_group_data)
@@ -597,7 +611,9 @@ class TestGroupMixinCRUD:
 		f_group_mixin.ldap_filter_attr = "mock_attr_filter"
 		f_group_mixin.ldap_filter_object = "mock_obj_filter"
 		with pytest.raises(exc_ldap.LDAPObjectExists):
-			f_group_mixin.create_group(group_data={"cn": "mock_cn"})
+			f_group_mixin.create_group(
+				group_data={LDAP_ATTR_COMMON_NAME: "mock_cn"}
+			)
 		f_group_mixin.ldap_connection.search.assert_called_once_with(
 			search_base=f_runtime_settings.LDAP_AUTH_SEARCH_BASE,
 			search_filter=f_group_mixin.ldap_filter_object,
@@ -622,10 +638,10 @@ class TestGroupMixinCRUD:
 
 		f_group_mixin.ldap_connection.entries = []
 		m_group_data = {
-			"cn": "Test Group",
+			LDAP_ATTR_COMMON_NAME: "Test Group",
 			"path": f"OU=Groups,{f_ldap_search_base}",
-			"groupType": 1,  # Mapped to Security
-			"groupScope": 1,  # Mapped to Domain Local
+			LDAP_ATTR_GROUP_TYPE: 1,  # Mapped to Security
+			LOCAL_LDAP_ATTR_GROUP_SCOPE: 1,  # Mapped to Domain Local
 			"membersToAdd": ["mock_user_dn"],
 		}
 		f_group_mixin.ldap_connection.add.side_effect = Exception
@@ -654,10 +670,10 @@ class TestGroupMixinCRUD:
 
 		f_group_mixin.ldap_connection.entries = []
 		m_group_data = {
-			"cn": "Test Group",
+			LDAP_ATTR_COMMON_NAME: "Test Group",
 			"path": f"OU=Groups,{f_ldap_search_base}",
-			"groupType": 1,  # Mapped to Security
-			"groupScope": 1,  # Mapped to Domain Local
+			LDAP_ATTR_GROUP_TYPE: 1,  # Mapped to Security
+			LOCAL_LDAP_ATTR_GROUP_SCOPE: 1,  # Mapped to Domain Local
 			"membersToAdd": ["mock_user_dn"],
 		}
 		eo_microsoft.add_members_to_groups.side_effect = Exception
@@ -785,7 +801,7 @@ class TestGroupMixinCRUD:
 		)
 		m_modify.assert_called_once_with(
 			"mock_dn",
-			{"groupType": [(MODIFY_REPLACE, [m_group_type_combined])]},
+			{LDAP_ATTR_GROUP_TYPE: [(MODIFY_REPLACE, [m_group_type_combined])]},
 		)
 
 	@staticmethod
@@ -815,11 +831,11 @@ class TestGroupMixinCRUD:
 		assert m_modify.call_count == 2
 		m_modify.assert_any_call(
 			"mock_dn",
-			{"groupType": [(MODIFY_REPLACE, [m_intermediate_group_type])]},
+			{LDAP_ATTR_GROUP_TYPE: [(MODIFY_REPLACE, [m_intermediate_group_type])]},
 		)
 		m_modify.assert_any_call(
 			"mock_dn",
-			{"groupType": [(MODIFY_REPLACE, [m_new_group_type])]},
+			{LDAP_ATTR_GROUP_TYPE: [(MODIFY_REPLACE, [m_new_group_type])]},
 		)
 
 	@staticmethod
@@ -849,23 +865,23 @@ class TestGroupMixinCRUD:
 		assert m_modify.call_count == 2
 		m_modify.assert_any_call(
 			"mock_dn",
-			{"groupType": [(MODIFY_REPLACE, [m_intermediate_group_type])]},
+			{LDAP_ATTR_GROUP_TYPE: [(MODIFY_REPLACE, [m_intermediate_group_type])]},
 		)
 		m_modify.assert_any_call(
 			"mock_dn",
-			{"groupType": [(MODIFY_REPLACE, [m_new_group_type])]},
+			{LDAP_ATTR_GROUP_TYPE: [(MODIFY_REPLACE, [m_new_group_type])]},
 		)
 
 	@staticmethod
 	def test_update_raises_no_dn(f_group_mixin: GroupViewMixin):
 		with pytest.raises(exc_groups.GroupDistinguishedNameMissing):
-			f_group_mixin.update_group(group_data={"distinguishedName": None})
+			f_group_mixin.update_group(group_data={LDAP_ATTR_DN: None})
 
 	@staticmethod
 	def test_update_raises_dn_validation_error(f_group_mixin: GroupViewMixin):
 		with pytest.raises(exc_ldap.DistinguishedNameValidationError):
 			f_group_mixin.update_group(
-				group_data={"distinguishedName": "Sasdadad"}
+				group_data={LDAP_ATTR_DN: "Sasdadad"}
 			)
 
 	@staticmethod
@@ -879,7 +895,7 @@ class TestGroupMixinCRUD:
 		)
 		with pytest.raises(exc_groups.GroupDoesNotExist):
 			f_group_mixin.update_group(
-				group_data={"distinguishedName": f_distinguished_name}
+				group_data={LDAP_ATTR_DN: f_distinguished_name}
 			)
 
 	@staticmethod
@@ -893,8 +909,8 @@ class TestGroupMixinCRUD:
 		with pytest.raises(exc_ldap.DistinguishedNameValidationError):
 			f_group_mixin.update_group(
 				group_data={
-					"cn": "CN=CN=pepe",
-					"distinguishedName": f_distinguished_name,
+					LDAP_ATTR_COMMON_NAME: "CN=CN=pepe",
+					LDAP_ATTR_DN: f_distinguished_name,
 				}
 			)
 
@@ -908,7 +924,7 @@ class TestGroupMixinCRUD:
 		with pytest.raises(exc_groups.BadMemberSelection):
 			f_group_mixin.update_group(
 				group_data={
-					"distinguishedName": f_distinguished_name,
+					LDAP_ATTR_DN: f_distinguished_name,
 					"membersToAdd": ["some_member"],
 					"membersToRemove": ["some_member"],
 				}
@@ -929,10 +945,10 @@ class TestGroupMixinCRUD:
 		m_common_name = "cn=New Name"
 		m_group_dict = GroupDict(
 			**{
-				"cn": m_common_name,
-				"member": ["mock_dn_1"],
+				LDAP_ATTR_COMMON_NAME: m_common_name,
+				LDAP_ATTR_GROUP_MEMBERS: ["mock_dn_1"],
 				"path": "mock_path",
-				"distinguishedName": f_distinguished_name,
+				LDAP_ATTR_DN: f_distinguished_name,
 			}
 		)
 		with pytest.raises(exc_dirtree.DirtreeRename):
@@ -951,10 +967,10 @@ class TestGroupMixinCRUD:
 		m_common_name = "cn=New Name"
 		m_group_dict = GroupDict(
 			**{
-				"cn": m_common_name,
-				"member": ["mock_dn_1"],
-				"distinguishedName": f_distinguished_name,
-				"groupScope": MAPPED_GROUP_SCOPE_GLOBAL,
+				LDAP_ATTR_COMMON_NAME: m_common_name,
+				LDAP_ATTR_GROUP_MEMBERS: ["mock_dn_1"],
+				LDAP_ATTR_DN: f_distinguished_name,
+				LOCAL_LDAP_ATTR_GROUP_SCOPE: MAPPED_GROUP_SCOPE_GLOBAL,
 			}
 		)
 		with pytest.raises(exc_groups.GroupTypeMissingField):
@@ -989,11 +1005,11 @@ class TestGroupMixinCRUD:
 
 		m_group_entry = mocker.Mock()
 		m_group_entry.attributes = {
-			"groupType": (
+			LDAP_ATTR_GROUP_TYPE: (
 				LDAP_GROUP_TYPE_MAPPING[MAPPED_GROUP_TYPE_DISTRIBUTION]
 				+ LDAP_GROUP_SCOPE_MAPPING[MAPPED_GROUP_SCOPE_GLOBAL]
 			),
-			"mail": f"oldemail@{f_ldap_domain}",
+			LDAP_ATTR_EMAIL: f"oldemail@{f_ldap_domain}",
 		}
 		# Mock old Group LDAP Entry
 		mocker.patch(
@@ -1010,17 +1026,17 @@ class TestGroupMixinCRUD:
 		m_members_remove = ["mock_remove"]
 		m_group_dict = GroupDict(
 			**{
-				"cn": m_common_name,
-				"member": ["mock_dn_1"],
+				LDAP_ATTR_COMMON_NAME: m_common_name,
+				LDAP_ATTR_GROUP_MEMBERS: ["mock_dn_1"],
 				"path": "mock_path",
-				"distinguishedName": f_distinguished_name,
-				"objectRid": 514,
-				"objectSid": "S-1-2-3-4",
-				"groupScope": MAPPED_GROUP_SCOPE_DOMAIN_LOCAL,
-				"groupType": MAPPED_GROUP_TYPE_SECURITY,
+				LDAP_ATTR_DN: f_distinguished_name,
+				LDAP_ATTR_RELATIVE_ID: 514,
+				LDAP_ATTR_SECURITY_ID: "S-1-2-3-4",
+				LOCAL_LDAP_ATTR_GROUP_SCOPE: MAPPED_GROUP_SCOPE_DOMAIN_LOCAL,
+				LDAP_ATTR_GROUP_TYPE: MAPPED_GROUP_TYPE_SECURITY,
 				"membersToAdd": m_members_add,
 				"membersToRemove": m_members_remove,
-				"mail": mail,
+				LDAP_ATTR_EMAIL: mail,
 			}
 		)
 
@@ -1046,15 +1062,17 @@ class TestGroupMixinCRUD:
 				LDAP_GROUP_TYPE_MAPPING[MAPPED_GROUP_TYPE_SECURITY]
 				+ LDAP_GROUP_SCOPE_MAPPING[MAPPED_GROUP_SCOPE_DOMAIN_LOCAL]
 			),
-			old_group_type=int(m_group_entry.attributes["groupType"]),
+			old_group_type=int(m_group_entry.attributes[LDAP_ATTR_GROUP_TYPE]),
 		)
 		if mail:
 			m_modify.assert_any_call(
-				m_new_distinguished_name, {"email": [(MODIFY_REPLACE, [mail])]}
+				m_new_distinguished_name,
+				{LDAP_ATTR_EMAIL: [(MODIFY_REPLACE, [mail])]}
 			)
 		else:
 			m_modify.assert_any_call(
-				m_new_distinguished_name, {"email": [(MODIFY_DELETE, [])]}
+				m_new_distinguished_name,
+				{LDAP_ATTR_EMAIL: [(MODIFY_DELETE, [])]}
 			)
 
 		eo_microsoft.add_members_to_groups.assert_called_once_with(
@@ -1082,7 +1100,7 @@ class TestGroupMixinCRUD:
 		f_distinguished_name: str,
 	):
 		m_group_entry = mocker.Mock()
-		m_group_entry.attributes = {"cn": "CN=Bad"}
+		m_group_entry.attributes = {LDAP_ATTR_COMMON_NAME: "CN=Bad"}
 		# Mock old Group LDAP Entry
 		mocker.patch(
 			"core.views.mixins.ldap.group.LDAPObject",
@@ -1090,7 +1108,7 @@ class TestGroupMixinCRUD:
 		)
 		with pytest.raises(exc_ldap.DistinguishedNameValidationError):
 			f_group_mixin.delete_group(
-				group_data={"distinguishedName": f_distinguished_name}
+				group_data={LDAP_ATTR_DN: f_distinguished_name}
 			)
 
 	@staticmethod
@@ -1106,7 +1124,7 @@ class TestGroupMixinCRUD:
 
 		with pytest.raises(exc_groups.GroupDoesNotExist):
 			f_group_mixin.delete_group(
-				group_data={"distinguishedName": f_distinguished_name}
+				group_data={LDAP_ATTR_DN: f_distinguished_name}
 			)
 
 	@staticmethod
@@ -1117,8 +1135,8 @@ class TestGroupMixinCRUD:
 	):
 		m_group_entry = mocker.Mock()
 		m_group_entry.attributes = {
-			"cn": "Domain Users",
-			"groupType": (
+			LDAP_ATTR_COMMON_NAME: "Domain Users",
+			LDAP_ATTR_GROUP_TYPE: (
 				-LDAPGroupTypes.TYPE_SECURITY.value
 				+ LDAPGroupTypes.TYPE_SYSTEM.value
 				+ LDAPGroupTypes.SCOPE_UNIVERSAL.value
@@ -1133,7 +1151,7 @@ class TestGroupMixinCRUD:
 		with pytest.raises(exc_groups.GroupBuiltinProtect):
 			f_group_mixin.delete_group(
 				group_data={
-					"distinguishedName": f"CN=Domain Users,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
+					LDAP_ATTR_DN: f"CN=Domain Users,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
 				}
 			)
 
@@ -1146,8 +1164,8 @@ class TestGroupMixinCRUD:
 	):
 		m_group_entry = mocker.Mock()
 		m_group_entry.attributes = {
-			"cn": safe_rdn(f_distinguished_name)[0],
-			"groupType": (
+			LDAP_ATTR_COMMON_NAME: safe_rdn(f_distinguished_name)[0],
+			LDAP_ATTR_GROUP_TYPE: (
 				-LDAPGroupTypes.TYPE_SECURITY.value
 				+ LDAPGroupTypes.SCOPE_UNIVERSAL.value
 			),
@@ -1161,7 +1179,7 @@ class TestGroupMixinCRUD:
 
 		with pytest.raises(exc_groups.GroupDelete):
 			f_group_mixin.delete_group(
-				group_data={"distinguishedName": f_distinguished_name}
+				group_data={LDAP_ATTR_DN: f_distinguished_name}
 			)
 
 	@staticmethod
@@ -1176,8 +1194,8 @@ class TestGroupMixinCRUD:
 		m_group_entry = mocker.Mock()
 		m_common_name: str = safe_rdn(f_distinguished_name)[0]
 		m_group_entry.attributes = {
-			"cn": m_common_name,
-			"groupType": (
+			LDAP_ATTR_COMMON_NAME: m_common_name,
+			LDAP_ATTR_GROUP_TYPE: (
 				-LDAPGroupTypes.TYPE_SECURITY.value
 				+ LDAPGroupTypes.SCOPE_UNIVERSAL.value
 			),
@@ -1189,7 +1207,7 @@ class TestGroupMixinCRUD:
 		)
 
 		f_group_mixin.delete_group(
-			group_data={"distinguishedName": f_distinguished_name}
+			group_data={LDAP_ATTR_DN: f_distinguished_name}
 		)
 		f_log_mixin.log.assert_called_once_with(
 			user=1,
