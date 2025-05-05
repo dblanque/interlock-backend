@@ -59,7 +59,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 	request: HttpRequest
 	VALID_FILTER_ITERABLES = (list, tuple, set)
 	VALID_FILTER_NON_ITERABLES = (bool, str, int, float)
-	VALID_FILTERS = [
+	VALID_FILTERS = (
 		"exclude",
 		"include",
 		"iexact",
@@ -69,10 +69,10 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 		"gte",
 		"lte",
 		"approx",
-	]
+	)
 
 	def validate_filter_dict(
-		self, filter_dict: dict, allowed_keys: list = None
+		self, filter_dict: dict, allowed_keys: list | tuple = None
 	):
 		if not allowed_keys:
 			allowed_keys = self.VALID_FILTERS
@@ -278,7 +278,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 		)
 		if default_filter:
 			self.validate_filter_dict(
-				filter_dict=default_filter, allowed_keys=["include"]
+				filter_dict=default_filter, allowed_keys=("include",)
 			)
 
 			# Build base filter from included attributes
