@@ -213,16 +213,17 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
 			data.pop(LOCAL_ATTR_USERNAME, None),
 		)
-		permission_list = data.pop("permission_list", [])
-		for key in EXCLUDE_KEYS:
-			if key in data:
-				del data[key]
 
 		# Validate user data
 		serializer = self.serializer_cls(data=data)
 		if not serializer.is_valid():
 			raise BadRequest(data={"errors": serializer.errors})
 		data = serializer.validated_data
+
+		permission_list = data.pop("permission_list", [])
+		for key in EXCLUDE_KEYS:
+			if key in data:
+				del data[key]
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
@@ -247,7 +248,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				permission_list=permission_list,
 			)
 
-		return Response(data={"code": code, "code_msg": code_msg, "data": data})
+		return Response(data={"code": code, "code_msg": code_msg})
 
 	@action(detail=False, methods=["post"])
 	@auth_required
