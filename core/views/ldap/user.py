@@ -225,6 +225,10 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			if key in data:
 				del data[key]
 
+		if user_to_update == user.username:
+			if ldap_adsi.LDAP_UF_ACCOUNT_DISABLE in permission_list:
+				raise exc_user.UserAntiLockout
+
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
@@ -254,17 +258,18 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def change_status(self, request):
+	def change_status(self, request: Request):
 		user: User = request.user
 		data: dict = request.data
 		code = 0
 		code_msg = "ok"
 
-		for required_key in ["username", "enabled"]:
-			if required_key not in data:
+		for required_key in (LOCAL_ATTR_USERNAME, "enabled",):
+			if required_key not in data or data.get(required_key, None) is None:
 				raise BadRequest(
 					data={"detail":f"{required_key} key must be in dictionary."}
 				)
+		username = data.pop(LOCAL_ATTR_USERNAME)
 		enabled = data.pop("enabled")
 
 		######################## Set LDAP Attributes ###########################
@@ -276,14 +281,15 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		).get_update_attrs()
 		########################################################################
 
-		if data["username"] == self.request.user:
+		if username == user.username:
 			raise exc_user.UserAntiLockout
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			self.ldap_user_change_status(
-				username=data["username"], enabled=enabled
+				username=username,
+				enabled=enabled,
 			)
 
 		return Response(data={"code": code, "code_msg": code_msg})
@@ -292,7 +298,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def delete(self, request, pk=None):
+	def delete(self, request: Request, pk=None):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -302,11 +308,12 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			raise exc_base.CoreException
 
 		# Get username from data
-		username = data.get("username", None)
-		if not username:
-			username = data.get(
+		username = data.get(
+			"username",
+			data.get(
 				RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"], None
 			)
+		)
 
 		# Open LDAP Connection
 		if not username:
@@ -320,7 +327,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 			# Check user exists and delete in LDAP Server
 			if self.ldap_user_exists(username=username, return_exception=False):
-				self.ldap_user_delete(username=data)
+				self.ldap_user_delete(username=username)
 
 			try:
 				django_user = User.objects.get(
