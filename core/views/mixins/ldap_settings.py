@@ -20,7 +20,7 @@ from core.models.interlock_settings import (
 	INTERLOCK_SETTING_ENABLE_LDAP,
 )
 from core.models.user import User
-from core.models.ldap_settings import LDAPPreset
+from core.models.ldap_settings import LDAPPreset, LDAP_PRESET_TABLE
 
 #### Exceptions
 from core.exceptions import ldap as exc_ldap
@@ -38,6 +38,7 @@ from interlock_backend.settings import BASE_DIR, DEFAULT_SUPERUSER_USERNAME
 from core.config.runtime import RuntimeSettings
 from django.core.exceptions import ObjectDoesNotExist
 import logging
+from core.utils.db import db_table_exists
 ################################################################################
 
 logger = logging.getLogger(__name__)
@@ -47,9 +48,10 @@ DEFAULT_PRESET_NAME = "default_preset"
 
 class SettingsViewMixin(viewsets.ViewSetMixin):
 	def create_default_preset(self):
-		LDAPPreset.objects.create(
-			name=DEFAULT_PRESET_NAME, label="Default Preset", active=True
-		)
+		if db_table_exists(LDAP_PRESET_TABLE):
+			LDAPPreset.objects.create(
+				name=DEFAULT_PRESET_NAME, label="Default Preset", active=True
+			)
 
 	def remove_default_preset(self):
 		qs = LDAPPreset.objects.filter(name=DEFAULT_PRESET_NAME)

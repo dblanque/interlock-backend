@@ -11,12 +11,19 @@ class CoreConfig(AppConfig):
 
 		create_default_superuser()
 
-		# DEFAULT SETTINGS CREATION
+		# DEFAULT INTERLOCK SETTINGS CREATION
 		from core.setup.interlock_setting import (
 			create_default_interlock_settings,
 		)
 
 		create_default_interlock_settings()
+
+		# DEFAULT LDAP SETTINGS PRESET CREATION
+		from core.views.mixins.ldap_settings import SettingsViewMixin
+
+		SettingsViewMixin().create_default_preset()
+
+		# OIDC Key Automatic Creation
 
 		from core.setup.oidc import create_default_oidc_rsa_key
 

@@ -20,6 +20,7 @@ from core.models.ldap_settings import (
 	LDAP_SETTING_TABLE,
 	LDAP_PRESET_TABLE,
 )
+from django.core.exceptions import ObjectDoesNotExist
 from interlock_backend.encrypt import aes_decrypt
 from core.utils.db import db_table_exists
 import sys
@@ -143,7 +144,10 @@ def get_settings(uuid, quiet=False) -> dict:
 			)
 
 	if db_table_exists(LDAP_PRESET_TABLE):
-		active_preset = LDAPPreset.objects.get(active=True)
+		try:
+			active_preset = LDAPPreset.objects.get(active=True)
+		except ObjectDoesNotExist:
+			pass
 
 	# For constant, value_type in...
 	for setting_key, setting_type in LDAP_SETTING_MAP.items():

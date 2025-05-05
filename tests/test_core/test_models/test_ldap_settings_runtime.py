@@ -298,7 +298,6 @@ def test_resync_returns_false_on_exception(mocker):
 	assert instance.resync() is False
 	m_postsync.assert_not_called()
 
-
 def test_get_settings_no_preset():
 	m_settings = get_settings("non-existing-uuid")
 	for s_key, s_val in m_settings.items():
