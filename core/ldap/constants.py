@@ -49,6 +49,8 @@ LDAP_ATTR_INITIALS = "initials"
 LDAP_ATTR_COMMON_NAME = "cn"
 LDAP_ATTR_GROUP_MEMBERS = "member"
 LDAP_ATTR_GROUP_TYPE = "groupType"
+# Local but related to LDAP
+LOCAL_LDAP_ATTR_GROUP_SCOPE = "groupScope"
 
 # LOCAL Attributes
 LOCAL_ATTR_USERNAME = "username"
