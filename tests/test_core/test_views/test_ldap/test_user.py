@@ -684,6 +684,55 @@ class TestDelete:
 class TestChangePassword:
 	endpoint = "/api/ldap/users/change_password/"
 
+	@pytest.mark.parametrize(
+		"m_data",
+		(
+			{},
+			{
+				LOCAL_ATTR_USERNAME: "testuser"
+			},
+			{
+				"password": "1234",
+				"passwordConfirm": "4321",
+			},
+		),
+	)
+	def test_raises_bad_request(
+		self,
+		m_data: dict,
+		user_factory,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		m_ldap_user_exists = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_exists",
+			return_value=True
+		)
+		m_ldap_set_password = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_set_password"
+		)
+
+		# Exec
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=m_data,
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		m_ldap_user_exists.assert_not_called()
+		m_ldap_set_password.assert_not_called()
+
+	# def test_success(
+	# 	self,
+	# 	admin_user: User,
+	# 	admin_user_client: APIClient,
+	# 	mocker: MockerFixture,
+	# ):
+	# 	pass
+
 class TestUnlock:
 	endpoint = "/api/ldap/users/unlock/"
 
