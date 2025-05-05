@@ -262,7 +262,9 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		for required_key in ["username", "enabled"]:
 			if required_key not in data:
-				raise BadRequest
+				raise BadRequest(
+					data={"detail":f"{required_key} key must be in dictionary."}
+				)
 		enabled = data.pop("enabled")
 
 		######################## Set LDAP Attributes ###########################
