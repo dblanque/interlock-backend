@@ -304,9 +304,6 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code_msg = "ok"
 		data = request.data
 
-		if not isinstance(data, dict):
-			raise exc_base.BadRequest
-
 		# Get username from data
 		username = data.get(
 			"username",
@@ -315,10 +312,10 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			)
 		)
 
-		# Open LDAP Connection
 		if not username:
 			raise exc_base.BadRequest
 
+		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
@@ -343,7 +340,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def change_password(self, request, pk=None):
+	def change_password(self, request: Request, pk=None):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -351,11 +348,14 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		ldap_user_search = None
 
 		# Get username from data
-		username = data.get("username", None)
-		if not username:
-			username = data.get(
+		username = data.get(
+			LOCAL_ATTR_USERNAME, 
+			data.get(
 				RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"], None
 			)
+		)
+		if not username:
+			raise exc_base.BadRequest
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
@@ -399,11 +399,21 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def unlock(self, request, pk=None):
+	def unlock(self, request: Request, pk=None):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
 		data = request.data
+
+		# Get username from data
+		username = data.get(
+			LOCAL_ATTR_USERNAME, 
+			data.get(
+				RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"], None
+			)
+		)
+		if not username:
+			raise exc_base.BadRequest
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
@@ -411,15 +421,15 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 			# Check user exists and fetch it with minimal attributes
 			if not self.ldap_user_exists(
-				username=data["username"], return_exception=False
+				username=username, return_exception=False
 			):
 				raise exc_user.UserDoesNotExist
 
 			try:
-				self.ldap_user_unlock(username=data["username"])
+				self.ldap_user_unlock(username=username)
 				result = self.ldap_connection.result
 				if result["description"] == "success":
-					response_result = data["username"]
+					response_result = username
 				else:
 					raise exc_user.CouldNotUnlockUser
 			except:
