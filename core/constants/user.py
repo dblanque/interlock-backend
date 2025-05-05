@@ -95,7 +95,7 @@ class UserViewsetFilterAttributeBuilder:
 			"path",
 			"permission_list",  # This array is parsed and calculated later
 			LDAP_ATTR_DN,  # We don't want the front-end generated DN
-			"username",  # LDAP Uses sAMAccountName
+			LOCAL_ATTR_USERNAME,  # LDAP Uses sAMAccountName
 			LDAP_ATTR_CREATED,
 			LDAP_ATTR_MODIFIED,
 			LDAP_ATTR_LAST_LOGIN,
@@ -116,7 +116,7 @@ class UserViewsetFilterAttributeBuilder:
 			"path",
 			"permission_list",  # This array is parsed and calculated later
 			LDAP_ATTR_DN,  # We don't want the front-end generated DN
-			"username",  # LDAP Uses sAMAccountName
+			LOCAL_ATTR_USERNAME,  # LDAP Uses sAMAccountName
 			LDAP_ATTR_CREATED,
 			LDAP_ATTR_MODIFIED,
 			LDAP_ATTR_LAST_LOGIN,
