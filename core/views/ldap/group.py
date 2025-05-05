@@ -25,6 +25,13 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
+from core.ldap.constants import (
+	LDAP_ATTR_OBJECT_CLASS,
+	LDAP_ATTR_DN,
+	LDAP_ATTR_GROUP_TYPE,
+	LDAP_ATTR_COMMON_NAME,
+)
+from core.serializers.group import LDAPGroupSerializer
 from core.constants.group import GroupViewsetFilterAttributeBuilder
 from core.decorators.login import auth_required, admin_required
 from core.decorators.intercept import ldap_backend_intercept
@@ -53,8 +60,8 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
-			self.ldap_filter_object = LDAPFilter.eq("objectClass", "group") \
-				.to_string()
+			self.ldap_filter_object = LDAPFilter.eq(
+				LDAP_ATTR_OBJECT_CLASS, "group").to_string()
 			self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings) \
 				.get_list_filter()
 
@@ -79,7 +86,10 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		code_msg = "ok"
 
 		########################################################################
-		group_search = request.data.get("group", None)
+		# Check group and distinguishedName keys
+		group_search = request.data.get("group", 
+						request.data.get(LDAP_ATTR_DN, None)
+					)
 		if not group_search:
 			raise exc_groups.GroupDistinguishedNameMissing
 
@@ -87,8 +97,8 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 			RuntimeSettings
 		).get_fetch_filter()
 		self.ldap_filter_object = LDAPFilter.and_(
-			LDAPFilter.eq("objectClass", "group"),
-			LDAPFilter.eq("distinguishedName", group_search),
+			LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "group"),
+			LDAPFilter.eq(LDAP_ATTR_DN, group_search),
 		).to_string()
 		########################################################################
 
@@ -136,7 +146,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 
 		# Filter to check Group doesn't exist check with CN, and user field
 		self.ldap_filter_object = LDAPFilter.or_(
-			LDAPFilter.eq("cn", group_cn),
+			LDAPFilter.eq(LDAP_ATTR_COMMON_NAME, group_cn),
 			LDAPFilter.eq(
 				RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
 				group_cn,
@@ -197,7 +207,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 				}
 			)
 
-		self.ldap_filter_attr = ["cn", "groupType"]
+		self.ldap_filter_attr = [LDAP_ATTR_COMMON_NAME, LDAP_ATTR_GROUP_TYPE]
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:

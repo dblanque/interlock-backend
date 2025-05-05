@@ -38,6 +38,19 @@ from ldap3.extend import (
 )
 
 ### Core
+from core.ldap.constants import (
+	LDAP_ATTR_DN,
+	LDAP_ATTR_FIRST_NAME,
+	LDAP_ATTR_LAST_NAME,
+	LDAP_ATTR_OBJECT_CATEGORY,
+	LDAP_ATTR_OBJECT_CLASS,
+	LDAP_ATTR_COMMON_NAME,
+	LDAP_ATTR_EMAIL,
+	LDAP_ATTR_GROUP_MEMBERS,
+	LDAP_ATTR_SECURITY_ID,
+	LDAP_ATTR_RELATIVE_ID,
+	LDAP_ATTR_GROUP_TYPE,
+)
 from core.models.choices.log import (
 	LOG_ACTION_CREATE,
 	LOG_ACTION_READ,
@@ -150,7 +163,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		rid: int = None, attributes: List[str] = None
 	) -> dict | None:
 		if not attributes:
-			attributes = ["objectSid", "distinguishedName"]
+			attributes = [LDAP_ATTR_SECURITY_ID, LDAP_ATTR_DN]
 		if isinstance(rid, list):
 			rid = rid[0]
 		if rid is None or rid is False:
@@ -168,7 +181,8 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			connection = ldc.connection
 			connection.search(
 				search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
-				search_filter=LDAPFilter.eq("objectClass", "group").to_string(),
+				search_filter=LDAPFilter.eq(
+					LDAP_ATTR_OBJECT_CLASS, "group").to_string(),
 				search_scope=ldap3.SUBTREE,
 				attributes=attributes,
 			)
@@ -176,7 +190,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			for g in connection.entries:
 				g: LDAPEntry
 				# Do not use getldapattr here, we want raw_values
-				_sid_attr = getattr(g, "objectSid", None)
+				_sid_attr = getattr(g, LDAP_ATTR_SECURITY_ID, None)
 				if not _sid_attr:
 					continue
 				_sid = SID(_sid_attr)
@@ -204,7 +218,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		# Remove attributes to return as table headers
 		headers: List[str] = self.ldap_filter_attr
-		remove_attributes = ["distinguishedName", "member"]
+		remove_attributes = [LDAP_ATTR_DN, LDAP_ATTR_GROUP_MEMBERS]
 
 		for attr in remove_attributes:
 			if attr in headers:
@@ -215,7 +229,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			# For each attribute in group object attributes
 			group_dict = {}
 			# Add entry DN to response dictionary
-			group_dict["distinguishedName"] = group_entry.entry_dn
+			group_dict[LDAP_ATTR_DN] = group_entry.entry_dn
 
 			for attr_key in group_entry.entry_attributes:
 				# Parse Group Type
@@ -230,7 +244,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 					)
 
 			# Check if group has Members
-			if getldapattrvalue(group_entry, "member", None):
+			if getldapattrvalue(group_entry, LDAP_ATTR_GROUP_MEMBERS, None):
 				group_dict["hasMembers"] = True
 			else:
 				group_dict["hasMembers"] = False
@@ -258,12 +272,12 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		# Remove attributes to return as table headers
 		headers: list[str] = self.ldap_filter_attr
-		headers.remove("distinguishedName")
+		headers.remove(LDAP_ATTR_DN)
 
 		# For each attribute in group object attributes
 		group_dict = {}
 		# Add entry DN to response dictionary
-		group_dict["distinguishedName"] = ldap_group_entry.entry_dn
+		group_dict[LDAP_ATTR_DN] = ldap_group_entry.entry_dn
 
 		for attr_key in ldap_group_entry.entry_attributes:
 			if not attr_key in headers:
@@ -271,12 +285,12 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 			attr_value = getldapattrvalue(ldap_group_entry, attr_key, None)
 			# Parse Group Type
-			if attr_key == "groupType":
+			if attr_key == LDAP_ATTR_GROUP_TYPE:
 				group_type = int(attr_value)
 				group_dict[attr_key] = self.get_group_types(
 					group_type=group_type
 				)
-			elif attr_key == "member":
+			elif attr_key == LDAP_ATTR_GROUP_MEMBERS:
 				_username_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS[
 					"username"
 				]
@@ -293,26 +307,26 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 								"connection": self.ldap_connection,
 								"dn": member_user_dn,
 								"ldap_attrs": [
-									"cn",
-									"distinguishedName",
+									LDAP_ATTR_COMMON_NAME,
+									LDAP_ATTR_DN,
 									_username_field,
-									"givenName",
-									"sn",
-									"objectCategory",
-									"objectClass",
+									LDAP_ATTR_FIRST_NAME,
+									LDAP_ATTR_LAST_NAME,
+									LDAP_ATTR_OBJECT_CATEGORY,
+									LDAP_ATTR_OBJECT_CLASS,
 								],
 							}
 						).attributes
 					)
 				group_dict[attr_key] = member_list
 			# Do the standard for every other key
-			elif attr_key == "objectSid":
+			elif attr_key == LDAP_ATTR_SECURITY_ID:
 				# Don't use getldapattr for the sid, we need raw bytes
 				sid = SID(getattr(ldap_group_entry, attr_key))
 				sid = sid.__str__()
 				rid = sid.split("-")[-1]
 				group_dict[attr_key] = sid
-				group_dict["objectRid"] = int(rid)
+				group_dict[LDAP_ATTR_RELATIVE_ID] = int(rid)
 			else:
 				group_dict[attr_key] = attr_value
 
@@ -320,15 +334,17 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			user=self.request.user.id,
 			operation_type=LOG_ACTION_READ,
 			log_target_class=LOG_CLASS_GROUP,
-			log_target=group_dict["cn"],
+			log_target=group_dict[LDAP_ATTR_COMMON_NAME],
 		)
 		return group_dict, headers
 
 	def create_group(
 		self,
 		group_data: GroupDict,
-		exclude_keys=["member", "path", "membersToAdd"],
+		exclude_keys=None,
 	) -> Connection:
+		if not exclude_keys:
+			exclude_keys = [LDAP_ATTR_GROUP_MEMBERS, "path", "membersToAdd"]
 		# Type hinting defs
 		extended_operations: ExtendedOperationsRoot = (
 			self.ldap_connection.extend
@@ -336,14 +352,20 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		eo_microsoft: MicrosoftExtendedOperations = (
 			extended_operations.microsoft
 		)
+		group_cn: str = group_data.get(LDAP_ATTR_COMMON_NAME, None)
+		if not group_cn:
+			raise ValueError("group_cn cannot be None or falsy value.")
 
-		if group_data.get("path", None):
-			distinguished_name = f"CN={group_data['cn']},{group_data['path']}"
-			logger.debug(f"Creating group in DN Path: {group_data['path']}")
+		group_path = group_data.get("path", None)
+		if group_path:
+			distinguished_name = f"CN={group_cn},{group_path}"
+			logger.debug(f"Creating group in DN Path: {group_path}")
 		else:
-			distinguished_name = f"CN={group_data['cn']},CN=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}"
+			distinguished_name = "CN=%s,CN=Users,%s" % (
+				group_cn,
+				RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
+			)
 
-		group_cn: str = group_data.get("cn")
 		group_data[RuntimeSettings.LDAP_GROUP_FIELD] = group_cn.lower()
 
 		# !!! CHECK IF GROUP EXISTS !!! #
@@ -355,13 +377,19 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			attributes=self.ldap_filter_attr,
 		)
 		if self.ldap_connection.entries:
-			raise exc_ldap.LDAPObjectExists(data={"group": group_data["cn"]})
+			raise exc_ldap.LDAPObjectExists(data={"group": group_data[LDAP_ATTR_COMMON_NAME]})
 
-		group_data["groupType"] = (
-			LDAP_GROUP_TYPE_MAPPING[int(group_data["groupType"])]
-			+ LDAP_GROUP_SCOPE_MAPPING[int(group_data["groupScope"])]
+		# Change group type if necessary
+		group_type = group_data.pop(LDAP_ATTR_GROUP_TYPE, None)
+		group_scope = group_data.pop("groupScope", None)
+		if (group_type is not None and group_scope is None) or (
+			group_type is None and group_scope is not None
+		):
+			raise exc_groups.GroupTypeMissingField
+		group_data[LDAP_ATTR_GROUP_TYPE] = (
+			LDAP_GROUP_TYPE_MAPPING[int(group_type)]
+			+ LDAP_GROUP_SCOPE_MAPPING[int(group_scope)]
 		)
-		group_data.pop("groupScope")
 
 		members_to_add = group_data.pop("membersToAdd", [])
 		for _key in exclude_keys:
@@ -394,7 +422,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			user=self.request.user.id,
 			operation_type=LOG_ACTION_CREATE,
 			log_target_class=LOG_CLASS_GROUP,
-			log_target=group_data["cn"],
+			log_target=group_data[LDAP_ATTR_COMMON_NAME],
 		)
 		return self.ldap_connection
 
@@ -484,7 +512,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		)
 
 		# Set Distinguished Name
-		distinguished_name = group_data.get("distinguishedName", None)
+		distinguished_name = group_data.get(LDAP_ATTR_DN, None)
 		if not distinguished_name:
 			raise exc_groups.GroupDistinguishedNameMissing
 		else:
@@ -509,7 +537,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		# Set Common Name
 		original_cn = safe_rdn(distinguished_name)[0]
-		group_cn: str = group_data.get("cn", None)
+		group_cn: str = group_data.get(LDAP_ATTR_COMMON_NAME, None)
 		if not group_cn:
 			group_cn = original_cn
 		# If Group CN is present and has changed
@@ -572,20 +600,20 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			)
 
 		# Update EMAIL Attr if any
-		group_email_attr = group_data.get("mail", None)
+		group_email_attr = group_data.get(LDAP_ATTR_EMAIL, None)
 		if group_email_attr is not None and fetched_group_attrs.get(
-			"mail", None
+			LDAP_ATTR_EMAIL, None
 		):
 			try:
 				if group_email_attr == "":
 					self.ldap_connection.modify(
 						distinguished_name,
-						{"email": [(MODIFY_DELETE, [])]},
+						{LDAP_ATTR_EMAIL: [(MODIFY_DELETE, [])]},
 					)
 				else:
 					self.ldap_connection.modify(
 						distinguished_name,
-						{"email": [(MODIFY_REPLACE, [group_email_attr])]},
+						{LDAP_ATTR_EMAIL: [(MODIFY_REPLACE, [group_email_attr])]},
 					)
 			except Exception as e:
 				logger.exception(e)
@@ -619,7 +647,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		return self.ldap_connection
 
 	def delete_group(self, group_data: GroupDict):
-		distinguished_name = group_data.get("distinguishedName", None)
+		distinguished_name = group_data.get(LDAP_ATTR_DN, None)
 		if not distinguished_name:
 			logger.error(group_data)
 			raise exc_ldap.DistinguishedNameValidationError
@@ -639,7 +667,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			raise exc_groups.GroupDoesNotExist
 
 		# Check if group is a builtin object
-		group_cn: str = fetched_group_attrs["cn"]
+		group_cn: str = fetched_group_attrs[LDAP_ATTR_COMMON_NAME]
 		if group_cn.lower().startswith("cn="):
 			group_cn = group_cn.split("=")[-1]
 
