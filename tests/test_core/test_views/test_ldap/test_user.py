@@ -392,18 +392,22 @@ class TestUpdate:
 			permission_list=m_perm_list
 		)
 	
+	@pytest.mark.parametrize(
+		"bad_key, bad_value",
+		(
+			("path", "some_bad_dn"),
+			("permission_list", "some_bad_perm"),
+		),
+	)
 	def test_raises_serializer_bad_request(
 		self,
+		bad_key: str,
+		bad_value: str,
 		admin_user_client: APIClient,
 		mocker: MockerFixture,
 	):
-		m_data = {
-			LOCAL_ATTR_USERNAME: "testuser",
-			"path":"OU=mock ou,DC=example,DC=com",
-			"permission_list": [
-				"some_bad_perm"
-			]
-		}
+		m_data = {LOCAL_ATTR_USERNAME: "testuser"}
+		m_data[bad_key] = bad_value
 		expected_m_data = m_data.copy()
 		expected_m_data.pop("path", None)
 		expected_m_data.pop("permission_list", None)
