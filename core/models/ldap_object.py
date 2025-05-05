@@ -65,9 +65,9 @@ class LDAPObjectOptions(TypedDict):
 
 
 DEFAULT_REQUIRED_LDAP_ATTRS = [
-	"distinguishedName",
-	"objectCategory",
-	"objectClass",
+	LDAP_ATTR_DN,
+	LDAP_ATTR_OBJECT_CATEGORY,
+	LDAP_ATTR_OBJECT_CLASS,
 ]
 DEFAULT_CONTAINER_TYPES = ["container", "organizational-unit"]
 DEFAULT_USER_TYPES = [
@@ -210,7 +210,7 @@ class LDAPObject:
 		distinguished_name: str = self.entry.entry_dn
 		self.attributes = {}
 		self.attributes["name"] = distinguished_name.split(",")[0].split("=")[1]
-		self.attributes["distinguishedName"] = distinguished_name
+		self.attributes[LDAP_ATTR_DN] = distinguished_name
 		self.attributes["type"] = (
 			getldapattrvalue(self.entry, LDAP_ATTR_OBJECT_CATEGORY)
 			.split(",")[0]
