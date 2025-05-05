@@ -517,6 +517,11 @@ class TestChangeStatus:
 		admin_user_client: APIClient,
 		mocker: MockerFixture,
 	):
+		m_ldap_user_exists = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_exists",
+			return_value=True
+		)
 		m_change_status = mocker.patch.object(
 			LDAPUserViewSet,
 			"ldap_user_change_status"
@@ -533,6 +538,10 @@ class TestChangeStatus:
 		m_change_status.assert_called_once_with(
 			username=m_data["username"],
 			enabled=enabled,
+		)
+		m_ldap_user_exists.assert_called_once_with(
+			username=m_data["username"],
+			return_exception=False,
 		)
 
 	@pytest.mark.parametrize(
