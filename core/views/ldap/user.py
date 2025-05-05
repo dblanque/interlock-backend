@@ -267,7 +267,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 		######################## Set LDAP Attributes ###########################
 		self.ldap_filter_object = LDAPFilter.eq(
-			"objectClass", RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
+			LDAP_ATTR_OBJECT_CLASS, RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
 		).to_string()
 		self.ldap_filter_attr = self.filter_attr_builder(
 			RuntimeSettings
