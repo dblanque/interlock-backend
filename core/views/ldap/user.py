@@ -193,7 +193,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def update(self, request, pk=None):
+	def update(self, request: Request, pk=None):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -210,12 +210,10 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		).get_update_exclude_keys()
 
 		user_to_update = data.get(
-			RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
+			RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
+			data.pop(LOCAL_ATTR_USERNAME, None),
 		)
-		if "permission_list" in data:
-			permission_list = data["permission_list"]
-		else:
-			permission_list = None
+		permission_list = data.pop("permission_list", [])
 		for key in EXCLUDE_KEYS:
 			if key in data:
 				del data[key]
@@ -232,12 +230,13 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 			# Check user exists and fetch it with minimal attributes
 			if not self.ldap_user_exists(
-				username=user_to_update, return_exception=False
+				username=user_to_update,
+				return_exception=False,
 			):
 				raise exc_user.UserDoesNotExist
 
 			# Check if email overlaps with any other users
-			user_email = data.get("email", None)
+			user_email = data.get(LDAP_ATTR_EMAIL, None)
 			if user_email:
 				self.ldap_user_exists(email=user_email)
 
