@@ -22,14 +22,16 @@ PUBLIC_FIELDS = (
 
 class UserViewsetFilterAttributeBuilder:
 	def __init__(self, settings: RuntimeSettingsSingleton):
-		self.RunningSettings = settings
+		if not isinstance(settings, RuntimeSettingsSingleton):
+			raise TypeError("Initialization for cls requires RuntimeSettingsSingleton instance.")
+		self.RuntimeSettings = settings
 
 	def get_list_attrs(self):
 		return [
 			LDAP_ATTR_FIRST_NAME,
 			LDAP_ATTR_LAST_NAME,
 			LDAP_ATTR_FULL_NAME,
-			self.RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
+			self.RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
 			LDAP_ATTR_EMAIL,
 			LDAP_ATTR_DN,
 			LDAP_ATTR_UAC,
@@ -40,7 +42,7 @@ class UserViewsetFilterAttributeBuilder:
 			LDAP_ATTR_FIRST_NAME,
 			LDAP_ATTR_LAST_NAME,
 			LDAP_ATTR_FULL_NAME,
-			self.RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
+			self.RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
 			"mail",
 			LDAP_ATTR_PHONE,
 			LDAP_ATTR_ADDRESS,
@@ -69,7 +71,7 @@ class UserViewsetFilterAttributeBuilder:
 
 	def get_update_attrs(self):
 		return [
-			self.RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
+			self.RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
 			LDAP_ATTR_DN,
 			LDAP_ATTR_UPN,
 			LDAP_ATTR_UAC,
@@ -77,7 +79,7 @@ class UserViewsetFilterAttributeBuilder:
 
 	def get_bulk_insert_attrs(self):
 		return [
-			self.RunningSettings.LDAP_AUTH_USER_FIELDS["username"],
+			self.RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
 			LDAP_ATTR_DN,
 			LDAP_ATTR_UPN,
 		]
