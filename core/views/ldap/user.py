@@ -109,7 +109,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def fetch(self, request):
+	def fetch(self, request: Request):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -145,16 +145,19 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		code_msg = "ok"
 		data: dict = request.data
 
-		if LOCAL_ATTR_USERNAME not in data:
+		if LDAP_ATTR_USERNAME_SAMBA_ADDS in data:
+			data[LOCAL_ATTR_USERNAME] = data.pop(LDAP_ATTR_USERNAME_SAMBA_ADDS)
+		user_username = data.get(LOCAL_ATTR_USERNAME, None)
+		if not user_username:
 			raise exc_base.MissingDataKey(data={"key": LOCAL_ATTR_USERNAME})
 
-		if data["password"] != data["passwordConfirm"]:
-			raise exc_user.UserPasswordsDontMatch(
-				data={
-					"code": "user_passwords_dont_match",
-					"user": data[LOCAL_ATTR_USERNAME],
-				}
-			)
+		set_pwd = False
+		user_pwd = data.get("password", None)
+		user_pwd_confirm = data.get("passwordConfirm", None)
+		if user_pwd and user_pwd_confirm:
+			set_pwd = True
+			if user_pwd != user_pwd_confirm:
+				raise exc_user.UserPasswordsDontMatch
 
 		# Validate user data
 		serializer = self.serializer_cls(data=data)
@@ -168,17 +171,20 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 			# User Exists check
 			self.ldap_user_exists(
-				username=data.get("username"),
+				username=user_username,
 				email=data.get(
-					RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"], None
+					RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"],
+					None,
 				),
 			)
 
 			user_dn = self.ldap_user_insert(user_data=data)
-			user_pwd = data["password"]
-			self.ldap_set_password(
-				user_dn=user_dn, user_pwd_new=user_pwd, set_by_admin=True
-			)
+			if set_pwd:
+				self.ldap_set_password(
+					user_dn=user_dn,
+					user_pwd_new=user_pwd,
+					set_by_admin=True,
+				)
 
 		return Response(
 			data={"code": code, "code_msg": code_msg, "data": data["username"]}
