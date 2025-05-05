@@ -69,8 +69,6 @@ DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
 
-# TODO - Make decorator that checks user existence both in LDAP and Django
-# TODO - Make decorator that checks user type being correct (ldap or django/local)
 class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 	queryset = User.objects.all()
 	serializer_cls = LDAPUserSerializer
@@ -86,7 +84,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		self.ldap_filter_object = LDAPFilter.eq(
 			LDAP_ATTR_OBJECT_CLASS, RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
-		).to_string()
+		)
 		self.ldap_filter_attr = self.filter_attr_builder(
 			RuntimeSettings
 		).get_list_attrs()

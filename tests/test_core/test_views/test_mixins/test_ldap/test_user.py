@@ -34,6 +34,7 @@ from core.exceptions import (
 	users as exc_user,
 	ldap as exc_ldap,
 )
+from core.ldap.filter import LDAPFilter
 from core.models.ldap_object import LDAPObject
 from ldap3 import Entry as LDAPEntry
 from ldap3.extend import (
@@ -49,6 +50,7 @@ from core.ldap.constants import (
 	LDAP_ATTR_COUNTRY,
 	LDAP_ATTR_EMAIL,
 	LDAP_ATTR_UAC,
+	LDAP_ATTR_OBJECT_CLASS,
 )
 
 
@@ -369,8 +371,22 @@ class TestLDAPUserMixin:
 		)
 		assert result == m_group_attrs
 
+	@pytest.mark.parametrize(
+		"ldap_filter_object",
+		(
+			LDAPFilter.eq(
+				LDAP_ATTR_OBJECT_CLASS, "person"
+			),
+			"(objectClass=person)",
+		),
+		ids=[
+			"Filter as LDAPFilter",
+			"Filter as string",
+		]
+	)
 	def test_ldap_user_list(
 		self,
+		ldap_filter_object: str,
 		f_user_mixin: LDAPUserMixin,
 		f_runtime_settings: RuntimeSettingsSingleton,
 		fc_user_entry: dict,
@@ -389,9 +405,7 @@ class TestLDAPUserMixin:
 				},
 			),
 		]
-		f_user_mixin.ldap_filter_object = (
-			"(objectClass=" + f_runtime_settings.LDAP_AUTH_OBJECT_CLASS + ")"
-		)
+		f_user_mixin.ldap_filter_object = ldap_filter_object
 		f_user_mixin.ldap_filter_attr = f_user_mixin.filter_attr_builder(
 			f_runtime_settings
 		).get_list_attrs()

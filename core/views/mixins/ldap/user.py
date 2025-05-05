@@ -72,7 +72,7 @@ from core.ldap.constants import (
 	LDAP_ATTR_COUNTRY_ISO,
 	LDAP_ATTR_SECURITY_ID,
 )
-from core.ldap.filter import LDAPFilter
+from core.ldap.filter import LDAPFilter, LDAPFilterType
 from rest_framework.serializers import ValidationError
 from core.ldap.countries import LDAP_COUNTRIES
 ################################################################################
@@ -270,24 +270,35 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		"""
 		user_list = []
 
+		if isinstance(self.ldap_filter_object, str):
+			self.ldap_filter_object = LDAPFilter.from_string(
+				self.ldap_filter_object
+			)
+
 		# Exclude Computer Accounts if settings allow it
 		if RuntimeSettings.EXCLUDE_COMPUTER_ACCOUNTS:
-			self.ldap_filter_object = ldap_adsi.join_ldap_filter(
+			self.ldap_filter_object = LDAPFilter.and_(
 				self.ldap_filter_object,
-				f"{LDAP_ATTR_OBJECT_CLASS}=computer",
-				negate_add=True,
+				LDAPFilter.not_(
+					LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "computer")
+				),
 			)
 
 		# Exclude Contacts
-		self.ldap_filter_object = ldap_adsi.join_ldap_filter(
-			self.ldap_filter_object,
-			f"{LDAP_ATTR_OBJECT_CLASS}=contact",
-			negate_add=True,
+		filter_contacts = LDAPFilter.not_(
+			LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "contact")
 		)
+		if self.ldap_filter_object.type == LDAPFilterType.AND:
+			self.ldap_filter_object.children.append(filter_contacts)
+		else:
+			self.ldap_filter_object = LDAPFilter.and_(
+				self.ldap_filter_object,
+				filter_contacts,
+			)
 
 		self.ldap_connection.search(
 			RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
-			self.ldap_filter_object,
+			self.ldap_filter_object.to_string(),
 			attributes=self.ldap_filter_attr,
 		)
 		user_entry_list: list[LDAPEntry] = self.ldap_connection.entries
