@@ -1,4 +1,9 @@
-# core.ldap.constants
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.ldap.constants
 
 # Global
 LDAP_DATE_FORMAT = "%Y%m%d%H%M%S.%fZ"
