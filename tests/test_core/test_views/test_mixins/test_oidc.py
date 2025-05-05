@@ -240,7 +240,7 @@ def test_get_user_groups_ldap_user(
 	m_ldap_user_mixin: LDAPUserMixin = mocker.MagicMock()
 	m_ldap_user_mixin.ldap_user_fetch.return_value = m_ldap_user_attrs
 	mocker.patch(
-		"core.views.mixins.oidc.UserViewLDAPMixin",
+		"core.views.mixins.oidc.LDAPUserMixin",
 		return_value=m_ldap_user_mixin,
 	)
 	assert get_user_groups(user=f_user_ldap) == ["some_group_dn"]

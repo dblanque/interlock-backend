@@ -177,7 +177,7 @@ def f_group_dn(f_ldap_search_base):
 	return f"CN=testgroup,OU=Groups,{f_ldap_search_base}"
 
 
-class TestUserViewLDAPMixin:
+class TestLDAPUserMixin:
 	def test_get_user_object_filter_xor_raises(
 		self, f_user_mixin: LDAPUserMixin
 	):
