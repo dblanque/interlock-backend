@@ -12,6 +12,7 @@ from django.utils.translation import gettext_lazy as _
 
 ### Interlock
 from core.ldap.constants import (
+	LOCAL_ATTRS_MAP,
 	LDAP_ATTR_COUNTRY_DCC,
 	LDAP_ATTR_UAC,
 	LDAP_ATTR_LAST_LOGIN,
@@ -269,6 +270,26 @@ class LDAPObject:
 		if not self.attributes:
 			return []
 		return list(self.attributes.keys())
+
+	def __mapped_attrs__(self) -> dict:
+		if not self.attributes:
+			return {}
+
+		result = {}
+		# Add mapped attrs
+		for local_key, ldap_aliases in LOCAL_ATTRS_MAP.items():
+			if isinstance(ldap_aliases, str):
+				if ldap_aliases in self.attributes.keys():
+					result[local_key] = self.attributes[ldap_aliases]
+			elif isinstance(ldap_aliases, (tuple, list, set)):
+				for alias in ldap_aliases:
+					if alias in self.attributes.keys():
+						result[local_key] = self.attributes[alias]
+		# Add unmapped attrs
+		for _key, _value in self.attributes.items():
+			if _value not in result.values():
+				result[_key] = _value
+		return result
 
 	def __get_common_name__(self, dn: str):
 		return str(dn).split(",")[0].split("=")[-1]

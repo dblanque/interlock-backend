@@ -11,6 +11,7 @@ from core.models.ldap_object import (
 	DEFAULT_CONTAINER_TYPES,
 	DEFAULT_USER_TYPES,
 )
+from core.ldap.constants import LOCAL_ATTRS_MAP
 from core.views.mixins.utils import is_non_str_iterable
 from copy import deepcopy
 from ldap3 import Attribute as LDAPAttribute
@@ -570,3 +571,20 @@ def test_dunder_get_common_name_handles_malformed_dn(
 
 	# Assert
 	assert result == "not"
+
+def test_dunder_mapped_attrs(f_object_entry_user, f_object_args, f_connection):
+	# Setup
+	object_args: LDAPObjectOptions = f_object_args()
+	ldap_obj = LDAPObject(auto_fetch=False, **object_args)
+	ldap_obj.connection.entries = [f_object_entry_user()]
+	ldap_obj.__fetch_object__()
+
+	result = ldap_obj.__mapped_attrs__()
+	assert isinstance(result, dict)
+	for _local_alias, _ldap_alias in LOCAL_ATTRS_MAP.items():
+		if not _local_alias in result:
+			continue
+		if isinstance(_ldap_alias, (tuple, list, set)):
+			assert any(_v in ldap_obj.attributes.keys() for _v in _ldap_alias)
+		else:
+			assert _ldap_alias in ldap_obj.attributes.keys()
