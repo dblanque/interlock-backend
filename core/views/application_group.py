@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.views.application
+# Module: core.views.application_group
 # Contains the ViewSet for SSO Application related operations
 
 # ---------------------------------- IMPORTS -----------------------------------#
