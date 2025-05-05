@@ -315,12 +315,12 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		if not username:
 			raise exc_base.BadRequest
 
+		if username == user.username:
+			raise exc_user.UserAntiLockout
+
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-
-			if username == user.username:
-				raise exc_user.UserAntiLockout
 
 			# Check user exists and delete in LDAP Server
 			if self.ldap_user_exists(username=username, return_exception=False):
