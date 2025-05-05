@@ -47,6 +47,9 @@ from core.views.mixins.utils import getldapattrvalue
 ################################################################################
 logger = getLogger()
 
+# TODO
+# Add save method to LDAPObject
+# Add Immutable or always excluded keys tuple
 
 class LDAPObjectOptions(TypedDict):
 	name: NotRequired[str]
@@ -96,6 +99,7 @@ class LDAPObject:
 	use_in_migrations: bool = False
 
 	# Type Hints
+	attr_map = LOCAL_ATTRS_MAP
 	attributes: dict
 	connection: Connection
 	container_types: list[str]
@@ -277,14 +281,9 @@ class LDAPObject:
 
 		result = {}
 		# Add mapped attrs
-		for local_key, ldap_aliases in LOCAL_ATTRS_MAP.items():
-			if isinstance(ldap_aliases, str):
-				if ldap_aliases in self.attributes.keys():
-					result[local_key] = self.attributes[ldap_aliases]
-			elif isinstance(ldap_aliases, (tuple, list, set)):
-				for alias in ldap_aliases:
-					if alias in self.attributes.keys():
-						result[local_key] = self.attributes[alias]
+		for local_key, ldap_alias in LOCAL_ATTRS_MAP.items():
+			if ldap_alias in self.attributes.keys():
+				result[local_key] = self.attributes[ldap_alias]
 		# Add unmapped attrs
 		for _key, _value in self.attributes.items():
 			if _value not in result.values():
@@ -293,3 +292,21 @@ class LDAPObject:
 
 	def __get_common_name__(self, dn: str):
 		return str(dn).split(",")[0].split("=")[-1]
+
+	def __setattr__(self, name, value):
+		if name != "attr_map":
+			if name in self.attr_map.keys():
+				self.attributes[self.attr_map[name]] = value
+				return
+			elif name in self.attr_map.values():
+				self.attributes[name] = value
+				return
+		return super().__setattr__(name, value)
+
+	def __getattribute__(self, name):
+		if name != "attr_map":
+			if name in self.attr_map.keys():
+				return self.attributes[self.attr_map[name]]
+			if name in self.attr_map.values():
+				return self.attributes[name]
+		return super().__getattribute__(name)
