@@ -305,7 +305,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		data = request.data
 
 		if not isinstance(data, dict):
-			raise exc_base.CoreException
+			raise exc_base.BadRequest
 
 		# Get username from data
 		username = data.get(
