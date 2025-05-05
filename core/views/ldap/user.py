@@ -287,6 +287,14 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
+
+			# Check user exists and fetch it with minimal attributes
+			if not self.ldap_user_exists(
+				username=username,
+				return_exception=False,
+			):
+				raise exc_user.UserDoesNotExist
+
 			self.ldap_user_change_status(
 				username=username,
 				enabled=enabled,
@@ -354,22 +362,33 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 				RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"], None
 			)
 		)
-		if not username:
+		password = data.get("password", None)
+		password_confirm = data.get("passwordConfirm", None)
+
+		if not username or not password:
 			raise exc_base.BadRequest
+		
+		if password != password_confirm:
+			raise exc_user.UserPasswordsDontMatch
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			ldap_user_entry = self.get_user_object(username=username)
 
+			# Check user exists and fetch it with minimal attributes
+			if not self.ldap_user_exists(
+				username=username,
+				return_exception=False,
+			):
+				raise exc_user.UserDoesNotExist
+
+			ldap_user_entry = self.get_user_object(username=username)
 			if not ldap_user_entry.entry_dn:
 				raise exc_user.UserDoesNotExist
 
-			if data["password"] != data["passwordConfirm"]:
-				raise exc_user.UserPasswordsDontMatch
 			self.ldap_set_password(
 				user_dn=ldap_user_entry.entry_dn,
-				user_pwd_new=data["password"],
+				user_pwd_new=password,
 				set_by_admin=True,
 			)
 
@@ -379,7 +398,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 		except Exception as e:
 			logger.error(e)
 		if django_user:
-			encrypted_data = aes_encrypt(data["password"])
+			encrypted_data = aes_encrypt(password)
 			for index, field in enumerate(USER_PASSWORD_FIELDS):
 				setattr(django_user, field, encrypted_data[index])
 			django_user.set_unusable_password()
@@ -393,7 +412,7 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 			message=LOG_EXTRA_USER_CHANGE_PASSWORD,
 		)
 
-		return Response(data={"code": code, "code_msg": code_msg, "data": data})
+		return Response(data={"code": code, "code_msg": code_msg})
 
 	@action(detail=False, methods=["post"])
 	@auth_required
@@ -421,7 +440,8 @@ class LDAPUserViewSet(BaseViewSet, UserViewMixin, UserViewLDAPMixin):
 
 			# Check user exists and fetch it with minimal attributes
 			if not self.ldap_user_exists(
-				username=username, return_exception=False
+				username=username,
+				return_exception=False,
 			):
 				raise exc_user.UserDoesNotExist
 
