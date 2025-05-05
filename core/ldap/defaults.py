@@ -153,22 +153,6 @@ LDAP_AUTH_RECEIVE_TIMEOUT = 10
 
 ADMIN_GROUP_TO_SEARCH = "CN=Administrators,CN=Builtin,DC=example,DC=com"
 
-# TODO - remove this
-LDAP_DIRTREE_OU_FILTER = {
-	"organizationalUnit": "objectCategory",
-	"top": "objectCategory",
-	"container": "objectCategory",
-	"builtinDomain": "objectClass",
-}
-
-LDAP_DIRTREE_CN_FILTER = {
-	"user": "objectClass",
-	"person": "objectClass",
-	"group": "objectClass",
-	"organizationalPerson": "objectClass",
-	"computer": "objectClass",
-}
-
 LDAP_DIRTREE_ATTRIBUTES = list(
 	{
 		# User Attrs

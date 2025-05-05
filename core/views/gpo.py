@@ -24,7 +24,14 @@ from ldap3 import ALL_ATTRIBUTES
 from core.decorators.login import auth_required, admin_required
 from core.ldap.guid import GUID
 from core.ldap.security_identifier import SID
-from core.ldap import adsi as ldap_adsi
+from core.ldap.filter import LDAPFilter
+from core.ldap.constants import (
+	LDAP_ATTR_OBJECT_CLASS,
+	LDAP_ATTR_DN,
+	LDAP_ATTR_SECURITY_ID,
+	LDAP_ATTR_GUID,
+	LDAP_ATTR_FULL_NAME,
+)
 import logging
 ################################################################################
 
@@ -50,11 +57,10 @@ class GPOViewSet(BaseViewSet): # pragma: no cover
 			# ! Might have to add cifs-utils as a dependency
 
 			### List GPOs here
-			self.ldap_filter_object = ldap_adsi.search_filter_from_dict(
-				{"*": ["gpLink", "objectClass"]},
-				expression=ldap_adsi.LDAP_FILTER_AND,
-				reverse_key=False,
-			)
+			self.ldap_filter_object = LDAPFilter.and_(
+				LDAPFilter.has("gpLink"),
+				LDAPFilter.has(LDAP_ATTR_OBJECT_CLASS)
+			).to_string()
 			try:
 				self.ldap_connection.search(
 					RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
@@ -65,32 +71,27 @@ class GPOViewSet(BaseViewSet): # pragma: no cover
 				self.ldap_connection.unbind()
 				raise
 			data["gpos"] = []
-			data["headers"] = ["displayName", "gPCFileSysPath", "dn", "flags"]
+			data["headers"] = [LDAP_ATTR_FULL_NAME, "gPCFileSysPath", "dn", "flags"]
 			for i in self.ldap_connection.entries:
 				data["gpos"].append(i.entry_attributes_as_dict)
 
 			for gpo in data["gpos"]:
-				if "objectGUID" in gpo:
+				if LDAP_ATTR_GUID in gpo:
 					try:
-						guid_bytes = gpo["objectGUID"]
-						gpo["objectGUID"] = GUID(guid_bytes).__str__()
+						guid_bytes = gpo[LDAP_ATTR_GUID]
+						gpo[LDAP_ATTR_GUID] = GUID(guid_bytes).__str__()
 					except:
 						raise
-				if "objectSid" in gpo:
+				if LDAP_ATTR_SECURITY_ID in gpo:
 					try:
-						gpo["objectSid"] = SID(gpo["objectSid"]).__str__()
+						gpo[LDAP_ATTR_SECURITY_ID] = SID(gpo[LDAP_ATTR_SECURITY_ID]).__str__()
 					except:
 						raise
 
-			self.ldap_filter_object = ldap_adsi.search_filter_from_dict(
-				{
-					"*": "objectClass",
-					# This is from a dev environment, doesn't matter
-					"CN={6AC1786C-016F-11D2-945F-00C04FB984F9},CN=Policies,CN=System,DC=brconsulting": "distinguishedName",
-				},
-				expression="&",
-				reverse_key=False,
-			)
+			self.ldap_filter_object = LDAPFilter.and_(
+				LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "*"),
+				LDAPFilter.eq(LDAP_ATTR_DN, "CN={6AC1786C-016F-11D2-945F-00C04FB984F9},CN=Policies,CN=System,DC=brconsulting")
+			).to_string()
 			try:
 				self.ldap_connection.search(
 					"CN=Policies,CN=System,DC=brconsulting",

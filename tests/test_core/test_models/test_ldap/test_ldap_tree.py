@@ -3,7 +3,7 @@ from pytest_mock import MockType
 from core.models.ldap_tree import LDAPTree
 from core.models.ldap_object import LDAPObject
 from core.config.runtime import RuntimeSettings
-
+from ldap3 import LEVEL
 
 # Create a spy wrapper to track calls AND execute original
 def init_spy(self, *args, **kwargs):
@@ -58,7 +58,7 @@ class TestLDAPTree:
 		f_connection.search.assert_called_once_with(
 			search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
 			search_filter=tree.ldap_filter,
-			search_scope="LEVEL",
+			search_scope=LEVEL,
 			attributes=tree.ldap_attrs,
 		)
 

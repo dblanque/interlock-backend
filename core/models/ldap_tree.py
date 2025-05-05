@@ -9,11 +9,19 @@
 # ---------------------------------- IMPORTS -----------------------------------#
 ### Interlock
 from core.models.ldap_object import LDAPObject, LDAPObjectOptions
-from core.ldap.adsi import search_filter_from_dict, LDAP_BUILTIN_OBJECTS
+from core.ldap.adsi import LDAP_BUILTIN_OBJECTS
 from core.ldap.security_identifier import SID
-from core.config.runtime import RuntimeSettings
+from core.ldap.filter import LDAPFilter
+from core.ldap.constants import (
+	LDAP_ATTR_DN,
+	LDAP_ATTR_OBJECT_CLASS,
+	LDAP_ATTR_OBJECT_CATEGORY,
+	LDAP_ATTR_SECURITY_ID,
+	LDAP_ATTR_COMMON_NAME,
+)
 
 ### Others
+from ldap3 import LEVEL
 from typing import Union
 from typing_extensions import NotRequired
 import logging
@@ -27,7 +35,6 @@ class LDAPTreeOptions(LDAPObjectOptions):
 	children_object_type: NotRequired[Union[str, type]]
 	recursive: NotRequired[bool]
 	test_fetch: NotRequired[bool]
-
 
 class LDAPTree(LDAPObject):
 	"""
@@ -69,12 +76,27 @@ class LDAPTree(LDAPObject):
 
 		# Set LDAPTree Default Values
 		self.subobject_id = 0
-		self.ldap_filter = search_filter_from_dict(
-			{
-				**RuntimeSettings.LDAP_DIRTREE_CN_FILTER,
-				**RuntimeSettings.LDAP_DIRTREE_OU_FILTER,
-			}
-		)
+		self.ldap_filter = LDAPFilter.and_(
+			# Object Class
+			LDAPFilter.or_(
+				*[LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, v) for v in (
+					"user",
+					"person",
+					"group",
+					"organizationalPerson",
+					"computer",
+				)]
+			),
+			# Object Category
+			LDAPFilter.or_(
+				*[LDAPFilter.eq(LDAP_ATTR_OBJECT_CATEGORY, v) for v in (
+					"organizationalUnit",
+					"top",
+					"container",
+				)],
+				LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "builtinDomain"),
+			)
+		).to_string()
 		self.children_object_type = "array"
 
 		# Set passed kwargs from Object Call
@@ -104,7 +126,7 @@ class LDAPTree(LDAPObject):
 		self.connection.search(
 			search_base=self.search_base,
 			search_filter=self.ldap_filter,
-			search_scope="LEVEL",
+			search_scope=LEVEL,
 			attributes=self.ldap_attrs,
 		)
 		baseLevelList = self.connection.entries
@@ -126,7 +148,7 @@ class LDAPTree(LDAPObject):
 				str(distinguished_name).split(",")[0].split("=")[1]
 			)
 			_current_obj["id"] = self.subobject_id
-			_current_obj["distinguishedName"] = distinguished_name
+			_current_obj[LDAP_ATTR_DN] = distinguished_name
 			_current_obj["type"] = (
 				str(entity.objectCategory).split(",")[0].split("=")[1]
 			)
@@ -153,9 +175,9 @@ class LDAPTree(LDAPObject):
 				self.subobject_id += 1
 			elif self.children_object_type == "dict":
 				###### Append subobject to Dict ######
-				children[_current_obj["distinguishedName"]] = _current_obj
-				children[_current_obj["distinguishedName"]].pop(
-					"distinguishedName"
+				children[_current_obj[LDAP_ATTR_DN]] = _current_obj
+				children[_current_obj[LDAP_ATTR_DN]].pop(
+					LDAP_ATTR_DN
 				)
 
 				###### Increase subobject_id ######
@@ -201,7 +223,7 @@ class LDAPTree(LDAPObject):
 		ldap_search = self.connection.extend.standard.paged_search(
 			search_base=distinguished_name,
 			search_filter=self.ldap_filter,
-			search_scope="LEVEL",
+			search_scope=LEVEL,
 			attributes=self.ldap_attrs,
 		)
 
@@ -217,15 +239,15 @@ class LDAPTree(LDAPObject):
 			self.subobject_id += 1
 			_current_obj["id"] = self.subobject_id
 			_current_obj["name"] = str(entry["dn"]).split(",")[0].split("=")[1]
-			_current_obj["distinguishedName"] = entry["dn"]
+			_current_obj[LDAP_ATTR_DN] = entry["dn"]
 			_current_obj["type"] = (
-				str(entry["attributes"]["objectCategory"])
+				str(entry["attributes"][LDAP_ATTR_OBJECT_CATEGORY])
 				.split(",")[0]
 				.split("=")[1]
 			)
 			if (
 				_current_obj["name"] in LDAP_BUILTIN_OBJECTS
-				or "builtinDomain" in entry["attributes"]["objectClass"]
+				or "builtinDomain" in entry["attributes"][LDAP_ATTR_OBJECT_CLASS]
 				or common_name in LDAP_BUILTIN_OBJECTS
 				or common_name == "Domain Controllers"
 			) and (
@@ -259,26 +281,26 @@ class LDAPTree(LDAPObject):
 						# For class in user classes check if it's in object
 						for cla in user_types:
 							if (
-								cla in entry["attributes"]["objectClass"]
+								cla in entry["attributes"][LDAP_ATTR_OBJECT_CLASS]
 								and "contact"
-								not in entry["attributes"]["objectClass"]
+								not in entry["attributes"][LDAP_ATTR_OBJECT_CLASS]
 							):
 								value = entry["attributes"][attr][0]
 								_current_obj["username"] = value
 					elif (
-						attr == "cn"
-						and "group" in entry["attributes"]["objectClass"]
+						attr == LDAP_ATTR_COMMON_NAME
+						and "group" in entry["attributes"][LDAP_ATTR_OBJECT_CLASS]
 					):
 						value = entry["attributes"][attr][0]
 						_current_obj["groupname"] = value
-					elif attr == "objectCategory":
+					elif attr == LDAP_ATTR_OBJECT_CATEGORY:
 						value = self.__get_common_name__(
 							entry["attributes"][attr]
 						)
 						_current_obj["type"] = value
 					elif (
-						attr == "objectSid"
-						and "group" in entry["attributes"]["objectClass"]
+						attr == LDAP_ATTR_SECURITY_ID
+						and "group" in entry["attributes"][LDAP_ATTR_OBJECT_CLASS]
 						and common_name.lower() != "builtin"
 					):
 						try:
@@ -305,7 +327,7 @@ class LDAPTree(LDAPObject):
 						except Exception as e:
 							logger.exception(e)
 							logger.error(
-								f"Could not set attribute {attr} for {_current_obj['distinguishedName']}"
+								f"Could not set attribute {attr} for {_current_obj[LDAP_ATTR_DN]}"
 							)
 					try:
 						_current_obj[attr] = value

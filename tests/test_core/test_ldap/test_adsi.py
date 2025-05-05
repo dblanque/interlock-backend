@@ -1,9 +1,8 @@
 import pytest
 from pytest_mock import MockType
-from core.ldap.defaults import LDAP_DIRTREE_OU_FILTER, LDAP_AUTH_USER_FIELDS
+from core.ldap.defaults import LDAP_AUTH_USER_FIELDS
 from core.ldap.adsi import (
 	join_ldap_filter,
-	search_filter_from_dict,
 	LDAP_FILTER_AND,
 	LDAP_FILTER_OR,
 	LDAP_UF_ACCOUNT_DISABLE,
@@ -161,39 +160,6 @@ def test_join_ldap_filter_raises_empty_string():
 def test_join_ldap_filter_raises_invalid_expression():
 	with pytest.raises(ValueError):
 		join_ldap_filter("", "objectClass=person", "A")
-
-
-@pytest.mark.parametrize(
-	"filter_dict,expression,reverse_key,expected",
-	(
-		(
-			LDAP_DIRTREE_OU_FILTER,
-			LDAP_FILTER_OR,
-			False,
-			f"({LDAP_FILTER_OR}(objectCategory=organizationalUnit)(objectCategory=top)(objectCategory=container)(objectClass=builtinDomain))",
-		),
-		(
-			{"objectClass": ["person", "user"], "sAMAccountName": "testuser"},
-			LDAP_FILTER_OR,
-			True,
-			f"({LDAP_FILTER_OR}(objectClass=person)(objectClass=user)(sAMAccountName=testuser))",
-		),
-		(
-			{"objectClass": "person", "sAMAccountName": "testuser"},
-			LDAP_FILTER_AND,
-			True,
-			f"({LDAP_FILTER_AND}(objectClass=person)(sAMAccountName=testuser))",
-		),
-	),
-)
-def test_search_filter_from_dict(
-	filter_dict, expression, reverse_key, expected
-):
-	assert (
-		search_filter_from_dict(filter_dict, expression, reverse_key)
-		== expected
-	)
-
 
 @pytest.mark.parametrize(
 	"input_value, expected",

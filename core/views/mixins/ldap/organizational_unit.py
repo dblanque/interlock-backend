@@ -14,12 +14,6 @@ from rest_framework import viewsets
 from core.exceptions import dirtree as exc_dirtree, ldap as exc_ldap
 
 ### Interlock
-from core.ldap.adsi import (
-	join_ldap_filter,
-	search_filter_from_dict,
-	LDAP_FILTER_AND,
-	LDAP_FILTER_OR,
-)
 from core.config.runtime import RuntimeSettings
 
 ### Models
@@ -33,12 +27,11 @@ from core.models.choices.log import (
 
 ### Others
 from rest_framework.exceptions import ValidationError
-from deprecated import deprecated
 from rest_framework import status
 from django.http.request import HttpRequest
 from core.ldap.filter import LDAPFilter, LDAPFilterType
 from ldap3 import Connection
-from ldap3.utils.dn import safe_dn, safe_rdn, parse_dn
+from ldap3.utils.dn import safe_rdn, parse_dn
 import logging
 ################################################################################
 
@@ -449,98 +442,3 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 			message=operation,
 		)
 		return new_dn
-
-	@deprecated
-	def process_filter(
-		self, data: dict = None, filter_dict: dict = None
-	):  # pragma: no cover
-		"""## DEPRECATED
-
-		Process LDAP Directory Tree Request Filter
-
-		Args:
-			data (dict): Request data dictionary
-			filter_dict (dict, optional): LDAP Filter dictionary to use when
-			iexact is not used. Defaults to None.
-
-		Raises:
-			TypeError: When data is not of type dict.
-
-		Returns:
-			str: LDAP Filter String
-		"""
-		if not isinstance(data, dict) and not data is None:
-			raise TypeError("data must be of type dict or None.")
-
-		ldap_filter: str = None
-		filter_data: dict = {}
-		if data:
-			filter_data = data.get("filter", {})
-
-		filter_data_iexact = filter_data.get("iexact", None)
-		if filter_data_iexact and not isinstance(filter_data_iexact, dict):
-			raise TypeError("filter_data_iexact must be of type dict.")
-
-		filter_data_exclude = filter_data.get("exclude", None)
-		if filter_data_exclude and not isinstance(filter_data_exclude, dict):
-			raise TypeError("filter_data_exclude must be of type dict.")
-
-		# Exact Filter
-		if filter_data_iexact:
-			logger.debug("Dirtree fetching with Filter iexact")
-			for lookup_value, lookup_params in filter_data_iexact.items():
-				# If lookup_params is a dict, fetch and use params.
-				if isinstance(lookup_params, dict):
-					lookup_type = lookup_params.pop("attr")
-					lookup_exclude = False
-					lookup_or = False
-
-					if "exclude" in lookup_params:
-						lookup_exclude = lookup_params.pop("exclude")
-					if "or" in lookup_params:
-						lookup_or = lookup_params.pop("or")
-
-					if lookup_or:
-						expr = LDAP_FILTER_OR
-					else:
-						expr = LDAP_FILTER_AND
-					ldap_filter = join_ldap_filter(
-						ldap_filter,
-						f"{lookup_type}={lookup_value}",
-						expression=expr,
-						negate_add=lookup_exclude,
-					)
-				else:
-					# If lookup_params isn't a dict, it's the type.
-					lookup_type = lookup_params
-					ldap_filter = join_ldap_filter(
-						ldap_filter, f"{lookup_type}={lookup_value}"
-					)
-		# Standard exclusion filter
-		else:
-			logger.debug("Dirtree fetching with Standard Exclusion Filter")
-			if filter_dict is None:
-				filter_dict = {
-					**RuntimeSettings.LDAP_DIRTREE_CN_FILTER,
-					**RuntimeSettings.LDAP_DIRTREE_OU_FILTER,
-				}
-			# Remove excluded field/value pairs from filter dict.
-			if filter_data_exclude:
-				for lookup_value in filter_data_exclude:
-					if lookup_value in filter_dict:
-						del filter_dict[lookup_value]
-
-			ldap_filter = search_filter_from_dict(filter_dict)
-
-			# Add excluded field/value pairs as negated filters to dict.
-			if filter_data_exclude:
-				for lookup_value in filter_data_exclude:
-					lookup_type = filter_data_exclude[lookup_value]
-					ldap_filter = join_ldap_filter(
-						ldap_filter,
-						f"{lookup_type}={lookup_value}",
-						negate_add=True,
-					)
-
-		logger.debug("LDAP Filter for Dirtree: %s", ldap_filter)
-		return ldap_filter
