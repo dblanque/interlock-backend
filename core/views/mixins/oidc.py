@@ -47,6 +47,10 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 
 # Others
+from core.ldap.constants import (
+	LDAP_ATTR_USER_GROUPS,
+	LDAP_ATTR_DN,
+)
 import logging
 from interlock_backend.settings import LOGIN_URL
 from oidc_provider.lib.endpoints.authorize import AuthorizeEndpoint
@@ -75,13 +79,13 @@ def get_user_groups(user: User) -> list:
 		with LDAPConnector(force_admin=True) as ldc:
 			groups = []
 			user_mixin = LDAPUserMixin()
-			user_mixin.ldap_filter_attr = ["memberOf"]
+			user_mixin.ldap_filter_attr = [LDAP_ATTR_USER_GROUPS]
 			user_mixin.ldap_connection = ldc.connection
 			ldap_user: dict = user_mixin.ldap_user_fetch(
 				user_search=user.username
 			)
 			for group in ldap_user["memberOfObjects"]:
-				groups.append(group["distinguishedName"])
+				groups.append(group[LDAP_ATTR_DN])
 			return groups
 	else:
 		return []
