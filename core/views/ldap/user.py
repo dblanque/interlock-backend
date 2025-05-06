@@ -423,9 +423,10 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		# Get username from data
 		username = data.get(
-			LOCAL_ATTR_USERNAME, 
+			LOCAL_ATTR_USERNAME,
 			data.get(
-				RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"], None
+				RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
+				None
 			)
 		)
 		if not username:
