@@ -351,7 +351,6 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		code = 0
 		code_msg = "ok"
 		data = request.data
-		ldap_user_search = None
 
 		# Get username from data
 		username = data.get(
@@ -392,9 +391,9 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		django_user = None
 		try:
-			django_user = User.objects.get(username=ldap_user_search)
-		except Exception as e:
-			logger.error(e)
+			django_user = User.objects.get(username=username)
+		except ObjectDoesNotExist:
+			pass
 		if django_user:
 			encrypted_data = aes_encrypt(password)
 			for index, field in enumerate(USER_PASSWORD_FIELDS):
@@ -406,7 +405,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			user=request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_USER,
-			log_target=ldap_user_search,
+			log_target=username,
 			message=LOG_EXTRA_USER_CHANGE_PASSWORD,
 		)
 
