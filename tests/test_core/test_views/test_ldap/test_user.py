@@ -34,6 +34,7 @@ from core.models.choices.log import (
 	LOG_CLASS_USER,
 	LOG_EXTRA_USER_CHANGE_PASSWORD,
 )
+from tests.test_core.type_hints import LDAPConnectorMock
 
 @pytest.fixture(autouse=True)
 def f_log_mixin(mocker: MockerFixture):
@@ -42,7 +43,7 @@ def f_log_mixin(mocker: MockerFixture):
 	return m_log_mixin
 
 @pytest.fixture(autouse=True)
-def f_ldap_connector(g_ldap_connector) -> MockType:
+def f_ldap_connector(g_ldap_connector) -> LDAPConnectorMock:
 	"""Fixture to mock LDAPConnector and its context manager."""
 	return g_ldap_connector(patch_path="core.views.ldap.user.LDAPConnector")
 
@@ -810,6 +811,111 @@ class TestChangePassword:
 
 class TestUnlock:
 	endpoint = "/api/ldap/users/unlock/"
+
+	def test_raises_bad_request(self, admin_user_client: APIClient):
+		# Exec
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={},
+			format="json",
+		)
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+	def test_raises_user_does_not_exist(
+		self,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		m_ldap_user_exists = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_exists",
+			return_value=False
+		)
+		m_ldap_user_unlock = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_unlock"
+		)
+
+		# Exec
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={"username":"someuser"},
+			format="json",
+		)
+
+		# Assertions
+		assert response.status_code == status.HTTP_404_NOT_FOUND
+		assert response.data.get("code") == "user_dn_does_not_exist"
+		m_ldap_user_exists.assert_called_once_with(
+			username="someuser",
+			return_exception=False,
+		)
+		m_ldap_user_unlock.assert_not_called()
+
+	def test_raises_could_not_unlock(
+		self,
+		admin_user_client: APIClient,
+		f_ldap_connector: LDAPConnectorMock,
+		mocker: MockerFixture,
+	):
+		f_ldap_connector.connection.result = {"description":"someError"}
+		m_ldap_user_exists = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_exists",
+			return_value=True
+		)
+		m_ldap_user_unlock = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_unlock"
+		)
+
+		# Exec
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={"username":"someuser"},
+			format="json",
+		)
+
+		# Assertions
+		assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+		assert response.data.get("code") == "user_unlock_error"
+		m_ldap_user_exists.assert_called_once_with(
+			username="someuser",
+			return_exception=False,
+		)
+		m_ldap_user_unlock.assert_called_once_with(username="someuser")
+
+	def test_success(
+		self,
+		admin_user_client: APIClient,
+		f_ldap_connector: LDAPConnectorMock,
+		mocker: MockerFixture,
+	):
+		f_ldap_connector.connection.result = {"description":"success"}
+		m_ldap_user_exists = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_exists",
+			return_value=True
+		)
+		m_ldap_user_unlock = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_unlock"
+		)
+
+		# Exec
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={"username":"someuser"},
+			format="json",
+		)
+
+		# Assertions
+		assert response.status_code == status.HTTP_200_OK
+		m_ldap_user_exists.assert_called_once_with(
+			username="someuser",
+			return_exception=False,
+		)
+		m_ldap_user_unlock.assert_called_once_with(username="someuser")
 
 class TestBulkInsert:
 	endpoint = "/api/ldap/users/bulk_insert/"
