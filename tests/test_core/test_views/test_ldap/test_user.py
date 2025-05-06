@@ -28,7 +28,18 @@ from core.ldap.constants import (
 	LDAP_ATTR_USERNAME_SAMBA_ADDS,
 	LDAP_ATTR_EMAIL,
 )
+from core.views.mixins.logs import LogMixin
+from core.models.choices.log import (
+	LOG_ACTION_UPDATE,
+	LOG_CLASS_USER,
+	LOG_EXTRA_USER_CHANGE_PASSWORD,
+)
 
+@pytest.fixture(autouse=True)
+def f_log_mixin(mocker: MockerFixture):
+	m_log_mixin = mocker.Mock(name="m_log_mixin")
+	mocker.patch("core.views.ldap.user.DBLogMixin", m_log_mixin)
+	return m_log_mixin
 
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector) -> MockType:
@@ -734,13 +745,68 @@ class TestChangePassword:
 		m_ldap_user_exists.assert_not_called()
 		m_ldap_set_password.assert_not_called()
 
-	# def test_success(
-	# 	self,
-	# 	admin_user: User,
-	# 	admin_user_client: APIClient,
-	# 	mocker: MockerFixture,
-	# ):
-	# 	pass
+	def test_success(
+		self,
+		user_factory,
+		admin_user: User,
+		admin_user_client: APIClient,
+		f_log_mixin: LogMixin,
+		mocker: MockerFixture,
+	):
+		m_user: User = user_factory(
+			username="someuser",
+			email="someuser@example.com"
+		)
+		m_user_entry = mocker.Mock()
+		m_user_entry.entry_dn = "mock_dn"
+		m_password = "MockPassword"
+		m_data = {
+			"username": m_user.username,
+			"password": m_password,
+			"passwordConfirm": m_password,
+		}
+		m_ldap_user_exists = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_exists",
+			return_value=True
+		)
+		m_ldap_set_password = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_set_password"
+		)
+		m_get_user_object = mocker.patch.object(
+			LDAPUserViewSet,
+			"get_user_object",
+			return_value=m_user_entry
+		)
+
+		# Exec
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=m_data,
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_200_OK
+		m_ldap_user_exists.assert_called_once_with(
+			username=m_data["username"],
+			return_exception=False,
+		)
+		m_get_user_object.assert_called_once_with(username=m_data["username"])
+		m_ldap_set_password.assert_called_once_with(
+			user_dn=m_user_entry.entry_dn,
+			user_pwd_new=m_data["password"],
+			set_by_admin=True,
+		)
+		f_log_mixin.log.assert_called_once_with(
+			user=admin_user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=m_data["username"],
+			message=LOG_EXTRA_USER_CHANGE_PASSWORD,
+		)
+		# User should have unusable password as it is LDAP Type
+		assert not m_user.check_password(m_password)
 
 class TestUnlock:
 	endpoint = "/api/ldap/users/unlock/"
