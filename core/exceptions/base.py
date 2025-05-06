@@ -19,7 +19,10 @@ class CoreException(APIException):
 			if "code" not in self.detail:
 				self.detail["code"] = self.default_code
 			else:
-				self.status_code = self.detail["code"]
+				try:
+					self.status_code = int(self.detail["code"])
+				except:
+					pass
 			if "detail" not in self.detail:
 				self.detail["detail"] = self.default_detail
 
