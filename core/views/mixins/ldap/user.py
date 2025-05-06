@@ -71,6 +71,8 @@ from core.ldap.constants import (
 	LDAP_ATTR_COUNTRY_DCC,
 	LDAP_ATTR_COUNTRY_ISO,
 	LDAP_ATTR_SECURITY_ID,
+	LOCAL_ATTR_EMAIL,
+	LOCAL_ATTR_USERNAME,
 )
 from core.ldap.filter import LDAPFilter, LDAPFilterType
 from rest_framework.serializers import ValidationError
@@ -176,7 +178,10 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 				"username or email must be specified in get_user_entry call."
 			)
 		if not self.ldap_connection.entries:
-			return
+			if raise_if_not_exists:
+				raise exc_user.UserEntryNotFound
+			else:
+				return
 
 		_username_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
 		_email_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"]
@@ -194,8 +199,10 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			elif email:
 				if getldapattrvalue(entry, _email_field) == email:
 					return entry
+
 		if raise_if_not_exists:
 			raise exc_user.UserEntryNotFound
+		return
 
 	def get_user_object(
 		self,
@@ -758,9 +765,9 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 				"username or email args are required for ldap_user_exists call."
 			)
 		ldap_attributes = [
-			RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
-			"distinguishedName",
-			RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"],
+			RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
+			LDAP_ATTR_DN,
+			RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_EMAIL],
 		]
 		self.get_user_object(
 			username=username, email=email, attributes=ldap_attributes
