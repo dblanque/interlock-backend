@@ -11,22 +11,9 @@
 from django.utils.translation import gettext_lazy as _
 
 ### Interlock
-from core.exceptions import (
-	users as exc_user,
-	groups as exc_group,
-	dirtree as exc_dirtree,
-	ldap as exc_ldap,
-)
 from core.ldap.constants import *
-from core.ldap.countries import LDAP_COUNTRIES
 from core.config.runtime import RuntimeSettings
-from core.ldap.adsi import (
-	calc_permissions,
-	LDAP_BUILTIN_OBJECTS,
-	list_user_perms,
-	LDAP_UF_ACCOUNT_DISABLE,
-	LDAP_UF_NORMAL_ACCOUNT,
-)
+from core.ldap.adsi import LDAP_BUILTIN_OBJECTS
 from core.ldap.security_identifier import SID
 
 ### Others
@@ -40,17 +27,10 @@ from ldap3 import (
 	MODIFY_DELETE,
 	MODIFY_REPLACE,
 )
-from ldap3.utils.dn import safe_rdn
-from core.views.mixins.ldap.organizational_unit import OrganizationalUnitMixin
 from typing import overload
 from enum import Enum
 from logging import getLogger
 from core.views.mixins.utils import getldapattrvalue
-from core.ldap.types.group import (
-	LDAPGroupTypes,
-	LDAP_GROUP_TYPE_MAPPING,
-	LDAP_GROUP_SCOPE_MAPPING,
-)
 ################################################################################
 logger = getLogger()
 
@@ -75,15 +55,16 @@ DEFAULT_CONTAINER_TYPES = {
 	"container",
 	"organizational-unit",
 }
-# Immutable Attributes
+
+# Immutable Attributes, these are read only
 ATTRS_IMMUTABLE = {
+	LOCAL_ATTR_PATH,
 	LOCAL_ATTR_BAD_PWD_COUNT,
 	LOCAL_ATTR_RELATIVE_ID,
 	LOCAL_ATTR_SECURITY_ID,
 	LOCAL_ATTR_GUID,
 	LOCAL_ATTR_ACCOUNT_TYPE,
 	LOCAL_ATTR_GROUP_MEMBERS,
-	LOCAL_ATTR_USER_GROUPS,
 	LOCAL_ATTR_CREATED,
 	LOCAL_ATTR_MODIFIED,
 	LOCAL_ATTR_UPN,
@@ -99,7 +80,8 @@ ATTRS_IMMUTABLE = {
 	LOCAL_ATTR_GROUP_MEMBERS,
 	LOCAL_ATTR_NAME,
 }
-# Special Attributes
+
+# Special Attributes, these will not be processed unless specified
 ATTRS_SPECIAL = {
 	LOCAL_ATTR_UAC,
 	LOCAL_ATTR_COUNTRY,
@@ -107,7 +89,12 @@ ATTRS_SPECIAL = {
 	LOCAL_ATTR_COUNTRY_ISO,
 	LOCAL_ATTR_NAME,
 	LOCAL_ATTR_GROUP_TYPE,
+	LOCAL_ATTR_GROUP_SCOPE,
 	LOCAL_ATTR_OBJECT_CATEGORY,
+}
+
+ATTRS_SPECIAL_LDAP = {
+	LDAP_ATTR_GROUP_TYPE,
 }
 
 class LDAPObject:
@@ -116,7 +103,7 @@ class LDAPObject:
 	use_in_migrations: bool = False
 
 	# Type Hints
-	type = None
+	type = LDAPObjectTypes.GENERIC
 	distinguished_name: str
 	attributes: dict = None
 	connection: LDAPConnectionProtocol = None
@@ -146,6 +133,7 @@ class LDAPObject:
 		distinguished_name: str = None,
 		username: str = None,
 		search_base: str = None,
+		search_attrs: list[str] = None,
 		excluded_attributes: list[str] = None,
 		required_attributes: list[str] = None,
 		attributes: dict = None,
@@ -158,7 +146,7 @@ class LDAPObject:
 		self.entry = kwargs.pop("entry", None)
 		self.connection = kwargs.pop("connection", None)
 		self.distinguished_name = kwargs.pop(LOCAL_ATTR_DN, None)
-		self.__validate_kwargs__(kwargs=kwargs)
+		self.__validate_kwargs__(kwargs)
 
 		self.search_base = RuntimeSettings.LDAP_AUTH_SEARCH_BASE
 		self.parsed_specials = []
@@ -173,7 +161,7 @@ class LDAPObject:
 		elif self.entry and not self.attributes:
 			self.__sync_object__()
 
-	def __validate_kwargs__(self):
+	def __validate_kwargs__(self, kwargs: dict):
 		if self.entry and not isinstance(self.entry, LDAPEntry):
 			raise TypeError("LDAPObject entry must attr must be of type ldap3.Entry")
 
@@ -225,55 +213,6 @@ class LDAPObject:
 	def __get_object__(self):
 		return self.attributes
 
-	@overload
-	def get_local_alias_for_ldap_key(self, v: str, default: str = None): ...
-
-	def get_local_alias_for_ldap_key(self, v: str, **kwargs):
-		for local_alias, ldap_alias in LOCAL_ATTRS_MAP.items():
-			if ldap_alias == v:
-				return local_alias
-		if "default" in kwargs:
-			return kwargs.pop("default")
-		raise ValueError(f"No alias for ldap key ({v})")
-
-	def get_group_types(self, group_type: int = None) -> list[str]:
-		"""Get group types and scopes from integer value"""
-		sum = 0
-		_scopes = []
-		_types = []
-		if not isinstance(group_type, (int, str)) or group_type is False:
-			raise TypeError("group_type must be of type int.")
-
-		if isinstance(group_type, str):
-			try:
-				group_type = int(group_type)
-			except:
-				raise ValueError("group_type could not be cast to int.")
-		group_type_last_int = int(str(group_type)[-1])
-		if group_type < -1:
-			sum -= LDAPGroupTypes.TYPE_SECURITY.value
-			_types.append(LDAPGroupTypes.TYPE_SECURITY.name)
-		else:
-			_types.append(LDAPGroupTypes.TYPE_DISTRIBUTION.name)
-
-		if (group_type_last_int % 2) != 0:
-			sum += LDAPGroupTypes.TYPE_SYSTEM.value
-			_types.append(LDAPGroupTypes.TYPE_SYSTEM.name)
-		if group_type == (sum + 2):
-			sum += LDAPGroupTypes.SCOPE_GLOBAL.value
-			_scopes.append(LDAPGroupTypes.SCOPE_GLOBAL.name)
-		if group_type == (sum + 4):
-			sum += LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
-			_scopes.append(LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.name)
-		if group_type == (sum + 8):
-			sum += LDAPGroupTypes.SCOPE_UNIVERSAL.value
-			_scopes.append(LDAPGroupTypes.SCOPE_UNIVERSAL.name)
-
-		if sum != group_type:
-			raise ValueError("Invalid group type integer")
-
-		return _types, _scopes
-
 	def __sync_object__(self):
 		if not self.entry:
 			return
@@ -287,7 +226,7 @@ class LDAPObject:
 		self.attributes = {}
 		self.attributes[LOCAL_ATTR_NAME] = distinguished_name.split(",")[0].split("=")[1]
 		self.attributes[LOCAL_ATTR_DN] = distinguished_name
-		self.attributes[LOCAL_ATTR_TYPE] = LDAPObjectTypes.GENERIC.name if not self.type else self.type
+		self.attributes[LOCAL_ATTR_TYPE] = LDAPObjectTypes.GENERIC.name if not self.type.name else self.type.name
 		if LDAP_ATTR_OBJECT_CATEGORY in self.entry.entry_attributes:
 			self.attributes[LOCAL_ATTR_OBJECT_CATEGORY] = (
 				getldapattrvalue(self.entry, LDAP_ATTR_OBJECT_CATEGORY)
@@ -325,12 +264,10 @@ class LDAPObject:
 						+ distinguished_name
 					)
 					logger.exception(e)
-			elif attr_key == LDAP_ATTR_GROUP_TYPE:
-				group_types, group_scopes = self.get_group_types(attr_value)
-				self.attributes[LOCAL_ATTR_GROUP_TYPE] = group_types
-				self.attributes[LOCAL_ATTR_GROUP_SCOPE] = group_scopes
-			elif attr_value:
+			elif attr_value and not attr_key in ATTRS_SPECIAL_LDAP:
 				self.attributes[local_key] = attr_value
+
+		self.parse_special_ldap_attributes()
 
 		for fld in self.int_fields:
 			if not fld in self.attributes:
@@ -378,6 +315,43 @@ class LDAPObject:
 	def __get_common_name__(self, dn: str):
 		return str(dn).split(",")[0].split("=")[-1]
 
+	def pre_create(self):
+		"""Pre Creation operations"""
+		return
+
+	def pre_update(self):
+		"""Pre Creation operations"""
+		return
+
+	def pre_delete(self):
+		"""Pre Creation operations"""
+		return
+
+	def post_create(self):
+		"""Post Creation operations"""
+		return
+
+	def post_update(self):
+		"""Post Creation operations"""
+		return
+
+	def post_delete(self):
+		"""Post Creation operations"""
+		return
+
+	@overload
+	def get_local_alias_for_ldap_key(self, v: str, default: str = None): ...
+
+	def get_local_alias_for_ldap_key(self, v: str, *args, **kwargs):
+		for local_alias, ldap_alias in LOCAL_ATTRS_MAP.items():
+			if ldap_alias == v:
+				return local_alias
+		if args:
+			return args[0]
+		elif "default" in kwargs:
+			return kwargs.pop("default")
+		raise ValueError(f"No alias for ldap key ({v})")
+
 	@property
 	def exists(self) -> bool:
 		self.__fetch_object__()
@@ -418,20 +392,38 @@ class LDAPObject:
 		has_changed = entry_value != local_value
 		return has_changed
 
+	def parse_special_ldap_attributes(self):
+		"""
+		Special LDAP Attribute parsing function (LDAP -> LOCAL Translation)
+		"""
+		return
+
 	def parse_special_attributes(self):
+		"""
+		Special LOCAL Attribute parsing function (LOCAL -> LDAP Translation)
+		"""
 		return
 
 	def create(self):
 		if self.entry:
 			raise Exception("There is already an existing LDAP Entry.")
 		attrs = {}
-		self.attributes[LOCAL_ATTR_OBJECT_CLASS] = list({
-			RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
-			"top",
-			"person",
-			"organizationalPerson",
-			"user",
-		})
+		_object_class = None
+		if self.type == LDAPObjectTypes.USER:
+			self.attributes[LOCAL_ATTR_OBJECT_CLASS] = list({
+				RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
+				"top",
+				"person",
+				"organizationalPerson",
+				"user",
+			})
+			_object_class = RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
+		elif self.type == LDAPObjectTypes.GROUP:
+			self.attributes[LOCAL_ATTR_OBJECT_CLASS] = list({
+				"top",
+				"group",
+			})
+			_object_class = "group"
 
 		self.parse_special_attributes()
 		for local_alias, local_value in self.attributes.items():
@@ -448,11 +440,14 @@ class LDAPObject:
 			if local_value:
 				attrs[ldap_alias] = local_value
 
+		# Execute Operations
+		self.pre_create()
 		self.connection.add(
 			dn=self.distinguished_name,
-			object_class=RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
+			object_class=_object_class,
 			attributes=attrs,
 		)
+		self.post_create()
 		return getattr(
 			self.connection.result,
 			"description",
@@ -492,11 +487,15 @@ class LDAPObject:
 				replace_attrs[ldap_alias] = [(MODIFY_REPLACE, local_value)]
 
 		attrs = replace_attrs | delete_attrs
+		
+		# Execute operations
 		if attrs:
+			self.pre_update()
 			self.connection.modify(
 				dn=self.entry.entry_dn,
 				changes=attrs
 			)
+			self.post_update()
 			return getattr(
 				self.connection.result,
 				"description",
@@ -505,12 +504,19 @@ class LDAPObject:
 		return True
 
 	def delete(self) -> bool:
+		self.pre_delete()
 		if self.entry:
 			self.connection.delete(dn=self.entry.entry_dn)
 		elif self.distinguished_name:
 			self.connection.delete(dn=self.distinguished_name)
 		else:
 			raise Exception("Deletion requires a valid dn or entry.")
+		self.post_delete()
+		return getattr(
+			self.connection.result,
+			"description",
+			""
+		).lower() == "success"
 
 	def save(self):
 		if not self.connection or not self.connection.bound:
@@ -521,317 +527,3 @@ class LDAPObject:
 			self.create()
 		else:
 			self.update()
-
-class LDAPUser(LDAPObject):
-	type = LDAPObjectTypes.USER.name
-	search_attrs = (
-		LDAP_ATTR_DN,
-		LDAP_ATTR_USERNAME_SAMBA_ADDS,
-		LDAP_ATTR_EMAIL,
-		LDAP_ATTR_FIRST_NAME,
-		LDAP_ATTR_LAST_NAME,
-		LDAP_ATTR_FULL_NAME,
-		LDAP_ATTR_PHONE,
-		LDAP_ATTR_ADDRESS,
-		LDAP_ATTR_POSTAL_CODE,
-		LDAP_ATTR_CITY,
-		LDAP_ATTR_STATE,
-		LDAP_ATTR_COUNTRY,
-		LDAP_ATTR_COUNTRY_DCC,
-		LDAP_ATTR_COUNTRY_ISO,
-		LDAP_ATTR_WEBSITE,
-		LDAP_ATTR_UPN,
-		LDAP_ATTR_UAC,
-		LDAP_ATTR_CREATED,
-		LDAP_ATTR_MODIFIED,
-		LDAP_ATTR_LAST_LOGIN,
-		LDAP_ATTR_BAD_PWD_COUNT,
-		LDAP_ATTR_PWD_SET_AT,
-		LDAP_ATTR_PRIMARY_GROUP_ID,
-		LDAP_ATTR_OBJECT_CLASS,
-		LDAP_ATTR_OBJECT_CATEGORY,
-		LDAP_ATTR_SECURITY_ID,
-		LDAP_ATTR_ACCOUNT_TYPE,
-		LDAP_ATTR_USER_GROUPS,
-		LDAP_ATTR_INITIALS,
-	)
-
-	def __validate_kwargs__(self, kwargs: dict):
-		kw_samaccountname = kwargs.pop(LDAP_ATTR_USERNAME_SAMBA_ADDS, None)
-		self.username = kwargs.pop(LOCAL_ATTR_USERNAME, kw_samaccountname)
-
-		# Type check Entry
-		if self.entry and not isinstance(self.entry, LDAPEntry):
-			raise TypeError("LDAPUser entry must attr must be of type ldap3.Entry")
-
-		if not self.connection and not self.entry:
-			raise Exception(
-				"LDAPUser requires an LDAP Connection or an Entry to Initialize"
-			)
-		elif self.connection:
-			if not self.distinguished_name and not self.username:
-				raise Exception(
-					"LDAPUser requires a distinguished_name or username to search for the object"
-				)
-
-		if self.entry:
-			_entry_dn = getattr(self.entry, "entry_dn", "")
-			if _entry_dn:
-				if not isinstance(_entry_dn, str):
-					raise TypeError("entry_dn must be of type str")
-				self.search_filter = LDAPFilter.eq(
-					LDAP_ATTR_DN,
-					_entry_dn
-				).to_string()
-		elif self.distinguished_name and isinstance(self.distinguished_name, str):
-			self.search_filter = LDAPFilter.eq(
-				LDAP_ATTR_DN,
-				self.distinguished_name
-			).to_string()
-		elif self.username and isinstance(self.username, str):
-			_USER_CLASSES = {
-				RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
-				"user",
-				"person",
-				"organizationalPerson",
-			}
-			self.search_filter = LDAPFilter.and_(
-				LDAPFilter.or_(
-					*[LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, auth_class)
-	   				for auth_class in _USER_CLASSES]
-				),
-				LDAPFilter.eq(
-					LDAP_ATTR_USERNAME_SAMBA_ADDS,
-					self.username
-				)
-			).to_string()
-
-	@overload
-	def __init__(
-		self,
-		entry: LDAPEntry = None,
-		connection: LDAPConnectionProtocol = None,
-		distinguished_name: str = None,
-		username: str = None,
-		search_base: str = None,
-		excluded_attributes: list[str] = None,
-		required_attributes: list[str] = None,
-		attributes: dict = None,
-	) -> None:
-		...
-
-	def __init__(self, **kwargs):
-		super().__init__(**kwargs)
-
-	def parse_special_attributes(self):
-		self.parse_country(self.attributes.get(LOCAL_ATTR_COUNTRY, None))
-		self.parse_permissions(
-			self.attributes.get(LOCAL_ATTR_PERMISSIONS, None)
-		)
-		self.parse_group_operations(
-			groups_to_add=self.attributes.get(LOCAL_ATTR_USER_ADD_GROUPS, []),
-			groups_to_remove=self.attributes.get(LOCAL_ATTR_USER_RM_GROUPS, []),
-		)
-
-	def parse_country(self, value: str = None):
-		_COUNTRY_ATTRS = (
-			LOCAL_ATTR_COUNTRY,
-			LOCAL_ATTR_COUNTRY_DCC,
-			LOCAL_ATTR_COUNTRY_ISO,
-		)
-		if value is None:
-			return
-		if value == "":
-			self.attributes[LOCAL_ATTR_COUNTRY_DCC] = ""
-			self.attributes[LOCAL_ATTR_COUNTRY_ISO] = ""
-		else:
-			self.attributes[LOCAL_ATTR_COUNTRY_DCC] = LDAP_COUNTRIES[value]["dccCode"]
-			self.attributes[LOCAL_ATTR_COUNTRY_ISO] = LDAP_COUNTRIES[value]["isoCode"]
-
-		for attr in _COUNTRY_ATTRS:
-			if not attr in self.parsed_specials:
-				self.parsed_specials.append(attr)
-
-	def parse_permissions(self, value: list[str]):
-		if value is None:
-			return
-		if value and isinstance(value, list):
-			self.attributes[LOCAL_ATTR_UAC] = calc_permissions(permission_list=value)
-		else:
-			self.attributes[LOCAL_ATTR_UAC] = calc_permissions([LDAP_UF_NORMAL_ACCOUNT])
-		if not LOCAL_ATTR_UAC in self.parsed_specials:
-			self.parsed_specials.append(LOCAL_ATTR_UAC)
-
-	def parse_group_operations(self, groups_to_add = None, groups_to_remove = None):
-		# De-duplicate group ops
-		if groups_to_add:
-			groups_to_add = set(groups_to_add)
-		if groups_to_remove:
-			groups_to_remove = set(groups_to_remove)
-
-		if groups_to_add and groups_to_remove:
-			if groups_to_add == groups_to_remove:
-				raise exc_user.BadGroupSelection
-			if any(a == b for a, b in zip(groups_to_add, groups_to_remove)):
-				raise exc_user.BadGroupSelection
-
-		# Group Add
-		if groups_to_add:
-			self.connection.extend.microsoft.add_members_to_groups(
-				self.distinguished_name, groups_to_add
-			)
-
-		# Group Remove
-		if groups_to_remove:
-			self.connection.extend.microsoft.remove_members_from_groups(
-				self.distinguished_name, groups_to_remove
-			)
-
-	@property
-	def is_enabled(self):
-		if not self.entry:
-			raise ValueError("No LDAP Entry for LDAPObjectUser")
-		if not LDAP_ATTR_UAC in self.entry.entry_attributes:
-			raise ValueError("%s attribute is required in entry search" \
-				% (LDAP_ATTR_UAC))
-
-		return not list_user_perms(
-			user=self.entry,
-			perm_search=LDAP_UF_ACCOUNT_DISABLE,
-		)
-
-class LDAPGroup(LDAPObject):
-	type = LDAPObjectTypes.GROUP.name
-	search_attrs = (
-		LDAP_ATTR_DN,
-		LDAP_ATTR_COMMON_NAME,
-		LDAP_ATTR_GROUP_MEMBERS,
-		LDAP_ATTR_GROUP_TYPE,
-		LDAP_ATTR_SECURITY_ID,
-		LDAP_ATTR_EMAIL,
-		LDAP_ATTR_OBJECT_CLASS,
-		LDAP_ATTR_OBJECT_CATEGORY,
-		LDAP_ATTR_CREATED,
-		LDAP_ATTR_MODIFIED,
-	)
-
-	@overload
-	def __init__(
-		self,
-		entry: LDAPEntry = None,
-		connection: LDAPConnectionProtocol = None,
-		distinguished_name: str = None,
-		groupname: str = None,
-		search_base: str = None,
-		excluded_attributes: list[str] = None,
-		required_attributes: list[str] = None,
-		attributes: dict = None,
-	) -> None:
-		...
-
-	def __init__(self, **kwargs):
-		super().__init__(**kwargs)
-
-	def parse_group_type_and_scope(self):
-		self.attributes[LOCAL_ATTR_GROUP_TYPE] = (
-			LDAP_GROUP_TYPE_MAPPING[self.attributes.get(LOCAL_ATTR_GROUP_TYPE)]
-			+ LDAP_GROUP_SCOPE_MAPPING[self.attributes.get(LOCAL_ATTR_GROUP_SCOPE)]
-		)
-		if not LOCAL_ATTR_GROUP_TYPE in self.parsed_specials:
-			self.parsed_specials.append(LOCAL_ATTR_GROUP_TYPE)
-
-	def parse_common_name(self):
-		# Set Common Name
-		original_cn = safe_rdn(self.distinguished_name)[0]
-		group_cn: str = self.attributes.get(LOCAL_ATTR_NAME, None)
-		if not group_cn:
-			group_cn = original_cn
-		# If Group CN is present and has changed
-		elif group_cn != original_cn:
-			# Validate CN Identifier
-			if group_cn.lower().startswith("cn="):
-				split_cn = group_cn.split("=")
-				if len(split_cn) != 2:
-					raise exc_ldap.DistinguishedNameValidationError
-				group_cn = f"CN={split_cn[-1]}"
-			# Rename Group
-			try:
-				distinguished_name = (
-					OrganizationalUnitMixin.move_or_rename_object(
-						self,
-						distinguished_name=distinguished_name,
-						target_rdn=group_cn,
-					)
-				)
-			except:
-				raise exc_dirtree.DirtreeRename
-
-		# Set group sAMAccountName to new CN, lower-cased
-		self.attributes[LDAP_ATTR_USERNAME_SAMBA_ADDS] = str(group_cn).lower()
-		if not LOCAL_ATTR_NAME in self.parsed_specials:
-			self.parsed_specials.append(LOCAL_ATTR_NAME)
-
-	def parse_group_operations(
-		self,
-		members_to_add=None,
-		members_to_remove=None
-	):
-		try:
-			self.connection.extend.microsoft.add_members_to_groups(
-				members_to_add, self.distinguished_name
-			)
-			if not LOCAL_ATTR_GROUP_ADD_MEMBERS in self.parsed_specials:
-				self.parsed_specials.append(LOCAL_ATTR_GROUP_ADD_MEMBERS)
-		except Exception as e:
-			logger.exception(e)
-			raise exc_group.GroupMembersAdd(
-				data={"ldap_response": self.connection.result})
-
-		try:
-			self.connection.extend.microsoft.remove_members_from_groups(
-				members_to_remove, self.distinguished_name
-			)
-			if not LOCAL_ATTR_GROUP_RM_MEMBERS in self.parsed_specials:
-				self.parsed_specials.append(LOCAL_ATTR_GROUP_RM_MEMBERS)
-		except Exception as e:
-			logger.exception(e)
-			raise exc_group.GroupMembersRemove(
-				data={"ldap_response": self.connection.result})
-
-	def parse_special_attributes(self):
-		self.parse_group_type_and_scope()
-		self.parse_group_operations(
-			members_to_add=self.attributes.get(LOCAL_ATTR_GROUP_ADD_MEMBERS, []),
-			members_to_remove=self.attributes.get(LOCAL_ATTR_GROUP_RM_MEMBERS, []),
-		)
-
-	def __validate_kwargs__(self, kwargs: dict):
-		kw_common_name = kwargs.pop("common_name", None)
-		self.groupname = kwargs.pop(LDAP_ATTR_COMMON_NAME, kw_common_name)
-
-		if self.entry and not isinstance(self.entry, LDAPEntry):
-			raise TypeError(f"LDAPGroup entry must attr must be of type ldap3.Entry")
-
-		if not self.connection and not self.entry:
-			raise Exception(
-				f"LDAPGroup requires an LDAP Connection or an Entry to Initialize"
-			)
-		elif self.connection:
-			if not self.distinguished_name and not self.groupname:
-				raise Exception(
-					f"LDAPGroup requires a distinguished_name or groupname to search for the object"
-				)
-
-		if self.entry:
-			_entry_dn = getattr(self.entry, "entry_dn", "")
-			if _entry_dn:
-				if not isinstance(_entry_dn, str):
-					raise TypeError("entry_dn must be of type str")
-				self.search_filter = LDAPFilter.eq(LDAP_ATTR_DN, _entry_dn).to_string()
-		elif self.distinguished_name and isinstance(self.distinguished_name, str):
-			self.search_filter = LDAPFilter.eq(LDAP_ATTR_DN, self.distinguished_name).to_string()
-		elif self.groupname and isinstance(self.groupname, str):
-			self.search_filter = LDAPFilter.and_(
-				LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "group"),
-				LDAPFilter.eq(LDAP_ATTR_COMMON_NAME, self.groupname)
-			).to_string()

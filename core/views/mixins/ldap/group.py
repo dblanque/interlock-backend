@@ -11,14 +11,7 @@
 from rest_framework import viewsets
 
 ### Interlock
-from core.ldap.types.group import (
-	LDAPGroupTypes,
-	LDAP_GROUP_SCOPE_MAPPING,
-	LDAP_GROUP_TYPE_MAPPING,
-	MAPPED_GROUP_SCOPE_GLOBAL,
-	MAPPED_GROUP_SCOPE_DOMAIN_LOCAL,
-	MAPPED_GROUP_SCOPE_UNIVERSAL,
-)
+from core.ldap.types.group import LDAPGroupTypes
 from core.ldap.security_identifier import SID
 from core.ldap.connector import LDAPConnector
 from core.config.runtime import RuntimeSettings
@@ -32,23 +25,7 @@ import ldap3
 from ldap3 import Entry as LDAPEntry, Connection
 
 ### Core
-from core.ldap.constants import (
-	LOCAL_ATTR_DN,
-	LOCAL_ATTR_PATH,
-	LDAP_ATTR_DN,
-	LDAP_ATTR_FIRST_NAME,
-	LDAP_ATTR_LAST_NAME,
-	LDAP_ATTR_OBJECT_CATEGORY,
-	LDAP_ATTR_OBJECT_CLASS,
-	LDAP_ATTR_COMMON_NAME,
-	LDAP_ATTR_GROUP_MEMBERS,
-	LDAP_ATTR_SECURITY_ID,
-	LDAP_ATTR_RELATIVE_ID,
-	LOCAL_ATTR_GROUP_TYPE,
-	LOCAL_ATTR_GROUP_MEMBERS,
-	LOCAL_ATTR_GROUP_HAS_MEMBERS,
-	LOCAL_ATTR_NAME,
-)
+from core.ldap.constants import *
 from core.models.choices.log import (
 	LOG_ACTION_CREATE,
 	LOG_ACTION_READ,
@@ -58,8 +35,9 @@ from core.models.choices.log import (
 	LOG_TARGET_ALL,
 )
 from core.ldap.filter import LDAPFilter
-from core.models.ldap_object import LDAPUser, LDAPGroup
-from core.views.mixins.ldap.organizational_unit import OrganizationalUnitMixin
+from core.models.ldap_group import LDAPGroup
+from core.models.ldap_object import LDAPObject
+from rest_framework import serializers
 
 ### Exceptions
 from core.exceptions import (
@@ -157,14 +135,6 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		)
 		ldap_entries = self.ldap_connection.entries
 
-		# Remove attributes to return as table headers
-		headers: List[str] = self.ldap_filter_attr
-		remove_attributes = [LOCAL_ATTR_DN, LOCAL_ATTR_GROUP_MEMBERS]
-
-		for attr in remove_attributes:
-			if attr in headers:
-				headers.remove(attr)
-
 		for group_entry in ldap_entries:
 			group_entry: LDAPEntry
 			group_obj = LDAPGroup(entry=group_entry)
@@ -175,11 +145,15 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				group_dict[LOCAL_ATTR_GROUP_HAS_MEMBERS] = True
 			else:
 				group_dict[LOCAL_ATTR_GROUP_HAS_MEMBERS] = False
-
 			data.append(group_dict)
 
-		# Add hasMembers header
-		headers.append(LOCAL_ATTR_GROUP_HAS_MEMBERS)
+		# Remove attributes to return as table headers
+		headers = (
+			LOCAL_ATTR_NAME,
+			LOCAL_ATTR_GROUP_TYPE,
+			LOCAL_ATTR_GROUP_SCOPE,
+			LOCAL_ATTR_GROUP_HAS_MEMBERS,
+		)
 
 		DBLogMixin.log(
 			user=self.request.user.id,
@@ -190,6 +164,10 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		return data, headers
 
 	def fetch_group(self):
+		_username_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS[
+			"username"
+		]
+
 		self.ldap_connection.search(
 			search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
 			search_filter=self.ldap_filter_object,
@@ -197,38 +175,56 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		)
 		group_obj = LDAPGroup(entry=self.ldap_connection.entries[0])
 
-		# Remove attributes to return as table headers
-		headers: list[str] = self.ldap_filter_attr
-		headers.remove(LOCAL_ATTR_DN)
+		attr_members = getldapattrvalue(group_obj.entry, LDAP_ATTR_GROUP_MEMBERS, [])
+		member_list = []
+		if attr_members:
+			attr_members = (
+				attr_members if isinstance(attr_members, list) else [attr_members]
+			)
 
-		# For each attribute in group object attributes
+			# Expand members to objects
+			for member_user_dn in attr_members:
+				member_list.append(
+					LDAPObject(
+						connection=self.ldap_connection,
+						distinguished_name=member_user_dn,
+						search_attrs=[
+							LDAP_ATTR_COMMON_NAME,
+							LDAP_ATTR_DN,
+							_username_field,
+							LDAP_ATTR_FIRST_NAME,
+							LDAP_ATTR_LAST_NAME,
+							LDAP_ATTR_OBJECT_CATEGORY,
+							LDAP_ATTR_OBJECT_CLASS,
+						]
+					).attributes
+				)
+			group_obj.attributes[LOCAL_ATTR_GROUP_MEMBERS] = member_list
+
 		group_dict = group_obj.attributes
-		# TODO add users in group members
 
 		DBLogMixin.log(
 			user=self.request.user.id,
 			operation_type=LOG_ACTION_READ,
 			log_target_class=LOG_CLASS_GROUP,
-			log_target=group_dict[LDAP_ATTR_COMMON_NAME],
+			log_target=group_dict[LOCAL_ATTR_NAME],
 		)
-		return group_dict, headers
+		return group_dict
 
 	def create_group(self, group_data: dict) -> Connection:
-		group_cn: str = group_data.get(LOCAL_ATTR_NAME, None)
-		if not group_cn:
+		group_name: str = group_data.get(LOCAL_ATTR_NAME, None)
+		if not group_name:
 			raise ValueError("group_cn cannot be None or falsy value.")
 
-		group_path = group_data.get(LOCAL_ATTR_PATH, None)
+		group_path = group_data.pop(LOCAL_ATTR_PATH, None)
 		if group_path:
-			distinguished_name = f"CN={group_cn},{group_path}"
+			distinguished_name = f"CN={group_name},{group_path}"
 			logger.debug(f"Creating group in DN Path: {group_path}")
 		else:
 			distinguished_name = "CN=%s,CN=Users,%s" % (
-				group_cn,
+				group_name,
 				RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
 			)
-
-		group_data[RuntimeSettings.LDAP_GROUP_FIELD] = group_cn.lower()
 
 		# !!! CHECK IF GROUP EXISTS !!! #
 		# If group exists, return error
@@ -277,6 +273,12 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			distinguished_name=distinguished_name,
 			search_attrs=self.ldap_filter_attr,
 		)
+		group_types = group_obj.attributes.get(LOCAL_ATTR_GROUP_TYPE, [])
+		if LDAPGroupTypes.TYPE_SYSTEM.name in group_types:
+			if not LDAPGroupTypes.TYPE_SYSTEM.name in data.get(LOCAL_ATTR_GROUP_TYPE):
+				raise serializers.ValidationError(
+					{LOCAL_ATTR_GROUP_TYPE: "System Group cannot have its SYSTEM flag removed."}
+				)
 		if not group_obj.exists:
 			raise exc_groups.GroupDoesNotExist
 

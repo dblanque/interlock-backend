@@ -1,10 +1,23 @@
 from rest_framework import serializers
 from core.serializers.ldap import DistinguishedNameField
 from django.core.validators import validate_email
+from core.ldap.types.group import LDAPGroupTypes
 from core.ldap.constants import (
 	LOCAL_ATTR_GROUP_TYPE,
 	LOCAL_ATTR_GROUP_SCOPE,
 )
+
+def group_type_validator(v: str):
+	try:
+		LDAPGroupTypes(v)
+	except:
+		raise serializers.ValidationError("Group Type is invalid")
+
+def group_scope_validator(v: str):
+	try:
+		LDAPGroupTypes(v)
+	except:
+		raise serializers.ValidationError("Group Scope is invalid")
 
 class LDAPGroupSerializer(serializers.Serializer):
 	# Common Name
@@ -17,8 +30,12 @@ class LDAPGroupSerializer(serializers.Serializer):
 		required=False,
 		validators=[validate_email],
 	)
-	group_types = serializers.ListField(required=False)
-	group_scopes = serializers.ListField(required=False)
+	group_types = serializers.ListField(required=False, child=serializers.CharField(validators=[group_type_validator]), max_length=2)
+	group_scopes = serializers.ListField(required=False, child=serializers.CharField(validators=[group_scope_validator]), max_length=1)
+	object_class = serializers.ListField(required=False, child=serializers.CharField())
+	object_category = serializers.CharField(required=False)
+	object_security_id = serializers.CharField(required=False)
+	object_relative_id = serializers.IntegerField(required=False)
 	members = serializers.ListField(required=False, child=DistinguishedNameField())
 	members_to_add = serializers.ListField(required=False, child=DistinguishedNameField())
 	members_to_remove = serializers.ListField(required=False, child=DistinguishedNameField())

@@ -12,15 +12,7 @@ from core.models.ldap_object import LDAPObject
 from core.ldap.adsi import LDAP_BUILTIN_OBJECTS
 from core.ldap.security_identifier import SID
 from core.ldap.filter import LDAPFilter
-from core.ldap.constants import (
-	LDAP_ATTR_DN,
-	LOCAL_ATTR_DN_SHORT,
-	LDAP_ATTR_OBJECT_CLASS,
-	LDAP_ATTR_OBJECT_CATEGORY,
-	LDAP_ATTR_SECURITY_ID,
-	LDAP_ATTR_COMMON_NAME,
-	LOCAL_ATTR_USERNAME,
-)
+from core.ldap.constants import *
 from core.config.runtime import RuntimeSettings
 
 ### Others
@@ -137,19 +129,19 @@ class LDAPTree(LDAPObject):
 			distinguished_name = entry.entry_dn
 			# Set entity attributes
 			_current_obj = {}
-			_current_obj["name"] = (
+			_current_obj[LOCAL_ATTR_NAME] = (
 				str(distinguished_name).split(",")[0].split("=")[1]
 			)
-			_current_obj["id"] = self.subobject_id
-			_current_obj[LDAP_ATTR_DN] = distinguished_name
-			_current_obj["type"] = (
+			_current_obj[LOCAL_ATTR_ID] = self.subobject_id
+			_current_obj[LOCAL_ATTR_DN] = distinguished_name
+			_current_obj[LOCAL_ATTR_TYPE] = (
 				str(entry.objectCategory).split(",")[0].split("=")[1]
 			)
 			if (
-				_current_obj["name"] in LDAP_BUILTIN_OBJECTS
+				_current_obj[LOCAL_ATTR_NAME] in LDAP_BUILTIN_OBJECTS
 				or "builtinDomain" in entry.objectClass
 			):
-				_current_obj["builtin"] = True
+				_current_obj[LOCAL_ATTR_BUILT_IN] = True
 
 			##################################
 			# Recursive Children Search Here #
@@ -168,9 +160,9 @@ class LDAPTree(LDAPObject):
 				self.subobject_id += 1
 			elif self.children_object_type == "dict":
 				###### Append subobject to Dict ######
-				children[_current_obj[LDAP_ATTR_DN]] = _current_obj
-				children[_current_obj[LDAP_ATTR_DN]].pop(
-					LDAP_ATTR_DN
+				children[_current_obj[LOCAL_ATTR_DN]] = _current_obj
+				children[_current_obj[LOCAL_ATTR_DN]].pop(
+					LOCAL_ATTR_DN
 				)
 
 				###### Increase subobject_id ######
@@ -233,16 +225,16 @@ class LDAPTree(LDAPObject):
 			_current_obj = {}
 			# Set sub-object main attributes
 			self.subobject_id += 1
-			_current_obj["id"] = self.subobject_id
-			_current_obj["name"] = str(entry_dict[LOCAL_ATTR_DN_SHORT]).split(",")[0].split("=")[1]
-			_current_obj[LDAP_ATTR_DN] = entry_dict[LOCAL_ATTR_DN_SHORT]
-			_current_obj["type"] = (
+			_current_obj[LOCAL_ATTR_ID] = self.subobject_id
+			_current_obj[LOCAL_ATTR_NAME] = str(entry_dict[LOCAL_ATTR_DN_SHORT]).split(",")[0].split("=")[1]
+			_current_obj[LOCAL_ATTR_DN] = entry_dict[LOCAL_ATTR_DN_SHORT]
+			_current_obj[LOCAL_ATTR_TYPE] = (
 				str(entry_dict["attributes"][LDAP_ATTR_OBJECT_CATEGORY])
 				.split(",")[0]
 				.split("=")[1]
 			)
 			if (
-				_current_obj["name"] in LDAP_BUILTIN_OBJECTS
+				_current_obj[LOCAL_ATTR_NAME] in LDAP_BUILTIN_OBJECTS
 				or "builtinDomain" in entry_dict["attributes"][LDAP_ATTR_OBJECT_CLASS]
 				or common_name in LDAP_BUILTIN_OBJECTS
 				or common_name == "Domain Controllers"
@@ -250,7 +242,7 @@ class LDAPTree(LDAPObject):
 				common_name.lower() != "computers"
 				and common_name.lower() != "users"
 			):
-				_current_obj["builtin"] = True
+				_current_obj[LOCAL_ATTR_BUILT_IN] = True
 			# Set the sub-object children
 			if (
 				self.children_object_type == "array"
@@ -269,6 +261,7 @@ class LDAPTree(LDAPObject):
 
 			# Set all other attributes
 			for attr in entry_dict["attributes"]:
+				local_alias = self.get_local_alias_for_ldap_key(attr, attr)
 				if attr in self.search_attrs or self.search_attrs == "*":
 					if (
 						attr == USERNAME_IDENTIFIER
@@ -282,22 +275,22 @@ class LDAPTree(LDAPObject):
 								not in entry_dict["attributes"][LDAP_ATTR_OBJECT_CLASS]
 							):
 								value = entry_dict["attributes"][attr][0]
-								_current_obj["username"] = value
+								_current_obj[LOCAL_ATTR_USERNAME] = value
 					elif (
 						attr == LDAP_ATTR_COMMON_NAME
 						and "group" in entry_dict["attributes"][LDAP_ATTR_OBJECT_CLASS]
 					):
 						value = entry_dict["attributes"][attr][0]
-						_current_obj["groupname"] = value
+						_current_obj[LOCAL_ATTR_NAME] = value
 					elif attr == LDAP_ATTR_OBJECT_CATEGORY:
 						value = self.__get_common_name__(
 							entry_dict["attributes"][attr]
 						)
-						_current_obj["type"] = value
+						_current_obj[LOCAL_ATTR_TYPE] = value
 					elif (
 						attr == LDAP_ATTR_SECURITY_ID
 						and "group" in entry_dict["attributes"][LDAP_ATTR_OBJECT_CLASS]
-						and common_name.lower() != "builtin"
+						and common_name.lower() != LOCAL_ATTR_BUILT_IN
 					):
 						try:
 							sid = SID(entry_dict["attributes"][attr])
@@ -323,10 +316,10 @@ class LDAPTree(LDAPObject):
 						except Exception as e:
 							logger.exception(e)
 							logger.error(
-								f"Could not set attribute {attr} for {_current_obj[LDAP_ATTR_DN]}"
+								f"Could not set attribute {attr} for {_current_obj[LOCAL_ATTR_DN]}"
 							)
 					try:
-						_current_obj[attr] = value
+						_current_obj[local_alias] = value
 					except Exception as e:
 						logger.exception(e)
 						logger.error(f"Exception on key: {attr}")
@@ -335,7 +328,7 @@ class LDAPTree(LDAPObject):
 			# Force exclude System folder, has a bunch of objects that aren't useful for administration
 			if (
 				self.recursive
-				and _current_obj["type"].lower() in
+				and _current_obj[LOCAL_ATTR_TYPE].lower() in
 					("container", "organizational-unit",)
 				and common_name.lower() != "system"
 			):

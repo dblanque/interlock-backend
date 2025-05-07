@@ -20,11 +20,9 @@ from core.ldap.types.account import LDAPAccountTypes
 
 ### Models
 from core.models import User
-from core.models.ldap_object import (
-	LDAPObject,
-	LDAPUser,
-	LDAPGroup,
-)
+from core.models.ldap_object import LDAPObject
+from core.models.ldap_group import LDAPGroup
+from core.models.ldap_user import LDAPUser
 from core.models.choices.log import (
 	LOG_CLASS_USER,
 	LOG_ACTION_CREATE,
@@ -40,10 +38,8 @@ from core.ldap.connector import LDAPConnector
 from core.views.mixins.logs import LogMixin
 from ldap3 import (
 	Connection,
-	MODIFY_DELETE,
 	MODIFY_REPLACE,
 	Entry as LDAPEntry,
-	ALL_ATTRIBUTES as ALL_LDAP3_ATTRIBUTES,
 )
 from ldap3.extend import (
 	ExtendedOperationsRoot,
@@ -70,7 +66,6 @@ from core.constants.user import UserViewsetFilterAttributeBuilder
 from core.ldap.constants import *
 from core.ldap.filter import LDAPFilter, LDAPFilterType
 from rest_framework.serializers import ValidationError
-from core.ldap.countries import LDAP_COUNTRIES
 ################################################################################
 
 DBLogMixin = LogMixin()
@@ -587,7 +582,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			log_target=user_search,
 		)
 
-		# Group Attr Fetching
+		# Expand Groups from DN to Objects
 		member_of_objects: list[dict] = []
 		user_dict[LOCAL_ATTR_USER_GROUPS] = []
 		try:

@@ -30,6 +30,7 @@ from core.ldap.constants import (
 	LDAP_ATTR_DN,
 	LDAP_ATTR_GROUP_TYPE,
 	LDAP_ATTR_COMMON_NAME,
+	LOCAL_ATTR_NAME,
 )
 from core.serializers.group import LDAPGroupSerializer
 from core.constants.group import GroupViewsetFilterAttributeBuilder
@@ -105,14 +106,13 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			group_dict, headers = self.fetch_group()
+			group_dict = self.fetch_group()
 
 		return Response(
 			data={
 				"code": code,
 				"code_msg": code_msg,
 				"data": group_dict,
-				"headers": headers,
 			}
 		)
 
@@ -136,11 +136,11 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 			)
 
 		# Get Group CN
-		group_cn = group_data.get("cn", None)
+		group_cn = group_data.get(LOCAL_ATTR_NAME, None)
 		if not group_cn or not isinstance(group_cn, str):
 			raise exc_base.BadRequest(
 				data={
-					"detail":"group dict should have a cn key containing the Group Common Name."
+					"detail":"group dict required a name key containing the Group Common Name."
 				}
 			)
 
