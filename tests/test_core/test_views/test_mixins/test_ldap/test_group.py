@@ -15,7 +15,7 @@ from core.ldap.types.group import (
 	MAPPED_GROUP_SCOPE_GLOBAL,
 	MAPPED_GROUP_SCOPE_UNIVERSAL,
 )
-from core.ldap.constants import (
+from core.constants.attrs import (
 	LDAP_ATTR_COMMON_NAME,
 	LDAP_ATTR_DN,
 	LDAP_ATTR_GROUP_TYPE,

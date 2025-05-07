@@ -25,7 +25,7 @@ import ldap3
 from ldap3 import Entry as LDAPEntry, Connection
 
 ### Core
-from core.ldap.constants import *
+from core.constants.attrs import *
 from core.models.choices.log import (
 	LOG_ACTION_CREATE,
 	LOG_ACTION_READ,

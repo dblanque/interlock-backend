@@ -16,7 +16,7 @@ from core.exceptions import (
 	dirtree as exc_dirtree,
 	ldap as exc_ldap,
 )
-from core.ldap.constants import *
+from core.constants.attrs import *
 
 ### Others
 from core.type_hints.connector import LDAPConnectionProtocol

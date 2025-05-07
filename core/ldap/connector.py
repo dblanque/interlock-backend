@@ -29,7 +29,7 @@ from core.models.choices.log import (
 	LOG_CLASS_CONN,
 )
 from core.views.mixins.logs import LogMixin
-from core.ldap.constants import LOCAL_ATTR_DN
+from core.constants.attrs import LOCAL_ATTR_DN
 from core.models.user import (
 	User,
 	USER_PASSWORD_FIELDS,

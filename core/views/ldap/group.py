@@ -25,7 +25,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
-from core.ldap.constants import (
+from core.constants.attrs import (
 	LDAP_ATTR_OBJECT_CLASS,
 	LDAP_ATTR_DN,
 	LDAP_ATTR_GROUP_TYPE,

@@ -42,7 +42,7 @@ from ldap3.extend import (
 	StandardExtendedOperations,
 	MicrosoftExtendedOperations,
 )
-from core.ldap.constants import (
+from core.constants.attrs import (
 	LDAP_DATE_FORMAT,
 	LDAP_ATTR_FIRST_NAME,
 	LDAP_ATTR_LAST_NAME,

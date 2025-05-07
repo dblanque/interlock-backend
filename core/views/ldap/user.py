@@ -46,7 +46,7 @@ from rest_framework.decorators import action
 ### Auth
 from core.decorators.login import auth_required, admin_required
 from core.ldap import adsi as ldap_adsi
-from core.ldap.constants import *
+from core.constants.attrs import *
 from core.ldap.connector import LDAPConnector
 import ldap3
 

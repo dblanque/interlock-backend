@@ -1,5 +1,5 @@
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
-from core.ldap.constants import *
+from core.constants.attrs import *
 
 LOCAL_PUBLIC_FIELDS_BASIC = (
 	LOCAL_ATTR_ID,

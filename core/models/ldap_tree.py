@@ -11,7 +11,7 @@
 from core.models.ldap_object import LDAPObject, LDAPObjectTypes
 from core.ldap.adsi import LDAP_BUILTIN_OBJECTS
 from core.ldap.filter import LDAPFilter
-from core.ldap.constants import *
+from core.constants.attrs import *
 
 ### Others
 from core.views.mixins.utils import getldapattrvalue

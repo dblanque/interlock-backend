@@ -1,5 +1,5 @@
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
-from core.ldap.constants import *
+from core.constants.attrs import *
 
 class GroupViewsetFilterAttributeBuilder:
 	def __init__(self, settings: RuntimeSettingsSingleton):

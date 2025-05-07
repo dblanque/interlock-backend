@@ -25,7 +25,7 @@ from core.decorators.login import auth_required, admin_required
 from core.ldap.guid import GUID
 from core.ldap.security_identifier import SID
 from core.ldap.filter import LDAPFilter
-from core.ldap.constants import (
+from core.constants.attrs import (
 	LDAP_ATTR_OBJECT_CLASS,
 	LDAP_ATTR_DN,
 	LDAP_ATTR_SECURITY_ID,

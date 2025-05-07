@@ -3,7 +3,7 @@ import pytest
 ################################################################################
 from core.serializers.user import LDAPUserSerializer, UserSerializer
 from rest_framework.serializers import ValidationError
-from core.ldap.constants import (
+from core.constants.attrs import (
 	LDAP_ATTR_DN,
 	LDAP_ATTR_USERNAME_SAMBA_ADDS,
 	LDAP_ATTR_FIRST_NAME,

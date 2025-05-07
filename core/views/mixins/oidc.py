@@ -47,7 +47,7 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 
 # Others
-from core.ldap.constants import (
+from core.constants.attrs import (
 	LDAP_ATTR_USER_GROUPS,
 	LDAP_ATTR_DN,
 )

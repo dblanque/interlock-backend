@@ -11,7 +11,7 @@ from core.models.ldap_object import (
 	DEFAULT_CONTAINER_TYPES,
 	DEFAULT_USER_TYPES,
 )
-from core.ldap.constants import (
+from core.constants.attrs import (
 	LOCAL_ATTRS_MAP,
 	LDAP_ATTR_FIRST_NAME,
 	LOCAL_ATTR_FIRST_NAME,

@@ -40,7 +40,7 @@ from rest_framework.decorators import action
 from core.views.mixins.logs import LogMixin
 
 # Others
-from core.ldap.constants import (
+from core.constants.attrs import (
 	LOCAL_ATTR_ID,
 	LOCAL_USER_TYPE,
 	LOCAL_ATTR_MODIFIED,

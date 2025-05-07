@@ -63,7 +63,7 @@ from core.type_hints.connector import LDAPConnectionProtocol
 from core.views.mixins.utils import getldapattrvalue
 from ldap3.utils.dn import safe_dn
 from core.constants.user import UserViewsetFilterAttributeBuilder
-from core.ldap.constants import *
+from core.constants.attrs import *
 from core.ldap.filter import LDAPFilter, LDAPFilterType
 from rest_framework.serializers import ValidationError
 ################################################################################

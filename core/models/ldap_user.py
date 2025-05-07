@@ -12,7 +12,7 @@ from django.utils.translation import gettext_lazy as _
 
 ### Interlock
 from core.exceptions import users as exc_user
-from core.ldap.constants import *
+from core.constants.attrs import *
 from core.ldap.countries import LDAP_COUNTRIES
 from core.config.runtime import RuntimeSettings
 from core.ldap.adsi import (

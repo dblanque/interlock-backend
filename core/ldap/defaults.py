@@ -4,7 +4,7 @@
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
 # Module: core.ldap.defaults
-from core.ldap.constants import (
+from core.constants.attrs import (
 	LDAP_ATTR_USERNAME_SAMBA_ADDS,
 	LDAP_ATTR_FIRST_NAME,
 	LDAP_ATTR_LAST_NAME,

@@ -2,7 +2,7 @@ from rest_framework import serializers
 from core.serializers.ldap import DistinguishedNameField
 from django.core.validators import validate_email
 from core.ldap.types.group import LDAPGroupTypes
-from core.ldap.constants import (
+from core.constants.attrs import (
 	LOCAL_ATTR_GROUP_TYPE,
 	LOCAL_ATTR_GROUP_SCOPE,
 )

@@ -2,7 +2,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from core.models.application import User
 from django.core.validators import validate_email
-from core.ldap.constants import (
+from core.constants.attrs import (
 	LDAP_DATE_FORMAT,
 	LOCAL_ATTR_USERNAME,
 	LOCAL_ATTR_FIRST_NAME,

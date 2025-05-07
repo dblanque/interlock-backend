@@ -18,7 +18,7 @@ from core.exceptions import (
 	ldap as exc_ldap,
 	users as exc_users,
 )
-from core.ldap.constants import (
+from core.constants.attrs import (
 	LOCAL_ATTR_USERNAME,
 	LDAP_ATTR_DN,
 	LDAP_ATTR_FULL_NAME,
