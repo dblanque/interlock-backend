@@ -121,6 +121,10 @@ class LDAPGroup(LDAPObject):
 
 		# Validate
 		_parsed_types, _parsed_scopes = self.get_group_types(_sum)
+		if set(_parsed_types) != set(self.attributes[LOCAL_ATTR_GROUP_TYPE]):
+			raise ValueError("Could not properly parse group type")
+		if set(_parsed_scopes) != set(self.attributes[LOCAL_ATTR_GROUP_SCOPE]):
+			raise ValueError("Could not properly parse group type")
 
 		self.attributes[LOCAL_ATTR_GROUP_TYPE] = _sum
 
