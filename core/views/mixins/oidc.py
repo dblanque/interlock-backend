@@ -223,7 +223,7 @@ class OidcAuthorizeMixin:
 			with LDAPConnector(force_admin=True) as ldc:
 				for distinguished_name in application_group.ldap_objects:
 					if recursive_member_search(
-						user_dn=user.dn,
+						user_dn=user.distinguished_name,
 						connection=ldc.connection,
 						group_dn=distinguished_name,
 					):

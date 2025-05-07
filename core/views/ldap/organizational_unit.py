@@ -21,7 +21,7 @@ from core.views.base import BaseViewSet
 
 ### Models
 from core.views.mixins.logs import LogMixin
-from core.models.ldap_tree import LDAPTree, LDAPTreeOptions
+from core.models.ldap_tree import LDAPTree
 from core.models.user import User
 from core.models.choices.log import (
 	LOG_ACTION_READ,
@@ -90,16 +90,15 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
-			ldap_tree_options: LDAPTreeOptions = {
-				"connection": self.ldap_connection,
-				"recursive": True,
-				"ldap_filter": search_filter,
-				"ldap_attrs": search_attrs,
-			}
 			try:
 				if DIRTREE_PERF_LOGGING:
 					perf_c_start = perf_counter()
-				dirtree = LDAPTree(**ldap_tree_options)
+				dirtree = LDAPTree(
+					connection=self.ldap_connection,
+					recursive=True,
+					search_filter=search_filter,
+					search_attrs=search_attrs,
+				)
 				if DIRTREE_PERF_LOGGING:
 					perf_c_end = perf_counter()
 					logger.info(
@@ -170,19 +169,18 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
-			ldap_tree_options: LDAPTreeOptions = {
-				"connection": self.ldap_connection,
-				"recursive": True,
-				"ldap_filter": ldap_filter_object,
-				"ldap_attrs": ldap_filter_attr,
-			}
 			# Should have:
 			# Filter by Object DN
 			# Filter by Attribute
 			try:
 				if DIRTREE_PERF_LOGGING:
 					perf_c_start = perf_counter()
-				dir_list = LDAPTree(**ldap_tree_options)
+				dir_list = LDAPTree(
+					connection=self.ldap_connection,
+					recursive=True,
+					search_filter=ldap_filter_object,
+					search_attrs=ldap_filter_attr,
+				)
 				if DIRTREE_PERF_LOGGING:
 					perf_c_end = perf_counter()
 					logger.info(

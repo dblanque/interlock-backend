@@ -20,7 +20,11 @@ from core.ldap.types.account import LDAPAccountTypes
 
 ### Models
 from core.models import User
-from core.models.ldap_object import LDAPObject, LDAPObjectOptions
+from core.models.ldap_object import (
+	LDAPObject,
+	LDAPUser,
+	LDAPGroup,
+)
 from core.models.choices.log import (
 	LOG_CLASS_USER,
 	LOG_ACTION_CREATE,
@@ -63,17 +67,7 @@ from core.type_hints.connector import LDAPConnectionProtocol
 from core.views.mixins.utils import getldapattrvalue
 from ldap3.utils.dn import safe_dn
 from core.constants.user import UserViewsetFilterAttributeBuilder
-from core.ldap.constants import (
-	LDAP_DATE_FORMAT,
-	LDAP_ATTR_DN,
-	LDAP_ATTR_OBJECT_CLASS,
-	LDAP_ATTR_COUNTRY,
-	LDAP_ATTR_COUNTRY_DCC,
-	LDAP_ATTR_COUNTRY_ISO,
-	LDAP_ATTR_SECURITY_ID,
-	LOCAL_ATTR_EMAIL,
-	LOCAL_ATTR_USERNAME,
-)
+from core.ldap.constants import *
 from core.ldap.filter import LDAPFilter, LDAPFilterType
 from rest_framework.serializers import ValidationError
 from core.ldap.countries import LDAP_COUNTRIES
@@ -304,8 +298,8 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			)
 
 		self.ldap_connection.search(
-			RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
-			self.ldap_filter_object.to_string(),
+			search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
+			search_filter=self.ldap_filter_object.to_string(),
 			attributes=self.ldap_filter_attr,
 		)
 		user_entry_list: list[LDAPEntry] = self.ldap_connection.entries
@@ -320,9 +314,9 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		# Remove attributes to return as table headers
 		valid_attributes: list = self.ldap_filter_attr
 		remove_attributes = [
-			"distinguishedName",
-			"userAccountControl",
-			"displayName",
+			LDAP_ATTR_DN,
+			LDAP_ATTR_UAC,
+			LDAP_ATTR_FULL_NAME,
 		]
 		for attr in remove_attributes:
 			if attr in valid_attributes:
@@ -330,53 +324,35 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		valid_attributes.append("is_enabled")
 
 		for user_entry in user_entry_list:
-			user_dict = {}
-
-			# For each attribute in user object attributes
-			for attr_key in user_entry.entry_attributes:
-				if attr_key not in valid_attributes:
-					continue
-				attr_val = getldapattrvalue(user_entry, attr_key)
-
-				if (
-					attr_key
-					== RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
-				):
-					user_dict[
-						RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
-					] = attr_val
-					user_dict["username"] = attr_val
-				else:
-					if not attr_val:
-						user_dict[attr_key] = ""
-					else:
-						user_dict[attr_key] = attr_val
-
-			# Add entry DN to response dictionary
-			user_dict["distinguishedName"] = user_entry.entry_dn
+			user_object = LDAPUser(entry=user_entry)
+			user_dict = user_object.attributes.copy()
+			user_dict.pop(LOCAL_ATTR_UAC, None)
 
 			# Check if user is disabled
 			try:
-				user_dict["is_enabled"] = not ldap_adsi.list_user_perms(
-					user=user_entry,
-					perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE,
-				)
+				user_dict["is_enabled"] = user_object.is_enabled
 			except Exception as e:
 				logger.exception(e)
 				logger.error(
-					f"Could not get user status for DN: {user_dict['distinguishedName']}"
+					f"Could not get user status for DN: {user_dict[LDAP_ATTR_DN]}"
 				)
 
 			user_list.append(user_dict)
 
 		result = {}
 		result["users"] = user_list
-		result["headers"] = valid_attributes
+		result["headers"] = (
+			LOCAL_ATTR_USERNAME,
+			LOCAL_ATTR_FIRST_NAME,
+			LOCAL_ATTR_LAST_NAME,
+			LOCAL_ATTR_EMAIL,
+			LOCAL_ATTR_IS_ENABLED,
+		)
 		return result
 
 	def ldap_user_insert(
 		self,
-		user_data: dict,
+		unmapped_data: dict,
 		exclude_keys: list = None,
 		return_exception: bool = True,
 		key_mapping: dict = None,
@@ -384,83 +360,39 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		"""
 		Returns User LDAP Distinguished Name on successful insert.
 		"""
-		# TODO Check by authUsernameIdentifier and CN
-		# TODO Add customizable default user path
-		user_username = user_data.pop("username")
+		data = {}
+		if key_mapping:
+			if not len(key_mapping) == len(unmapped_data):
+				raise ValidationError("Key map length mismatch with user data")
+
+			for key, mapped_key in key_mapping.items():
+				data[key] = unmapped_data[mapped_key]
+		else:
+			data = unmapped_data
+
+		if exclude_keys:
+			for key in exclude_keys:
+				data.pop(key, None)
+
+		username: str = data.get("username").lower()
 		try:
-			user_path = user_data.pop("path", None)
+			user_path: str = data.pop(LOCAL_ATTR_PATH, None)
 			if user_path:
-				user_dn = f"CN={user_username},{user_path}"
+				user_dn = f"CN={username},{user_path}"
 			else:
-				user_dn = f"CN={user_username},CN=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}"
+				user_dn = f"CN={username},CN=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}"
 			user_dn = safe_dn(dn=user_dn)
 		except:
 			raise exc_user.UserDNPathException
 
-		parsed_user_attrs = {}
-		permission_list = user_data.pop("permission_list", [])
-		if permission_list and isinstance(permission_list, list):
-			parsed_user_attrs["userAccountControl"] = (
-				ldap_adsi.calc_permissions(permission_list=permission_list)
-			)
-		else:
-			parsed_user_attrs["userAccountControl"] = (
-				ldap_adsi.calc_permissions(
-					[
-						ldap_adsi.LDAP_UF_NORMAL_ACCOUNT,
-					]
-				)
-			)
-		parsed_user_attrs[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]] = (
-			str(user_username).lower()
-		)
-		parsed_user_attrs["objectClass"] = [
-			"top",
-			"person",
-			"organizationalPerson",
-			"user",
-		]
-		parsed_user_attrs["userPrincipalName"] = (
-			f"{user_username}@{RuntimeSettings.LDAP_DOMAIN}"
-		)
-
-		if not exclude_keys:
-			exclude_keys = [
-				"password",
-				"passwordConfirm",
-				"path",
-				"permission_list",  # This array was parsed and calculated, we need to ensure it's not looped over
-				"distinguishedName",  # We don't want the front-end generated DN
-				"username",  # LDAP Uses sAMAccountName
-			]
-
-		for key in exclude_keys:
-			user_data.pop(key, None)
-
-		for key in user_data:
-			if len(str(user_data[key])) <= 0:
-				continue
-
-			logger.debug("Key in data: " + key)
-			logger.debug("Value for key above: " + user_data[key])
-			if key_mapping and key in key_mapping.values():
-				# In the event of using a mapping translation (e.g.: bulk import from csv)
-				for _k, _mapped_k in key_mapping.items():
-					if _mapped_k == key:
-						ldap_key = _k
-						break
-				parsed_user_attrs[ldap_key] = user_data[key]
-			else:
-				# Normal behavior
-				parsed_user_attrs[key] = user_data[key]
-
 		logger.debug(f"Creating user in DN Path: {user_dn}")
 		try:
-			self.ldap_connection.add(
-				user_dn,
-				RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
-				attributes=parsed_user_attrs,
+			user_obj = LDAPUser(
+				connection=self.ldap_connection,
+				distinguished_name=user_dn,
+				attributes=data,
 			)
+			user_obj.save()
 		except Exception as e:
 			logger.error(e)
 			logger.error(f"Could not create User: {user_dn}")
@@ -474,180 +406,22 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			user=self.request.user.id,
 			operation_type=LOG_ACTION_CREATE,
 			log_target_class=LOG_CLASS_USER,
-			log_target=user_username,
+			log_target=username,
 		)
 
 		return user_dn
 
-	def ldap_user_update_keys(
-		self,
-		user_dn: str,
-		user_data: dict | LDAPEntry,
-		replace_operation_keys: list = None,
-		delete_operation_keys: list = None,
-	):
-		"""Executes LDAP User Updates based on dictionary and requested replace/delete
-		operations.
-
-		Args:
-			user_dn (str): User Distinguished Name.
-			user_data (dict): User Data to Update.
-			replace_operation_keys (list, optional): user_data keys to replace
-				in LDAP Server. Defaults to None.
-			delete_operation_keys (list, optional): user_data keys to delete
-				in LDAP Server. Defaults to None.
-		"""
-		# Type checks
-		if not isinstance(user_dn, str):
-			raise TypeError("user_dn must be of type str.")
-		if not isinstance(user_data, (dict, LDAPEntry)):
-			raise TypeError("user_data must be any of types [dict, LDAPEntry]")
-		# Value Checks
-		if not user_dn:
-			raise ValueError("user_dn cannot be a falsy value.")
-
-		_replace = {}
-		_delete = {}
-		# LDAP Operation Setup
-		for _key in replace_operation_keys:
-			if isinstance(user_data, dict):
-				_value = user_data.get(_key, None)
-			elif isinstance(user_data, LDAPEntry):
-				_value = getldapattrvalue(user_data, _key)
-			if _value is None:
-				continue
-			if not isinstance(_value, list):
-				_value = [_value]
-			_replace[_key] = [(MODIFY_REPLACE, _value)]
-
-		for _key in delete_operation_keys:
-			_delete[_key] = [(MODIFY_DELETE, [])]
-
-		# LDAP Operation Execution
-		if replace_operation_keys:
-			self.ldap_connection.modify(user_dn, _replace)
-
-		if delete_operation_keys:
-			self.ldap_connection.modify(user_dn, _delete)
-
-	def ldap_user_update(
-		self, username: str, user_data: dict, permission_list: list = None
-	) -> LDAPConnector:
-		"""Updates LDAP User with provided data
+	def ldap_user_update(self, data: dict) -> LDAPConnector:
+		"""Updates LDAP User with user data.
+		Does not validate (See LDAPUserSerializer).
 
 		Returns:
 			ldap3.Connection
 		"""
-		if not isinstance(username, str):
-			raise TypeError("username must be of type str.")
-		if not isinstance(user_data, dict):
-			raise TypeError("user_data must be of type dict.")
-		if permission_list and not isinstance(permission_list, list):
-			raise TypeError("permission_list must be of type list.")
-
-		ldap_user_entry: LDAPEntry = self.get_user_object(
-			username=username, attributes=ALL_LDAP3_ATTRIBUTES
-		)
-		user_dn = ldap_user_entry.entry_dn
-
-		################# START NON-STANDARD ARGUMENT UPDATES ##################
-		if permission_list:
-			if ldap_adsi.LDAP_UF_LOCKOUT in permission_list:
-				# Default is 30 Minutes
-				user_data["lockoutTime"] = 30
-			try:
-				new_permissions_int = ldap_adsi.calc_permissions(
-					permission_list
-				)
-			except:
-				raise exc_user.UserPermissionError
-
-			logger.debug("Located in: %s.update", __name__)
-			logger.debug(
-				"New Permission Integer (cast to String): %s",
-				str(new_permissions_int),
-			)
-			user_data["userAccountControl"] = new_permissions_int
-
-		user_country = user_data.get(LDAP_ATTR_COUNTRY, None)
-		if user_country:
-			try:
-				# Set numeric country code (DCC Standard)
-				user_data[LDAP_ATTR_COUNTRY_DCC] = LDAP_COUNTRIES[user_country][
-					"dccCode"
-				]
-				# Set ISO Country Code
-				user_data[LDAP_ATTR_COUNTRY_ISO] = LDAP_COUNTRIES[user_country][
-					"isoCode"
-				]
-			except Exception as e:
-				logger.exception(e)
-				raise exc_user.UserCountryUpdateError
-
-		# Catch rare front-end mutation exception
-		groups_to_add = user_data.pop("groupsToAdd", None)
-		groups_to_remove = user_data.pop("groupsToRemove", None)
-		# De-duplicate group ops
-		if groups_to_add:
-			groups_to_add = set(groups_to_add)
-		if groups_to_remove:
-			groups_to_remove = set(groups_to_remove)
-
-		if groups_to_add and groups_to_remove:
-			if groups_to_add == groups_to_remove:
-				raise exc_user.BadGroupSelection
-
-		# Group Add
-		if groups_to_add:
-			self.ldap_connection.extend.microsoft.add_members_to_groups(
-				user_dn, groups_to_add
-			)
-
-		# Group Remove
-		if groups_to_remove:
-			self.ldap_connection.extend.microsoft.remove_members_from_groups(
-				user_dn, groups_to_remove
-			)
-
-		user_data.pop(RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"], None)
-		user_data.pop("memberOfObjects", None)
-		user_data.pop("memberOf", None)
-
-		################### START STANDARD ARGUMENT UPDATES ####################
-		replace_operation_keys = []
-		delete_operation_keys = []
-		for key in user_data:
-			if key in ldap_user_entry.entry_attributes and user_data[key] == "":
-				delete_operation_keys.append(key)
-			elif user_data[key] != "":
-				replace_operation_keys.append(key)
-			else:
-				logger.info("No suitable operation for attribute %s", key)
-
-		try:
-			self.ldap_user_update_keys(
-				user_dn=user_dn,
-				user_data=user_data,
-				replace_operation_keys=replace_operation_keys,
-				delete_operation_keys=delete_operation_keys,
-			)
-		except Exception as e:
-			logger.exception(e)
-			logger.error("Unable to update LDAP User keys.")
-			try:
-				self.ldap_user_update_keys(
-					user_dn=user_dn,
-					user_data=ldap_user_entry.entry_attributes_as_dict,
-					replace_operation_keys=replace_operation_keys
-					+ delete_operation_keys,
-				)
-			except Exception as e:
-				logger.exception(e)
-				logger.error("LDAP User Update Rollback error.")
-				pass
-			raise exc_user.UserUpdateError
-
-		logger.debug(self.ldap_connection.result)
+		username = data.get(LOCAL_ATTR_USERNAME)
+		user_obj = LDAPUser(connection=self.ldap_connection, username=username)
+		user_obj.attributes = data
+		user_obj.save()
 
 		DBLogMixin.log(
 			user=self.request.user.id,
@@ -665,8 +439,8 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		if django_user:
 			for key in RuntimeSettings.LDAP_AUTH_USER_FIELDS:
 				mapped_key = RuntimeSettings.LDAP_AUTH_USER_FIELDS[key]
-				if mapped_key in user_data:
-					setattr(django_user, key, user_data[mapped_key])
+				if mapped_key in data:
+					setattr(django_user, key, data[mapped_key])
 			django_user.save()
 		return self.ldap_connection
 
@@ -791,6 +565,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		return False
 
 	def ldap_user_fetch(self, user_search, return_entry=False) -> dict:
+		"""Returns Serialized LDAP User attributes or Entry."""
 		self.ldap_filter_object = self.get_user_object_filter(
 			username=user_search
 		)
@@ -799,14 +574,10 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 				RuntimeSettings
 			).get_fetch_attrs()
 
-		ldap_object_options: LDAPObjectOptions = {
-			"connection": self.ldap_connection,
-			"ldap_filter": self.ldap_filter_object,
-			"ldap_attrs": self.ldap_filter_attr,
-		}
-
-		user_obj = LDAPObject(**ldap_object_options)
-		user_entry = user_obj.entry
+		user_obj = LDAPUser(
+			connection=self.ldap_connection,
+			username=user_search
+		)
 		user_dict = user_obj.attributes
 
 		DBLogMixin.log(
@@ -817,72 +588,65 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		)
 
 		# Group Attr Fetching
-		memberOfObjects: list[dict] = []
-		user_dict["memberOfObjects"] = []
+		member_of_objects: list[dict] = []
+		user_dict[LOCAL_ATTR_USER_GROUPS] = []
 		try:
-			if "memberOf" in self.ldap_filter_attr:
-				memberOf = user_dict.pop("memberOf", None)
-				if memberOf:
-					if isinstance(memberOf, (list, tuple, set)):
-						for _group in memberOf:
-							memberOfObjects.append(
-								self.get_group_attributes(_group)
+			if LDAP_ATTR_USER_GROUPS in user_obj.entry.entry_attributes:
+				user_groups = getldapattrvalue(
+					user_obj.entry,
+					LDAP_ATTR_USER_GROUPS
+				)
+				if user_groups:
+					if isinstance(user_groups, (list, tuple, set)):
+						for _group_dn in user_groups:
+							member_of_objects.append(
+								LDAPGroup(
+									connection=self.ldap_connection,
+									distinguished_name=_group_dn
+								).attributes
 							)
 					else:
-						memberOfObjects.append(
-							self.get_group_attributes(memberOf)
+						member_of_objects.append(
+							LDAPGroup(
+								connection=self.ldap_connection,
+								distinguished_name=user_groups
+							).attributes
 						)
 
 			### Also add default Users Group to be available as Selectable PID
-			if "primaryGroupID" in self.ldap_filter_attr:
-				_primary_group_id = user_dict["primaryGroupID"]
+			if LDAP_ATTR_PRIMARY_GROUP_ID in self.ldap_filter_attr:
+				_primary_group_id = user_dict[LOCAL_ATTR_PRIMARY_GROUP_ID]
 				if not any(
-					_g.get("objectRid", None) == _primary_group_id
-					for _g in memberOfObjects
+					_g.get(LOCAL_ATTR_RELATIVE_ID, None) == _primary_group_id
+					for _g in member_of_objects
 				):
-					memberOfObjects.append(
-						GroupViewMixin.get_group_by_rid(_primary_group_id)
-					)
+					primary_group = GroupViewMixin.get_group_by_rid(_primary_group_id)
+					member_of_objects.append(primary_group)
 
-			if memberOfObjects:
-				user_dict["memberOfObjects"] = memberOfObjects
-
-			del memberOfObjects
+			if member_of_objects:
+				user_dict[LOCAL_ATTR_USER_GROUPS] = member_of_objects
 		except Exception as e:
 			logger.exception(e)
 			raise exc_user.UserGroupsFetchError
 
-		if "userAccountControl" in self.ldap_filter_attr:
+		if LOCAL_ATTR_UAC in user_dict.keys():
 			# Check if user is disabled
 			try:
-				user_dict["is_enabled"] = not ldap_adsi.list_user_perms(
-					user=user_entry,
-					perm_search=ldap_adsi.LDAP_UF_ACCOUNT_DISABLE,
-				)
+				user_dict[LOCAL_ATTR_IS_ENABLED] = user_obj.is_enabled
 			except Exception as e:
 				logger.exception(e)
-				logger.error(
-					user_dict.get(
-						"distinguishedName", "No Distinguished Name available."
-					)
-				)
 
 			# Build permissions list
 			try:
-				user_permissions = ldap_adsi.list_user_perms(user=user_entry)
-				user_dict["permission_list"] = user_permissions
+				user_permissions = ldap_adsi.list_user_perms(user=user_obj.entry)
+				user_dict[LOCAL_ATTR_PERMISSIONS] = user_permissions
 			except Exception as e:
 				logger.exception(e)
-				logger.error(
-					user_dict.get(
-						"distinguishedName", "No Distinguished Name available."
-					)
-				)
 
-		if "sAMAccountType" in self.ldap_filter_attr:
+		if LOCAL_ATTR_ACCOUNT_TYPE in user_dict:
 			# Replace sAMAccountType Value with String
-			user_account_type = int(user_dict["sAMAccountType"])
-			user_dict["sAMAccountType"] = LDAPAccountTypes(
+			user_account_type = int(user_dict[LOCAL_ATTR_ACCOUNT_TYPE])
+			user_dict[LOCAL_ATTR_ACCOUNT_TYPE] = LDAPAccountTypes(
 				user_account_type
 			).name
 
@@ -893,10 +657,10 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		# Parse dates to LDAP Format (Front-end requirement)
 		_result = serializer.validated_data.copy()
 		for fld in [
-			"whenCreated",
-			"whenChanged",
-			"lastLogonTimestamp",
-			"accountExpires",
+			LOCAL_ATTR_CREATED,
+			LOCAL_ATTR_MODIFIED,
+			LOCAL_ATTR_LOGON_TIMESTAMP,
+			LOCAL_ATTR_EXPIRES_AT,
 		]:
 			if fld in _result:
 				_result[fld] = _result[fld].strftime(LDAP_DATE_FORMAT)

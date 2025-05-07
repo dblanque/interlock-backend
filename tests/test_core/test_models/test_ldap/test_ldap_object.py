@@ -223,17 +223,13 @@ def test_init(
 		m_ldap_object.username_identifier
 		== f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
 	)
-	assert m_ldap_object.excluded_ldap_attrs == []
-	assert m_ldap_object.required_ldap_attrs == DEFAULT_REQUIRED_LDAP_ATTRS
+	assert m_ldap_object.excluded_attributes == []
+	assert m_ldap_object.required_attributes == DEFAULT_REQUIRED_LDAP_ATTRS
 	assert m_ldap_object.container_types == DEFAULT_CONTAINER_TYPES
 	assert m_ldap_object.user_types == DEFAULT_USER_TYPES
-	dirtree_attrs = f_runtime_settings.LDAP_DIRTREE_ATTRIBUTES + [
-		f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"],
-		"username",
-	]
-	assert list(set(m_ldap_object.ldap_attrs)) == list(set(dirtree_attrs))
+	assert m_ldap_object.search_attrs == "+"
 	assert (
-		m_ldap_object.ldap_filter
+		m_ldap_object.search_filter
 		== f"(distinguishedName={object_args.get('dn')})"
 	)
 	m_set_kwargs.assert_called_once_with(object_args)
@@ -249,8 +245,8 @@ def test_dunder_set_kwargs(
 	object_args: LDAPObjectOptions = f_object_args()
 	mocker.patch.object(LDAPObject, "__fetch_object__")
 	m_ldap_object = LDAPObject(**object_args)
-	c = m_ldap_object.ldap_attrs.count("distinguishedName")
-	m_ldap_object.ldap_attrs.remove("distinguishedName")
+	c = m_ldap_object.search_attrs.count("distinguishedName")
+	m_ldap_object.search_attrs.remove("distinguishedName")
 	m_ldap_object.__set_kwargs__(
 		{
 			"a": 1,
@@ -262,7 +258,7 @@ def test_dunder_set_kwargs(
 	assert getattr(m_ldap_object, "b") == 2
 
 	# Check if required attribute was re-added to ldap_attrs list
-	assert "distinguishedName" in m_ldap_object.ldap_attrs
+	assert "distinguishedName" in m_ldap_object.search_attrs
 
 
 @pytest.mark.parametrize(
@@ -305,9 +301,9 @@ def test_dunder_fetch_object_returns_none_on_empty_response(
 	f_connection.entries = []
 	f_connection.search.assert_called_once_with(
 		search_base=m_ldap_object.search_base,
-		search_filter=m_ldap_object.ldap_filter,
+		search_filter=m_ldap_object.search_filter,
 		search_scope="SUBTREE",
-		attributes=m_ldap_object.ldap_attrs,
+		attributes=m_ldap_object.search_attrs,
 	)
 	assert m_ldap_object.__fetch_object__() is None
 
@@ -329,9 +325,9 @@ def test_dunder_fetch_object(
 	m_ldap_object = LDAPObject(**object_args)
 	f_connection.search.assert_called_once_with(
 		search_base=m_ldap_object.search_base,
-		search_filter=m_ldap_object.ldap_filter,
+		search_filter=m_ldap_object.search_filter,
 		search_scope="SUBTREE",
-		attributes=m_ldap_object.ldap_attrs,
+		attributes=m_ldap_object.search_attrs,
 	)
 	m_ldap_object.__fetch_object__() == m_entry
 
@@ -352,9 +348,9 @@ def test_dunder_fetch_object_removes_empty_string(
 	m_ldap_object = LDAPObject(**object_args)
 	f_connection.search.assert_called_once_with(
 		search_base=m_ldap_object.search_base,
-		search_filter=m_ldap_object.ldap_filter,
+		search_filter=m_ldap_object.search_filter,
 		search_scope="SUBTREE",
-		attributes=m_ldap_object.ldap_attrs,
+		attributes=m_ldap_object.search_attrs,
 	)
 	m_ldap_object.__fetch_object__() == result
 
@@ -379,9 +375,9 @@ def test_dunder_fetch_object_marks_builtin(
 	m_ldap_object = LDAPObject(**object_args)
 	f_connection.search.assert_called_once_with(
 		search_base=m_ldap_object.search_base,
-		search_filter=m_ldap_object.ldap_filter,
+		search_filter=m_ldap_object.search_filter,
 		search_scope="SUBTREE",
-		attributes=m_ldap_object.ldap_attrs,
+		attributes=m_ldap_object.search_attrs,
 	)
 	assert m_ldap_object.attributes["builtin"] is True
 
@@ -403,8 +399,8 @@ def test_dunder_fetch_object_successful_user_fetch(
 
 	# Instantiate LDAPObject
 	ldap_obj = LDAPObject(auto_fetch=False, **object_args)
-	ldap_obj.excluded_ldap_attrs = []
-	ldap_obj.ldap_attrs.extend(
+	ldap_obj.excluded_attributes = []
+	ldap_obj.search_attrs.extend(
 		[
 			"badPwdCount",
 			"objectSid",
@@ -421,9 +417,9 @@ def test_dunder_fetch_object_successful_user_fetch(
 	assert ldap_obj.entry == mock_entry
 	f_connection.search.assert_called_once_with(
 		search_base=ldap_obj.search_base,
-		search_filter=ldap_obj.ldap_filter,
+		search_filter=ldap_obj.search_filter,
 		search_scope="SUBTREE",
-		attributes=ldap_obj.ldap_attrs,
+		attributes=ldap_obj.search_attrs,
 	)
 
 

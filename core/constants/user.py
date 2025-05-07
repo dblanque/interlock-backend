@@ -1,22 +1,22 @@
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from core.ldap.constants import *
 
-PUBLIC_FIELDS_SHORT = (
-	"id",
-	"username",
-	"email",
-	"dn",
-	"user_type",
-	"is_enabled",
+LOCAL_PUBLIC_FIELDS_BASIC = (
+	LOCAL_ATTR_ID,
+	LOCAL_ATTR_USERNAME,
+	LOCAL_ATTR_EMAIL,
+	LOCAL_ATTR_DN,
+	LOCAL_ATTR_USERTYPE,
+	LOCAL_ATTR_IS_ENABLED,
 )
 
-PUBLIC_FIELDS = (
-	*PUBLIC_FIELDS_SHORT,
-	"first_name",
-	"last_name",
-	"last_login",
-	"created_at",
-	"modified_at",
+LOCAL_PUBLIC_FIELDS = (
+	*LOCAL_PUBLIC_FIELDS_BASIC,
+	LOCAL_ATTR_FIRST_NAME,
+	LOCAL_ATTR_LAST_NAME,
+	LOCAL_ATTR_LAST_LOGIN,
+	LOCAL_ATTR_CREATED,
+	LOCAL_ATTR_MODIFIED,
 )
 
 
@@ -31,7 +31,7 @@ class UserViewsetFilterAttributeBuilder:
 			LDAP_ATTR_FIRST_NAME,
 			LDAP_ATTR_LAST_NAME,
 			LDAP_ATTR_FULL_NAME,
-			self.RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
+			self.RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
 			LDAP_ATTR_EMAIL,
 			LDAP_ATTR_DN,
 			LDAP_ATTR_UAC,
@@ -42,8 +42,8 @@ class UserViewsetFilterAttributeBuilder:
 			LDAP_ATTR_FIRST_NAME,
 			LDAP_ATTR_LAST_NAME,
 			LDAP_ATTR_FULL_NAME,
-			self.RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
-			"mail",
+			self.RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
+			LDAP_ATTR_EMAIL,
 			LDAP_ATTR_PHONE,
 			LDAP_ATTR_ADDRESS,
 			LDAP_ATTR_POSTAL_CODE,
@@ -71,7 +71,7 @@ class UserViewsetFilterAttributeBuilder:
 
 	def get_update_attrs(self):
 		return [
-			self.RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
+			self.RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
 			LDAP_ATTR_DN,
 			LDAP_ATTR_UPN,
 			LDAP_ATTR_UAC,
@@ -79,7 +79,7 @@ class UserViewsetFilterAttributeBuilder:
 
 	def get_bulk_insert_attrs(self):
 		return [
-			self.RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
+			self.RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
 			LDAP_ATTR_DN,
 			LDAP_ATTR_UPN,
 		]
@@ -87,13 +87,13 @@ class UserViewsetFilterAttributeBuilder:
 	def get_update_exclude_keys(self):
 		return [
 			# Added keys for front-end normalization
-			"name",
-			"type",
+			LOCAL_ATTR_NAME,
+			LOCAL_ATTR_TYPE,
 			# Samba keys to intentionally exclude
-			"password",
-			"passwordConfirm",
-			"path",
-			"permission_list",  # This array is parsed and calculated later
+			LOCAL_ATTR_PASSWORD,
+			LOCAL_ATTR_PASSWORD_CONFIRM,
+			LOCAL_ATTR_PASSWORD_CONFIRM,
+			LOCAL_ATTR_PERMISSIONS,  # This array is parsed and calculated later
 			LDAP_ATTR_DN,  # We don't want the front-end generated DN
 			LOCAL_ATTR_USERNAME,  # LDAP Uses sAMAccountName
 			LDAP_ATTR_CREATED,
@@ -101,7 +101,7 @@ class UserViewsetFilterAttributeBuilder:
 			LDAP_ATTR_LAST_LOGIN,
 			LDAP_ATTR_BAD_PWD_COUNT,
 			LDAP_ATTR_PWD_SET_AT,
-			"is_enabled",
+			LOCAL_ATTR_IS_ENABLED,
 			LDAP_ATTR_ACCOUNT_TYPE,
 			LDAP_ATTR_OBJECT_CATEGORY,
 			LDAP_ATTR_SECURITY_ID,
@@ -111,10 +111,10 @@ class UserViewsetFilterAttributeBuilder:
 	def get_update_self_exclude_keys(self):
 		return [
 			"can_change_pwd",
-			"password",
-			"passwordConfirm",
-			"path",
-			"permission_list",  # This array is parsed and calculated later
+			LOCAL_ATTR_PASSWORD,
+			LOCAL_ATTR_PASSWORD_CONFIRM,
+			LOCAL_ATTR_PATH,
+			LOCAL_ATTR_PERMISSIONS,  # This array is parsed and calculated later
 			LDAP_ATTR_DN,  # We don't want the front-end generated DN
 			LOCAL_ATTR_USERNAME,  # LDAP Uses sAMAccountName
 			LDAP_ATTR_CREATED,
@@ -122,7 +122,7 @@ class UserViewsetFilterAttributeBuilder:
 			LDAP_ATTR_LAST_LOGIN,
 			LDAP_ATTR_BAD_PWD_COUNT,
 			LDAP_ATTR_PWD_SET_AT,
-			"is_enabled",
+			LOCAL_ATTR_IS_ENABLED,
 			LDAP_ATTR_ACCOUNT_TYPE,
 			LDAP_ATTR_OBJECT_CATEGORY,
 			LDAP_ATTR_UAC,

@@ -50,7 +50,7 @@ def f_user(mocker, f_user_dn) -> Union[MockType, User]:
 	m_user.username = "testuser"
 	m_user.user_type = USER_TYPE_LDAP
 	m_user.dn = f_user_dn
-	m_user.encryptedPassword = (
+	m_user.encrypted_password = (
 		"encrypted_aes_key",
 		"ciphertext",
 		"nonce",

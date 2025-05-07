@@ -381,37 +381,6 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		self.resync_settings()
 		return Response(data={"code": code, "code_msg": "ok", "data": data})
 
-	# TODO
-	# @action(detail=False, methods=['post'])
-	# @auth_required()
-	# def manualcmd(self, request, pk=None):
-	# 	user = request.user
-	# 	data = request.data
-	# 	code = 0
-
-	# 	operation = data['operation']
-	# 	op_dn = data['dn']
-	# 	op_object = data['op_object']
-	# 	op_filter = data['op_filter']
-	# 	op_attributes = data['op_attributes']
-
-	# 	# Open LDAP Connection
-	# 	try:
-	# 		self.ldap_connection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
-	# 	except Exception as e:
-	# 		print(e)
-	# 		raise exc_ldap.CouldNotOpenConnection
-
-	# 	# Unbind the connection
-	# 	self.ldap_connection.unbind()
-	# 	return Response(
-	# 		 data={
-	# 			'code': code,
-	# 			'code_msg': 'ok',
-	# 			'data': data
-	# 		 }
-	# 	)
-
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required

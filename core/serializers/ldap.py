@@ -54,8 +54,8 @@ def ldap_permission_validator(v: str):
 
 class DistinguishedNameField(serializers.CharField):
 	def __init__(self, **kwargs):
-		if not "required" in kwargs:
-			kwargs["required"] = False
 		if not "validators" in kwargs:
 			kwargs["validators"] = [dn_validator_se]
+		else:
+			kwargs["validators"] = [dn_validator_se] + kwargs["validators"]
 		super().__init__(**kwargs)

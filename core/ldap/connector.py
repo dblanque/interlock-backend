@@ -29,6 +29,7 @@ from core.models.choices.log import (
 	LOG_CLASS_CONN,
 )
 from core.views.mixins.logs import LogMixin
+from core.ldap.constants import LOCAL_ATTR_DN
 from core.models.user import (
 	User,
 	USER_PASSWORD_FIELDS,
@@ -116,11 +117,11 @@ def sync_user_relations(user: User, ldap_attributes, *, connection=None):
 		)
 
 	if isinstance(ldap_attributes["distinguishedName"], str):
-		user.dn = (
+		user.distinguished_name = (
 			str(ldap_attributes["distinguishedName"]).lstrip("['").rstrip("']")
 		)
 	elif isinstance(ldap_attributes["distinguishedName"], Iterable):
-		user.dn = (
+		user.distinguished_name = (
 			ldap_attributes["distinguishedName"][0].lstrip("['").rstrip("']")
 		)
 	if (
@@ -131,7 +132,7 @@ def sync_user_relations(user: User, ldap_attributes, *, connection=None):
 		user.is_superuser = True
 		user.save()
 	elif recursive_member_search(
-		user_dn=user.dn,
+		user_dn=user.distinguished_name,
 		connection=connection,
 		group_dn=RuntimeSettings.ADMIN_GROUP_TO_SEARCH,
 	):
@@ -194,7 +195,7 @@ def authenticate(*args, **kwargs):
 		# sources:
 		# https://learn.microsoft.com/en-US/troubleshoot/windows-server/windows-security/new-setting-modifies-ntlm-network-authentication
 		# https://unix.stackexchange.com/questions/737113/samba-4-change-password-old-enable
-		if not ldc.rebind(user_dn=user.dn, password=password):
+		if not ldc.rebind(user_dn=user.distinguished_name, password=password):
 			return None
 
 	# Save user password in DB (encrypted) for LDAP Operations
@@ -246,8 +247,8 @@ class LDAPConnector(object):
 			self._temp_password = self.default_user_pwd
 		# If initial auth or user is local interlock superadmin
 		elif user is not None and user.user_type == USER_TYPE_LDAP:
-			self.user_dn = getattr(user, "dn", None)
-			self._temp_password = aes_decrypt(*user.encryptedPassword)
+			self.user_dn = getattr(user, LOCAL_ATTR_DN, None)
+			self._temp_password = aes_decrypt(*user.encrypted_password)
 		else:
 			raise Exception("No valid user in LDAP Connector.")
 

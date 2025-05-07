@@ -254,8 +254,8 @@ class User(BaseUser):
 	last_name = models.CharField(
 		_("Last name"), max_length=255, null=True, blank=True
 	)
-	dn = models.CharField(
-		_("distinguishedName"), max_length=128, null=True, blank=True
+	_distinguished_name = models.CharField(
+		_("Distinguished Name"), max_length=128, null=True, blank=True
 	)
 	user_type = models.CharField(
 		_("User Type"),
@@ -282,7 +282,7 @@ class User(BaseUser):
 	ldap_password_tag = models.BinaryField(null=True, blank=True, default=None)
 
 	@property
-	def encryptedPassword(self):
+	def encrypted_password(self):
 		"""Returns tuple of BinaryField memoryview objects"""
 		return tuple([getattr(self, f) for f in USER_PASSWORD_FIELDS])
 
@@ -295,7 +295,14 @@ class User(BaseUser):
 	def distinguished_name(self):
 		if self.user_type != USER_TYPE_LDAP:
 			return None
-		return self.dn
+		return self._distinguished_name
+
+	@distinguished_name.setter
+	def distinguished_name(self, v):
+		if self.user_type != USER_TYPE_LDAP:
+			self._distinguished_name = None
+		else:
+			self._distinguished_name = v
 
 	def is_user_local(self):
 		return self.user_type == USER_TYPE_LOCAL

@@ -57,9 +57,9 @@ class TestLDAPTree:
 		# Verify
 		f_connection.search.assert_called_once_with(
 			search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
-			search_filter=tree.ldap_filter,
+			search_filter=tree.search_filter,
 			search_scope=LEVEL,
-			attributes=tree.ldap_attrs,
+			attributes=tree.search_attrs,
 		)
 
 		assert len(tree.children) == 1
@@ -132,9 +132,9 @@ class TestLDAPTree:
 		# Verify
 		f_connection.extend.standard.paged_search.assert_called_once_with(
 			search_base="OU=Parent,DC=example,DC=com",
-			search_filter=tree.ldap_filter,
+			search_filter=tree.search_filter,
 			search_scope="LEVEL",
-			attributes=tree.ldap_attrs,
+			attributes=tree.search_attrs,
 		)
 
 		assert len(result) == 1

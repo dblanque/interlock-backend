@@ -70,7 +70,6 @@ class RuntimeSettingsSingleton:
 	LDAP_AUTH_CONNECT_TIMEOUT = defaults.LDAP_AUTH_CONNECT_TIMEOUT
 	LDAP_AUTH_RECEIVE_TIMEOUT = defaults.LDAP_AUTH_RECEIVE_TIMEOUT
 	ADMIN_GROUP_TO_SEARCH = defaults.ADMIN_GROUP_TO_SEARCH
-	LDAP_DIRTREE_ATTRIBUTES = defaults.LDAP_DIRTREE_ATTRIBUTES
 	LDAP_LDIF_IDENTIFIERS = defaults.LDAP_LDIF_IDENTIFIERS
 	LDAP_OPERATIONS = defaults.LDAP_OPERATIONS
 	LDAP_LOG_READ = defaults.LDAP_LOG_READ
@@ -104,13 +103,7 @@ class RuntimeSettingsSingleton:
 		self._initialized = True
 
 	def postsync(self) -> None:
-		for f in [
-			self.LDAP_AUTH_USER_FIELDS["username"],
-			"username",
-		]:
-			if not f in self.LDAP_DIRTREE_ATTRIBUTES:
-				self.LDAP_DIRTREE_ATTRIBUTES.append(f)
-		self.LDAP_DIRTREE_ATTRIBUTES = list(set(self.LDAP_DIRTREE_ATTRIBUTES))
+		pass
 
 	def resync(self, raise_exc=False) -> bool:
 		self.__newUuid__()

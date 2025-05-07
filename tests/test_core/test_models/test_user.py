@@ -74,8 +74,8 @@ class TestUserModel:
 		)
 		assert user.distinguished_name is None
 
-	def test_encryptedPassword_property(self, mocker):
-		"""Test the encryptedPassword property"""
+	def test_encrypted_password_property(self, mocker):
+		"""Test the encrypted_password property"""
 		# Setup mock values for the password fields
 		mock_fields = {
 			"ldap_password_aes": b"aes_data",
@@ -88,7 +88,7 @@ class TestUserModel:
 		user = User(**mock_fields)
 
 		# Test the property
-		result = user.encryptedPassword
+		result = user.encrypted_password
 		assert result == (b"aes_data", b"ct_data", b"nonce_data", b"tag_data")
 
 	def test_password_constraint_all_or_none(self):

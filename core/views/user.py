@@ -40,10 +40,24 @@ from rest_framework.decorators import action
 from core.views.mixins.logs import LogMixin
 
 # Others
+from core.ldap.constants import (
+	LOCAL_ATTR_ID,
+	LOCAL_USER_TYPE,
+	LOCAL_ATTR_MODIFIED,
+	LOCAL_ATTR_CREATED,
+	LOCAL_ATTR_PASSWORD,
+	LOCAL_ATTR_PASSWORD_CONFIRM,
+	LOCAL_ATTR_USERNAME,
+	LOCAL_ATTR_DN,
+	LOCAL_ATTR_LAST_LOGIN,
+	LOCAL_ATTR_FIRST_NAME,
+	LOCAL_ATTR_LAST_NAME,
+	LOCAL_ATTR_EMAIL,
+)
 from django.db import transaction
 from core.decorators.login import auth_required, admin_required
 from core.config.runtime import RuntimeSettings
-from core.constants.user import PUBLIC_FIELDS, PUBLIC_FIELDS_SHORT
+from core.constants.user import LOCAL_PUBLIC_FIELDS, LOCAL_PUBLIC_FIELDS_BASIC
 import logging
 ################################################################################
 
@@ -73,10 +87,10 @@ class UserViewSet(BaseViewSet):
 			data={
 				"code": code,
 				"code_msg": code_msg,
-				"users": user_queryset.values(*PUBLIC_FIELDS_SHORT),
+				"users": user_queryset.values(*LOCAL_PUBLIC_FIELDS_BASIC),
 				"headers": [
 					field
-					for field in PUBLIC_FIELDS_SHORT
+					for field in LOCAL_PUBLIC_FIELDS_BASIC
 					if not field in VALUE_ONLY
 				],
 			}
@@ -91,17 +105,13 @@ class UserViewSet(BaseViewSet):
 		data: dict = request.data
 		serializer = self.serializer_class(data=data)
 		password = None
-		FIELDS_EXCLUDE = ("permission_list",)
-		for field in FIELDS_EXCLUDE:
-			if field in data:
-				del data[field]
 
 		if not serializer.is_valid():
 			raise BadRequest(data={"errors": serializer.errors})
 		else:
 			serialized_data = serializer.data
-			password = serialized_data.pop("password")
-			serialized_data.pop("passwordConfirm")
+			password = serialized_data.pop(LOCAL_ATTR_PASSWORD)
+			serialized_data.pop(LOCAL_ATTR_PASSWORD_CONFIRM)
 			with transaction.atomic():
 				user_instance = User.objects.create(**serialized_data)
 				user_instance.set_password(password)
@@ -136,7 +146,7 @@ class UserViewSet(BaseViewSet):
 			log_target_class=LOG_CLASS_USER,
 			log_target=user_instance.username,
 		)
-		for field in PUBLIC_FIELDS:
+		for field in LOCAL_PUBLIC_FIELDS:
 			data[field] = getattr(user_instance, field)
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
 
@@ -148,13 +158,13 @@ class UserViewSet(BaseViewSet):
 		data: dict = request.data
 		pk = int(pk)
 		EXCLUDE_FIELDS = (
-			"id",
-			"modified_at",
-			"created_at",
-			"user_type",
-			"last_login",
-			"dn",
-			"username",
+			LOCAL_ATTR_ID,
+			LOCAL_ATTR_MODIFIED,
+			LOCAL_ATTR_CREATED,
+			LOCAL_USER_TYPE,
+			LOCAL_ATTR_LAST_LOGIN,
+			LOCAL_ATTR_DN,
+			LOCAL_ATTR_USERNAME,
 		)
 		for key in EXCLUDE_FIELDS:
 			if key in data:
@@ -250,7 +260,7 @@ class UserViewSet(BaseViewSet):
 		code_msg = "ok"
 		data: dict = request.data
 		pk = int(pk)
-		for field in ("password", "passwordConfirm"):
+		for field in (LOCAL_ATTR_PASSWORD, LOCAL_ATTR_PASSWORD_CONFIRM):
 			if not field in data:
 				raise BadRequest(
 					data={"errors": f"Must contain field {field}."}
@@ -262,7 +272,7 @@ class UserViewSet(BaseViewSet):
 		if not serializer.is_valid():
 			raise BadRequest(data={"errors": serializer.errors})
 
-		user_instance.set_password(serializer.validated_data["password"])
+		user_instance.set_password(serializer.validated_data[LOCAL_ATTR_PASSWORD])
 		user_instance.save()
 
 		DBLogMixin.log(
@@ -277,7 +287,7 @@ class UserViewSet(BaseViewSet):
 			data={
 				"code": code,
 				"code_msg": code_msg,
-				"data": {"username": user_instance.username},
+				"data": {LOCAL_ATTR_USERNAME: user_instance.username},
 			}
 		)
 
@@ -288,7 +298,7 @@ class UserViewSet(BaseViewSet):
 		code = 0
 		code_msg = "ok"
 		data: dict = request.data
-		for field in ("password", "passwordConfirm"):
+		for field in (LOCAL_ATTR_PASSWORD, LOCAL_ATTR_PASSWORD_CONFIRM):
 			if not field in data:
 				raise BadRequest(
 					data={"errors": f"Must contain field {field}."}
@@ -299,7 +309,7 @@ class UserViewSet(BaseViewSet):
 		if not serializer.is_valid():
 			raise BadRequest(data={"errors": serializer.errors})
 
-		user.set_password(serializer.validated_data["password"])
+		user.set_password(serializer.validated_data[LOCAL_ATTR_PASSWORD])
 		user.save()
 
 		DBLogMixin.log(
@@ -314,7 +324,7 @@ class UserViewSet(BaseViewSet):
 			data={
 				"code": code,
 				"code_msg": code_msg,
-				"data": {"username": user.username},
+				"data": {LOCAL_ATTR_USERNAME: user.username},
 			}
 		)
 
@@ -326,9 +336,9 @@ class UserViewSet(BaseViewSet):
 		code_msg = "ok"
 		data: dict = request.data
 		FIELDS = (
-			"first_name",
-			"last_name",
-			"email",
+			LOCAL_ATTR_FIRST_NAME,
+			LOCAL_ATTR_LAST_NAME,
+			LOCAL_ATTR_EMAIL,
 		)
 		for key in data:
 			if not key in FIELDS:

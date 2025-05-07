@@ -186,7 +186,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			self.update_group(group_data=group_data)
+			self.update_group(data=group_data)
 
 		return Response(data={"code": code, "code_msg": code_msg})
 

@@ -507,7 +507,7 @@ class TestLDAPUserMixin:
 			if m_user_data.get(k, None):
 				expected_attrs[k] = m_user_data[k]
 
-		result = f_user_mixin.ldap_user_insert(user_data=m_user_data)
+		result = f_user_mixin.ldap_user_insert(data=m_user_data)
 		f_user_mixin.ldap_connection.add.assert_called_with(
 			expected_dn,
 			f_runtime_settings.LDAP_AUTH_OBJECT_CLASS,
@@ -587,7 +587,7 @@ class TestLDAPUserMixin:
 		}
 
 		result = f_user_mixin.ldap_user_insert(
-			user_data=m_user_data, key_mapping=key_mapping
+			data=m_user_data, key_mapping=key_mapping
 		)
 		f_user_mixin.ldap_connection.add.assert_called_with(
 			expected_dn,
@@ -603,7 +603,7 @@ class TestLDAPUserMixin:
 			"core.views.mixins.ldap.user.safe_dn", side_effect=Exception
 		)
 		with pytest.raises(exc_user.UserDNPathException):
-			f_user_mixin.ldap_user_insert(user_data={"username":"testuser"})
+			f_user_mixin.ldap_user_insert(data={"username":"testuser"})
 
 	def test_ldap_user_insert_raises_add_exc(
 		self, f_user_mixin: LDAPUserMixin
@@ -611,7 +611,7 @@ class TestLDAPUserMixin:
 		f_user_mixin.ldap_connection.add.side_effect = Exception
 		with pytest.raises(exc_user.UserCreate):
 			f_user_mixin.ldap_user_insert(
-				user_data={
+				data={
 					"username": "testuser",
 					"password": "some_password",
 					"passwordConfirm": "some_password",
@@ -627,7 +627,7 @@ class TestLDAPUserMixin:
 		f_user_mixin.ldap_connection.add.side_effect = Exception
 		assert (
 			f_user_mixin.ldap_user_insert(
-				user_data={
+				data={
 					"username": "testuser",
 					"password": "some_password",
 					"passwordConfirm": "some_password",

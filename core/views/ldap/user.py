@@ -34,7 +34,6 @@ from core.views.mixins.ldap.user import LDAPUserMixin
 
 ### Serializers / Validators
 from core.serializers.user import LDAPUserSerializer
-from core.serializers import user as UserValidators
 
 ### ViewSets
 from core.views.base import BaseViewSet
@@ -47,20 +46,14 @@ from rest_framework.decorators import action
 ### Auth
 from core.decorators.login import auth_required, admin_required
 from core.ldap import adsi as ldap_adsi
-from core.ldap.constants import (
-	LOCAL_ATTR_USERNAME,
-	LDAP_ATTR_OBJECT_CLASS,
-	LDAP_ATTR_USERNAME_SAMBA_ADDS,
-	LOCAL_ATTR_PASSWORD,
-	LDAP_ATTR_EMAIL,
-)
+from core.ldap.constants import *
 from core.ldap.connector import LDAPConnector
 import ldap3
 
 ### Others
 from core.ldap.filter import LDAPFilter
 from core.decorators.intercept import ldap_backend_intercept
-from core.constants.user import PUBLIC_FIELDS
+from core.constants.user import LOCAL_PUBLIC_FIELDS
 from core.config.runtime import RuntimeSettings
 import logging
 ################################################################################
@@ -113,6 +106,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		code_msg = "ok"
 		data: dict = request.data
 
+		# TODO - Add DN support?
 		user_search = None
 		for _k in (
 			RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
@@ -150,8 +144,8 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			raise exc_base.MissingDataKey(data={"key": LOCAL_ATTR_USERNAME})
 
 		set_pwd = False
-		user_pwd = data.get("password", None)
-		user_pwd_confirm = data.get("passwordConfirm", None)
+		user_pwd = data.get(LOCAL_ATTR_PASSWORD, None)
+		user_pwd_confirm = data.get(LOCAL_ATTR_PASSWORD_CONFIRM, None)
 		if user_pwd and user_pwd_confirm:
 			set_pwd = True
 			if user_pwd != user_pwd_confirm:
@@ -176,7 +170,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				),
 			)
 
-			user_dn = self.ldap_user_insert(user_data=data)
+			user_dn = self.ldap_user_insert(unmapped_data=data)
 			if set_pwd:
 				self.ldap_set_password(
 					user_dn=user_dn,
@@ -185,7 +179,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				)
 
 		return Response(
-			data={"code": code, "code_msg": code_msg, "data": data["username"]}
+			data={"code": code, "code_msg": code_msg, "data": data[LOCAL_ATTR_USERNAME]}
 		)
 
 	@auth_required
@@ -202,15 +196,10 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			RuntimeSettings
 		).get_update_attrs()
 		########################################################################
-
-		EXCLUDE_KEYS = self.filter_attr_builder(
-			RuntimeSettings
-		).get_update_exclude_keys()
-
-		user_to_update = data.get(
-			RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
-			data.pop(LOCAL_ATTR_USERNAME, None),
-		)
+		user_to_update = data.get(LOCAL_ATTR_USERNAME, None)
+		EXCLUDE_KEYS = (LOCAL_ATTR_LAST_LOGIN, LOCAL_ATTR_PWD_SET_AT,)
+		for k in EXCLUDE_KEYS:
+			data.pop(k, None)
 
 		# Validate user data
 		serializer = self.serializer_cls(data=data)
@@ -218,13 +207,9 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			raise BadRequest(data={"errors": serializer.errors})
 		data = serializer.validated_data
 
-		permission_list = data.pop("permission_list", [])
-		for key in EXCLUDE_KEYS:
-			if key in data:
-				del data[key]
-
 		if user_to_update == user.username:
-			if ldap_adsi.LDAP_UF_ACCOUNT_DISABLE in permission_list:
+			if (ldap_adsi.LDAP_UF_ACCOUNT_DISABLE in
+	   				data.get(LOCAL_ATTR_PERMISSIONS, [])):
 				raise exc_user.UserAntiLockout
 
 		# Open LDAP Connection
@@ -244,11 +229,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				self.ldap_user_exists(email=user_email)
 
 			# Update
-			self.ldap_user_update(
-				username=user_to_update,
-				user_data=data,
-				permission_list=permission_list,
-			)
+			self.ldap_user_update(data=data)
 
 		return Response(data={"code": code, "code_msg": code_msg})
 
@@ -312,9 +293,9 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		# Get username from data
 		username = data.get(
-			"username",
+			LOCAL_ATTR_USERNAME,
 			data.get(
-				RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"], None
+				RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME], None
 			)
 		)
 
@@ -356,11 +337,11 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		username = data.get(
 			LOCAL_ATTR_USERNAME, 
 			data.get(
-				RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"], None
+				RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME], None
 			)
 		)
-		password = data.get("password", None)
-		password_confirm = data.get("passwordConfirm", None)
+		password = data.get(LOCAL_ATTR_PASSWORD, None)
+		password_confirm = data.get(LOCAL_ATTR_PASSWORD_CONFIRM, None)
 
 		if not username or not password:
 			raise exc_base.BadRequest
@@ -461,27 +442,28 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def bulk_insert(self, request):
+	def bulk_insert(self, request: Request):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
 		data = request.data
-		data_keys = ["headers", "users", "path", "mapping"]
+		DATA_HEADERS = ("headers", "users", "path", "mapping",)
 		imported_users = []
 		skipped_users = []
 		failed_users = []
 
-		for k in data_keys:
-			if k not in data:
+		for k in DATA_HEADERS:
+			if k not in data or not data.get(k, None):
 				e = exc_base.MissingDataKey()
 				e.set_detail({"key": k})
 				raise e
 
-		user_headers = data["headers"]
+		HEADERS = data["headers"]
+		HEADER_COUNT = len(HEADERS)
+		HEADER_MAPPING = data["mapping"]
+		INSERTION_PATH: str = data["path"]
 		user_list: list = data["users"]
-		user_path: str = data["path"]
 		user_placeholder_password = None
-		header_mapping = data["mapping"]
 
 		######################## Set LDAP Attributes ###########################
 		self.ldap_filter_attr = self.filter_attr_builder(
@@ -489,74 +471,56 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		).get_bulk_insert_attrs()
 
 		# Check if data has a requested placeholder_password
-		required_fields = ["username"]
+		required_fields = [LOCAL_ATTR_USERNAME]
 		if "placeholder_password" in data and data["placeholder_password"]:
 			if len(data["placeholder_password"]) > 0:
 				user_placeholder_password = data["placeholder_password"]
 
 		# Use CSV column if placeholder not requested
 		if not user_placeholder_password:
-			required_fields.append("password")
+			required_fields.append(LOCAL_ATTR_PASSWORD)
 
-		mapped_user_key = header_mapping[LDAP_ATTR_USERNAME_SAMBA_ADDS]
-		mapped_email_key = header_mapping[LDAP_ATTR_EMAIL]
+		MAPPED_USER_KEY = HEADER_MAPPING[LDAP_ATTR_USERNAME_SAMBA_ADDS]
+		MAPPED_EMAIL_KEY = HEADER_MAPPING[LDAP_ATTR_EMAIL]
 		if user_placeholder_password:
 			mapped_pwd_key = LOCAL_ATTR_PASSWORD
 		else:
-			mapped_pwd_key = header_mapping[LOCAL_ATTR_PASSWORD]
+			mapped_pwd_key = HEADER_MAPPING[LOCAL_ATTR_PASSWORD]
 		EXCLUDE_KEYS = [
-			mapped_user_key,  # LDAP Uses sAMAccountName
+			MAPPED_USER_KEY,  # LDAP Uses sAMAccountName
 			mapped_pwd_key,
-			"permission_list",  # This array was parsed and calculated, then changed to userAccountControl
-			"distinguishedName",  # We don't want the front-end generated DN
+			"permission_list",  # This array should be parsed and calculated,
+								# then changed to userAccountControl
+			LDAP_ATTR_DN,  # We don't want the front-end generated DN
 		]
 		########################################################################
 
 		# Validate Front-end mapping with CSV Headers
 		for k in required_fields:
-			if k not in header_mapping:
+			if k not in HEADER_MAPPING:
 				raise exc_user.UserBulkInsertMappingError(data={"key": k})
 
-		# Validate all usernames before opening connection
+		# Validate row lengths before opening connection
 		for row in user_list:
-			if len(row) != len(user_headers):
+			if len(row) != HEADER_COUNT:
 				raise exc_user.UserBulkInsertLengthError(
-					data={"user": row[mapped_user_key]}
+					data={"user": row[MAPPED_USER_KEY]}
 				)
-
-			for fld in row.keys():
-				if fld in UserValidators.FIELD_VALIDATORS:
-					validator = UserValidators.FIELD_VALIDATORS[fld]
-					if validator and callable(validator):
-						if not validator(row[fld]):
-							if len(user_list) > 1:
-								failed_users.append(
-									{
-										"username": row[mapped_user_key],
-										"stage": "validation",
-									}
-								)
-								user_list.remove(row)
-							else:
-								data = {"field": fld, "value": row[fld]}
-								raise exc_user.UserFieldValidatorFailed(
-									data=data
-								)
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			for row in user_list:
 				row: dict
-				user_search = row[mapped_user_key]
-				row["path"] = user_path
+				user_search = row[MAPPED_USER_KEY]
+				row["path"] = INSERTION_PATH
 
 				if self.ldap_user_exists(
 					username=user_search,
-					email=row.get(mapped_email_key, None),
+					email=row.get(MAPPED_EMAIL_KEY, None),
 					return_exception=False,
 				):
-					skipped_users.append(row[mapped_user_key])
+					skipped_users.append(row[MAPPED_USER_KEY])
 					continue
 
 				# Serializer validation
@@ -564,7 +528,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				if not serializer.is_valid():
 					failed_users.append(
 						{
-							"username": row[mapped_user_key],
+							LOCAL_ATTR_USERNAME: row[MAPPED_USER_KEY],
 							"stage": "serializer_validation",
 						}
 					)
@@ -572,15 +536,15 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				_validated_row = serializer.validated_data
 
 				user_dn = self.ldap_user_insert(
-					user_data=_validated_row,
+					data=_validated_row,
 					exclude_keys=EXCLUDE_KEYS,
 					return_exception=False,
-					key_mapping=header_mapping,
+					key_mapping=HEADER_MAPPING,
 				)
 				if not user_dn:
 					failed_users.append(
 						{
-							"username": row[mapped_user_key],
+							LOCAL_ATTR_USERNAME: row[MAPPED_USER_KEY],
 							"stage": "permission",
 						}
 					)
@@ -606,17 +570,17 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 					except:
 						failed_users.append(
 							{
-								"username": row[mapped_user_key],
-								"stage": "password",
+								LOCAL_ATTR_USERNAME: row[MAPPED_USER_KEY],
+								"stage": LOCAL_ATTR_PASSWORD,
 							}
 						)
 
-				imported_users.append(row[mapped_user_key])
+				imported_users.append(row[MAPPED_USER_KEY])
 				DBLogMixin.log(
 					user=request.user.id,
 					operation_type=LOG_ACTION_CREATE,
 					log_target_class=LOG_CLASS_USER,
-					log_target=row[mapped_user_key],
+					log_target=row[MAPPED_USER_KEY],
 				)
 
 		return Response(
@@ -740,7 +704,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def bulk_delete(self, request, pk=None):
+	def bulk_delete(self, request: Request, pk=None):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -751,7 +715,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		self.ldap_settings = {
 			"authUsernameIdentifier": 
-				RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
+				RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME]
 		}
 
 		# Open LDAP Connection
@@ -766,7 +730,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def bulk_unlock(self, request, pk=None):
+	def bulk_unlock(self, request: Request, pk=None):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -781,7 +745,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			success = []
 			for user_object in data:
 				self.ldap_user_unlock(username=user_object)
-				success.append(user_object["username"])
+				success.append(user_object[LOCAL_ATTR_USERNAME])
 
 			result = self.ldap_connection.result
 			if result["description"] == "success":
@@ -796,18 +760,23 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@ldap_backend_intercept
-	def self_change_password(self, request, pk=None):
+	def self_change_password(self, request: Request, pk=None):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
 		data = request.data
 
-		excKeys = [
-			"username",
-			RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
-		]
-		for k in excKeys:
+		ALERT_KEYS = (
+			LOCAL_ATTR_USERNAME,
+			RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
+			LDAP_ATTR_DN,
+		)
+		for k in ALERT_KEYS:
 			if k in data:
+				logger.warning(
+					"User %s requested password with malformed data.",
+					user.username
+				)
 				raise exc_base.BadRequest
 
 		# Open LDAP Connection
@@ -820,26 +789,12 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			ldap_user_entry = self.get_user_object(
 				ldap_user_search,
 				attributes=[
-					RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
-					"distinguishedName",
-					"userAccountControl",
+					RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
+					LDAP_ATTR_DN,
+					LDAP_ATTR_UAC,
 				],
 			)
-
-			if (
-				"distinguishedName" in data.keys()
-				and data["distinguishedName"] != ""
-			):
-				logger.debug(
-					"Updating with distinguishedName obtained from front-end"
-				)
-				logger.debug(data["distinguishedName"])
-				distinguishedName = data["distinguishedName"]
-			else:
-				logger.debug("Updating with user dn search method")
-
-				distinguishedName = str(ldap_user_entry.distinguishedName)
-				logger.debug(distinguishedName)
+			distinguished_name = str(ldap_user_entry.entry_dn)
 
 			if ldap_adsi.list_user_perms(
 				user=ldap_user_entry,
@@ -847,16 +802,16 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			):
 				raise PermissionDenied
 
-			if not distinguishedName or distinguishedName == "":
+			if not distinguished_name:
 				raise exc_user.UserDoesNotExist
 
-			if data["password"] != data["passwordConfirm"]:
+			if data[LOCAL_ATTR_PASSWORD] != data[LOCAL_ATTR_PASSWORD_CONFIRM]:
 				raise exc_user.UserPasswordsDontMatch
 
 			self.ldap_set_password(
-				user_dn=distinguishedName,
-				user_pwd_new=data["password"],
-				user_pwd_old=aes_decrypt(*user.encryptedPassword),
+				user_dn=distinguished_name,
+				user_pwd_new=data[LOCAL_ATTR_PASSWORD],
+				user_pwd_old=aes_decrypt(*user.encrypted_password),
 			)
 
 		django_user = None
@@ -865,7 +820,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		except Exception as e:
 			logger.error(e)
 		if django_user:
-			encrypted_data = aes_encrypt(data["password"])
+			encrypted_data = aes_encrypt(data[LOCAL_ATTR_PASSWORD])
 			for index, field in enumerate(USER_PASSWORD_FIELDS):
 				setattr(django_user, field, encrypted_data[index])
 			django_user.set_unusable_password()
@@ -884,15 +839,15 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 	@action(detail=False, methods=["put", "post"])
 	@auth_required
 	@ldap_backend_intercept
-	def self_update(self, request, pk=None):
+	def self_update(self, request: Request, pk=None):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
 		data = request.data
 
 		BAD_KEYS = [
-			"username",
-			RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
+			LOCAL_ATTR_USERNAME,
+			RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
 		]
 		for k in BAD_KEYS:
 			if k in data:
@@ -955,10 +910,10 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		user: User = request.user
 		data = {}
 		code = 0
-		data["username"] = user.username or ""
-		data["first_name"] = user.first_name or ""
-		data["last_name"] = user.last_name or ""
-		data["email"] = user.email or ""
+		data[LOCAL_ATTR_USERNAME] = user.username or ""
+		data[LOCAL_ATTR_FIRST_NAME] = user.first_name or ""
+		data[LOCAL_ATTR_LAST_NAME] = user.last_name or ""
+		data[LOCAL_ATTR_EMAIL] = user.email or ""
 		# This only informs the front-end it is admin capable
 		# Validation is done on the back-end
 		if user.is_superuser:
@@ -975,7 +930,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		user_search = user.username
 		if user.user_type == USER_TYPE_LOCAL:
 			user_data = {}
-			for field in PUBLIC_FIELDS:
+			for field in LOCAL_PUBLIC_FIELDS:
 				user_data[field] = getattr(user, field)
 		elif user.user_type == USER_TYPE_LDAP:
 			# Open LDAP Connection
@@ -985,17 +940,20 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 					RuntimeSettings
 				).get_fetch_me_attrs()
 
-				self.ldap_filter_object = (
-					"(objectClass="
-					+ RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
-					+ ")"
+				self.ldap_filter_object = LDAPFilter.eq(
+					LDAP_ATTR_OBJECT_CLASS,
+					RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
 				)
 
 				# Add filter for username
-				self.ldap_filter_object = ldap_adsi.join_ldap_filter(
+				self.ldap_filter_object = LDAPFilter.and_(
 					self.ldap_filter_object,
-					f"{RuntimeSettings.LDAP_AUTH_USER_FIELDS['username']}={user_search}",
-				)
+					LDAPFilter.eq(
+						RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
+						user_search
+					)
+				).to_string()
+
 				self.ldap_connection.search(
 					RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
 					self.ldap_filter_object,
@@ -1017,9 +975,9 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 							user_data[str_key] = str_value
 					if (
 						attr_key
-						== RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
+						== RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME]
 					):
-						user_data["username"] = str_value
+						user_data[LOCAL_ATTR_USERNAME] = str_value
 
 					# Check if user can change password based on perms
 					user_data["can_change_pwd"] = not ldap_adsi.list_user_perms(

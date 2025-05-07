@@ -21,7 +21,7 @@ from core.ldap.constants import (
 	LDAP_ATTR_GROUP_TYPE,
 	LDAP_ATTR_FIRST_NAME,
 	LDAP_ATTR_LAST_NAME,
-	LOCAL_LDAP_ATTR_GROUP_SCOPE,
+	LOCAL_ATTR_GROUP_SCOPE,
 	LDAP_ATTR_GROUP_MEMBERS,
 	LDAP_ATTR_EMAIL,
 	LDAP_ATTR_OBJECT_CLASS,
@@ -540,13 +540,13 @@ class TestGroupMixinCRUD:
 			{
 				LDAP_ATTR_COMMON_NAME: "Test Group",
 				LDAP_ATTR_GROUP_TYPE: 1,  # Mapped to Security
-				LOCAL_LDAP_ATTR_GROUP_SCOPE: 1,  # Mapped to Domain Local
+				LOCAL_ATTR_GROUP_SCOPE: 1,  # Mapped to Domain Local
 				"membersToAdd": ["mock_user_dn"],
 			},
 			{
 				LDAP_ATTR_COMMON_NAME: "Test Group",
 				LDAP_ATTR_GROUP_TYPE: 1,  # Mapped to Security
-				LOCAL_LDAP_ATTR_GROUP_SCOPE: 1,  # Mapped to Domain Local
+				LOCAL_ATTR_GROUP_SCOPE: 1,  # Mapped to Domain Local
 			},
 		),
 	)
@@ -582,7 +582,7 @@ class TestGroupMixinCRUD:
 		)
 		expected_group_attrs.pop("path", None)
 		expected_group_attrs.pop("membersToAdd", None)
-		expected_group_attrs.pop(LOCAL_LDAP_ATTR_GROUP_SCOPE, None)
+		expected_group_attrs.pop(LOCAL_ATTR_GROUP_SCOPE, None)
 
 		assert (
 			f_group_mixin.create_group(group_data=m_group_data)
@@ -641,7 +641,7 @@ class TestGroupMixinCRUD:
 			LDAP_ATTR_COMMON_NAME: "Test Group",
 			"path": f"OU=Groups,{f_ldap_search_base}",
 			LDAP_ATTR_GROUP_TYPE: 1,  # Mapped to Security
-			LOCAL_LDAP_ATTR_GROUP_SCOPE: 1,  # Mapped to Domain Local
+			LOCAL_ATTR_GROUP_SCOPE: 1,  # Mapped to Domain Local
 			"membersToAdd": ["mock_user_dn"],
 		}
 		f_group_mixin.ldap_connection.add.side_effect = Exception
@@ -673,7 +673,7 @@ class TestGroupMixinCRUD:
 			LDAP_ATTR_COMMON_NAME: "Test Group",
 			"path": f"OU=Groups,{f_ldap_search_base}",
 			LDAP_ATTR_GROUP_TYPE: 1,  # Mapped to Security
-			LOCAL_LDAP_ATTR_GROUP_SCOPE: 1,  # Mapped to Domain Local
+			LOCAL_ATTR_GROUP_SCOPE: 1,  # Mapped to Domain Local
 			"membersToAdd": ["mock_user_dn"],
 		}
 		eo_microsoft.add_members_to_groups.side_effect = Exception
@@ -875,13 +875,13 @@ class TestGroupMixinCRUD:
 	@staticmethod
 	def test_update_raises_no_dn(f_group_mixin: GroupViewMixin):
 		with pytest.raises(exc_groups.GroupDistinguishedNameMissing):
-			f_group_mixin.update_group(group_data={LDAP_ATTR_DN: None})
+			f_group_mixin.update_group(data={LDAP_ATTR_DN: None})
 
 	@staticmethod
 	def test_update_raises_dn_validation_error(f_group_mixin: GroupViewMixin):
 		with pytest.raises(exc_ldap.DistinguishedNameValidationError):
 			f_group_mixin.update_group(
-				group_data={LDAP_ATTR_DN: "Sasdadad"}
+				data={LDAP_ATTR_DN: "Sasdadad"}
 			)
 
 	@staticmethod
@@ -895,7 +895,7 @@ class TestGroupMixinCRUD:
 		)
 		with pytest.raises(exc_groups.GroupDoesNotExist):
 			f_group_mixin.update_group(
-				group_data={LDAP_ATTR_DN: f_distinguished_name}
+				data={LDAP_ATTR_DN: f_distinguished_name}
 			)
 
 	@staticmethod
@@ -908,7 +908,7 @@ class TestGroupMixinCRUD:
 		mocker.patch("core.views.mixins.ldap.group.LDAPObject")
 		with pytest.raises(exc_ldap.DistinguishedNameValidationError):
 			f_group_mixin.update_group(
-				group_data={
+				data={
 					LDAP_ATTR_COMMON_NAME: "CN=CN=pepe",
 					LDAP_ATTR_DN: f_distinguished_name,
 				}
@@ -923,7 +923,7 @@ class TestGroupMixinCRUD:
 		mocker.patch("core.views.mixins.ldap.group.LDAPObject")
 		with pytest.raises(exc_groups.BadMemberSelection):
 			f_group_mixin.update_group(
-				group_data={
+				data={
 					LDAP_ATTR_DN: f_distinguished_name,
 					"membersToAdd": ["some_member"],
 					"membersToRemove": ["some_member"],
@@ -952,7 +952,7 @@ class TestGroupMixinCRUD:
 			}
 		)
 		with pytest.raises(exc_dirtree.DirtreeRename):
-			f_group_mixin.update_group(group_data=m_group_dict)
+			f_group_mixin.update_group(data=m_group_dict)
 
 	@staticmethod
 	def test_update_raises_missing_type_field(
@@ -970,11 +970,11 @@ class TestGroupMixinCRUD:
 				LDAP_ATTR_COMMON_NAME: m_common_name,
 				LDAP_ATTR_GROUP_MEMBERS: ["mock_dn_1"],
 				LDAP_ATTR_DN: f_distinguished_name,
-				LOCAL_LDAP_ATTR_GROUP_SCOPE: MAPPED_GROUP_SCOPE_GLOBAL,
+				LOCAL_ATTR_GROUP_SCOPE: MAPPED_GROUP_SCOPE_GLOBAL,
 			}
 		)
 		with pytest.raises(exc_groups.GroupTypeMissingField):
-			f_group_mixin.update_group(group_data=m_group_dict)
+			f_group_mixin.update_group(data=m_group_dict)
 
 	@staticmethod
 	@pytest.mark.parametrize(
@@ -1032,7 +1032,7 @@ class TestGroupMixinCRUD:
 				LDAP_ATTR_DN: f_distinguished_name,
 				LDAP_ATTR_RELATIVE_ID: 514,
 				LDAP_ATTR_SECURITY_ID: "S-1-2-3-4",
-				LOCAL_LDAP_ATTR_GROUP_SCOPE: MAPPED_GROUP_SCOPE_DOMAIN_LOCAL,
+				LOCAL_ATTR_GROUP_SCOPE: MAPPED_GROUP_SCOPE_DOMAIN_LOCAL,
 				LDAP_ATTR_GROUP_TYPE: MAPPED_GROUP_TYPE_SECURITY,
 				"membersToAdd": m_members_add,
 				"membersToRemove": m_members_remove,
@@ -1047,7 +1047,7 @@ class TestGroupMixinCRUD:
 		)
 
 		# Execute
-		f_group_mixin.update_group(group_data=m_group_dict)
+		f_group_mixin.update_group(data=m_group_dict)
 		# Assertions
 		m_move_or_rename_object.assert_called_once_with(
 			f_group_mixin,

@@ -220,21 +220,6 @@ def test_init_with_existing_instance(mocker):
 	mock_resync.assert_not_called()
 	assert new_instance.uuid == original_uuid
 
-
-def test_postsync():
-	instance = RuntimeSettingsSingleton()
-	FIELDS_TO_CHECK = [
-		instance.LDAP_AUTH_USER_FIELDS["username"],
-		"username",
-	]
-	for f in FIELDS_TO_CHECK:
-		if f in instance.LDAP_DIRTREE_ATTRIBUTES:
-			instance.LDAP_DIRTREE_ATTRIBUTES.remove(f)
-	instance.postsync()
-	for f in FIELDS_TO_CHECK:
-		assert f in instance.LDAP_DIRTREE_ATTRIBUTES
-
-
 def test_resync_with_defaults(mocker):
 	m_logger = mocker.patch("core.models.ldap_settings_runtime.logger")
 	mocker.patch.object(RuntimeSettingsSingleton, "__init__", return_value=None)

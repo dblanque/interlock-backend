@@ -5,21 +5,13 @@ from django.core.validators import validate_email
 from core.ldap.constants import (
 	LDAP_DATE_FORMAT,
 	LOCAL_ATTR_USERNAME,
+	LOCAL_ATTR_FIRST_NAME,
+	LOCAL_ATTR_LAST_NAME,
+	LOCAL_ATTR_EMAIL,
 	LOCAL_ATTR_PASSWORD,
-	LDAP_ATTR_EMAIL,
-	LDAP_ATTR_FIRST_NAME,
-	LDAP_ATTR_LAST_LOGIN,
-	LDAP_ATTR_INITIALS,
-	LDAP_ATTR_PHONE,
-	LDAP_ATTR_WEBSITE,
-	LDAP_ATTR_ADDRESS,
-	LDAP_ATTR_POSTAL_CODE,
-	LDAP_ATTR_CITY,
-	LDAP_ATTR_STATE,
-	LDAP_ATTR_COUNTRY,
+	LOCAL_ATTR_PASSWORD_CONFIRM,
 )
 from core.serializers.ldap import (
-	ldap_user_validator,
 	DistinguishedNameField,
 	ldap_user_validator_se,
 	country_validator,
@@ -28,23 +20,8 @@ from core.serializers.ldap import (
 	ldap_permission_validator,
 )
 
-FIELD_VALIDATORS = {
-	LOCAL_ATTR_USERNAME: ldap_user_validator,  # username
-	LOCAL_ATTR_PASSWORD: None,  # password
-	LDAP_ATTR_EMAIL: None,  # email
-	LDAP_ATTR_FIRST_NAME: None,  # first_name
-	LDAP_ATTR_LAST_LOGIN: None,  # last_name
-	LDAP_ATTR_INITIALS: None,  # initials
-	LDAP_ATTR_PHONE: None,  # phone_number
-	LDAP_ATTR_WEBSITE: None,  # webpage
-	LDAP_ATTR_ADDRESS: None,  # street_address
-	LDAP_ATTR_POSTAL_CODE: None,  # postal_code
-	LDAP_ATTR_CITY: None,  # town
-	LDAP_ATTR_STATE: None,  # state_province
-	LDAP_ATTR_COUNTRY: None,  # country
-}
 class UserSerializer(serializers.ModelSerializer):
-	passwordConfirm = serializers.CharField(
+	password_confirm = serializers.CharField(
 		required=False,
 		write_only=True,
 		allow_blank=True,
@@ -53,118 +30,124 @@ class UserSerializer(serializers.ModelSerializer):
 	class Meta:
 		model = User
 		fields = (
-			"username",
-			"first_name",
-			"last_name",
-			"email",
-			"password",
-			"passwordConfirm",
+			LOCAL_ATTR_USERNAME,
+			LOCAL_ATTR_FIRST_NAME,
+			LOCAL_ATTR_LAST_NAME,
+			LOCAL_ATTR_EMAIL,
+			LOCAL_ATTR_PASSWORD,
+			LOCAL_ATTR_PASSWORD_CONFIRM,
 		)
 		extra_kwargs = {
-			'password': {'write_only': True}  # Also hide password in responses
+			LOCAL_ATTR_PASSWORD: {'write_only': True}  # Also hide password in responses
 		}
 
 	def validate(self, data: dict):
 		"""Handle password confirmation validation"""
-		password = data.get('password', None)
-		password_confirm = data.get('passwordConfirm', None)
+		password = data.get(LOCAL_ATTR_PASSWORD, None)
+		password_confirm = data.get(LOCAL_ATTR_PASSWORD_CONFIRM, None)
 
 		# Only validate if password is being set/changed
 		if password is not None:
 			if password_confirm is None:
 				raise serializers.ValidationError(
-					{"passwordConfirm": "Password confirmation is required when setting password"}
+					{LOCAL_ATTR_PASSWORD_CONFIRM: "Password confirmation is required when setting password"}
 				)
 			if password != password_confirm:
 				raise serializers.ValidationError(
-					{"passwordConfirm": "Passwords do not match"}
+					{LOCAL_ATTR_PASSWORD_CONFIRM: "Passwords do not match"}
 				)
 
-		# Remove passwordConfirm from data as it's not a model field
-		data.pop('passwordConfirm', None)
+		# Remove password_confirm from data as it's not a model field
+		data.pop(LOCAL_ATTR_PASSWORD_CONFIRM, None)
 		return data
 
 class LDAPUserSerializer(serializers.Serializer):
 	name = serializers.CharField(required=False)
-	password = serializers.CharField(required=False)
-	path = DistinguishedNameField(required=False)
-
 	# Distinguished Name
-	distinguishedName = DistinguishedNameField()
-	type = serializers.CharField(required=False)
-	# First Name
-	givenName = serializers.CharField(
-		allow_blank=True,
-		required=False,
-	)
-	# Last Name
-	sn = serializers.CharField(
-		allow_blank=True,
-		required=False,
-	)
+	distinguished_name = DistinguishedNameField(required=False)
 	# Username
-	sAMAccountName = serializers.CharField(required=False, min_length=1, max_length=21, validators=[ldap_user_validator_se])
 	username = serializers.CharField(required=False, min_length=1, max_length=21, validators=[ldap_user_validator_se])
 	# Email
-	mail = serializers.CharField(
-		allow_blank=True,
-		required=False,
-		validators=[validate_email]
-	)
 	email = serializers.CharField(
 		allow_blank=True,
 		required=False,
 		validators=[validate_email],
 	)
+	password = serializers.CharField(required=False, write_only=True)
+	path = DistinguishedNameField(required=False, write_only=True)
+
+	# First Name
+	first_name = serializers.CharField(
+		allow_blank=True,
+		required=False,
+	)
+	# Last Name
+	last_name = serializers.CharField(
+		allow_blank=True,
+		required=False,
+	)
+	# Website
+	website = serializers.CharField(required=False)
+	# Phone Number
+	phone = serializers.CharField(required=False, max_length=33, min_length=2)
+	# Street Address
+	street_address = serializers.CharField(required=False, max_length=254, min_length=2)
 	# Postal Code
-	postalCode = serializers.CharField(required=False)
+	postal_code = serializers.CharField(required=False)
 	# City
-	l = serializers.CharField(required=False)
+	city = serializers.CharField(required=False)
+	# State / Province
+	state_province = serializers.CharField(required=False)
 	# Country Name
-	co = serializers.CharField(
+	country_name = serializers.CharField(
 		required=False,
 		validators=[country_validator]
 	)
 	# Number Code for Country
-	countryCode = serializers.IntegerField(required=False, validators=[country_dcc_validator])
+	country_code_dcc = serializers.IntegerField(required=False, validators=[country_dcc_validator])
 	# Two letter Country Code
-	c = serializers.CharField(max_length=3, required=False, validators=[country_iso_validator])
-	userPrincipalName = serializers.CharField(required=False)
-	userAccountControl = serializers.IntegerField(required=False)
-	whenCreated = serializers.DateTimeField(
+	country_code_iso = serializers.CharField(max_length=3, required=False, validators=[country_iso_validator])
+	user_principal_name = serializers.CharField(required=False)
+	user_account_control = serializers.IntegerField(required=False)
+	created_at = serializers.DateTimeField(
 		format=LDAP_DATE_FORMAT,
 		input_formats=[LDAP_DATE_FORMAT, "iso-8601"],
 		required=False,
 	)
-	whenChanged = serializers.DateTimeField(
+	modified_at = serializers.DateTimeField(
 		format=LDAP_DATE_FORMAT,
 		input_formats=[LDAP_DATE_FORMAT, "iso-8601"],
 		required=False,
 	)
-	lastLogonTimestamp = serializers.DateTimeField(
+	login_timestamp = serializers.DateTimeField(
 		format=LDAP_DATE_FORMAT,
 		input_formats=[LDAP_DATE_FORMAT, "iso-8601"],
 		required=False,
 	)
-	accountExpires = serializers.DateTimeField(
+	expires_at = serializers.DateTimeField(
 		format=LDAP_DATE_FORMAT,
 		input_formats=[LDAP_DATE_FORMAT, "iso-8601"],
 		required=False,
 	)
-	lastLogon = serializers.IntegerField(required=False)
-	badPwdCount = serializers.IntegerField(required=False)
-	pwdLastSet = serializers.IntegerField(required=False)
-	primaryGroupID = serializers.IntegerField(required=False)
-	objectClass = serializers.ListField(required=False, child=serializers.CharField())
-	objectCategory = serializers.CharField(required=False)
-	objectSid = serializers.CharField(required=False)
-	objectRid = serializers.IntegerField(required=False)
-	sAMAccountType = serializers.CharField(required=False)
-	memberOfObjects = serializers.ListField(required=False, child=serializers.DictField())
+	last_login_win32 = serializers.IntegerField(required=False)
+	bad_password_count = serializers.IntegerField(required=False)
+	password_set_at = serializers.IntegerField(required=False)
+	primary_group_id = serializers.IntegerField(required=False)
+	object_class = serializers.ListField(required=False, child=serializers.CharField())
+	object_category = serializers.CharField(required=False)
+	object_security_id = serializers.CharField(required=False)
+	object_relative_id = serializers.IntegerField(required=False)
+	account_type = serializers.CharField(required=False)
 	is_enabled = serializers.BooleanField(required=False)
-	permission_list = serializers.ListField(
+	permissions = serializers.ListField(
 		required=False,
 		child=serializers.CharField(validators=[ldap_permission_validator])
 	)
-	groupsToAdd = serializers.ListField(required=False, child=DistinguishedNameField())
-	groupsToRemove = serializers.ListField(required=False, child=DistinguishedNameField())
+	# TODO - Serialize groups with LDAPGroupSerializer
+	groups = serializers.ListField(required=False, child=serializers.DictField())
+	groups_to_add = serializers.ListField(required=False, child=DistinguishedNameField())
+	groups_to_remove = serializers.ListField(required=False, child=DistinguishedNameField())
+
+	def validate(self, data: dict):
+		"""Handle extra validation"""
+		return data
