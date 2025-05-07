@@ -3,6 +3,13 @@
 * Re-factor LDAPObjectGroup to normalize LDAP Attributes to local map
 * Re-factor LDAPObjects to normalize LDAP Attributes to local map
 
+# Check after re-factor
+* User CRUD
+* User Bulk OPS
+* Group CRUD
+* Dirtree Operations
+* DNS Operations
+
 # To test manually
 * Add OIDC Consent Features <t>
 * Add OIDC TOTP Features for Users <t>
