@@ -140,63 +140,73 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			if not self.connection.response and not self.connection.entries:
 				raise exc_dns.DNSListEmpty
 
-		record_id = 0
-		# This was changed from ldap_connection.response to .entries
-		for entry in self.connection.entries:
-				# Set Record Name
-			record_index = 0
-			record_name: bytes = getldapattrvalue(entry, "name")
-			record_name = record_name.decode("utf-8")
+			record_id = 0
+			# This was changed from ldap_connection.response to .entries
+			for entry in self.connection.entries:
+					# Set Record Name
+				record_index = 0
+				record_name: bytes | str= getldapattrvalue(entry, "name")
+				if isinstance(record_name, bytes):
+					record_name = record_name.decode("utf-8")
 
-			# If not root of zone, append zone to subdomain
-			if record_name != "@":
-				record_name += "." + target_zone
-			else:
-				record_name = target_zone
-			logger.debug(f"{__name__} [DEBUG] - {record_name}")
+				# If not root of zone, append zone to subdomain
+				if record_name != "@":
+					record_name += "." + target_zone
+				else:
+					record_name = target_zone
+				logger.debug(f"{__name__} [DEBUG] - {record_name}")
 
-			# Set Record Data
-			for record in getldapattr(entry, "dnsRecord").values:
-				dr = dnstool.DNS_RECORD(record)
-				record_dict = record_to_dict(
-					record=dr,
-					ts=getldapattrvalue(entry, "dNSTombstoned")
-				)
-				record_dict["id"] = record_id
-				record_dict["index"] = record_index
-				record_dict["displayName"] = record_name
-				record_dict["name"] = record_name
-				record_dict["ttl"] = dr.__getTTL__()
-				record_dict["distinguishedName"] = entry.entry_dn
-				logger.debug(
-					"%s [DEBUG] - Record: %s, Starts With Underscore: %s, Exclude Entry: %s",
-					__name__,
-					record_name,
-					record_name.startswith('_'),
-					record_name in exclude_entries,
-				)
-				logger.debug("%s [DEBUG] - %s", __name__, dr)
-				if (
-					not record_name.startswith("_")
-					and not any(
-							record_name.lower() == v.lower()
-							for v in exclude_entries
-						)
-				):
-					result.append(record_dict)
-				record_id += 1
-				record_index += 1
+				# Set Record Data
+				entry_raw_attrs: dict = entry.entry_raw_attributes
+				for record in entry_raw_attrs.get("dnsRecord"):
+					is_tombstoned = bool(getldapattrvalue(entry, "dNSTombstoned"))
 
-				for i, zone_name in enumerate(dns_zones):
-					if zone_name.lower() == "RootDNSServers".lower():
-						dns_zones[i] = "Root DNS Servers"
+					try:
+						dr = dnstool.DNS_RECORD(record)
+					except:
+						logger.error(f"Could not parse struct values for record {record_name}")
+						raise
 
-				response_data["dnsZones"] = dns_zones
-				response_data["forestZones"] = forest_zones
-				response_data["records"] = result
-				response_data["legacy"] = (
-					RuntimeSettings.LDAP_DNS_LEGACY or False
-				)
+					try:
+						record_dict = record_to_dict(record=dr, ts=is_tombstoned)
+					except:
+						logger.error(f"Could not parse dict values for record {record_name}")
+						raise
+					record_dict["id"] = record_id
+					record_dict["index"] = record_index
+					record_dict["displayName"] = record_name
+					record_dict["name"] = record_name
+					record_dict["ttl"] = dr.__getTTL__()
+					record_dict["distinguishedName"] = entry.entry_dn
+					logger.debug(
+						"%s [DEBUG] - Record: %s, Starts With Underscore: %s, Exclude Entry: %s",
+						__name__,
+						record_name,
+						record_name.startswith('_'),
+						record_name in exclude_entries,
+					)
+					logger.debug("%s [DEBUG] - %s", __name__, dr)
+					if (
+						not record_name.startswith("_")
+						and not any(
+								record_name.lower() == v.lower()
+								for v in exclude_entries
+							)
+					):
+						result.append(record_dict)
+					record_id += 1
+					record_index += 1
+
+					for i, zone_name in enumerate(dns_zones):
+						if zone_name.lower() == "RootDNSServers".lower():
+							dns_zones[i] = "Root DNS Servers"
+
+					response_data["dnsZones"] = dns_zones
+					response_data["forestZones"] = forest_zones
+					response_data["records"] = result
+					response_data["legacy"] = (
+						RuntimeSettings.LDAP_DNS_LEGACY or False
+					)
 
 		DBLogMixin.log(
 			user=user.id,
