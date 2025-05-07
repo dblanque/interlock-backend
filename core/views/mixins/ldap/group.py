@@ -294,7 +294,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		return self.ldap_connection
 
 	def delete_group(self, group_data: GroupDict):
-		distinguished_name = group_data.get(LDAP_ATTR_DN, None)
+		distinguished_name = group_data.get(LOCAL_ATTR_DN, None)
 		if not distinguished_name:
 			logger.error(group_data)
 			raise exc_ldap.DistinguishedNameValidationError
