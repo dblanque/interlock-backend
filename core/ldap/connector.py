@@ -29,7 +29,14 @@ from core.models.choices.log import (
 	LOG_CLASS_CONN,
 )
 from core.views.mixins.logs import LogMixin
-from core.constants.attrs import LOCAL_ATTR_DN
+from core.constants.attrs import (
+	LOCAL_ATTR_DN,
+	LOCAL_ATTR_USERNAME,
+	LDAP_ATTR_EMAIL,
+	LDAP_ATTR_DN,
+	LDAP_ATTR_OBJECT_CLASS,
+	LDAP_ATTR_GROUP_MEMBERS,
+)
 from core.models.user import (
 	User,
 	USER_PASSWORD_FIELDS,
@@ -80,18 +87,18 @@ def recursive_member_search(
 
 	# Add filter for username
 	ldap_filter_object = LDAPFilter.and_(
-		LDAPFilter.eq("distinguishedName", group_dn),
-		LDAPFilter.eq("objectClass", "group"),
+		LDAPFilter.eq(LDAP_ATTR_DN, group_dn),
+		LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "group"),
 	).to_string()
 	connection.search(
 		RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
 		ldap_filter_object,
-		attributes=["member", "objectClass", "distinguishedName"],
+		attributes=[LDAP_ATTR_GROUP_MEMBERS, LDAP_ATTR_OBJECT_CLASS, LDAP_ATTR_DN],
 	)
 	for e in connection.entries:
-		e_object_classes = getldapattr(e, "objectClass")
+		e_object_classes = getldapattr(e, LDAP_ATTR_OBJECT_CLASS)
 		if "group" in e_object_classes.values:
-			e_member = getldapattr(e, "member")
+			e_member = getldapattr(e, LDAP_ATTR_GROUP_MEMBERS)
 			# Check if member in group directly
 			if user_dn in e_member.values:
 				return True
@@ -111,22 +118,23 @@ def recursive_member_search(
 
 
 def sync_user_relations(user: User, ldap_attributes, *, connection=None):
-	if not "distinguishedName" in ldap_attributes:
+	_username_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME]
+	if not LDAP_ATTR_DN in ldap_attributes:
 		raise ValueError(
 			"distinguishedName not present in User LDAP Attributes."
 		)
 
-	if isinstance(ldap_attributes["distinguishedName"], str):
+	if isinstance(ldap_attributes[LDAP_ATTR_DN], str):
 		user.distinguished_name = (
-			str(ldap_attributes["distinguishedName"]).lstrip("['").rstrip("']")
+			str(ldap_attributes[LDAP_ATTR_DN]).lstrip("['").rstrip("']")
 		)
-	elif isinstance(ldap_attributes["distinguishedName"], Iterable):
+	elif isinstance(ldap_attributes[LDAP_ATTR_DN], Iterable):
 		user.distinguished_name = (
-			ldap_attributes["distinguishedName"][0].lstrip("['").rstrip("']")
+			ldap_attributes[LDAP_ATTR_DN][0].lstrip("['").rstrip("']")
 		)
 	if (
 		"Administrator"
-		in ldap_attributes[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]]
+		in ldap_attributes[_username_field]
 	):
 		user.is_staff = True
 		user.is_superuser = True
@@ -138,17 +146,17 @@ def sync_user_relations(user: User, ldap_attributes, *, connection=None):
 	):
 		user.is_staff = True
 		user.is_superuser = True
-		if "mail" in ldap_attributes:
+		if LDAP_ATTR_EMAIL in ldap_attributes:
 			user.email = (
-				str(ldap_attributes["mail"]).lstrip("['").rstrip("']") or ""
+				str(ldap_attributes[LDAP_ATTR_EMAIL]).lstrip("['").rstrip("']") or ""
 			)
 		user.save()
 	else:
 		user.is_staff = False
 		user.is_superuser = False
-		if "mail" in ldap_attributes:
+		if LDAP_ATTR_EMAIL in ldap_attributes:
 			user.email = (
-				str(ldap_attributes["mail"]).lstrip("['").rstrip("']") or ""
+				str(ldap_attributes[LDAP_ATTR_EMAIL]).lstrip("['").rstrip("']") or ""
 			)
 		user.save()
 
@@ -471,7 +479,7 @@ class LDAPConnector(object):
 		}
 		return import_func(RuntimeSettings.LDAP_AUTH_CLEAN_USER_DATA)(_fields)
 
-	def _get_or_create_user(self, user_data) -> User:
+	def _get_or_create_user(self, user_data: dict) -> User:
 		"""
 		Returns a Django user for the given LDAP user data.
 
