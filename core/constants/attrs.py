@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.ldap.constants
+# Module: core.constants.attrs
 
 # Global
 LDAP_DATE_FORMAT = "%Y%m%d%H%M%S.%fZ"
