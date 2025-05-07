@@ -24,6 +24,7 @@ from ldap3 import (
 	Attribute as LDAPAttribute,
 	SUBTREE,
 	ALL_OPERATIONAL_ATTRIBUTES,
+	ALL_ATTRIBUTES,
 	MODIFY_DELETE,
 	MODIFY_REPLACE,
 )
@@ -39,12 +40,16 @@ logger = getLogger()
 # Add Immutable or always excluded keys tuple
 
 class LDAPObjectTypes(Enum):
-	GENERIC = 1
-	USER = 2
-	GROUP = 3
-	ORGANIZATIONAL_UNIT = 4
-	COMPUTER = 5
-	PRINTER = 6
+	GENERIC = "generic"
+	CONTAINER = "container"
+	USER = "user"
+	PERSON = "person"
+	GROUP = "group"
+	ORGANIZATIONAL_UNIT = "organizational-unit"
+	COMPUTER = "computer"
+	PRINTER = "printer"
+	CONTACT = "contact"
+	BUILTIN = "builtin-domain"
 
 DEFAULT_REQUIRED_LDAP_ATTRS = {
 	LDAP_ATTR_DN,
@@ -52,8 +57,8 @@ DEFAULT_REQUIRED_LDAP_ATTRS = {
 	LDAP_ATTR_OBJECT_CLASS,
 }
 DEFAULT_CONTAINER_TYPES = {
-	"container",
-	"organizational-unit",
+	LDAPObjectTypes.CONTAINER.value,
+	LDAPObjectTypes.ORGANIZATIONAL_UNIT.value,
 }
 
 # Immutable Attributes, these are read only
@@ -189,6 +194,9 @@ class LDAPObject:
 		for kw in kwargs:
 			setattr(self, kw, kwargs[kw])
 
+		if self.search_attrs in (ALL_OPERATIONAL_ATTRIBUTES, ALL_ATTRIBUTES):
+			return
+
 		# Remove excluded attributes
 		for attr in self.excluded_attributes:
 			if attr in self.search_attrs:
@@ -222,12 +230,20 @@ class LDAPObject:
 		# Set searchResult attributes
 		if self.entry:
 			distinguished_name: str = self.entry.entry_dn
+			if LDAP_ATTR_OBJECT_CATEGORY in self.entry.entry_attributes:
+				self.type = (
+					getldapattrvalue(self.entry, LDAP_ATTR_OBJECT_CATEGORY)
+					.split(",")[0]
+					.split("=")[1]
+				)
+				self.type = LDAPObjectTypes(self.type.lower())
 		else:
 			distinguished_name: str = self.distinguished_name
 		self.attributes = {}
 		self.attributes[LOCAL_ATTR_NAME] = distinguished_name.split(",")[0].split("=")[1]
 		self.attributes[LOCAL_ATTR_DN] = distinguished_name
-		self.attributes[LOCAL_ATTR_TYPE] = LDAPObjectTypes.GENERIC.name if not self.type.name else self.type.name
+		self.attributes[LOCAL_ATTR_TYPE] = LDAPObjectTypes.GENERIC.value.lower() \
+						if not self.type.value else self.type.value.lower()
 		if LDAP_ATTR_OBJECT_CATEGORY in self.entry.entry_attributes:
 			self.attributes[LOCAL_ATTR_OBJECT_CATEGORY] = (
 				getldapattrvalue(self.entry, LDAP_ATTR_OBJECT_CATEGORY)
