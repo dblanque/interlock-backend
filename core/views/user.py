@@ -49,7 +49,7 @@ from core.constants.attrs import (
 	LOCAL_ATTR_PASSWORD_CONFIRM,
 	LOCAL_ATTR_USERNAME,
 	LOCAL_ATTR_DN,
-	LOCAL_ATTR_LAST_LOGIN,
+	LOCAL_ATTR_LAST_LOGIN_WIN32,
 	LOCAL_ATTR_FIRST_NAME,
 	LOCAL_ATTR_LAST_NAME,
 	LOCAL_ATTR_EMAIL,
@@ -74,8 +74,8 @@ class UserViewSet(BaseViewSet):
 		code = 0
 		code_msg = "ok"
 		VALUE_ONLY = (
-			"id",
-			"dn",
+			LOCAL_ATTR_ID,
+			LOCAL_ATTR_DN,
 		)
 		user_queryset = User.objects.all()
 		DBLogMixin.log(
@@ -83,15 +83,25 @@ class UserViewSet(BaseViewSet):
 			operation_type=LOG_ACTION_READ,
 			log_target_class=LOG_CLASS_USER,
 		)
+		result = list(user_queryset.values(*LOCAL_PUBLIC_FIELDS_BASIC))
+		key_to_fix = f"_{LOCAL_ATTR_DN}"
+		for user in result:
+			_v = user.pop(key_to_fix, None)
+			if _v:
+				user[LOCAL_ATTR_DN] = _v
+
+		headers = list(LOCAL_PUBLIC_FIELDS_BASIC)
+		for i, v in enumerate(headers):
+			if v == key_to_fix:
+				headers[i] = LOCAL_ATTR_DN
+
 		return Response(
 			data={
 				"code": code,
 				"code_msg": code_msg,
-				"users": user_queryset.values(*LOCAL_PUBLIC_FIELDS_BASIC),
+				"users": result,
 				"headers": [
-					field
-					for field in LOCAL_PUBLIC_FIELDS_BASIC
-					if not field in VALUE_ONLY
+					field for field in headers if not field in VALUE_ONLY
 				],
 			}
 		)
@@ -162,7 +172,7 @@ class UserViewSet(BaseViewSet):
 			LOCAL_ATTR_MODIFIED,
 			LOCAL_ATTR_CREATED,
 			LOCAL_USER_TYPE,
-			LOCAL_ATTR_LAST_LOGIN,
+			LOCAL_ATTR_LAST_LOGIN_WIN32,
 			LOCAL_ATTR_DN,
 			LOCAL_ATTR_USERNAME,
 		)

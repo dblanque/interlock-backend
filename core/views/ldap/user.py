@@ -197,7 +197,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		).get_update_attrs()
 		########################################################################
 		user_to_update = data.get(LOCAL_ATTR_USERNAME, None)
-		EXCLUDE_KEYS = (LOCAL_ATTR_LAST_LOGIN, LOCAL_ATTR_PWD_SET_AT,)
+		EXCLUDE_KEYS = (LOCAL_ATTR_LAST_LOGIN_WIN32, LOCAL_ATTR_PWD_SET_AT,)
 		for k in EXCLUDE_KEYS:
 			data.pop(k, None)
 
