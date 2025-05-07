@@ -58,6 +58,7 @@ DEFAULT_CONTAINER_TYPES = {
 
 # Immutable Attributes, these are read only
 ATTRS_IMMUTABLE = {
+	LOCAL_ATTR_TYPE,
 	LOCAL_ATTR_PATH,
 	LOCAL_ATTR_BAD_PWD_COUNT,
 	LOCAL_ATTR_RELATIVE_ID,
@@ -244,7 +245,9 @@ class LDAPObject:
 
 		for attr_key in self.entry.entry_attributes:
 			attr_value = getldapattrvalue(self.entry, attr_key)
-			local_key = self.get_local_alias_for_ldap_key(attr_key)
+			local_key = self.get_local_alias_for_ldap_key(attr_key, None)
+			if not local_key:
+				continue
 
 			if (
 				attr_key == LDAP_ATTR_SECURITY_ID
