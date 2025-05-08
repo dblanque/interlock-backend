@@ -21,6 +21,20 @@ from core.serializers.ldap import (
 	website_validator,
 )
 
+def validate_password_match(password: str, password_confirm: str) -> str:
+	"""Validates password match with confirm field, returns value if valid"""
+	# Only validate if password is being set/changed
+	if password:
+		if not password_confirm:
+			raise serializers.ValidationError(
+				{LOCAL_ATTR_PASSWORD_CONFIRM: "Password confirmation is required when setting password"}
+			)
+		if password != password_confirm:
+			raise serializers.ValidationError(
+				{LOCAL_ATTR_PASSWORD_CONFIRM: "Passwords do not match"}
+			)
+	return password
+
 class UserSerializer(serializers.ModelSerializer):
 	password_confirm = serializers.CharField(
 		required=False,
@@ -46,17 +60,7 @@ class UserSerializer(serializers.ModelSerializer):
 		"""Handle password confirmation validation"""
 		password = data.get(LOCAL_ATTR_PASSWORD, None)
 		password_confirm = data.get(LOCAL_ATTR_PASSWORD_CONFIRM, None)
-
-		# Only validate if password is being set/changed
-		if password is not None:
-			if password_confirm is None:
-				raise serializers.ValidationError(
-					{LOCAL_ATTR_PASSWORD_CONFIRM: "Password confirmation is required when setting password"}
-				)
-			if password != password_confirm:
-				raise serializers.ValidationError(
-					{LOCAL_ATTR_PASSWORD_CONFIRM: "Passwords do not match"}
-				)
+		validate_password_match(password, password_confirm)
 
 		# Remove password_confirm from data as it's not a model field
 		data.pop(LOCAL_ATTR_PASSWORD_CONFIRM, None)
@@ -75,7 +79,16 @@ class LDAPUserSerializer(serializers.Serializer):
 		required=False,
 		validators=[validate_email],
 	)
-	password = serializers.CharField(required=False, write_only=True)
+	password = serializers.CharField(
+		allow_blank=True,
+		required=False,
+		write_only=True
+	)
+	password_confirm = serializers.CharField(
+		required=False,
+		write_only=True,
+		allow_blank=True,
+	)
 	path = DistinguishedNameField(required=False, write_only=True)
 
 	# First Name
@@ -195,4 +208,10 @@ class LDAPUserSerializer(serializers.Serializer):
 
 	def validate(self, data: dict):
 		"""Handle extra validation"""
+		password = data.get(LOCAL_ATTR_PASSWORD, None)
+		password_confirm = data.get(LOCAL_ATTR_PASSWORD_CONFIRM, None)
+		validate_password_match(password, password_confirm)
+
+		# Remove password_confirm from data as it's not a model field
+		data.pop(LOCAL_ATTR_PASSWORD_CONFIRM, None)
 		return data
