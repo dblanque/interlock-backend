@@ -84,30 +84,6 @@ class UserViewsetFilterAttributeBuilder:
 			LDAP_ATTR_UPN,
 		]
 
-	def get_update_exclude_keys(self):
-		return [
-			# Added keys for front-end normalization
-			LOCAL_ATTR_NAME,
-			LOCAL_ATTR_TYPE,
-			# Samba keys to intentionally exclude
-			LOCAL_ATTR_PASSWORD,
-			LOCAL_ATTR_PASSWORD_CONFIRM,
-			LOCAL_ATTR_PASSWORD_CONFIRM,
-			LOCAL_ATTR_PERMISSIONS,  # This array is parsed and calculated later
-			LDAP_ATTR_DN,  # We don't want the front-end generated DN
-			LOCAL_ATTR_USERNAME,  # LDAP Uses sAMAccountName
-			LDAP_ATTR_CREATED,
-			LDAP_ATTR_MODIFIED,
-			LDAP_ATTR_LAST_LOGIN,
-			LDAP_ATTR_BAD_PWD_COUNT,
-			LDAP_ATTR_PWD_SET_AT,
-			LOCAL_ATTR_IS_ENABLED,
-			LDAP_ATTR_ACCOUNT_TYPE,
-			LDAP_ATTR_OBJECT_CATEGORY,
-			LDAP_ATTR_SECURITY_ID,
-			LDAP_ATTR_RELATIVE_ID,
-		]
-
 	def get_update_self_exclude_keys(self):
 		return [
 			"can_change_pwd",
