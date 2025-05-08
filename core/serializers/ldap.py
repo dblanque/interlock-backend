@@ -5,6 +5,8 @@ from ldap3.utils.dn import parse_dn
 from core.ldap.adsi import LDAP_PERMS
 from core.ldap.countries import LDAP_COUNTRIES
 
+WEBSITE_RE = re.compile(r"^((?:http(?:s){0,5}(:\/\/){0,1}){0,1}(?:[a-zA-Z0-9-_.]){2,61}(?:\.[a-zA-Z]{2,})+)?/?$")
+
 def ldap_user_validator(v: str):
 	def has_invalid_chars(s: str):
 		return re.match(r'.*[\.\@\]\["\:\;\|\=\+\*\?\<\>\/\\\,]', s) is not None
@@ -50,6 +52,11 @@ def country_iso_validator(v: str):
 def ldap_permission_validator(v: str):
 	if not v in LDAP_PERMS.keys():
 		raise ValidationError(f"LDAP Permission is invalid ({v}).")
+	return v
+
+def website_validator(v: str):
+	if not WEBSITE_RE.match(v):
+		raise ValidationError(f"Website validation failed.")
 	return v
 
 class DistinguishedNameField(serializers.CharField):

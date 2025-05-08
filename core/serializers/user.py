@@ -18,6 +18,7 @@ from core.serializers.ldap import (
 	country_iso_validator,
 	country_dcc_validator,
 	ldap_permission_validator,
+	website_validator,
 )
 
 class UserSerializer(serializers.ModelSerializer):
@@ -70,6 +71,7 @@ class LDAPUserSerializer(serializers.Serializer):
 	# Email
 	email = serializers.CharField(
 		allow_blank=True,
+		allow_null=True,
 		required=False,
 		validators=[validate_email],
 	)
@@ -79,34 +81,77 @@ class LDAPUserSerializer(serializers.Serializer):
 	# First Name
 	first_name = serializers.CharField(
 		allow_blank=True,
+		allow_null=True,
 		required=False,
 	)
 	# Last Name
 	last_name = serializers.CharField(
 		allow_blank=True,
+		allow_null=True,
 		required=False,
 	)
 	# Website
-	website = serializers.CharField(required=False)
+	website = serializers.CharField(
+		allow_blank=True,
+		allow_null=True,
+		required=False,
+		validators=[website_validator]
+	)
 	# Phone Number
-	phone = serializers.CharField(required=False, max_length=33, min_length=2)
+	phone = serializers.CharField(
+		allow_blank=True,
+		allow_null=True,
+		required=False,
+		max_length=33,
+		min_length=2
+	)
 	# Street Address
-	street_address = serializers.CharField(required=False, max_length=254, min_length=2)
+	street_address = serializers.CharField(
+		allow_blank=True,
+		allow_null=True,
+		required=False,
+		max_length=254,
+		min_length=2
+	)
 	# Postal Code
-	postal_code = serializers.CharField(required=False)
+	postal_code = serializers.CharField(
+		allow_blank=True,
+		allow_null=True,
+		required=False,
+	)
 	# City
-	city = serializers.CharField(required=False)
+	city = serializers.CharField(
+		allow_blank=True,
+		allow_null=True,
+		required=False,
+	)
 	# State / Province
-	state_province = serializers.CharField(required=False)
+	state_province = serializers.CharField(
+		allow_blank=True,
+		allow_null=True,
+		required=False,
+	)
 	# Country Name
 	country_name = serializers.CharField(
+		allow_blank=True,
+		allow_null=True,
 		required=False,
-		validators=[country_validator]
+		validators=[country_validator],
 	)
 	# Number Code for Country
-	country_code_dcc = serializers.IntegerField(required=False, validators=[country_dcc_validator])
+	country_code_dcc = serializers.IntegerField(
+		allow_null=True,
+		required=False,
+		validators=[country_dcc_validator]
+	)
 	# Two letter Country Code
-	country_code_iso = serializers.CharField(max_length=3, required=False, validators=[country_iso_validator])
+	country_code_iso = serializers.CharField(
+		allow_blank=True,
+		allow_null=True,
+		max_length=3,
+		required=False,
+		validators=[country_iso_validator]
+	)
 	user_principal_name = serializers.CharField(required=False)
 	user_account_control = serializers.IntegerField(required=False)
 	created_at = serializers.DateTimeField(
