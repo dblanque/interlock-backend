@@ -107,6 +107,11 @@ class LDAPGroup(LDAPObject):
 		return _types, _scopes
 
 	def parse_group_type_and_scope(self):
+		group_types = self.attributes.get(LOCAL_ATTR_GROUP_TYPE, [])
+		group_scopes = self.attributes.get(LOCAL_ATTR_GROUP_SCOPE, [])
+		if not group_types or not group_scopes:
+			return
+
 		_type = 0
 		for t in set(self.attributes[LOCAL_ATTR_GROUP_TYPE]):
 			t: str
@@ -133,12 +138,11 @@ class LDAPGroup(LDAPObject):
 
 	def parse_common_name(self):
 		# Set Common Name
-		original_cn = safe_rdn(self.distinguished_name)[0]
+		original_cn: str = safe_rdn(self.distinguished_name)[0]
+		original_cn = original_cn.split("=")[-1]
 		group_cn: str = self.attributes.get(LOCAL_ATTR_NAME, None)
-		if not group_cn:
-			group_cn = original_cn
 		# If Group CN is present and has changed
-		elif group_cn != original_cn:
+		if group_cn.lower() != original_cn.lower():
 			# Validate CN Identifier
 			if group_cn.lower().startswith("cn="):
 				split_cn = group_cn.split("=")
@@ -146,21 +150,13 @@ class LDAPGroup(LDAPObject):
 					raise exc_ldap.DistinguishedNameValidationError
 				group_cn = f"CN={split_cn[-1]}"
 			# Rename Group
-			try:
-				distinguished_name = (
-					OrganizationalUnitMixin.move_or_rename_object(
-						self,
-						distinguished_name=distinguished_name,
-						target_rdn=group_cn,
-					)
+			self.distinguished_name = (
+				OrganizationalUnitMixin.move_or_rename_object(
+					self,
+					distinguished_name=self.distinguished_name,
+					target_rdn=group_cn,
 				)
-			except:
-				raise exc_dirtree.DirtreeRename
-
-		# Set group sAMAccountName to new CN, lower-cased
-		self.attributes[LDAP_ATTR_USERNAME_SAMBA_ADDS] = str(group_cn).lower()
-		if not LOCAL_ATTR_NAME in self.parsed_specials:
-			self.parsed_specials.append(LOCAL_ATTR_NAME)
+			)
 
 	def parse_group_operations(
 		self,
@@ -215,6 +211,7 @@ class LDAPGroup(LDAPObject):
 
 	def post_update(self):
 		self.post_create()
+		self.parse_common_name()
 
 	def __validate_kwargs__(self, kwargs: dict):
 		kw_common_name = kwargs.pop("common_name", None)
