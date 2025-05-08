@@ -347,24 +347,13 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 
 	def ldap_user_insert(
 		self,
-		unmapped_data: dict,
+		data: dict,
 		exclude_keys: list = None,
 		return_exception: bool = True,
-		key_mapping: dict = None,
 	) -> str:
 		"""
 		Returns User LDAP Distinguished Name on successful insert.
 		"""
-		data = {}
-		if key_mapping:
-			if not len(key_mapping) == len(unmapped_data):
-				raise ValidationError("Key map length mismatch with user data")
-
-			for key, mapped_key in key_mapping.items():
-				data[key] = unmapped_data[mapped_key]
-		else:
-			data = unmapped_data
-
 		if exclude_keys:
 			for key in exclude_keys:
 				data.pop(key, None)
@@ -692,7 +681,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 
 		self.ldap_connection.modify(
 			user_entry.entry_dn,
-			{"userAccountControl": [(MODIFY_REPLACE, [new_permissions])]},
+			{LDAP_ATTR_UAC: [(MODIFY_REPLACE, [new_permissions])]},
 		)
 
 		try:
