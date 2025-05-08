@@ -150,8 +150,6 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		user_pwd_confirm = data.get(LOCAL_ATTR_PASSWORD_CONFIRM, None)
 		if user_pwd and user_pwd_confirm:
 			set_pwd = True
-			if user_pwd != user_pwd_confirm:
-				raise exc_user.UserPasswordsDontMatch
 
 		# Validate user data
 		serializer = self.serializer_cls(data=data)
@@ -167,11 +165,15 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			self.ldap_user_exists(
 				username=user_username,
 				email=data.get(
-					RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"],
+					RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_EMAIL],
 					None,
 				),
 			)
 
+			if not set_pwd:
+				permissions: list = data.get(LOCAL_ATTR_PERMISSIONS, [])
+				permissions.append(ldap_adsi.LDAP_UF_ACCOUNT_DISABLE)
+				data[LOCAL_ATTR_PERMISSIONS] = permissions
 			user_dn = self.ldap_user_insert(data=data)
 			if set_pwd:
 				self.ldap_set_password(
