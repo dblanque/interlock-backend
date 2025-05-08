@@ -17,6 +17,7 @@ from core.exceptions import dirtree as exc_dirtree, ldap as exc_ldap
 from core.config.runtime import RuntimeSettings
 
 ### Models
+from core.models.user import User
 from core.views.mixins.logs import LogMixin
 from core.models.choices.log import (
 	LOG_ACTION_UPDATE,
@@ -347,6 +348,9 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 		Returns:
 			str: New Distinguished Name for LDAP Entry / Object
 		"""
+		if getattr(self, "connection", None) and not hasattr(self, "ldap_connection"):
+			self.ldap_connection = self.connection
+
 		try:
 			parse_dn(dn=distinguished_name)
 		except Exception as e:
@@ -434,8 +438,13 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 				}
 			)
 
+		responsible_user = None
+		try:
+			responsible_user = self.request.user
+		except:
+			responsible_user = User.objects.get(_distinguished_name=self.ldap_connection.user)
 		DBLogMixin.log(
-			user=self.request.user.id,
+			user=responsible_user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_LDAP,
 			log_target=f"{distinguished_name} to {new_dn}",
