@@ -19,8 +19,8 @@ import ldap3
 from core.type_hints.connector import LDAPConnectionProtocol
 from django_python3_ldap.utils import import_func
 from core.ldap.filter import LDAPFilter
-from core.exceptions import ldap as exc_ldap
-from ldap3.core.exceptions import LDAPException
+from core.exceptions import ldap as exc_ldap, base as exc_base
+from ldap3.core.exceptions import LDAPException, LDAPOperationResult
 
 # Models
 from core.models.choices.log import (
@@ -364,8 +364,15 @@ class LDAPConnector(object):
 			)
 		logger.info(f"Connection {self.uuid} closed.")
 		if exc_value:
-			logger.exception(exc_value)
-			raise exc_value
+			if isinstance(exc_value, LDAPOperationResult):
+				logger.exception(exc_value)
+				raise exc_base.LDAPBackendException(data={
+					"code": exc_value.description,
+					"detail": exc_value.message,
+				})
+			else:
+				logger.exception(exc_value)
+				raise exc_value
 
 	def __validate_entered__(self) -> None:
 		"""Ensure the LDAPConnector is used within a context manager."""
