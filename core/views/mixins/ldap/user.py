@@ -19,7 +19,7 @@ from core.ldap import adsi as ldap_adsi
 from core.ldap.types.account import LDAPAccountTypes
 
 ### Models
-from core.models import User
+from core.models.user import User, USER_TYPE_LDAP
 from core.models.ldap_object import LDAPObject
 from core.models.ldap_group import LDAPGroup
 from core.models.ldap_user import LDAPUser
@@ -59,6 +59,8 @@ from core.exceptions import (
 import logging
 
 ### Others
+from django.db import transaction
+from core.serializers.user import UserSerializer
 from core.type_hints.connector import LDAPConnectionProtocol
 from core.views.mixins.utils import getldapattrvalue
 from ldap3.utils.dn import safe_dn
@@ -268,36 +270,22 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		)
 		return self.get_user_entry(username=username, email=email)
 
-	def get_group_attributes(self, group_dn, filter_id=None, filter_class=None):
-		if filter_id is None:
-			filter_id = LDAPFilter.eq(LDAP_ATTR_DN, group_dn)
-		if filter_class is None:
-			filter_class = LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "group")
-		
-		# Merge with AND expression if both filters exist.
-		if filter_id and filter_class:
-			object_class_filter = LDAPFilter.and_(filter_id, filter_class)
-		elif filter_id:
-			object_class_filter = filter_id
-		elif filter_class:
-			object_class_filter = filter_class
+	def _get_all_ldap_users(self, as_entries=False) -> list[dict] | list[LDAPEntry]:
+		"""Function to fetch all LDAP Users.
 
-		group = LDAPObject(
-			connection=self.ldap_connection,
-			ldap_filter=object_class_filter.to_string(),
-			ldap_attrs=[LDAP_ATTR_SECURITY_ID],
-		)
-		return group.attributes
+		Returns list of dictionaries.
 
-	def ldap_user_list(self) -> dict:
+		Returns list of ldap3.Entry objects if as_entries is True.
 		"""
-		Returns dictionary with the following keys:
-		* headers: Headers list() for the front-end data-table
-		* users: Users dict()
-		"""
-		if not getattr(self, "ldap_filter_attr", None):
-			raise ValueError("self must have ldap_filter_attr attribute.")
 		user_list = []
+		if not self.ldap_filter_object:
+			self.ldap_filter_object = LDAPFilter.eq(
+				LDAP_ATTR_OBJECT_CLASS, RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
+			)
+		if not self.ldap_filter_attr:
+			self.ldap_filter_attr = self.filter_attr_builder(
+				RuntimeSettings
+			).get_list_attrs()
 
 		if isinstance(self.ldap_filter_object, str):
 			self.ldap_filter_object = LDAPFilter.from_string(
@@ -325,32 +313,17 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 				filter_contacts,
 			)
 
+		# Perform search
 		self.ldap_connection.search(
 			search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
 			search_filter=self.ldap_filter_object.to_string(),
 			attributes=self.ldap_filter_attr,
 		)
 		user_entry_list: list[LDAPEntry] = self.ldap_connection.entries
+		if as_entries:
+			return user_entry_list.copy()
 
-		DBLogMixin.log(
-			user=self.request.user.id,
-			operation_type=LOG_ACTION_READ,
-			log_target_class=LOG_CLASS_USER,
-			log_target=LOG_TARGET_ALL,
-		)
-
-		# Remove attributes to return as table headers
-		valid_attributes: list = self.ldap_filter_attr
-		remove_attributes = [
-			LDAP_ATTR_DN,
-			LDAP_ATTR_UAC,
-			LDAP_ATTR_FULL_NAME,
-		]
-		for attr in remove_attributes:
-			if attr in valid_attributes:
-				valid_attributes.remove(attr)
-		valid_attributes.append(LOCAL_ATTR_IS_ENABLED)
-
+		# Parse user attrs into dictionaries
 		for user_entry in user_entry_list:
 			user_object = LDAPUser(entry=user_entry)
 			user_dict = user_object.attributes.copy()
@@ -369,8 +342,39 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 					f"Could not get user status for user {username_or_dn}"
 				)
 				pass
-
 			user_list.append(user_dict)
+		return user_list
+
+	def ldap_user_list(self) -> dict:
+		"""
+		Returns dictionary with the following keys:
+		* headers: Headers list() for the front-end data-table
+		* users: Users dict()
+		"""
+		if not getattr(self, "ldap_filter_attr", None):
+			raise ValueError("self must have ldap_filter_attr attribute.")
+
+		user_list = self._get_all_ldap_users()
+
+		DBLogMixin.log(
+			user=self.request.user.id,
+			operation_type=LOG_ACTION_READ,
+			log_target_class=LOG_CLASS_USER,
+			log_target=LOG_TARGET_ALL,
+		)
+
+		# Set headers
+		# Remove attributes to return as table headers
+		valid_attributes: list = self.ldap_filter_attr
+		remove_attributes = [
+			LDAP_ATTR_DN,
+			LDAP_ATTR_UAC,
+			LDAP_ATTR_FULL_NAME,
+		]
+		for attr in remove_attributes:
+			if attr in valid_attributes:
+				valid_attributes.remove(attr)
+		valid_attributes.append(LOCAL_ATTR_IS_ENABLED)
 
 		result = {}
 		result["users"] = user_list
@@ -774,3 +778,90 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		)
 
 		return self.ldap_connection
+
+class LDAPUserBaseMixin(LDAPUserMixin):
+	@transaction.atomic
+	def ldap_users_sync(self, responsible_user: User = None) -> int:
+		synced_users = 0
+		updated_users = 0
+		with LDAPConnector(
+			user=responsible_user,
+			force_admin=True if not responsible_user else False
+		) as ldc:
+			self.ldap_connection = ldc.connection
+
+			ldap_users: list[dict] = self._get_all_ldap_users()
+			for ldap_user in ldap_users:
+				user = None
+				_username = ldap_user.get(LOCAL_ATTR_USERNAME, None)
+				is_non_admin_builtin = self.is_built_in_user(
+					username=_username,
+					security_id=ldap_user.get(LOCAL_ATTR_SECURITY_ID, None),
+					ignore_admin=True,
+				)
+				if is_non_admin_builtin:
+					logger.debug(
+						"Skipping sync for built-in non-admin user (%s)",
+						_username
+					)
+					continue
+
+				# Serialize Data
+				user_serializer = UserSerializer(data=ldap_user)
+				user_serializer.is_valid()
+				validated_data = user_serializer.validated_data
+
+				# Create the user lookup.
+				user_lookup = {}
+				for field_name in RuntimeSettings.LDAP_AUTH_USER_LOOKUP_FIELDS:
+					_v = ldap_user.get(field_name, "")
+					if _v and len(_v) >= 1:
+						user_lookup[field_name] = _v
+
+				# Update or create the user.
+				user, created = User.objects.update_or_create(
+					defaults=validated_data, **user_lookup
+				)
+
+				# If the user was created, set them an unusable password.
+				user.user_type = USER_TYPE_LDAP
+				if created:
+					synced_users += 1
+					user.set_unusable_password()
+				else:
+					updated_users += 1
+
+				user.save()
+			return synced_users, updated_users
+
+	@transaction.atomic
+	def ldap_users_prune(self, responsible_user: User = None) -> int:
+		pruned_users = 0
+		with LDAPConnector(
+			user=responsible_user,
+			force_admin=True if not responsible_user else False
+		) as ldc:
+			self.ldap_connection = ldc.connection
+			users = User.objects.filter(user_type=USER_TYPE_LDAP)
+			for user in users:
+				if not self.ldap_user_exists(
+					username=user.username,
+					email=user.email,
+					return_exception=False,
+				):
+					logger.warning(f"LDAP User {user.username} pruned.")
+					user.delete_permanently()
+					pruned_users += 1
+			return pruned_users
+
+	@transaction.atomic
+	def ldap_users_purge(self, responsible_user: User = None) -> int:
+		purged_users = 0
+		users = User.objects.filter(user_type=USER_TYPE_LDAP)
+		for user in users:
+			if responsible_user:
+				if user.username.lower() == responsible_user.username.lower():
+					continue
+			user.delete_permanently()
+			purged_users += 1
+		return purged_users

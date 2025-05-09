@@ -353,24 +353,6 @@ class TestLDAPUserMixin:
 		with pytest.raises(ValidationError):
 			f_user_mixin.get_user_object()
 
-	def test_get_group_attributes(
-		self, f_user_mixin: LDAPUserMixin, f_group_dn, mocker
-	):
-		m_group_attrs = ["some_attribute_list"]
-		m_group = mocker.Mock()
-		m_group.attributes = m_group_attrs
-		m_ldap_object = mocker.patch(
-			"core.views.mixins.ldap.user.LDAPObject", return_value=m_group
-		)
-
-		result = f_user_mixin.get_group_attributes(group_dn=f_group_dn)
-		m_ldap_object.assert_called_once_with(
-			connection=f_user_mixin.ldap_connection,
-			ldap_filter=f"({LDAP_FILTER_AND}(distinguishedName={f_group_dn})(objectClass=group))",
-			ldap_attrs=["objectSid"],
-		)
-		assert result == m_group_attrs
-
 	@pytest.mark.parametrize(
 		"ldap_filter_object",
 		(

@@ -24,7 +24,6 @@ from core.models.choices.log import (
 	LOG_CLASS_SET,
 	LOG_TARGET_ALL,
 )
-from core.models.user import User, USER_TYPE_LDAP
 from core.models.interlock_settings import (
 	InterlockSetting,
 	INTERLOCK_SETTING_PUBLIC,
@@ -39,13 +38,12 @@ from core.models.ldap_settings import (
 
 ### Mixins
 from core.views.mixins.ldap_settings import SettingsViewMixin
-from core.views.mixins.ldap.user import LDAPUserMixin
+from core.views.mixins.ldap.user import LDAPUserBaseMixin
 
 ### Viewsets
 from core.views.base import BaseViewSet
 
 ### Serializers
-from core.serializers.user import UserSerializer
 from core.serializers.ldap_settings import (
 	LDAPSettingSerializer,
 	LDAPPresetSerializer,
@@ -58,28 +56,16 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
-from core.constants.attrs import (
-	LOCAL_ATTR_USERNAME,
-	LDAP_ATTR_DN,
-	LDAP_ATTR_USERNAME_SAMBA_ADDS,
-	LDAP_ATTR_SECURITY_ID,
-	LDAP_ATTR_OBJECT_CLASS,
-	LOCAL_ATTR_SECURITY_ID,
-)
-from core.ldap.connector import LDAPConnector
 from core.ldap import defaults
 from interlock_backend.encrypt import aes_encrypt
 from core.decorators.login import auth_required, admin_required
 from core.ldap.ldap_settings import get_setting_list
-from core.config.runtime import RuntimeSettings
-from core.ldap.filter import LDAPFilter
 from django.db import transaction
 import logging, ssl
 ################################################################################
 
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
-
 
 class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	ldap_setting_class = LDAPSetting
@@ -422,66 +408,16 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@admin_required
 	def sync_users(self, request: Request, pk=None):
 		"""Synchronizes LDAP Users to Local Database"""
-		synced_users = 0
-
-		# Open LDAP Connection
-		ldap_user_mixin = LDAPUserMixin()
-		ldap_user_mixin.request = self.request
-		ldap_user_mixin.ldap_filter_object = LDAPFilter.eq(
-			LDAP_ATTR_OBJECT_CLASS, RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
+		synced_users, updated_users = LDAPUserBaseMixin().ldap_users_sync(
+			responsible_user=request.user
 		)
-		ldap_user_mixin.ldap_filter_attr = ldap_user_mixin.filter_attr_builder(
-			RuntimeSettings
-		).get_list_attrs()
-
-		with LDAPConnector(request.user) as ldc:
-			ldap_user_mixin.ldap_connection = ldc.connection
-			ldap_users: list[dict] = ldap_user_mixin.ldap_user_list().get("users")
-			for ldap_user in ldap_users:
-				user = None
-				_username = ldap_user.get(LOCAL_ATTR_USERNAME, None)
-				is_non_admin_builtin = LDAPUserMixin.is_built_in_user(
-					username=_username,
-					security_id=ldap_user.get(LOCAL_ATTR_SECURITY_ID, None),
-					ignore_admin=True,
-				)
-				if is_non_admin_builtin:
-					logger.info(
-						"Skipping sync for built-in non-admin user (%s)",
-						_username
-					)
-					continue
-
-				# Serialize Data
-				user_serializer = UserSerializer(data=ldap_user)
-				user_serializer.is_valid()
-				validated_data = user_serializer.validated_data
-
-				# Create the user lookup.
-				user_lookup = {}
-				for field_name in RuntimeSettings.LDAP_AUTH_USER_LOOKUP_FIELDS:
-					_v = ldap_user.get(field_name, "")
-					if _v and len(_v) >= 1:
-						user_lookup[field_name] = _v
-
-				# Update or create the user.
-				user, created = User.objects.update_or_create(
-					defaults=validated_data, **user_lookup
-				)
-
-				# If the user was created, set them an unusable password.
-				user.user_type = USER_TYPE_LDAP
-				if created:
-					user.set_unusable_password()
-
-				user.save()
-				synced_users += 1
 
 		return Response(
 			data={
 				"code": 0,
 				"code_msg": "ok",
-				"count": synced_users
+				"synced_users": synced_users,
+				"updated_users": updated_users,
 			}
 		)
 
@@ -490,23 +426,9 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@admin_required
 	def prune_users(self, request: Request, pk=None):
 		"""Prunes LDAP Users from Local Database"""
-		pruned_users = 0
-		users = User.objects.filter(user_type=USER_TYPE_LDAP)
-
-		# Open LDAP Connection
-		ldap_user_mixin = LDAPUserMixin()
-		with LDAPConnector(request.user) as ldc:
-			ldap_user_mixin.ldap_connection = ldc.connection
-			for user in users:
-				if not ldap_user_mixin.ldap_user_exists(
-					username=user.username,
-					email=user.email,
-					return_exception=False,
-				):
-					logger.warning(f"LDAP User {user.username} pruned.")
-					user.delete_permanently()
-					pruned_users += 1
-
+		pruned_users = LDAPUserBaseMixin().ldap_users_prune(
+			responsible_user=request.user
+		)
 		return Response(
 			data={
 				"code": 0,
@@ -521,14 +443,9 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	def purge_users(self, request: Request, pk=None):
 		"""Synchronizes LDAP Users to Local Database"""
 		logger.warning(f"LDAP User Purge requested by {request.user.username}")
-
-		purged_users = 0
-		users = User.objects.filter(user_type=USER_TYPE_LDAP)
-		for user in users:
-			if user.username.lower() == request.user.username.lower():
-				continue
-			user.delete_permanently()
-			purged_users += 1
+		purged_users = LDAPUserBaseMixin().ldap_users_purge(
+			responsible_user=request.user
+		)
 
 		return Response(
 			data={
