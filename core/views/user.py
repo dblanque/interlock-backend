@@ -31,6 +31,7 @@ from core.models.choices.log import (
 from core.serializers.user import UserSerializer
 
 # Exceptions
+from django.core.exceptions import ObjectDoesNotExist
 from core.exceptions import users as exc_user
 from core.exceptions.base import BadRequest
 
@@ -195,7 +196,11 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 		if not serializer.is_valid():
 			raise BadRequest(data={"errors": serializer.errors})
 
-		user_instance = User.objects.get(id=pk)
+		try:
+			user_instance = User.objects.get(id=pk)
+		except ObjectDoesNotExist:
+			raise exc_user.UserDoesNotExist
+
 		for key in data:
 			setattr(user_instance, key, data[key])
 		user_instance.save()
@@ -222,7 +227,11 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 		code_msg = "ok"
 		pk = int(pk)
 		with transaction.atomic():
-			user_instance = User.objects.get(id=pk)
+			try:
+				user_instance = User.objects.get(id=pk)
+			except ObjectDoesNotExist:
+				raise exc_user.UserDoesNotExist
+
 			if req_user.id == pk:
 				raise exc_user.UserAntiLockout
 			user_instance.delete_permanently()
@@ -252,7 +261,11 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 			raise BadRequest(
 				data={"errors": "Must contain field enabled (bool)"}
 			)
-		user_instance = User.objects.get(id=pk)
+		
+		try:
+			user_instance = User.objects.get(id=pk)
+		except ObjectDoesNotExist:
+			raise exc_user.UserDoesNotExist
 		user_instance.is_enabled = data.pop("enabled")
 		user_instance.save()
 
@@ -286,7 +299,10 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 				raise BadRequest(
 					data={"errors": f"Must contain field {field}."}
 				)
-		user_instance = User.objects.get(id=pk)
+		try:
+			user_instance = User.objects.get(id=pk)
+		except ObjectDoesNotExist:
+			raise exc_user.UserDoesNotExist
 
 		# Validate Data
 		serializer = self.serializer_class(data=data, partial=True)
