@@ -2,7 +2,7 @@ from datetime import datetime
 from django.utils import timezone as tz
 
 
-def date_str_to_date(string) -> datetime.date:
+def date_str_to_date(string) -> datetime:
 	"""
 	Takes a date in ISO format and returns its corresponding datetime.date object
 	"""
