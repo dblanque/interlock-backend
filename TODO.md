@@ -5,6 +5,7 @@
 * core.models.ldap_user
 * core.ldap.ldap_settings
 * core.serializers.group
+* core.views.mixins.domain
 * core.views
 
 # To test manually
