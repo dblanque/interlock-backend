@@ -852,8 +852,10 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 					self.distinguished_name,
 					{"dnsRecord": [(MODIFY_ADD, self.structure.getData())]},
 				)
+		
+		result = self.connection.result
 		self.fetch()
-		return self.connection.result
+		return result
 
 	def fetch(self) -> list[dict]:
 		if self.zone not in self.dns_zones:
@@ -967,7 +969,9 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			self.distinguished_name,
 			{"dnsRecord": [(MODIFY_ADD, new_record_bytes)]},
 		)
-		return self.connection.result
+		result = self.connection.result
+		self.fetch()
+		return result
 
 	def delete(self):
 		"""
