@@ -33,14 +33,16 @@ from core.models.structs.ldap_dns_record import (
 from core.models.types.ldap_dns_record import RecordTypes
 
 ### Interlock
-from core.ldap.adsi import join_ldap_filter
 from core.ldap.filter import LDAPFilter
 
 ### Utils
 from core.constants.attrs import LDAP_ATTR_OBJECT_CLASS, LDAP_ATTR_DN
-from core.utils.dns import *
-from core.utils import dnstool
-from core.utils.dnstool import new_record, record_to_dict
+from core.utils.dnstool import (
+	new_record,
+	record_to_dict,
+	get_dns_zones,
+	DNS_RECORD,
+)
 from ldap3 import MODIFY_ADD, MODIFY_DELETE, Connection
 import logging
 from typing import TypedDict, Iterable
@@ -80,7 +82,7 @@ class LDAPDNS:
 		self.list_forest_zones()
 
 	def list_dns_zones(self):
-		zones = dnstool.get_dns_zones(self.connection, self.dns_root)
+		zones = get_dns_zones(self.connection, self.dns_root)
 		self.dns_zones = zones
 		if len(zones) > 0:
 			logger.debug("Found %d domain DNS zone(s):" % len(zones))
@@ -88,7 +90,7 @@ class LDAPDNS:
 				logger.debug("\t%s" % zone)
 
 	def list_forest_zones(self):
-		zones = dnstool.get_dns_zones(self.connection, self.forest_root)
+		zones = get_dns_zones(self.connection, self.forest_root)
 		self.forest_zones = zones
 		if len(zones) > 0:
 			logger.debug("Found %d forest DNS zone(s):" % len(zones))
@@ -300,7 +302,7 @@ class LDAPRecordMixin:
 					try:
 						logger.error(
 							record_to_dict(
-								dnstool.DNS_RECORD(self.structure.getData())
+								DNS_RECORD(self.structure.getData())
 							)
 						)
 					except:
@@ -339,7 +341,7 @@ class LDAPRecordMixin:
 				try:
 					logger.error(
 						record_to_dict(
-							dnstool.DNS_RECORD(self.structure.getData())
+							DNS_RECORD(self.structure.getData())
 						)
 					)
 				except:
@@ -826,7 +828,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				logger.exception(e)
 				try:
 					logger.error(
-						record_to_dict(dnstool.DNS_RECORD(result), ts=False)
+						record_to_dict(DNS_RECORD(result), ts=False)
 					)
 				except:  # pragma: no cover
 					pass
@@ -834,7 +836,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 
 			# Log entry creation
 			logger.info("Create Entry for %s" % (self.name))
-			logger.debug(record_to_dict(dnstool.DNS_RECORD(result), ts=False))
+			logger.debug(record_to_dict(DNS_RECORD(result), ts=False))
 
 		# LDAP entry exists
 		else:
@@ -842,7 +844,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			self.validate_create(values=values)
 			# Logging entry modify
 			logger.info("Adding Record to Entry with name %s" % (self.name))
-			logger.debug(record_to_dict(dnstool.DNS_RECORD(result)))
+			logger.debug(record_to_dict(DNS_RECORD(result)))
 
 			# If all checks passed
 			if not dry_run:
@@ -894,7 +896,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 
 			# Set Record Data
 			for record in self.raw_entry["raw_attributes"]["dnsRecord"]:
-				dr = dnstool.DNS_RECORD(record)
+				dr = DNS_RECORD(record)
 				record_dict = record_to_dict(
 					dr, self.raw_entry["attributes"]["dNSTombstoned"]
 				)
