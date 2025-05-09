@@ -178,7 +178,7 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 					record_dict[LDNS_ATTR_ID] = record_id
 					record_dict[LDNS_ATTR_ENTRY_DISPLAY_NAME] = \
 						f"{record_name}.{target_zone}" \
-						if record_name != "@" else target_zone
+						if record_name != "@" else f"@ ({target_zone})"
 					record_dict[LDNS_ATTR_ENTRY_NAME] = record_name
 					record_dict[LDNS_ATTR_TTL] = dr.__getTTL__()
 					record_dict[LDNS_ATTR_ENTRY_DN] = entry.entry_dn
