@@ -832,7 +832,7 @@ class LDAPUserBaseMixin(LDAPUserMixin):
 					updated_users += 1
 
 				user.save()
-			return synced_users, updated_users
+		return synced_users, updated_users
 
 	@transaction.atomic
 	def ldap_users_prune(self, responsible_user: User = None) -> int:
@@ -852,7 +852,7 @@ class LDAPUserBaseMixin(LDAPUserMixin):
 					logger.warning(f"LDAP User {user.username} pruned.")
 					user.delete_permanently()
 					pruned_users += 1
-			return pruned_users
+		return pruned_users
 
 	@transaction.atomic
 	def ldap_users_purge(self, responsible_user: User = None) -> int:
