@@ -324,7 +324,7 @@ def test_validate_record_raises_root_dns_servers_validation_error(
 )
 def test_validate_record_raises_root_dns_servers_validation_error(
 	bad_zone: str,
-	mocker,
+	mocker: MockerFixture,
 	f_record_data_soa: dict,
 	f_record_mixin: DNSRecordMixin,
 ):
