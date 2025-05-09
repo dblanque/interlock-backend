@@ -540,9 +540,9 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			if entry_by_email or entry_by_username:
 				if return_exception:
 					if entry_by_email:
-						_code = "user_email_exists"
+						_code = "user_ldap_email_exists"
 					elif entry_by_username:
-						_code = "user_exists"
+						_code = "user_ldap_exists"
 					raise exc_ldap.LDAPObjectExists(data={"code": _code})
 				else:
 					return True

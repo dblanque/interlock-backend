@@ -9,9 +9,12 @@
 # ---------------------------------- IMPORTS -----------------------------------#
 # Views
 from core.views.base import BaseViewSet
+from core.views.mixins.ldap.user import LDAPUserMixin
 
 # Models
 from core.models.user import User
+from core.models.interlock_settings import InterlockSetting, INTERLOCK_SETTING_ENABLE_LDAP
+from core.ldap.connector import LDAPConnector
 from core.models.choices.log import (
 	LOG_ACTION_CREATE,
 	LOG_ACTION_READ,
@@ -56,7 +59,6 @@ from core.constants.attrs import (
 )
 from django.db import transaction
 from core.decorators.login import auth_required, admin_required
-from core.config.runtime import RuntimeSettings
 from core.constants.user import LOCAL_PUBLIC_FIELDS, LOCAL_PUBLIC_FIELDS_BASIC
 import logging
 ################################################################################
@@ -65,7 +67,7 @@ DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
 
-class UserViewSet(BaseViewSet):
+class UserViewSet(BaseViewSet, LDAPUserMixin):
 	serializer_class = UserSerializer
 
 	@auth_required
@@ -115,13 +117,22 @@ class UserViewSet(BaseViewSet):
 		data: dict = request.data
 		serializer = self.serializer_class(data=data)
 		password = None
+		ldap_backend_enabled = InterlockSetting.objects.get(
+			name=INTERLOCK_SETTING_ENABLE_LDAP
+		)
 
 		if not serializer.is_valid():
 			raise BadRequest(data={"errors": serializer.errors})
 		else:
 			serialized_data = serializer.data
-			password = serialized_data.pop(LOCAL_ATTR_PASSWORD)
-			serialized_data.pop(LOCAL_ATTR_PASSWORD_CONFIRM)
+			password = serialized_data.get(LOCAL_ATTR_PASSWORD)
+			if ldap_backend_enabled:
+				# Open LDAP Connection
+				with LDAPConnector(force_admin=True) as ldc:
+					self.ldap_connection = ldc.connection
+					self.ldap_user_exists(
+						username=serialized_data.get(LOCAL_ATTR_USERNAME)
+					)
 			with transaction.atomic():
 				user_instance = User.objects.create(**serialized_data)
 				user_instance.set_password(password)
