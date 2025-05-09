@@ -34,8 +34,10 @@ from core.models.types.ldap_dns_record import RecordTypes
 
 ### Interlock
 from core.ldap.adsi import join_ldap_filter
+from core.ldap.filter import LDAPFilter
 
 ### Utils
+from core.constants.attrs import LDAP_ATTR_OBJECT_CLASS, LDAP_ATTR_DN
 from core.utils.dns import *
 from core.utils import dnstool
 from core.utils.dnstool import new_record, record_to_dict
@@ -623,6 +625,10 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		else:
 			return f"{self.name}.{self.zone} ({self.mapping['name']})"
 
+	@property
+	def display_name(self):
+		return self.__fullname__()
+
 	def __soa__(self):
 		return self.soa
 
@@ -844,6 +850,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 					self.distinguished_name,
 					{"dnsRecord": [(MODIFY_ADD, self.structure.getData())]},
 				)
+		self.fetch()
 		return self.connection.result
 
 	def fetch(self) -> list[dict]:
@@ -856,10 +863,10 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		if self.name.endswith(self.zone) or self.zone in self.name:
 			raise exc_dns.DNSZoneInRecord
 
-		search_filter = join_ldap_filter(
-			"objectClass=dnsNode",
-			f"distinguishedName={self.distinguished_name}",
-		)
+		search_filter = LDAPFilter.and_(
+			LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "dnsNode"),
+			LDAPFilter.eq(LDAP_ATTR_DN, self.distinguished_name)
+		).to_string()
 		attributes = ["dnsRecord", "dNSTombstoned", "name"]
 
 		search_target = f"DC={self.zone},{self.dns_root}"

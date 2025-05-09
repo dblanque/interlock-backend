@@ -14,11 +14,12 @@ from core.models.types.ldap_dns_record import RecordTypes
 from ldap3 import LEVEL as ldap3_LEVEL
 
 ### Models
-from core.views.mixins.utils import getldapattrvalue, getldapattr
+from core.views.mixins.utils import getldapattrvalue
 from core.models.dns import LDAPDNS, LDAPRecord, DATE_FMT
 from core.models.user import User
+from core.constants.attrs import LDAP_ATTR_OBJECT_CLASS
+from core.constants.dns import *
 from core.models.validators.ldap import (
-	domain_validator,
 	ipv4_validator,
 	ipv6_validator,
 )
@@ -88,8 +89,8 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 		record: dict = soa_entry.data
 		prev_soa_r = record.copy()
 		next_soa_r = record.copy()
-		next_soa_r["dwSerialNo"] = record_serial
-		next_soa_r["serial"] = next_soa_r["dwSerialNo"]
+		next_soa_r[LDNS_ATTR_SOA_SERIAL] = record_serial
+		next_soa_r[LDNS_ATTR_SERIAL] = record_serial
 
 		try:
 			soa_entry.update(new_values=next_soa_r, old_values=prev_soa_r)
@@ -105,17 +106,15 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			self.connection = ldc.connection
 
 			response_data["headers"] = [
-				# 'displayName', # Custom Header, attr not in LDAP
-				"name",
+				LDNS_ATTR_ENTRY_DISPLAY_NAME, # Custom Header, attr not in LDAP
 				"value",
-				"ttl",
-				"typeName",
-				"serial",
-				# 'ts',
+				LDNS_ATTR_TTL,
+				LDNS_ATTR_TYPE_NAME,
+				LDNS_ATTR_SERIAL,
 			]
 
-			search_filter = LDAPFilter.eq("objectClass", "dnsNode").to_string()
-			attributes = ["dnsRecord", "dNSTombstoned", "name"]
+			search_filter = LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "dnsNode").to_string()
+			attributes = [LDNS_ATTR_ENTRY_RECORD, LDNS_ATTR_ENTRY_TOMBSTONED, "name"]
 
 			dns_object = LDAPDNS(self.connection)
 			dns_zones = dns_object.dns_zones
@@ -135,7 +134,7 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 				raise e
 
 			result = []
-			exclude_entries = ["ForestDnsZones", "DomainDnsZones"]
+			exclude_entries = ["forestdnszones", "domaindnszones"]
 
 			if not self.connection.response and not self.connection.entries:
 				raise exc_dns.DNSListEmpty
@@ -146,21 +145,25 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 					# Set Record Name
 				record_index = 0
 				record_name: bytes | str= getldapattrvalue(entry, "name")
+				if (
+					record_name.startswith("_") or
+					any(
+						record_name.lower() == v.lower()
+						for v in exclude_entries
+					)
+				):
+					continue
 				if isinstance(record_name, bytes):
 					record_name = record_name.decode("utf-8")
 
-				# If not root of zone, append zone to subdomain
-				if record_name != "@":
-					record_name += "." + target_zone
-				else:
-					record_name = target_zone
 				logger.debug(f"{__name__} [DEBUG] - {record_name}")
 
 				# Set Record Data
 				entry_raw_attrs: dict = entry.entry_raw_attributes
-				for record in entry_raw_attrs.get("dnsRecord"):
-					is_tombstoned = bool(getldapattrvalue(entry, "dNSTombstoned"))
-
+				for record in entry_raw_attrs.get(LDNS_ATTR_ENTRY_RECORD):
+					is_tombstoned = bool(getldapattrvalue(entry, LDNS_ATTR_ENTRY_TOMBSTONED))
+					if is_tombstoned:
+						print()
 					try:
 						dr = dnstool.DNS_RECORD(record)
 					except:
@@ -172,12 +175,13 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 					except:
 						logger.error(f"Could not parse dict values for record {record_name}")
 						raise
-					record_dict["id"] = record_id
-					record_dict["index"] = record_index
-					record_dict["displayName"] = record_name
-					record_dict["name"] = record_name
-					record_dict["ttl"] = dr.__getTTL__()
-					record_dict["distinguishedName"] = entry.entry_dn
+					record_dict[LDNS_ATTR_ID] = record_id
+					record_dict[LDNS_ATTR_ENTRY_DISPLAY_NAME] = \
+						f"{record_name}.{target_zone}" \
+						if record_name != "@" else target_zone
+					record_dict[LDNS_ATTR_ENTRY_NAME] = record_name
+					record_dict[LDNS_ATTR_TTL] = dr.__getTTL__()
+					record_dict[LDNS_ATTR_ENTRY_DN] = entry.entry_dn
 					logger.debug(
 						"%s [DEBUG] - Record: %s, Starts With Underscore: %s, Exclude Entry: %s",
 						__name__,
@@ -186,14 +190,7 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 						record_name in exclude_entries,
 					)
 					logger.debug("%s [DEBUG] - %s", __name__, dr)
-					if (
-						not record_name.startswith("_")
-						and not any(
-								record_name.lower() == v.lower()
-								for v in exclude_entries
-							)
-					):
-						result.append(record_dict)
+					result.append(record_dict)
 					record_id += 1
 					record_index += 1
 
@@ -233,16 +230,16 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			record_main_value=f"ns.{target_zone}.",
 		)
 		record_soa.create(values={
-			"ttl": ttl,
-			"serial": serial,
+			LDNS_ATTR_TTL: ttl,
+			LDNS_ATTR_SERIAL: serial,
 			# SOA Specific
-			"dwSerialNo": serial,
-			"dwRefresh": 900,
-			"dwRetry": 600,
-			"dwExpire": 86400,
-			"dwMinimumTtl": ttl,
-			"namePrimaryServer": f"ns.{target_zone}.",
-			"zoneAdminEmail": f"hostmaster.{target_zone}",
+			LDNS_ATTR_SOA_SERIAL: serial,
+			LDNS_ATTR_SOA_REFRESH: 900,
+			LDNS_ATTR_SOA_RETRY: 600,
+			LDNS_ATTR_SOA_EXPIRE: 86400,
+			LDNS_ATTR_SOA_MIN_TTL: ttl,
+			LDNS_ATTR_SOA_PRIMARY_NS: f"ns.{target_zone}.",
+			LDNS_ATTR_SOA_EMAIL: f"hostmaster.{target_zone}",
 		})
 		return deepcopy(self.connection.result)
 
@@ -263,9 +260,9 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			record_main_value=ip_address,
 		)
 		a_record.create(values={
-			"address": ip_address,
-			"ttl": ttl,
-			"serial": serial,
+			LDNS_ATTR_IPV4: ip_address,
+			LDNS_ATTR_TTL: ttl,
+			LDNS_ATTR_SERIAL: serial,
 		})
 		a_record_result = deepcopy(self.connection.result)
 
@@ -277,9 +274,9 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			record_main_value=ip_address,
 		)
 		ns_record_a.create(values={
-			"address": ip_address,
-			"ttl": ttl,
-			"serial": serial,
+			LDNS_ATTR_IPV4: ip_address,
+			LDNS_ATTR_TTL: ttl,
+			LDNS_ATTR_SERIAL: serial,
 		})
 		a_to_ns_record_result = deepcopy(self.connection.result)
 
@@ -302,9 +299,9 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			record_main_value=ip_address,
 		)
 		aaaa_record.create(values={
-			"address": ip_address,
-			"ttl": ttl,
-			"serial": serial,
+			LDNS_ATTR_IPV6: ip_address,
+			LDNS_ATTR_TTL: ttl,
+			LDNS_ATTR_SERIAL: serial,
 		})
 		aaaa_record_result = deepcopy(self.connection.result)
 
@@ -316,9 +313,9 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			record_main_value=ip_address,
 		)
 		ns_record_aaaa.create(values={
-			"address": ip_address,
-			"ttl": ttl,
-			"serial": serial,
+			LDNS_ATTR_IPV6: ip_address,
+			LDNS_ATTR_TTL: ttl,
+			LDNS_ATTR_SERIAL: serial,
 		})
 		aaaa_to_ns_record_result = deepcopy(self.connection.result)
 
@@ -341,9 +338,9 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			record_main_value=f"ns1.{target_zone}.",
 		)
 		record_ns.create(values={
-			"nameNode": f"ns1.{target_zone}.",
-			"ttl": ttl,
-			"serial": serial,
+			LDNS_ATTR_NAME_NODE: f"ns1.{target_zone}.",
+			LDNS_ATTR_TTL: ttl,
+			LDNS_ATTR_SERIAL: serial,
 		})
 		return deepcopy(self.connection.result)
 
@@ -484,12 +481,13 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			)
 
 			search_target = f"DC={target_zone},{dns_object.dns_root}"
-			search_filter = LDAPFilter.eq("objectClass", "dnsNode").to_string()
+			search_filter = LDAPFilter.eq(
+				LDAP_ATTR_OBJECT_CLASS, "dnsNode").to_string()
 			records = self.connection.extend.standard.paged_search(
 				search_base=search_target,
 				search_filter=search_filter,
 				search_scope=ldap3_LEVEL,
-				attributes=["dnsRecord", "dNSTombstoned", "name"],
+				attributes=[LDNS_ATTR_ENTRY_RECORD, LDNS_ATTR_ENTRY_TOMBSTONED, "name"],
 			)
 
 			for _record in list(records):

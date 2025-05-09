@@ -10,6 +10,7 @@
 from struct import unpack, pack
 from impacket.structure import Structure
 from core.models.types.ldap_dns_record import RecordTypes
+from core.constants.dns import *
 from typing import Iterable
 import socket
 import datetime
@@ -37,94 +38,105 @@ RECORD_MAPPINGS = {
 	RecordTypes.DNS_RECORD_TYPE_ZERO.value: {
 		"name": "ZERO",
 		"class": "DNS_RPC_RECORD_TS",
-		"fields": ["tstime"],
+		"fields": [LDNS_ATTR_TOMBSTONE_TIME],
 	},
 	RecordTypes.DNS_RECORD_TYPE_A.value: {
 		"name": "A",
 		"class": "DNS_RPC_RECORD_A",
-		"fields": ["address"],
+		"fields": [LDNS_ATTR_IPV4],
 		"multi_record": True,
 	},
 	RecordTypes.DNS_RECORD_TYPE_AAAA.value: {
 		"name": "AAAA",
 		"class": "DNS_RPC_RECORD_AAAA",
-		"fields": ["ipv6Address"],
+		"fields": [LDNS_ATTR_IPV6],
 		"multi_record": True,
 	},
 	RecordTypes.DNS_RECORD_TYPE_NS.value: {
 		"name": "NS",
 		"class": "DNS_RPC_RECORD_NODE_NAME",
-		"fields": ["nameNode"],
+		"fields": [LDNS_ATTR_NAME_NODE],
 		"multi_record": True,
 	},
 	RecordTypes.DNS_RECORD_TYPE_CNAME.value: {
 		"name": "CNAME",
 		"class": "DNS_RPC_RECORD_NODE_NAME",
-		"fields": ["nameNode"],
+		"fields": [LDNS_ATTR_NAME_NODE],
 		"multi_record": False,
 	},
 	RecordTypes.DNS_RECORD_TYPE_DNAME.value: {
 		"name": "DNAME",
 		"class": "DNS_RPC_RECORD_NODE_NAME",
-		"fields": ["nameNode"],
+		"fields": [LDNS_ATTR_NAME_NODE],
 		"multi_record": False,
 	},
 	RecordTypes.DNS_RECORD_TYPE_SOA.value: {
 		"name": "SOA",
 		"class": "DNS_RPC_RECORD_SOA",
-		"main_field": "namePrimaryServer",
+		"main_field": LDNS_ATTR_SOA_PRIMARY_NS,
 		"fields": [
-			"dwSerialNo",
-			"dwRefresh",
-			"dwRetry",
-			"dwExpire",
-			"dwMinimumTtl",
-			"namePrimaryServer",
-			"zoneAdminEmail",
+			LDNS_ATTR_SOA_SERIAL,
+			LDNS_ATTR_SOA_REFRESH,
+			LDNS_ATTR_SOA_RETRY,
+			LDNS_ATTR_SOA_EXPIRE,
+			LDNS_ATTR_SOA_MIN_TTL,
+			LDNS_ATTR_SOA_PRIMARY_NS,
+			LDNS_ATTR_SOA_EMAIL,
 		],
 		"multi_record": False,
 	},
 	RecordTypes.DNS_RECORD_TYPE_TXT.value: {
 		"name": "TXT",
 		"class": "DNS_RPC_RECORD_STRING",
-		"fields": ["stringData"],
+		"fields": [LDNS_ATTR_STRING_DATA],
 		"multi_record": True,
 	},
 	RecordTypes.DNS_RECORD_TYPE_X25.value: {
 		"name": "X25",
 		"class": "DNS_RPC_RECORD_STRING",
-		"fields": ["stringData"],
+		"fields": [LDNS_ATTR_STRING_DATA],
 		"multi_record": True,
 	},
 	RecordTypes.DNS_RECORD_TYPE_ISDN.value: {
 		"name": "ISDN",
 		"class": "DNS_RPC_RECORD_STRING",
-		"fields": ["stringData"],
+		"fields": [LDNS_ATTR_STRING_DATA],
 		"multi_record": True,
 	},
 	RecordTypes.DNS_RECORD_TYPE_LOC.value: {
 		"name": "LOC",
 		"class": "DNS_RPC_RECORD_STRING",
-		"fields": ["stringData"],
+		"fields": [LDNS_ATTR_STRING_DATA],
 		"multi_record": True,
 	},
 	RecordTypes.DNS_RECORD_TYPE_HINFO.value: {
 		"name": "HINFO",
 		"class": "DNS_RPC_RECORD_STRING",
-		"fields": ["stringData"],
+		"fields": [LDNS_ATTR_STRING_DATA],
 		"multi_record": True,
 	},
 	RecordTypes.DNS_RECORD_TYPE_MX.value: {
 		"name": "MX",
 		"class": "DNS_RPC_RECORD_NAME_PREFERENCE",
-		"main_field": "nameExchange",
-		"fields": ["wPreference", "nameExchange"],
+		"main_field": LDNS_ATTR_MX_SERVER,
+		"fields": [LDNS_ATTR_MX_PRIORITY, LDNS_ATTR_MX_SERVER],
 		"multi_record": True,
 	},
 	RecordTypes.DNS_RECORD_TYPE_SIG.value: {
 		"name": "SIG",
-		"class": None,
-		"fields": [],
+		"class": "DNS_RPC_RECORD_SIG",
+		"main_field": LDNS_ATTR_SIG_SIGNATURE_INFO,
+		"fields": [
+			LDNS_ATTR_SIG_TYPE_COVERED,
+			LDNS_ATTR_SIG_ALGORITHM,
+			LDNS_ATTR_SIG_LABEL_COUNT,
+			LDNS_ATTR_SIG_ORIGINAL_TTL,
+			LDNS_ATTR_SIG_SIG_EXPIRATION,
+			LDNS_ATTR_SIG_SIG_INCEPTION,
+			LDNS_ATTR_SIG_KEY_TAG,
+			LDNS_ATTR_SIG_NAME_SIGNER,
+			LDNS_ATTR_SIG_SIGNATURE_INFO,
+		],
 	},
 	RecordTypes.DNS_RECORD_TYPE_KEY.value: {
 		"name": "KEY",
@@ -134,14 +146,14 @@ RECORD_MAPPINGS = {
 	RecordTypes.DNS_RECORD_TYPE_SRV.value: {
 		"name": "SRV",
 		"class": "DNS_RPC_RECORD_SRV",
-		"main_field": "nameTarget",
-		"fields": ["wPriority", "wWeight", "wPort", "nameTarget"],
+		"main_field": LDNS_ATTR_SRV_TARGET,
+		"fields": [LDNS_ATTR_SRV_PRIORITY, LDNS_ATTR_SRV_WEIGHT, LDNS_ATTR_SRV_PORT, LDNS_ATTR_SRV_TARGET],
 		"multi_record": True,
 	},
 	RecordTypes.DNS_RECORD_TYPE_PTR.value: {
 		"name": "PTR",
 		"class": "DNS_RPC_RECORD_NODE_NAME",
-		"fields": ["nameNode"],
+		"fields": [LDNS_ATTR_NAME_NODE],
 		"multi_record": False,
 	},
 	RecordTypes.DNS_RECORD_TYPE_WINS.value: {
@@ -153,27 +165,27 @@ RECORD_MAPPINGS = {
 	RecordTypes.DNS_RECORD_TYPE_MB.value: {
 		"name": "MB",
 		"class": "DNS_RPC_RECORD_NODE_NAME",
-		"fields": ["nameNode"],
+		"fields": [LDNS_ATTR_NAME_NODE],
 	},
 	RecordTypes.DNS_RECORD_TYPE_MR.value: {
 		"name": "MR",
 		"class": "DNS_RPC_RECORD_NODE_NAME",
-		"fields": ["nameNode"],
+		"fields": [LDNS_ATTR_NAME_NODE],
 	},
 	RecordTypes.DNS_RECORD_TYPE_MG.value: {
 		"name": "MG",
 		"class": "DNS_RPC_RECORD_NODE_NAME",
-		"fields": ["nameNode"],
+		"fields": [LDNS_ATTR_NAME_NODE],
 	},
 	RecordTypes.DNS_RECORD_TYPE_MD.value: {
 		"name": "MD",
 		"class": "DNS_RPC_RECORD_NODE_NAME",
-		"fields": ["nameNode"],
+		"fields": [LDNS_ATTR_NAME_NODE],
 	},
 	RecordTypes.DNS_RECORD_TYPE_MF.value: {
 		"name": "MF",
 		"class": "DNS_RPC_RECORD_NODE_NAME",
-		"fields": ["nameNode"],
+		"fields": [LDNS_ATTR_NAME_NODE],
 	},
 }
 
@@ -183,62 +195,62 @@ def record_to_dict(record: "DNS_RECORD", ts=False):
 
 	# For original reference see print_record
 	try:
-		rtype = RECORD_MAPPINGS[record["Type"]]["name"]
+		rtype = RECORD_MAPPINGS[record[LDNS_ATTR_STRUCT_TYPE]]["name"]
 	except KeyError:
 		rtype = "Unsupported"
 
 	record_dict = {}
-	record_dict["ts"] = False
+	record_dict[LDNS_ATTR_TOMBSTONED] = False
 
 	# Check if record is Tombstoned / Inactive
 	if isinstance(ts, bool):
-		record_dict["ts"] = ts
+		record_dict[LDNS_ATTR_TOMBSTONED] = ts
 	elif isinstance(ts, str):
 		if len(ts) > 0:
-			record_dict["ts"] = ts.lower() == "true"
+			record_dict[LDNS_ATTR_TOMBSTONED] = ts.lower() == "true"
 	elif isinstance(ts, Iterable):
 		if len(ts) >= 1:
-			record_dict["ts"] = ts[0] == True or str(ts[0]).lower() == "true"
+			record_dict[LDNS_ATTR_TOMBSTONED] = ts[0] == True or str(ts[0]).lower() == "true"
 
-	record_dict["type"] = record["Type"]
-	record_dict["typeName"] = rtype
-	record_dict["serial"] = record["Serial"]
+	record_dict[LDNS_ATTR_TYPE] = record[LDNS_ATTR_STRUCT_TYPE]
+	record_dict[LDNS_ATTR_TYPE_NAME] = rtype
+	record_dict[LDNS_ATTR_SERIAL] = record[LDNS_ATTR_STRUCT_SERIAL]
 
 	# If the Record Type is Mapped to a Class
-	if record["Type"] in RECORD_MAPPINGS:
+	if record[LDNS_ATTR_STRUCT_TYPE] in RECORD_MAPPINGS:
 		# Initialize the class with the record Data key
-		data = getattr(thismodule, RECORD_MAPPINGS[record["Type"]]["class"])(
-			record["Data"]
+		data = getattr(thismodule, RECORD_MAPPINGS[record[LDNS_ATTR_STRUCT_TYPE]]["class"])(
+			record[LDNS_ATTR_STRUCT_DATA]
 		)
 
 		# ! Print class ! #
 		logger.debug(
-			getattr(thismodule, RECORD_MAPPINGS[record["Type"]]["class"])
+			getattr(thismodule, RECORD_MAPPINGS[record[LDNS_ATTR_STRUCT_TYPE]]["class"])
 		)
 
 		fqdnFields = [
-			"nameNode",
-			"nameExchange",
-			"nameTarget",
-			"namePrimaryServer",
-			"zoneAdminEmail",
+			LDNS_ATTR_NAME_NODE,
+			LDNS_ATTR_MX_SERVER,
+			LDNS_ATTR_SRV_TARGET,
+			LDNS_ATTR_SOA_PRIMARY_NS,
+			LDNS_ATTR_SOA_EMAIL,
 		]
 		# For each value field mapped for this Record Type set it
-		for valueField in RECORD_MAPPINGS[record["Type"]]["fields"]:
+		for valueField in RECORD_MAPPINGS[record[LDNS_ATTR_STRUCT_TYPE]]["fields"]:
 			try:
-				if valueField == "tstime":
+				if valueField == LDNS_ATTR_TOMBSTONE_TIME:
 					record_dict[valueField] = data.toDatetime()
 				elif (
-					valueField == "address"
-					and record["Type"] == RecordTypes.DNS_RECORD_TYPE_A.value
+					valueField == LDNS_ATTR_IPV4
+					and record[LDNS_ATTR_STRUCT_TYPE] == RecordTypes.DNS_RECORD_TYPE_A.value
 				):
 					record_dict[valueField] = data.formatCanonical()
 				elif (
-					valueField == "ipv6Address"
-					and record["Type"] == RecordTypes.DNS_RECORD_TYPE_AAAA.value
+					valueField == LDNS_ATTR_IPV6
+					and record[LDNS_ATTR_STRUCT_TYPE] == RecordTypes.DNS_RECORD_TYPE_AAAA.value
 				):
 					record_dict[valueField] = data.formatCanonical()
-				elif valueField == "stringData":
+				elif valueField == LDNS_ATTR_STRING_DATA:
 					record_dict[valueField] = data[valueField].toString()
 				elif valueField in fqdnFields:
 					record_dict[valueField] = data[valueField].toFqdn()
@@ -260,16 +272,16 @@ class DNS_RECORD(Structure):
 	"""
 
 	structure = (
-		("DataLength", "<H-Data"),
-		("Type", "<H"),
-		("Version", "B=5"),
-		("Rank", "B"),
-		("Flags", "<H=0"),
-		("Serial", "<L"),
-		("TtlSeconds", ">L"),
-		("Reserved", "<L=0"),
-		("TimeStamp", "<L=0"),
-		("Data", ":"),
+		(LDNS_ATTR_STRUCT_DATA_LENGTH, "<H-Data"),
+		(LDNS_ATTR_STRUCT_TYPE, "<H"),
+		(LDNS_ATTR_STRUCT_VERSION, "B=5"),
+		(LDNS_ATTR_STRUCT_RANK, "B"),
+		(LDNS_ATTR_STRUCT_FLAGS, "<H=0"),
+		(LDNS_ATTR_STRUCT_SERIAL, "<L"),
+		(LDNS_ATTR_STRUCT_TTL_SECONDS, ">L"),
+		(LDNS_ATTR_STRUCT_RESERVED, "<L=0"),
+		(LDNS_ATTR_STRUCT_TIMESTAMP, "<L=0"),
+		(LDNS_ATTR_STRUCT_DATA, ":"),
 	)
 
 	def __bytedata__(self):
@@ -282,7 +294,7 @@ class DNS_RECORD(Structure):
 		return record_to_dict(self)
 
 	def __getTTL__(self):
-		return self["TtlSeconds"]
+		return self[LDNS_ATTR_STRUCT_TTL_SECONDS]
 
 
 # Note that depending on whether we use RPC or LDAP all the DNS_RPC_XXXX
@@ -302,14 +314,17 @@ class DNS_RPC_NAME(Structure):
 	[MS-DNSP] section 2.2.2.2.1
 	"""
 
-	structure = (("cchNameLength", "B-dnsName"), ("dnsName", ":"))
+	structure = (
+		(LDNS_ATTR_STRUCT_NAME_LENGTH, "B-dnsName"),
+		(LDNS_ATTR_STRUCT_DNS_NAME, ":")
+	)
 
 	def toString(self):
 		labels = ""
-		for i in range(self["cchNameLength"]):
+		for i in range(self[LDNS_ATTR_STRUCT_NAME_LENGTH]):
 			# Convert byte array of ASCII or UTF-8 data from (single?)
 			# byte character.
-			labels = labels + chr(self["dnsName"][i])
+			labels = labels + chr(self[LDNS_ATTR_STRUCT_DNS_NAME][i])
 		return labels
 
 	def toRPCName(self, valueString):
@@ -319,8 +334,8 @@ class DNS_RPC_NAME(Structure):
 			# Convert character to ASCII single byte character.
 			dnsName.append(ord(valueString[i]))
 		lengthToPack = pack("B", length)
-		self["cchNameLength"] = lengthToPack
-		self["dnsName"] = bytes(dnsName)
+		self[LDNS_ATTR_STRUCT_NAME_LENGTH] = lengthToPack
+		self[LDNS_ATTR_STRUCT_DNS_NAME] = bytes(dnsName)
 
 
 class DNS_COUNT_NAME(Structure):
@@ -331,7 +346,11 @@ class DNS_COUNT_NAME(Structure):
 	[MS-DNSP] section 2.2.2.2.2
 	"""
 
-	structure = (("Length", "B-RawName"), ("LabelCount", "B"), ("RawName", ":"))
+	structure = (
+		(LDNS_ATTR_STRUCT_LENGTH, "B-RawName"),
+		(LDNS_ATTR_STRUCT_LABEL_COUNT, "B"),
+		(LDNS_ATTR_STRUCT_RAW_NAME, ":")
+	)
 
 	def insert_field_to_struct(self, fieldName=None, fieldStructVal=None):
 		"""
@@ -355,23 +374,23 @@ class DNS_COUNT_NAME(Structure):
 	def toFqdn(self):
 		ind = 0
 		labels = []
-		for i in range(self["LabelCount"]):
+		for i in range(self[LDNS_ATTR_STRUCT_LABEL_COUNT]):
 			try:
-				nextlen = unpack("B", self["RawName"][ind : ind + 1])[0]
+				nextlen = unpack("B", self[LDNS_ATTR_STRUCT_RAW_NAME][ind : ind + 1])[0]
 				labels.append(
-					self["RawName"][ind + 1 : ind + 1 + nextlen].decode("utf-8")
+					self[LDNS_ATTR_STRUCT_RAW_NAME][ind + 1 : ind + 1 + nextlen].decode("utf-8")
 				)
 				ind += nextlen + 1
 			except Exception as e:
 				logger.error("Unable to UNPACK Raw Name in DNS Record")
 				logger.error(
-					f"Length: ({str(type(self['Length']))}): {self['Length']}"
+					f"Length: ({str(type(self[LDNS_ATTR_STRUCT_LENGTH]))}): {self[LDNS_ATTR_STRUCT_LENGTH]}"
 				)
 				logger.error(
-					f"Label Count: ({str(type(self['LabelCount']))}): {self['LabelCount']}"
+					f"Label Count: ({str(type(self[LDNS_ATTR_STRUCT_LABEL_COUNT]))}): {self[LDNS_ATTR_STRUCT_LABEL_COUNT]}"
 				)
 				logger.error(
-					f"Raw Name: ({str(type(self['RawName']))}): {self['RawName']}"
+					f"Raw Name: ({str(type(self[LDNS_ATTR_STRUCT_RAW_NAME]))}): {self[LDNS_ATTR_STRUCT_RAW_NAME]}"
 				)
 				raise e
 
@@ -395,20 +414,20 @@ class DNS_COUNT_NAME(Structure):
 			)
 
 		# Add 1 to Length as it must include the NULL Terminator Byte
-		self["Length"] = length + 1
-		self["LabelCount"] = label_count
+		self[LDNS_ATTR_STRUCT_LENGTH] = length + 1
+		self[LDNS_ATTR_STRUCT_LABEL_COUNT] = label_count
 		try:
 			if add_null_at_end:
-				self["RawName"] = new_string + b"\x00"
+				self[LDNS_ATTR_STRUCT_RAW_NAME] = new_string + b"\x00"
 			else:
-				self["RawName"] = new_string
+				self[LDNS_ATTR_STRUCT_RAW_NAME] = new_string
 		except Exception as e:
 			print(e)
 			raise Exception("Error setting RawName key in Data Structure")
 
 		# Impacket Structure should handle this, but just in case...
-		if len(self["RawName"]) > 256:
-			print(self["RawName"])
+		if len(self[LDNS_ATTR_STRUCT_RAW_NAME]) > 256:
+			print(self[LDNS_ATTR_STRUCT_RAW_NAME])
 			raise ValueError("Raw Name Length cannot be more than 256")
 
 
@@ -420,11 +439,11 @@ class DNS_RPC_NODE(Structure):
 	"""
 
 	structure = (
-		("wLength", ">H"),
-		("wRecordCount", ">H"),
-		("dwFlags", ">L"),
-		("dwChildCount", ">L"),
-		("dnsNodeName", ":"),
+		(LDNS_ATTR_STRUCT_RPC_LENGTH, ">H"),
+		(LDNS_ATTR_STRUCT_RECORD_COUNT, ">H"),
+		(LDNS_ATTR_STRUCT_RPC_FLAGS, ">L"),
+		(LDNS_ATTR_STRUCT_RPC_CHILD_COUNT, ">L"),
+		(LDNS_ATTR_STRUCT_RPC_NODE_NAME, ":"),
 	)
 
 
@@ -435,21 +454,21 @@ class DNS_RPC_RECORD_A(Structure):
 	[MS-DNSP] section 2.2.2.2.4.1
 	"""
 
-	structure = (("address", ":"),)
+	structure = ((LDNS_ATTR_IPV4, ":"),)
 
 	def formatCanonical(self):
 		"""
 		formatCanonical (IPv4)
 		Returns IPv4 Bytes as String Address
 		"""
-		return socket.inet_ntop(socket.AF_INET, self["address"])
+		return socket.inet_ntop(socket.AF_INET, self[LDNS_ATTR_IPV4])
 
 	def fromCanonical(self, canonical):
 		"""
 		fromCanonical (IPv4)
 		Returns IPv4 String Address as Bytes
 		"""
-		self["address"] = socket.inet_pton(socket.AF_INET, canonical)
+		self[LDNS_ATTR_IPV4] = socket.inet_pton(socket.AF_INET, canonical)
 
 
 class DNS_RPC_RECORD_NODE_NAME(Structure):
@@ -471,7 +490,7 @@ class DNS_RPC_RECORD_NODE_NAME(Structure):
 	[MS-DNSP] section 2.2.2.2.4.2
 	"""
 
-	structure = (("nameNode", ":", DNS_COUNT_NAME),)
+	structure = ((LDNS_ATTR_NAME_NODE, ":", DNS_COUNT_NAME),)
 
 
 class DNS_RPC_RECORD_SOA(Structure):
@@ -482,13 +501,13 @@ class DNS_RPC_RECORD_SOA(Structure):
 	"""
 
 	structure = (
-		("dwSerialNo", ">L"),
-		("dwRefresh", ">L"),
-		("dwRetry", ">L"),
-		("dwExpire", ">L"),
-		("dwMinimumTtl", ">L"),
-		("namePrimaryServer", ":", DNS_COUNT_NAME),
-		("zoneAdminEmail", ":", DNS_COUNT_NAME),
+		(LDNS_ATTR_SOA_SERIAL, ">L"),
+		(LDNS_ATTR_SOA_REFRESH, ">L"),
+		(LDNS_ATTR_SOA_RETRY, ">L"),
+		(LDNS_ATTR_SOA_EXPIRE, ">L"),
+		(LDNS_ATTR_SOA_MIN_TTL, ">L"),
+		(LDNS_ATTR_SOA_PRIMARY_NS, ":", DNS_COUNT_NAME),
+		(LDNS_ATTR_SOA_EMAIL, ":", DNS_COUNT_NAME),
 	)
 
 	def setField(self, fieldName, value):
@@ -528,7 +547,7 @@ class DNS_RPC_RECORD_STRING(Structure):
 	[MS-DNSP] section 2.2.2.2.4.6
 	"""
 
-	structure = (("stringData", ":", DNS_RPC_NAME),)
+	structure = ((LDNS_ATTR_STRING_DATA, ":", DNS_RPC_NAME),)
 
 
 # TODO
@@ -549,7 +568,10 @@ class DNS_RPC_RECORD_NAME_PREFERENCE(Structure):
 	[MS-DNSP] section 2.2.2.2.4.8
 	"""
 
-	structure = (("wPreference", ">H"), ("nameExchange", ":", DNS_COUNT_NAME))
+	structure = (
+		(LDNS_ATTR_MX_PRIORITY, ">H"),
+		(LDNS_ATTR_MX_SERVER, ":", DNS_COUNT_NAME)
+	)
 
 
 class DNS_RPC_RECORD_SIG(Structure):
@@ -563,15 +585,15 @@ class DNS_RPC_RECORD_SIG(Structure):
 	"""
 
 	structure = (
-		("wTypeCovered", ">H"),  # 2 bytes - Unsigned Short
-		("chAlgorithm", ">B"),  # 1 byte - Unsigned Char
-		("chLabelCount", ">B"),  # 1 byte - Unsigned Char
-		("dwOriginalTtl", ">L"),  # 4 bytes - Unsigned Long
-		("dwSigExpiration", ">L"),  # 4 bytes - Unsigned Long
-		("dwSigInception", ">L"),  # 4 bytes - Unsigned Long
-		("wKeyTag", ">H"),  # 2 bytes - Unsigned Short
-		("nameSigner", ":", DNS_COUNT_NAME),  # Variable
-		("SignatureInfo", ":"),  # Variable
+		(LDNS_ATTR_SIG_TYPE_COVERED, ">H"),  # 2 bytes - Unsigned Short
+		(LDNS_ATTR_SIG_ALGORITHM, ">B"),  # 1 byte - Unsigned Char
+		(LDNS_ATTR_SIG_LABEL_COUNT, ">B"),  # 1 byte - Unsigned Char
+		(LDNS_ATTR_SIG_ORIGINAL_TTL, ">L"),  # 4 bytes - Unsigned Long
+		(LDNS_ATTR_SIG_SIG_EXPIRATION, ">L"),  # 4 bytes - Unsigned Long
+		(LDNS_ATTR_SIG_SIG_INCEPTION, ">L"),  # 4 bytes - Unsigned Long
+		(LDNS_ATTR_SIG_KEY_TAG, ">H"),  # 2 bytes - Unsigned Short
+		(LDNS_ATTR_SIG_NAME_SIGNER, ":", DNS_COUNT_NAME),  # Variable
+		(LDNS_ATTR_SIG_SIGNATURE_INFO, ":"),  # Variable
 	)
 
 
@@ -587,14 +609,14 @@ class DNS_RPC_RECORD_AAAA(Structure):
 	[MS-DNSP] section 2.2.2.2.4.16
 	"""
 
-	structure = (("ipv6Address", "!16s"),)
+	structure = ((LDNS_ATTR_IPV6, "!16s"),)
 
 	def formatCanonical(self):
 		"""
 		formatCanonical (IPv6)
 		Returns IPv6 Bytes as String Address
 		"""
-		return socket.inet_ntop(socket.AF_INET6, self["ipv6Address"])
+		return socket.inet_ntop(socket.AF_INET6, self[LDNS_ATTR_IPV6])
 		# return self['ipv6Address']
 
 	def fromCanonical(self, canonical):
@@ -602,7 +624,7 @@ class DNS_RPC_RECORD_AAAA(Structure):
 		fromCanonical (IPv6)
 		Returns IPv6 String Address without separators
 		"""
-		self["ipv6Address"] = socket.inet_pton(socket.AF_INET6, canonical)
+		self[LDNS_ATTR_IPV6] = socket.inet_pton(socket.AF_INET6, canonical)
 		# self['ipv6Address'] = str(canonical).replace(':','')
 
 
@@ -617,10 +639,10 @@ class DNS_RPC_RECORD_SRV(Structure):
 	"""
 
 	structure = (
-		("wPriority", ">H"),
-		("wWeight", ">H"),
-		("wPort", ">H"),
-		("nameTarget", ":", DNS_COUNT_NAME),
+		(LDNS_ATTR_SRV_PRIORITY, ">H"),
+		(LDNS_ATTR_SRV_WEIGHT, ">H"),
+		(LDNS_ATTR_SRV_PORT, ">H"),
+		(LDNS_ATTR_SRV_TARGET, ":", DNS_COUNT_NAME),
 	)
 
 	def setField(self, fieldName, value):
@@ -643,10 +665,10 @@ class DNS_RPC_RECORD_TS(Structure):
 	[MS-DNSP] section 2.2.2.2.4.23
 	"""
 
-	structure = (("entombedTime", "<Q"),)
+	structure = ((LDNS_ATTR_TS_ENTOMBED_AT, "<Q"),)
 
 	def toDatetime(self):
-		microseconds = self["entombedTime"] / 10.0
+		microseconds = self[LDNS_ATTR_TS_ENTOMBED_AT] / 10.0
 		return datetime.datetime(1601, 1, 1) + datetime.timedelta(
 			microseconds=microseconds
 		)

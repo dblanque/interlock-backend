@@ -173,7 +173,7 @@ class DNSRecordMixin(DomainViewMixin):
 			user=self.request.user.id,
 			operation_type=LOG_ACTION_CREATE,
 			log_target_class=LOG_CLASS_DNSR,
-			log_target=dns_record.__fullname__(),
+			log_target=dns_record.display_name,
 		)
 		return dns_record.as_dict
 
