@@ -66,17 +66,48 @@ from core.constants.user import UserViewsetFilterAttributeBuilder
 from core.constants.attrs import *
 from core.ldap.filter import LDAPFilter, LDAPFilterType
 from rest_framework.serializers import ValidationError
+from core.constants.user import BUILTIN_USERS, BUILTIN_ADMIN
+import re
 ################################################################################
 
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
 class LDAPUserMixin(viewsets.ViewSetMixin):
+	"""LDAP User Mixin
+
+	Methods in this mixin may be used in the local django users viewset, so
+	beware not to have any overlap with its' mixin (if any exists).
+	"""
 	ldap_connection: LDAPConnectionProtocol = None
 	ldap_filter_object = None
 	ldap_filter_attr = None
 	filter_attr_builder = UserViewsetFilterAttributeBuilder
 	request: Request
+
+	@staticmethod
+	def is_built_in_user(
+		username: str = None,
+		security_id: str = None,
+		ignore_admin: bool = False,
+	) -> bool:
+		if username == "Guest":
+			print()
+		if username or security_id:
+			for well_known_username, well_known_rid in BUILTIN_USERS:
+				is_admin = (well_known_username, well_known_rid) == BUILTIN_ADMIN
+				if ignore_admin and is_admin:
+					continue
+				# Check SID First, as it's more specific
+				if security_id:
+					_sid_re = re.compile(rf"^S-1-5-.*-{str(well_known_rid)}$")
+					if _sid_re.match(security_id):
+						return True
+				# Check username
+				if username:
+					if username.lower() == well_known_username.lower():
+						return True
+		return False
 
 	def get_user_object_filter(
 		self,
@@ -264,6 +295,8 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		* headers: Headers list() for the front-end data-table
 		* users: Users dict()
 		"""
+		if not getattr(self, "ldap_filter_attr", None):
+			raise ValueError("self must have ldap_filter_attr attribute.")
 		user_list = []
 
 		if isinstance(self.ldap_filter_object, str):
@@ -316,7 +349,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		for attr in remove_attributes:
 			if attr in valid_attributes:
 				valid_attributes.remove(attr)
-		valid_attributes.append("is_enabled")
+		valid_attributes.append(LOCAL_ATTR_IS_ENABLED)
 
 		for user_entry in user_entry_list:
 			user_object = LDAPUser(entry=user_entry)
@@ -325,12 +358,17 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 
 			# Check if user is disabled
 			try:
-				user_dict["is_enabled"] = user_object.is_enabled
+				user_dict[LOCAL_ATTR_IS_ENABLED] = user_object.is_enabled
 			except Exception as e:
+				username_or_dn = user_dict.get(
+					LDAP_ATTR_DN,
+					user_dict.get(LDAP_ATTR_USERNAME_SAMBA_ADDS, "")
+				)
 				logger.exception(e)
 				logger.error(
-					f"Could not get user status for DN: {user_dict[LDAP_ATTR_DN]}"
+					f"Could not get user status for user {username_or_dn}"
 				)
+				pass
 
 			user_list.append(user_dict)
 
