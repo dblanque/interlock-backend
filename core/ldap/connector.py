@@ -28,6 +28,7 @@ from core.models.choices.log import (
 	LOG_ACTION_CLOSE,
 	LOG_CLASS_CONN,
 )
+from core.ldap.security_identifier import SID
 from core.views.mixins.logs import LogMixin
 from core.constants.attrs import (
 	LOCAL_ATTR_DN,
@@ -36,7 +37,9 @@ from core.constants.attrs import (
 	LDAP_ATTR_DN,
 	LDAP_ATTR_OBJECT_CLASS,
 	LDAP_ATTR_GROUP_MEMBERS,
+	LDAP_ATTR_SECURITY_ID,
 )
+from core.constants.user import BUILTIN_ADMIN
 from core.models.user import (
 	User,
 	USER_PASSWORD_FIELDS,
@@ -117,19 +120,31 @@ def recursive_member_search(
 	return False
 
 
-def sync_user_relations(user: User, ldap_attributes: ldap3.Entry, *, connection=None):
+def sync_user_relations(user: User, ldap_attributes: dict[list], *, connection=None):
 	_username_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME]
-	_distinguished_name = ldap_attributes[LDAP_ATTR_DN][0]
+	_username: str = ldap_attributes.get(_username_field, [])[0]
+	_distinguished_name = ldap_attributes.get(LDAP_ATTR_DN, [])[0]
+	if not _username:
+		raise ValueError("Username not present in User LDAP Attributes.")
 	if not _distinguished_name:
 		raise ValueError("Distinguished Name not present in User LDAP Attributes.")
 
 	# Set user as LDAP Type for Distinguished Name getter/setter to work
 	user.user_type = USER_TYPE_LDAP
 	user.distinguished_name = _distinguished_name
-	if "Administrator" in ldap_attributes[_username_field]:
-		user.is_staff = True
-		user.is_superuser = True
-		user.save()
+	if "administrator" == _username.lower():
+		# Attempt Security ID Matching, ignore if failed
+		sid_matches = False
+		try:
+			sid = SID(ldap_attributes[LDAP_ATTR_SECURITY_ID])
+			sid_matches = sid.subauthorities[-1] == BUILTIN_ADMIN[1]
+		except:
+			sid_matches = True
+			pass
+		if sid_matches:
+			user.is_staff = True
+			user.is_superuser = True
+			user.save()
 	elif recursive_member_search(
 		user_dn=user.distinguished_name,
 		connection=connection,
