@@ -19,6 +19,13 @@ LOCAL_PUBLIC_FIELDS = (
 	LOCAL_ATTR_MODIFIED,
 )
 
+# Lower-cased username, well-known Relative ID
+BUILTIN_ADMIN = ("administrator", 500)
+BUILTIN_USERS = (
+	BUILTIN_ADMIN,
+	("guest", 501),
+	("krbtgt", 502),
+)
 
 class UserViewsetFilterAttributeBuilder:
 	def __init__(self, settings: RuntimeSettingsSingleton):
