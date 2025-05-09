@@ -117,25 +117,16 @@ def recursive_member_search(
 	return False
 
 
-def sync_user_relations(user: User, ldap_attributes, *, connection=None):
+def sync_user_relations(user: User, ldap_attributes: ldap3.Entry, *, connection=None):
 	_username_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME]
-	if not LDAP_ATTR_DN in ldap_attributes:
-		raise ValueError(
-			"distinguishedName not present in User LDAP Attributes."
-		)
+	_distinguished_name = ldap_attributes[LDAP_ATTR_DN][0]
+	if not _distinguished_name:
+		raise ValueError("Distinguished Name not present in User LDAP Attributes.")
 
-	if isinstance(ldap_attributes[LDAP_ATTR_DN], str):
-		user.distinguished_name = (
-			str(ldap_attributes[LDAP_ATTR_DN]).lstrip("['").rstrip("']")
-		)
-	elif isinstance(ldap_attributes[LDAP_ATTR_DN], Iterable):
-		user.distinguished_name = (
-			ldap_attributes[LDAP_ATTR_DN][0].lstrip("['").rstrip("']")
-		)
-	if (
-		"Administrator"
-		in ldap_attributes[_username_field]
-	):
+	# Set user as LDAP Type for Distinguished Name getter/setter to work
+	user.user_type = USER_TYPE_LDAP
+	user.distinguished_name = _distinguished_name
+	if "Administrator" in ldap_attributes[_username_field]:
 		user.is_staff = True
 		user.is_superuser = True
 		user.save()
@@ -147,17 +138,13 @@ def sync_user_relations(user: User, ldap_attributes, *, connection=None):
 		user.is_staff = True
 		user.is_superuser = True
 		if LDAP_ATTR_EMAIL in ldap_attributes:
-			user.email = (
-				str(ldap_attributes[LDAP_ATTR_EMAIL]).lstrip("['").rstrip("']") or ""
-			)
+			user.email = ldap_attributes[LDAP_ATTR_EMAIL][0] or ""
 		user.save()
 	else:
 		user.is_staff = False
 		user.is_superuser = False
 		if LDAP_ATTR_EMAIL in ldap_attributes:
-			user.email = (
-				str(ldap_attributes[LDAP_ATTR_EMAIL]).lstrip("['").rstrip("']") or ""
-			)
+			user.email = ldap_attributes[LDAP_ATTR_EMAIL][0] or ""
 		user.save()
 
 
