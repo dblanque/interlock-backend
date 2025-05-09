@@ -77,7 +77,7 @@ def f_user_ldap(f_default_password):
 	m_user = User.objects.create(
 		username="testuserldap",
 		password=f_default_password,
-		dn="cn=john,ou=users,dc=example,dc=com",
+		_distinguished_name="cn=john,ou=users,dc=example,dc=com",
 		user_type=USER_TYPE_LDAP,
 		is_enabled=True,
 	)
