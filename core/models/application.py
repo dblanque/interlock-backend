@@ -19,19 +19,6 @@ def generate_client_id() -> str:
 			return client_id
 		tries += 1
 
-
-def generate_asg_uuid():
-	"""Generates a 12 character ASG id, retries up to 10 times and gives up.
-	The odds of generating an existing id 10 times in a row are very low.
-	"""
-	tries = 0
-	while True and tries <= 10:
-		uuid = get_random_string(12, "abcdefghijklmnopqrstuvwxyz0123456789")
-		if not ApplicationSecurityGroup.objects.filter(uuid=uuid).exists():
-			return uuid
-		tries += 1
-
-
 def generate_client_secret() -> str:
 	"""Generates a 48 character urlsafe token."""
 	_urlsafe_token = secrets.token_urlsafe(48)
@@ -53,9 +40,6 @@ class Application(BaseModel):
 
 class ApplicationSecurityGroup(BaseModel):
 	application = models.OneToOneField(Application, on_delete=models.CASCADE)
-	uuid = models.CharField(
-		max_length=13, default=generate_asg_uuid, unique=True
-	)
 	enabled = models.BooleanField(default=True)
 	users = models.ManyToManyField(User, blank=True, related_name="asg_member")
 	ldap_objects = ArrayField(

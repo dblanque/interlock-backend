@@ -72,9 +72,7 @@ def get_user_groups(user: User) -> list:
 			local application group uuids.
 	"""
 	if user.user_type == USER_TYPE_LOCAL:
-		application_groups: Manager = user.asg_member.only("uuid")
-		asg_uuids = list(application_groups.values_list("uuid", flat=True))
-		return asg_uuids
+		return []
 	elif user.user_type == USER_TYPE_LDAP:
 		with LDAPConnector(force_admin=True) as ldc:
 			groups = []
