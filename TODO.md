@@ -4,6 +4,8 @@
 * Re-factor LDAPObjects to normalize LDAP Attributes to local map
 
 # Check after re-factor
+* Why DNS View Data Table breaks?
+* Enable Tombstoning status changes for DNS Records
 * User CRUD
 * User Bulk OPS
 * Group CRUD
