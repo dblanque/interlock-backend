@@ -1,15 +1,11 @@
-# Long term
-* Re-factor LDAPObjectUser to normalize LDAP Attributes to local map
-* Re-factor LDAPObjectGroup to normalize LDAP Attributes to local map
-* Re-factor LDAPObjects to normalize LDAP Attributes to local map
-
-# Check after re-factor
-* Enable Tombstoning status changes for DNS Records
-* User CRUD
-* User Bulk OPS
-* Group CRUD
-* Dirtree Operations
-* DNS Operations
+# Create/Complete tests for
+* core.models.ldap_group
+* core.models.ldap_object
+* core.models.ldap_tree
+* core.models.ldap_user
+* core.ldap.ldap_settings
+* core.serializers.group
+* core.views
 
 # To test manually
 * Add OIDC Consent Features <t>
