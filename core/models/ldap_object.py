@@ -222,6 +222,34 @@ class LDAPObject:
 	def __get_object__(self):
 		return self.attributes
 
+	def __sync_int_fields__(self):
+		for fld in self.int_fields:
+			if not fld in self.attributes:
+				continue
+			try:
+				_v = int(self.attributes[fld])
+				if fld == LOCAL_ATTR_COUNTRY_DCC and _v == 0:
+					self.attributes.pop(fld, None)
+					continue
+				self.attributes[fld] = _v
+			except:
+				logger.error(
+					f"Could not cast LDAP Object field to int ({fld})."
+				)
+				pass
+
+	def parse_special_ldap_attributes(self):
+		"""
+		Special LDAP Attribute parsing function (LDAP -> LOCAL Translation)
+		"""
+		return
+
+	def parse_special_attributes(self):
+		"""
+		Special LOCAL Attribute parsing function (LOCAL -> LDAP Translation)
+		"""
+		return
+
 	def __sync_object__(self):
 		if not self.entry:
 			return
@@ -287,21 +315,7 @@ class LDAPObject:
 				self.attributes[local_key] = attr_value
 
 		self.parse_special_ldap_attributes()
-
-		for fld in self.int_fields:
-			if not fld in self.attributes:
-				continue
-			try:
-				_v = int(self.attributes[fld])
-				if fld == LOCAL_ATTR_COUNTRY_DCC and _v == 0:
-					self.attributes.pop(fld, None)
-					continue
-				self.attributes[fld] = _v
-			except:
-				logger.error(
-					f"Could not cast LDAP Object field to int ({fld})."
-				)
-				pass
+		self.__sync_int_fields__()
 		return
 
 	def __fetch_object__(self):
@@ -402,26 +416,19 @@ class LDAPObject:
 			# Have to contrast with single value sets, edge-case.
 			if isinstance(entry_value, str):
 				entry_value = {entry_value}
-			else:
+			elif isinstance(entry_value, list):
 				entry_value = set(entry_value)
+			else:
+				logger.warning("Bad value type for local %s field", local_alias)
+
 			if isinstance(local_value, str):
 				local_value = {local_value}
-			else:
+			elif isinstance(local_value, list):
 				local_value = set(local_value)
+			else:
+				logger.warning("Bad value type for ldap %s field", ldap_alias)
 		has_changed = entry_value != local_value
 		return has_changed
-
-	def parse_special_ldap_attributes(self):
-		"""
-		Special LDAP Attribute parsing function (LDAP -> LOCAL Translation)
-		"""
-		return
-
-	def parse_special_attributes(self):
-		"""
-		Special LOCAL Attribute parsing function (LOCAL -> LDAP Translation)
-		"""
-		return
 
 	def create(self):
 		if self.entry:
@@ -506,7 +513,7 @@ class LDAPObject:
 				replace_attrs[ldap_alias] = [(MODIFY_REPLACE, local_value)]
 
 		attrs = replace_attrs | delete_attrs
-		
+
 		# Execute operations
 		if attrs:
 			self.pre_update()
