@@ -21,7 +21,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class LivenessViewSet(BaseViewSet): # pragma: no cover
+class LivenessViewSet(BaseViewSet):  # pragma: no cover
 	@action(detail=False, methods=["get"])
 	def check(self, request, pk=None):
 		code = 0

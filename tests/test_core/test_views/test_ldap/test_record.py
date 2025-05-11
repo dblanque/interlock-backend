@@ -1,6 +1,7 @@
 ########################### Standard Pytest Imports ############################
 import pytest
 from pytest_mock import MockerFixture, MockType
+
 ################################################################################
 from core.views.ldap.record import LDAPRecordViewSet
 from rest_framework.test import APIClient
@@ -28,13 +29,13 @@ class TestInsert:
 	endpoint = "/api/ldap/record/insert/"
 
 	def test_record_not_in_request(self, admin_user_client: APIClient):
-		response: Response = admin_user_client.post(
-			self.endpoint, data={}
-		)
+		response: Response = admin_user_client.post(self.endpoint, data={})
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert response.data["code"] == "dns_record_not_in_request"
 
-	def test_successful(self, mocker: MockerFixture, admin_user_client: APIClient):
+	def test_successful(
+		self, mocker: MockerFixture, admin_user_client: APIClient
+	):
 		m_request_record = {"some_record_attr": "some_value"}
 		m_valid_record = {"some_record_attr": "some_value"}
 		m_return_record = {"some_record_result": "some_value"}
@@ -77,7 +78,9 @@ class TestUpdate:
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert response.data["code"] == "dns_record_not_in_request"
 
-	def test_successful(self, mocker: MockerFixture, admin_user_client: APIClient):
+	def test_successful(
+		self, mocker: MockerFixture, admin_user_client: APIClient
+	):
 		# Mocked Request Data
 		m_request_record = {"some_record_attr": "some_value"}
 		m_request_old_record = {"some_record_attr": "some_old_value"}
@@ -115,10 +118,9 @@ class TestUpdate:
 
 class TestDelete:
 	endpoint = "/api/ldap/record/delete/"
+
 	def test_record_not_in_request(self, admin_user_client: APIClient):
-		response: Response = admin_user_client.post(
-			self.endpoint, data={}
-		)
+		response: Response = admin_user_client.post(self.endpoint, data={})
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert response.data["code"] == "dns_record_not_in_request"
 
@@ -135,8 +137,7 @@ class TestDelete:
 		assert response.data["code"] == "dns_record_operation_conflict"
 
 	def test_successful_single(
-		self,
-		mocker: MockerFixture, admin_user_client: APIClient
+		self, mocker: MockerFixture, admin_user_client: APIClient
 	):
 		m_request_record = {"some_record_attr": "some_value"}
 		m_valid_record = {"some_record_attr": "some_value"}
@@ -191,7 +192,9 @@ class TestDelete:
 		assert response.status_code == status.HTTP_200_OK
 		assert response.data["data"] == ["record_result_1", "record_result_2"]
 
-	def test_successful_single_raises_malformed(self, admin_user_client: APIClient):
+	def test_successful_single_raises_malformed(
+		self, admin_user_client: APIClient
+	):
 		m_request_record = ["some_record_attr", "some_value"]
 
 		response: Response = admin_user_client.post(
@@ -216,7 +219,9 @@ class TestDelete:
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert response.data["code"] == "dns_record_data_malformed"
 
-	def test_successful_multi_raises_malformed(self, admin_user_client: APIClient):
+	def test_successful_multi_raises_malformed(
+		self, admin_user_client: APIClient
+	):
 		m_request_records = ["some_record_attr", "some_value"]
 
 		response: Response = admin_user_client.post(

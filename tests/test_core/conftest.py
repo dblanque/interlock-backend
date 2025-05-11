@@ -12,6 +12,7 @@ from core.models.interlock_settings import (
 	TYPE_BOOL,
 )
 
+
 @pytest.fixture
 def g_interlock_ldap_enabled(db):
 	# Fake LDAP Enabled
@@ -27,10 +28,12 @@ def g_interlock_ldap_disabled(db):
 		name=INTERLOCK_SETTING_ENABLE_LDAP, type=TYPE_BOOL, value=False
 	)
 
+
 @pytest.fixture(autouse=True)
 def teardown_interlock_setting(db):
 	yield
 	InterlockSetting.objects.all().delete()
+
 
 class RuntimeSettingsFactory(Protocol):
 	def __call__(self) -> RuntimeSettingsSingleton: ...

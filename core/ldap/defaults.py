@@ -80,7 +80,10 @@ LDAP_AUTH_USER_FIELDS = {
 }
 
 # Normalize to the standard LDAP string if it's sAMAccountName just in case
-if str(LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME]).lower() == LDAP_ATTR_USERNAME_SAMBA_ADDS.lower():
+if (
+	str(LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME]).lower()
+	== LDAP_ATTR_USERNAME_SAMBA_ADDS.lower()
+):
 	LDAP_AUTH_USERNAME_IDENTIFIER = LDAP_ATTR_USERNAME_SAMBA_ADDS
 else:
 	LDAP_AUTH_USERNAME_IDENTIFIER = LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME]
@@ -123,8 +126,9 @@ LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN = "EXAMPLE"
 # This is used when the local Interlock Admin is logged in.
 LDAP_AUTH_CONNECTION_USER_DN = "CN=Administrator,CN=Users,DC=example,DC=com"
 
-LDAP_AUTH_CONNECTION_USERNAME = LDAP_AUTH_CONNECTION_USER_DN.split(",")[0]\
-	.split("CN=")[1]
+LDAP_AUTH_CONNECTION_USERNAME = LDAP_AUTH_CONNECTION_USER_DN.split(",")[
+	0
+].split("CN=")[1]
 LDAP_AUTH_CONNECTION_PASSWORD = None
 
 # Set connection/receive timeouts (in seconds) on the underlying `ldap3` library.

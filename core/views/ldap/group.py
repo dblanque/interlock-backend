@@ -62,9 +62,11 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 			self.ldap_connection = ldc.connection
 
 			self.ldap_filter_object = LDAPFilter.eq(
-				LDAP_ATTR_OBJECT_CLASS, "group").to_string()
-			self.ldap_filter_attr = self.filter_attr_builder(RuntimeSettings) \
-				.get_list_filter()
+				LDAP_ATTR_OBJECT_CLASS, "group"
+			).to_string()
+			self.ldap_filter_attr = self.filter_attr_builder(
+				RuntimeSettings
+			).get_list_filter()
 
 			data, valid_attributes = self.list_groups()
 
@@ -88,9 +90,9 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 
 		########################################################################
 		# Check group and distinguishedName keys
-		group_search = request.data.get("group", 
-						request.data.get(LDAP_ATTR_DN, None)
-					)
+		group_search = request.data.get(
+			"group", request.data.get(LDAP_ATTR_DN, None)
+		)
 		if not group_search:
 			raise exc_groups.GroupDistinguishedNameMissing
 
@@ -129,18 +131,14 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		# Get Group Data
 		group_data: dict = data.get("group", None)
 		if not group_data or not isinstance(group_data, dict):
-			raise exc_base.BadRequest(
-				data={
-					"detail":"group dict is required"
-				}
-			)
+			raise exc_base.BadRequest(data={"detail": "group dict is required"})
 
 		# Get Group CN
 		group_cn = group_data.get(LOCAL_ATTR_NAME, None)
 		if not group_cn or not isinstance(group_cn, str):
 			raise exc_base.BadRequest(
 				data={
-					"detail":"group dict required a name key containing the Group Common Name."
+					"detail": "group dict required a name key containing the Group Common Name."
 				}
 			)
 
@@ -176,11 +174,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 
 		group_data = data.get("group", None)
 		if not group_data or not isinstance(group_data, dict):
-			raise exc_base.BadRequest(
-				data={
-					"detail":"group dict is required"
-				}
-			)
+			raise exc_base.BadRequest(data={"detail": "group dict is required"})
 		self.ldap_filter_attr = list(group_data.keys())
 
 		# Open LDAP Connection
@@ -201,11 +195,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		data = request.data
 		group_data = data.get("group", None)
 		if not group_data or not isinstance(group_data, dict):
-			raise exc_base.BadRequest(
-				data={
-					"detail":"group dict is required"
-				}
-			)
+			raise exc_base.BadRequest(data={"detail": "group dict is required"})
 
 		self.ldap_filter_attr = [LDAP_ATTR_COMMON_NAME, LDAP_ATTR_GROUP_TYPE]
 

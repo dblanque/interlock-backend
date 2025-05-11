@@ -67,6 +67,7 @@ import logging, ssl
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
+
 class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	ldap_setting_class = LDAPSetting
 
@@ -430,11 +431,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			responsible_user=request.user
 		)
 		return Response(
-			data={
-				"code": 0,
-				"code_msg": "ok",
-				"count": pruned_users
-			}
+			data={"code": 0, "code_msg": "ok", "count": pruned_users}
 		)
 
 	@action(detail=False, methods=["get"])
@@ -448,9 +445,5 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		)
 
 		return Response(
-			data={
-				"code": 0,
-				"code_msg": "ok",
-				"count": purged_users
-			}
+			data={"code": 0, "code_msg": "ok", "count": purged_users}
 		)

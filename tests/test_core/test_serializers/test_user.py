@@ -1,5 +1,6 @@
 ########################### Standard Pytest Imports ############################
 import pytest
+
 ################################################################################
 from core.serializers.user import LDAPUserSerializer, UserSerializer
 from rest_framework.serializers import ValidationError
@@ -23,41 +24,37 @@ from core.ldap.adsi import (
 	LDAP_UF_DONT_EXPIRE_PASSWD,
 )
 
+
 @pytest.mark.django_db
 def test_validate_password_confirm():
 	serializer = UserSerializer(
-		data={
-			"password":"a",
-			"passwordConfirm":"a"
-		},
-		partial=True
+		data={"password": "a", "passwordConfirm": "a"}, partial=True
 	)
 	assert serializer.is_valid()
+
 
 @pytest.mark.django_db
 def test_validate_password_confirm_raises_password_mismatch():
 	serializer = UserSerializer(
-		data={
-			"password":"a",
-			"passwordConfirm":"b"
-		},
-		partial=True
+		data={"password": "a", "passwordConfirm": "b"}, partial=True
 	)
 	with pytest.raises(ValidationError) as e:
 		serializer.is_valid(raise_exception=True)
 	assert e.value.detail.get("passwordConfirm")
+
 
 @pytest.mark.django_db
 def test_validate_password_confirm_raises_field_missing():
 	serializer = UserSerializer(
 		data={
-			"password":"a",
+			"password": "a",
 		},
-		partial=True
+		partial=True,
 	)
 	with pytest.raises(ValidationError) as e:
 		serializer.is_valid(raise_exception=True)
 	assert e.value.detail.get("passwordConfirm")
+
 
 @pytest.mark.parametrize(
 	"test_data",
@@ -84,19 +81,47 @@ def test_ldap_user_serializer_valid(test_data: dict):
 	serializer = LDAPUserSerializer(data=test_data)
 	assert serializer.is_valid()
 
+
 @pytest.mark.parametrize(
 	"key, value",
 	(
-		(LDAP_ATTR_DN, "cn=testuser,dc=,dc=com",),
-		(LOCAL_ATTR_USERNAME, "testuser.",),
-		(LOCAL_ATTR_USERNAME, "testuser/",),
-		(LDAP_ATTR_USERNAME_SAMBA_ADDS, "testuser@",),
-		(LDAP_ATTR_EMAIL, "test@example",),
+		(
+			LDAP_ATTR_DN,
+			"cn=testuser,dc=,dc=com",
+		),
+		(
+			LOCAL_ATTR_USERNAME,
+			"testuser.",
+		),
+		(
+			LOCAL_ATTR_USERNAME,
+			"testuser/",
+		),
+		(
+			LDAP_ATTR_USERNAME_SAMBA_ADDS,
+			"testuser@",
+		),
+		(
+			LDAP_ATTR_EMAIL,
+			"test@example",
+		),
 		("permission_list", ["bad_perm_value"]),
-		(LDAP_ATTR_COUNTRY, "Some Country That Does Not Exist",),
-		(LDAP_ATTR_COUNTRY_DCC, 99999,),
-		(LDAP_ATTR_COUNTRY_ISO, "BADCODE",),
-		(LDAP_ATTR_UAC, False,),
+		(
+			LDAP_ATTR_COUNTRY,
+			"Some Country That Does Not Exist",
+		),
+		(
+			LDAP_ATTR_COUNTRY_DCC,
+			99999,
+		),
+		(
+			LDAP_ATTR_COUNTRY_ISO,
+			"BADCODE",
+		),
+		(
+			LDAP_ATTR_UAC,
+			False,
+		),
 	),
 )
 def test_ldap_user_serializer_raises(key, value):

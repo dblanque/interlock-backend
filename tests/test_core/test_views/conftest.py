@@ -10,6 +10,7 @@ from pytest import FixtureRequest
 
 User = get_user_model()
 
+
 @pytest.fixture(
 	params=[
 		# LDAP Domain
@@ -22,43 +23,48 @@ User = get_user_model()
 		("/api/ldap/record/update/", "put"),
 		("/api/ldap/record/delete/", "post"),
 	],
-	ids=lambda x: f"{x[1].upper()}: {x[0]}"
+	ids=lambda x: f"{x[1].upper()}: {x[0]}",
 )
 def g_all_endpoints(request: FixtureRequest):
 	"""Returns tuple of (endpoint, method)"""
 	return request.param
 
-# Filtered fixture - only LDAP domain endpoints
-excluded_from_ldap = (
-	"/api/ldap/domain/details/",
-)
-@pytest.fixture(
-    params=[
-		# Access underlying params
-        p for p in g_all_endpoints._pytestfixturefunction.params
-		# Filter condition
-        if p[0] not in excluded_from_ldap
-    ],
-    ids=lambda x: f"{x[1].upper()}: {x[0]} (LDAP Required)"
-)
-def g_ldap_domain_endpoints(request: FixtureRequest):
-    return request.param
 
 # Filtered fixture - only LDAP domain endpoints
-excluded_from_auth = (
-	"/api/ldap/domain/details/",
-)
+excluded_from_ldap = ("/api/ldap/domain/details/",)
+
+
 @pytest.fixture(
-    params=[
+	params=[
 		# Access underlying params
-        p for p in g_all_endpoints._pytestfixturefunction.params
+		p
+		for p in g_all_endpoints._pytestfixturefunction.params
 		# Filter condition
-        if p[0] not in excluded_from_auth
-    ],
-    ids=lambda x: f"{x[1].upper()}: {x[0]} (Auth. Required)"
+		if p[0] not in excluded_from_ldap
+	],
+	ids=lambda x: f"{x[1].upper()}: {x[0]} (LDAP Required)",
+)
+def g_ldap_domain_endpoints(request: FixtureRequest):
+	return request.param
+
+
+# Filtered fixture - only LDAP domain endpoints
+excluded_from_auth = ("/api/ldap/domain/details/",)
+
+
+@pytest.fixture(
+	params=[
+		# Access underlying params
+		p
+		for p in g_all_endpoints._pytestfixturefunction.params
+		# Filter condition
+		if p[0] not in excluded_from_auth
+	],
+	ids=lambda x: f"{x[1].upper()}: {x[0]} (Auth. Required)",
 )
 def g_authenticated_endpoints(request: FixtureRequest):
-    return request.param
+	return request.param
+
 
 @pytest.fixture
 def api_client():

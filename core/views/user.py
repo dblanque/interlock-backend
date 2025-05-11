@@ -13,7 +13,10 @@ from core.views.mixins.ldap.user import LDAPUserMixin
 
 # Models
 from core.models.user import User
-from core.models.interlock_settings import InterlockSetting, INTERLOCK_SETTING_ENABLE_LDAP
+from core.models.interlock_settings import (
+	InterlockSetting,
+	INTERLOCK_SETTING_ENABLE_LDAP,
+)
 from core.ldap.connector import LDAPConnector
 from core.models.choices.log import (
 	LOG_ACTION_CREATE,
@@ -261,7 +264,7 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 			raise BadRequest(
 				data={"errors": "Must contain field enabled (bool)"}
 			)
-		
+
 		try:
 			user_instance = User.objects.get(id=pk)
 		except ObjectDoesNotExist:
@@ -309,7 +312,9 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 		if not serializer.is_valid():
 			raise BadRequest(data={"errors": serializer.errors})
 
-		user_instance.set_password(serializer.validated_data[LOCAL_ATTR_PASSWORD])
+		user_instance.set_password(
+			serializer.validated_data[LOCAL_ATTR_PASSWORD]
+		)
 		user_instance.save()
 
 		DBLogMixin.log(

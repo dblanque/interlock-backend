@@ -293,9 +293,7 @@ class TestLDAPUserMixin:
 		with pytest.raises(ValueError):
 			f_user_mixin.get_user_entry()
 
-	def test_get_user_entry_raises_not_found(
-		self, f_user_mixin: LDAPUserMixin
-	):
+	def test_get_user_entry_raises_not_found(self, f_user_mixin: LDAPUserMixin):
 		with pytest.raises(exc_user.UserEntryNotFound):
 			f_user_mixin.get_user_entry(
 				username="testuser", raise_if_not_exists=True
@@ -356,15 +354,13 @@ class TestLDAPUserMixin:
 	@pytest.mark.parametrize(
 		"ldap_filter_object",
 		(
-			LDAPFilter.eq(
-				LDAP_ATTR_OBJECT_CLASS, "person"
-			),
+			LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "person"),
 			"(objectClass=person)",
 		),
 		ids=[
 			"Filter as LDAPFilter",
 			"Filter as string",
-		]
+		],
 	)
 	def test_ldap_user_list(
 		self,
@@ -585,11 +581,9 @@ class TestLDAPUserMixin:
 			"core.views.mixins.ldap.user.safe_dn", side_effect=Exception
 		)
 		with pytest.raises(exc_user.UserDNPathException):
-			f_user_mixin.ldap_user_insert(data={"username":"testuser"})
+			f_user_mixin.ldap_user_insert(data={"username": "testuser"})
 
-	def test_ldap_user_insert_raises_add_exc(
-		self, f_user_mixin: LDAPUserMixin
-	):
+	def test_ldap_user_insert_raises_add_exc(self, f_user_mixin: LDAPUserMixin):
 		f_user_mixin.ldap_connection.add.side_effect = Exception
 		with pytest.raises(exc_user.UserCreate):
 			f_user_mixin.ldap_user_insert(
@@ -603,9 +597,7 @@ class TestLDAPUserMixin:
 				}
 			)
 
-	def test_ldap_user_insert_returns_none(
-		self, f_user_mixin: LDAPUserMixin
-	):
+	def test_ldap_user_insert_returns_none(self, f_user_mixin: LDAPUserMixin):
 		f_user_mixin.ldap_connection.add.side_effect = Exception
 		assert (
 			f_user_mixin.ldap_user_insert(
@@ -1068,9 +1060,7 @@ class TestLDAPUserMixin:
 		m_logger.exception.assert_called_once()
 		m_logger.error.assert_called_once()
 
-	def test_ldap_set_password_adds_admin(
-		self, f_user_mixin: LDAPUserMixin
-	):
+	def test_ldap_set_password_adds_admin(self, f_user_mixin: LDAPUserMixin):
 		extended_operations: ExtendedOperationsRoot = (
 			f_user_mixin.ldap_connection.extend
 		)
@@ -1089,9 +1079,7 @@ class TestLDAPUserMixin:
 			user=m_distinguished_name, new_password="new_pwd"
 		)
 
-	def test_ldap_set_password_samba_admin(
-		self, f_user_mixin: LDAPUserMixin
-	):
+	def test_ldap_set_password_samba_admin(self, f_user_mixin: LDAPUserMixin):
 		extended_operations: ExtendedOperationsRoot = (
 			f_user_mixin.ldap_connection.extend
 		)
@@ -1131,9 +1119,7 @@ class TestLDAPUserMixin:
 			old_password="old_pwd",
 		)
 
-	def test_ldap_set_password_samba_user(
-		self, f_user_mixin: LDAPUserMixin
-	):
+	def test_ldap_set_password_samba_user(self, f_user_mixin: LDAPUserMixin):
 		extended_operations: ExtendedOperationsRoot = (
 			f_user_mixin.ldap_connection.extend
 		)

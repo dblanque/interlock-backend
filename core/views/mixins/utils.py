@@ -14,7 +14,9 @@ from ldap3 import Entry as LDAPEntry, Attribute as LDAPAttribute
 
 
 @overload
-def getldapattrvalue(entry: LDAPEntry, attr: str, /) -> str | Iterable | Any: ...
+def getldapattrvalue(
+	entry: LDAPEntry, attr: str, /
+) -> str | Iterable | Any: ...
 
 
 @overload
@@ -56,7 +58,10 @@ def getldapattr(
 	entry: LDAPEntry, attr: str, /, default=None
 ) -> LDAPAttribute: ...
 
-def getldapattr(entry: LDAPEntry, attr: str, /, *args, **kwargs) -> LDAPAttribute:
+
+def getldapattr(
+	entry: LDAPEntry, attr: str, /, *args, **kwargs
+) -> LDAPAttribute:
 	"""Get LDAP Attribute Abstract Object
 
 	Args:
@@ -73,6 +78,7 @@ def getldapattr(entry: LDAPEntry, attr: str, /, *args, **kwargs) -> LDAPAttribut
 		return getattr(entry, attr, kwargs["default"])
 	else:
 		return getattr(entry, attr)
+
 
 def net_port_test(ip, port, timeout=5):
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

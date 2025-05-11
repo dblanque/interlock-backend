@@ -33,8 +33,10 @@ from core.models.ldap_object import (
 	ATTRS_SPECIAL_LDAP,
 )
 from core.ldap.types.group import LDAPGroupTypes
+
 ################################################################################
 logger = getLogger()
+
 
 class LDAPGroup(LDAPObject):
 	type = LDAPObjectTypes.GROUP
@@ -62,8 +64,7 @@ class LDAPGroup(LDAPObject):
 		excluded_attributes: list[str] = None,
 		required_attributes: list[str] = None,
 		attributes: dict = None,
-	) -> None:
-		...
+	) -> None: ...
 
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
@@ -121,7 +122,9 @@ class LDAPGroup(LDAPObject):
 				_type += LDAPGroupTypes[t].value
 
 		_scope = 0
-		_scope += LDAPGroupTypes[self.attributes[LOCAL_ATTR_GROUP_SCOPE][0]].value
+		_scope += LDAPGroupTypes[
+			self.attributes[LOCAL_ATTR_GROUP_SCOPE][0]
+		].value
 		_sum = _type + _scope
 
 		# Validate
@@ -159,9 +162,7 @@ class LDAPGroup(LDAPObject):
 			)
 
 	def parse_group_operations(
-		self,
-		members_to_add=None,
-		members_to_remove=None
+		self, members_to_add=None, members_to_remove=None
 	):
 		try:
 			self.connection.extend.microsoft.add_members_to_groups(
@@ -173,7 +174,8 @@ class LDAPGroup(LDAPObject):
 		except Exception as e:
 			logger.exception(e)
 			raise exc_group.GroupMembersAdd(
-				data={"ldap_response": self.connection.result})
+				data={"ldap_response": self.connection.result}
+			)
 
 		try:
 			self.connection.extend.microsoft.remove_members_from_groups(
@@ -185,7 +187,8 @@ class LDAPGroup(LDAPObject):
 		except Exception as e:
 			logger.exception(e)
 			raise exc_group.GroupMembersRemove(
-				data={"ldap_response": self.connection.result})
+				data={"ldap_response": self.connection.result}
+			)
 
 	def parse_special_attributes(self):
 		self.parse_group_type_and_scope()
@@ -204,9 +207,11 @@ class LDAPGroup(LDAPObject):
 	def post_create(self):
 		self.parse_group_operations(
 			members_to_add=self.attributes.get(
-				LOCAL_ATTR_GROUP_ADD_MEMBERS, []),
+				LOCAL_ATTR_GROUP_ADD_MEMBERS, []
+			),
 			members_to_remove=self.attributes.get(
-				LOCAL_ATTR_GROUP_RM_MEMBERS, []),
+				LOCAL_ATTR_GROUP_RM_MEMBERS, []
+			),
 		)
 
 	def post_update(self):
@@ -218,7 +223,9 @@ class LDAPGroup(LDAPObject):
 		self.groupname = kwargs.pop(LDAP_ATTR_COMMON_NAME, kw_common_name)
 
 		if self.entry and not isinstance(self.entry, LDAPEntry):
-			raise TypeError(f"LDAPGroup entry must attr must be of type ldap3.Entry")
+			raise TypeError(
+				f"LDAPGroup entry must attr must be of type ldap3.Entry"
+			)
 
 		if not self.connection and not self.entry:
 			raise Exception(
@@ -235,11 +242,17 @@ class LDAPGroup(LDAPObject):
 			if _entry_dn:
 				if not isinstance(_entry_dn, str):
 					raise TypeError("entry_dn must be of type str")
-				self.search_filter = LDAPFilter.eq(LDAP_ATTR_DN, _entry_dn).to_string()
-		elif self.distinguished_name and isinstance(self.distinguished_name, str):
-			self.search_filter = LDAPFilter.eq(LDAP_ATTR_DN, self.distinguished_name).to_string()
+				self.search_filter = LDAPFilter.eq(
+					LDAP_ATTR_DN, _entry_dn
+				).to_string()
+		elif self.distinguished_name and isinstance(
+			self.distinguished_name, str
+		):
+			self.search_filter = LDAPFilter.eq(
+				LDAP_ATTR_DN, self.distinguished_name
+			).to_string()
 		elif self.groupname and isinstance(self.groupname, str):
 			self.search_filter = LDAPFilter.and_(
 				LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "group"),
-				LDAPFilter.eq(LDAP_ATTR_COMMON_NAME, self.groupname)
+				LDAPFilter.eq(LDAP_ATTR_COMMON_NAME, self.groupname),
 			).to_string()

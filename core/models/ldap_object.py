@@ -32,12 +32,14 @@ from typing import overload
 from enum import Enum
 from logging import getLogger
 from core.views.mixins.utils import getldapattrvalue
+
 ################################################################################
 logger = getLogger()
 
 # TODO
 # Add save method to LDAPObject
 # Add Immutable or always excluded keys tuple
+
 
 class LDAPObjectTypes(Enum):
 	GENERIC = "generic"
@@ -50,6 +52,7 @@ class LDAPObjectTypes(Enum):
 	PRINTER = "printer"
 	CONTACT = "contact"
 	BUILTIN = "builtin-domain"
+
 
 DEFAULT_REQUIRED_LDAP_ATTRS = {
 	LDAP_ATTR_DN,
@@ -79,7 +82,7 @@ ATTRS_IMMUTABLE = {
 	LOCAL_ATTR_USER_ADD_GROUPS,
 	LOCAL_ATTR_USER_RM_GROUPS,
 	LOCAL_ATTR_IS_ENABLED,
-	LOCAL_ATTR_PASSWORD, # This is modified with a specific method
+	LOCAL_ATTR_PASSWORD,  # This is modified with a specific method
 	LOCAL_ATTR_GROUP_ADD_MEMBERS,
 	LOCAL_ATTR_GROUP_RM_MEMBERS,
 	LOCAL_ATTR_GROUP_HAS_MEMBERS,
@@ -103,8 +106,10 @@ ATTRS_SPECIAL_LDAP = {
 	LDAP_ATTR_GROUP_TYPE,
 }
 
+
 class LDAPObject:
 	"""Fetches LDAP Object from a specified DN"""
+
 	# Django
 	use_in_migrations: bool = False
 
@@ -144,8 +149,7 @@ class LDAPObject:
 		required_attributes: list[str] = None,
 		attributes: dict = None,
 		skip_fetch: bool = False,
-	) -> None:
-		...
+	) -> None: ...
 
 	def __init__(self, **kwargs) -> None:
 		skip_fetch = kwargs.pop("skip_fetch", False)
@@ -169,7 +173,9 @@ class LDAPObject:
 
 	def __validate_kwargs__(self, kwargs: dict):
 		if self.entry and not isinstance(self.entry, LDAPEntry):
-			raise TypeError("LDAPObject entry must attr must be of type ldap3.Entry")
+			raise TypeError(
+				"LDAPObject entry must attr must be of type ldap3.Entry"
+			)
 
 		if not self.connection and not self.entry:
 			raise Exception(
@@ -179,15 +185,21 @@ class LDAPObject:
 			raise Exception(
 				"LDAPObject requires a Distinguished Name to search for the object"
 			)
-		
+
 		if self.entry:
 			_entry_dn = getattr(self.entry, "entry_dn", "")
 			if _entry_dn:
 				if not isinstance(_entry_dn, str):
 					raise TypeError("entry_dn must be of type str")
-				self.search_filter = LDAPFilter.eq(LDAP_ATTR_DN, _entry_dn).to_string()
-		elif self.distinguished_name and isinstance(self.distinguished_name, str):
-			self.search_filter = LDAPFilter.eq(LDAP_ATTR_DN, self.distinguished_name).to_string()
+				self.search_filter = LDAPFilter.eq(
+					LDAP_ATTR_DN, _entry_dn
+				).to_string()
+		elif self.distinguished_name and isinstance(
+			self.distinguished_name, str
+		):
+			self.search_filter = LDAPFilter.eq(
+				LDAP_ATTR_DN, self.distinguished_name
+			).to_string()
 
 	def __set_kwargs__(self, kwargs):
 		# Set passed kwargs from Object Call
@@ -206,7 +218,7 @@ class LDAPObject:
 		for attr in self.required_attributes:
 			if attr not in self.search_attrs:
 				self.search_attrs.append(attr)
-		
+
 		# Add primary_group_id fetching if groups are fetched,
 		# as the primary group is not included in memberOf
 		if LDAP_ATTR_USER_GROUPS in self.search_attrs:
@@ -268,10 +280,15 @@ class LDAPObject:
 		else:
 			distinguished_name: str = self.distinguished_name
 		self.attributes = {}
-		self.attributes[LOCAL_ATTR_NAME] = distinguished_name.split(",")[0].split("=")[1]
+		self.attributes[LOCAL_ATTR_NAME] = distinguished_name.split(",")[
+			0
+		].split("=")[1]
 		self.attributes[LOCAL_ATTR_DN] = distinguished_name
-		self.attributes[LOCAL_ATTR_TYPE] = LDAPObjectTypes.GENERIC.value.lower() \
-						if not self.type.value else self.type.value.lower()
+		self.attributes[LOCAL_ATTR_TYPE] = (
+			LDAPObjectTypes.GENERIC.value.lower()
+			if not self.type.value
+			else self.type.value.lower()
+		)
 		if LDAP_ATTR_OBJECT_CATEGORY in self.entry.entry_attributes:
 			self.attributes[LOCAL_ATTR_OBJECT_CATEGORY] = (
 				getldapattrvalue(self.entry, LDAP_ATTR_OBJECT_CATEGORY)
@@ -392,7 +409,7 @@ class LDAPObject:
 
 	def value_has_changed(self, local_alias: str, ldap_alias: str, /) -> bool:
 		"""Checks if a local value differs from its entry counterpart
-		
+
 		Positional args only.
 		"""
 		if not local_alias:
@@ -436,19 +453,23 @@ class LDAPObject:
 		attrs = {}
 		_object_class = None
 		if self.type == LDAPObjectTypes.USER:
-			self.attributes[LOCAL_ATTR_OBJECT_CLASS] = list({
-				RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
-				"top",
-				"person",
-				"organizationalPerson",
-				"user",
-			})
+			self.attributes[LOCAL_ATTR_OBJECT_CLASS] = list(
+				{
+					RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
+					"top",
+					"person",
+					"organizationalPerson",
+					"user",
+				}
+			)
 			_object_class = RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
 		elif self.type == LDAPObjectTypes.GROUP:
-			self.attributes[LOCAL_ATTR_OBJECT_CLASS] = list({
-				"top",
-				"group",
-			})
+			self.attributes[LOCAL_ATTR_OBJECT_CLASS] = list(
+				{
+					"top",
+					"group",
+				}
+			)
 			_object_class = "group"
 
 		self.parse_special_attributes()
@@ -457,8 +478,8 @@ class LDAPObject:
 			if local_alias in ATTRS_IMMUTABLE:
 				continue
 			elif (
-				local_alias in ATTRS_SPECIAL and
-				not local_alias in self.parsed_specials
+				local_alias in ATTRS_SPECIAL
+				and not local_alias in self.parsed_specials
 			):
 				continue
 
@@ -474,15 +495,16 @@ class LDAPObject:
 			attributes=attrs,
 		)
 		self.post_create()
-		return getattr(
-			self.connection.result,
-			"description",
-			""
-		).lower() == "success"
+		return (
+			getattr(self.connection.result, "description", "").lower()
+			== "success"
+		)
 
 	def update(self) -> bool:
 		if not self.entry:
-			raise ValueError("An existing LDAP Entry is required to perform an update")
+			raise ValueError(
+				"An existing LDAP Entry is required to perform an update"
+			)
 		if not self.attributes:
 			raise ValueError("New attributes must be set to perform an update")
 		if not isinstance(self.entry, LDAPEntry):
@@ -496,8 +518,8 @@ class LDAPObject:
 			if local_alias in ATTRS_IMMUTABLE:
 				continue
 			elif (
-				local_alias in ATTRS_SPECIAL and
-				not local_alias in self.parsed_specials
+				local_alias in ATTRS_SPECIAL
+				and not local_alias in self.parsed_specials
 			):
 				continue
 
@@ -517,16 +539,12 @@ class LDAPObject:
 		# Execute operations
 		if attrs:
 			self.pre_update()
-			self.connection.modify(
-				dn=self.entry.entry_dn,
-				changes=attrs
-			)
+			self.connection.modify(dn=self.entry.entry_dn, changes=attrs)
 			self.post_update()
-			return getattr(
-				self.connection.result,
-				"description",
-				""
-			).lower() == "success"
+			return (
+				getattr(self.connection.result, "description", "").lower()
+				== "success"
+			)
 		return True
 
 	def delete(self) -> bool:
@@ -538,16 +556,16 @@ class LDAPObject:
 		else:
 			raise Exception("Deletion requires a valid dn or entry.")
 		self.post_delete()
-		return getattr(
-			self.connection.result,
-			"description",
-			""
-		).lower() == "success"
+		return (
+			getattr(self.connection.result, "description", "").lower()
+			== "success"
+		)
 
 	def save(self):
 		if not self.connection or not self.connection.bound:
 			raise Exception(
-				"LDAPObject requires a bound connection to save modifications")
+				"LDAPObject requires a bound connection to save modifications"
+			)
 
 		if not self.entry:
 			self.create()

@@ -51,7 +51,9 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 		if db_table_exists(LDAP_PRESET_TABLE):
 			if not LDAPPreset.objects.filter(name=DEFAULT_PRESET_NAME).exists():
 				LDAPPreset.objects.create(
-					name=DEFAULT_PRESET_NAME, label="Default Preset", active=True
+					name=DEFAULT_PRESET_NAME,
+					label="Default Preset",
+					active=True,
 				)
 
 	def remove_default_preset(self):

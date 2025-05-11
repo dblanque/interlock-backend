@@ -75,12 +75,14 @@ import re
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
+
 class LDAPUserMixin(viewsets.ViewSetMixin):
 	"""LDAP User Mixin
 
 	Methods in this mixin may be used in the local django users viewset, so
 	beware not to have any overlap with its' mixin (if any exists).
 	"""
+
 	ldap_connection: LDAPConnectionProtocol = None
 	ldap_filter_object = None
 	ldap_filter_attr = None
@@ -97,7 +99,10 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			print()
 		if username or security_id:
 			for well_known_username, well_known_rid in BUILTIN_USERS:
-				is_admin = (well_known_username, well_known_rid) == BUILTIN_ADMIN
+				is_admin = (
+					well_known_username,
+					well_known_rid,
+				) == BUILTIN_ADMIN
 				if ignore_admin and is_admin:
 					continue
 				# Check SID First, as it's more specific
@@ -151,7 +156,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		# Class Filter Setup
 		class_filter = join_ldap_filter(
 			None,
-			f"{LDAP_ATTR_OBJECT_CLASS}={RuntimeSettings.LDAP_AUTH_OBJECT_CLASS}"
+			f"{LDAP_ATTR_OBJECT_CLASS}={RuntimeSettings.LDAP_AUTH_OBJECT_CLASS}",
 		)
 		# Exclude Computer Accounts if settings allow it
 		if RuntimeSettings.EXCLUDE_COMPUTER_ACCOUNTS:
@@ -270,7 +275,9 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		)
 		return self.get_user_entry(username=username, email=email)
 
-	def _get_all_ldap_users(self, as_entries=False) -> list[dict] | list[LDAPEntry]:
+	def _get_all_ldap_users(
+		self, as_entries=False
+	) -> list[dict] | list[LDAPEntry]:
 		"""Function to fetch all LDAP Users.
 
 		Returns list of dictionaries.
@@ -335,7 +342,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			except Exception as e:
 				username_or_dn = user_dict.get(
 					LDAP_ATTR_DN,
-					user_dict.get(LDAP_ATTR_USERNAME_SAMBA_ADDS, "")
+					user_dict.get(LDAP_ATTR_USERNAME_SAMBA_ADDS, ""),
 				)
 				logger.exception(e)
 				logger.error(
@@ -601,8 +608,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			).get_fetch_attrs()
 
 		user_obj = LDAPUser(
-			connection=self.ldap_connection,
-			username=user_search
+			connection=self.ldap_connection, username=user_search
 		)
 		user_dict = user_obj.attributes
 
@@ -619,8 +625,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		try:
 			if LDAP_ATTR_USER_GROUPS in user_obj.entry.entry_attributes:
 				user_groups = getldapattrvalue(
-					user_obj.entry,
-					LDAP_ATTR_USER_GROUPS
+					user_obj.entry, LDAP_ATTR_USER_GROUPS
 				)
 				if user_groups:
 					if isinstance(user_groups, (list, tuple, set)):
@@ -628,14 +633,14 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 							member_of_objects.append(
 								LDAPGroup(
 									connection=self.ldap_connection,
-									distinguished_name=_group_dn
+									distinguished_name=_group_dn,
 								).attributes
 							)
 					else:
 						member_of_objects.append(
 							LDAPGroup(
 								connection=self.ldap_connection,
-								distinguished_name=user_groups
+								distinguished_name=user_groups,
 							).attributes
 						)
 
@@ -646,7 +651,9 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 					_g.get(LOCAL_ATTR_RELATIVE_ID, None) == _primary_group_id
 					for _g in member_of_objects
 				):
-					primary_group = GroupViewMixin.get_group_by_rid(_primary_group_id)
+					primary_group = GroupViewMixin.get_group_by_rid(
+						_primary_group_id
+					)
 					member_of_objects.append(primary_group)
 
 			if member_of_objects:
@@ -664,7 +671,9 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 
 			# Build permissions list
 			try:
-				user_permissions = ldap_adsi.list_user_perms(user=user_obj.entry)
+				user_permissions = ldap_adsi.list_user_perms(
+					user=user_obj.entry
+				)
 				user_dict[LOCAL_ATTR_PERMISSIONS] = user_permissions
 			except Exception as e:
 				logger.exception(e)
@@ -779,6 +788,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 
 		return self.ldap_connection
 
+
 class LDAPUserBaseMixin(LDAPUserMixin):
 	@transaction.atomic
 	def ldap_users_sync(self, responsible_user: User = None) -> int:
@@ -786,7 +796,7 @@ class LDAPUserBaseMixin(LDAPUserMixin):
 		updated_users = 0
 		with LDAPConnector(
 			user=responsible_user,
-			force_admin=True if not responsible_user else False
+			force_admin=True if not responsible_user else False,
 		) as ldc:
 			self.ldap_connection = ldc.connection
 
@@ -802,7 +812,7 @@ class LDAPUserBaseMixin(LDAPUserMixin):
 				if is_non_admin_builtin:
 					logger.debug(
 						"Skipping sync for built-in non-admin user (%s)",
-						_username
+						_username,
 					)
 					continue
 
@@ -839,7 +849,7 @@ class LDAPUserBaseMixin(LDAPUserMixin):
 		pruned_users = 0
 		with LDAPConnector(
 			user=responsible_user,
-			force_admin=True if not responsible_user else False
+			force_admin=True if not responsible_user else False,
 		) as ldc:
 			self.ldap_connection = ldc.connection
 			users = User.objects.filter(user_type=USER_TYPE_LDAP)

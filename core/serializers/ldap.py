@@ -5,17 +5,23 @@ from ldap3.utils.dn import parse_dn
 from core.ldap.adsi import LDAP_PERMS
 from core.ldap.countries import LDAP_COUNTRIES
 
-WEBSITE_RE = re.compile(r"^((?:http(?:s){0,5}(:\/\/){0,1}){0,1}(?:[a-zA-Z0-9-_.]){2,61}(?:\.[a-zA-Z]{2,})+)?/?$")
+WEBSITE_RE = re.compile(
+	r"^((?:http(?:s){0,5}(:\/\/){0,1}){0,1}(?:[a-zA-Z0-9-_.]){2,61}(?:\.[a-zA-Z]{2,})+)?/?$"
+)
+
 
 def ldap_user_validator(v: str):
 	def has_invalid_chars(s: str):
 		return re.match(r'.*[\.\@\]\["\:\;\|\=\+\*\?\<\>\/\\\,]', s) is not None
+
 	return not has_invalid_chars(v)
+
 
 def ldap_user_validator_se(v: str):
 	if not ldap_user_validator(v):
 		raise ValidationError("Username contains invalid characters.")
 	return v
+
 
 def dn_validator_se(v: str):
 	try:
@@ -24,10 +30,12 @@ def dn_validator_se(v: str):
 		raise ValidationError("Could not parse Distinguished Name.")
 	return v
 
+
 def country_validator(v: str):
 	if not v.strip().lower() in [c.lower() for c in LDAP_COUNTRIES.keys()]:
 		raise ValidationError("Invalid country name.")
 	return v
+
 
 def country_dcc_validator(v: int):
 	try:
@@ -37,6 +45,7 @@ def country_dcc_validator(v: int):
 	except:
 		pass
 	raise ValidationError(f"Country DCC code ({v}) not found.")
+
 
 def country_iso_validator(v: str):
 	if len(v) > 2:
@@ -49,15 +58,18 @@ def country_iso_validator(v: str):
 		pass
 	raise ValidationError(f"Country DCC code ({v}) not found.")
 
+
 def ldap_permission_validator(v: str):
 	if not v in LDAP_PERMS.keys():
 		raise ValidationError(f"LDAP Permission is invalid ({v}).")
 	return v
 
+
 def website_validator(v: str):
 	if not WEBSITE_RE.match(v):
 		raise ValidationError(f"Website validation failed.")
 	return v
+
 
 class DistinguishedNameField(serializers.CharField):
 	def __init__(self, **kwargs):

@@ -144,8 +144,7 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		)
 		try:
 			ldap_filter_object = self.process_ldap_filter(
-				data_filter=data_filter,
-				default_filter=data_filter_use_defaults
+				data_filter=data_filter, default_filter=data_filter_use_defaults
 			).to_string()
 		except Exception as e:
 			logger.exception(e)
@@ -222,14 +221,20 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 
 		ldap_object: dict = data.get("ldapObject", {})
 		if not ldap_object:
-			raise exc_base.BadRequest(data={"detail":"ldapObject dict is required in data."})
+			raise exc_base.BadRequest(
+				data={"detail": "ldapObject dict is required in data."}
+			)
 		ldap_path: str = ldap_object.get("destination", None)
 		distinguished_name: str = ldap_object.get("distinguishedName", None)
 
 		if not ldap_path:
-			raise exc_base.BadRequest(data={"detail":"destination is required."})
+			raise exc_base.BadRequest(
+				data={"detail": "destination is required."}
+			)
 		if not distinguished_name:
-			raise exc_base.BadRequest(data={"detail":"distinguishedName is required."})
+			raise exc_base.BadRequest(
+				data={"detail": "distinguishedName is required."}
+			)
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
@@ -258,14 +263,18 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 
 		ldap_object: dict = data.get("ldapObject", {})
 		if not ldap_object:
-			raise exc_base.BadRequest(data={"detail":"ldapObject dict is required in data."})
+			raise exc_base.BadRequest(
+				data={"detail": "ldapObject dict is required in data."}
+			)
 		distinguished_name: str = ldap_object.get("distinguishedName", None)
 		new_rdn: str = ldap_object.get("newRDN", None)
 
 		if not distinguished_name:
-			raise exc_base.BadRequest(data={"detail":"distinguishedName is required."})
+			raise exc_base.BadRequest(
+				data={"detail": "distinguishedName is required."}
+			)
 		if not new_rdn:
-			raise exc_base.BadRequest(data={"detail":"newRDN is required."})
+			raise exc_base.BadRequest(data={"detail": "newRDN is required."})
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
@@ -293,9 +302,15 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 
 		ldap_object: dict = data.get("ldapObject", {})
 		if not ldap_object:
-			raise exc_base.BadRequest(data={"detail":"ldapObject dict is required in data."})
+			raise exc_base.BadRequest(
+				data={"detail": "ldapObject dict is required in data."}
+			)
 
-		fields = ("name", "path", "type",)
+		fields = (
+			"name",
+			"path",
+			"type",
+		)
 		for _fld in fields:
 			if _fld not in ldap_object:
 				logger.error(_fld + " not in LDAP Object.")
@@ -306,8 +321,16 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		object_type: str = ldap_object["type"]
 
 		# Validate object type
-		if ldap_object.get("type") not in ("ou", "computer", "printer",):
-			raise exc_base.BadRequest(data={"detail":"object type must be one of (ou, computer, printer)."})
+		if ldap_object.get("type") not in (
+			"ou",
+			"computer",
+			"printer",
+		):
+			raise exc_base.BadRequest(
+				data={
+					"detail": "object type must be one of (ou, computer, printer)."
+				}
+			)
 
 		attributes = {"name": object_name}
 
@@ -334,16 +357,18 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				result_description = getattr(
 					self.ldap_connection.result,
 					"description",
-					"unhandledLdapException"
+					"unhandledLdapException",
 				)
 				code = status.HTTP_500_INTERNAL_SERVER_ERROR
 				if result_description.lower() == "entryalreadyexists":
 					code = status.HTTP_409_CONFLICT
-				raise exc_ou.OUCreate(data={
-					"ldap_response": result_description,
-					"ldapObject": object_name,
-					"code": code,
-				})
+				raise exc_ou.OUCreate(
+					data={
+						"ldap_response": result_description,
+						"ldapObject": object_name,
+						"code": code,
+					}
+				)
 
 		DBLogMixin.log(
 			user=user.id,
@@ -381,13 +406,15 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			except Exception as e:
 				logger.exception(e)
 				logger.error(f"Could not delete LDAP Object: {object_dn}")
-				raise exc_base.LDAPBackendException(data={
-					"ldap_response": getattr(
-						self.ldap_connection.result,
-						"description",
-						"unhandledLdapException"
-					)
-				})
+				raise exc_base.LDAPBackendException(
+					data={
+						"ldap_response": getattr(
+							self.ldap_connection.result,
+							"description",
+							"unhandledLdapException",
+						)
+					}
+				)
 
 		DBLogMixin.log(
 			user=user.id,

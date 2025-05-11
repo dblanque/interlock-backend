@@ -23,11 +23,13 @@ import logging
 ################################################################################
 logger = logging.getLogger()
 
+
 class LDAPTree(LDAPObject):
 	"""
 	## LDAPTree Object
 	Fetches LDAP Directory Tree from the default Search Base or a specified Level
 	"""
+
 	# Django only
 	use_in_migrations = False
 
@@ -46,11 +48,13 @@ class LDAPTree(LDAPObject):
 		required_attributes: list[str] = None,
 		recursive: bool = False,
 		test_fetch: bool = False,
-	) -> None:
-		...
+	) -> None: ...
 
 	def __init__(self, **kwargs):
-		for a in ("recursive", "test_fetch",):
+		for a in (
+			"recursive",
+			"test_fetch",
+		):
 			if a in kwargs:
 				setattr(self, a, kwargs.pop(a))
 		kwargs.pop("skip_fetch", None)
@@ -62,23 +66,29 @@ class LDAPTree(LDAPObject):
 		self.search_filter = LDAPFilter.and_(
 			# Object Class
 			LDAPFilter.or_(
-				*[LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, v) for v in (
-					"user",
-					"person",
-					"group",
-					"organizationalPerson",
-					"computer",
-				)]
+				*[
+					LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, v)
+					for v in (
+						"user",
+						"person",
+						"group",
+						"organizationalPerson",
+						"computer",
+					)
+				]
 			),
 			# Object Category
 			LDAPFilter.or_(
-				*[LDAPFilter.eq(LDAP_ATTR_OBJECT_CATEGORY, v) for v in (
-					"organizationalUnit",
-					"top",
-					"container",
-				)],
+				*[
+					LDAPFilter.eq(LDAP_ATTR_OBJECT_CATEGORY, v)
+					for v in (
+						"organizationalUnit",
+						"top",
+						"container",
+					)
+				],
 				LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "builtinDomain"),
-			)
+			),
 		).to_string()
 		self.children_object_type = list
 
@@ -166,9 +176,7 @@ class LDAPTree(LDAPObject):
 			elif self.children_object_type == dict:
 				###### Append subobject to Dict ######
 				children[_current_obj[LOCAL_ATTR_DN]] = _current_obj
-				children[_current_obj[LOCAL_ATTR_DN]].pop(
-					LOCAL_ATTR_DN
-				)
+				children[_current_obj[LOCAL_ATTR_DN]].pop(LOCAL_ATTR_DN)
 
 				###### Increase subobject_id ######
 				self.subobject_id += 1
@@ -218,7 +226,7 @@ class LDAPTree(LDAPObject):
 		)
 
 		for entry in self.connection.entries:
-			entry: LDAPEntry# Set the sub-object children
+			entry: LDAPEntry  # Set the sub-object children
 			children = None
 
 			# Setup sub-object main attributes
@@ -246,7 +254,8 @@ class LDAPTree(LDAPObject):
 			# Construct subobject
 			if (
 				_current_obj[LOCAL_ATTR_NAME] in LDAP_BUILTIN_OBJECTS
-				or "builtinDomain" in getldapattrvalue(entry, LDAP_ATTR_OBJECT_CLASS)
+				or "builtinDomain"
+				in getldapattrvalue(entry, LDAP_ATTR_OBJECT_CLASS)
 				or common_name in LDAP_BUILTIN_OBJECTS
 				or common_name == "Domain Controllers"
 			) and (
@@ -258,8 +267,11 @@ class LDAPTree(LDAPObject):
 			# Force exclude System folder, has a bunch of objects that aren't useful for administration
 			if (
 				self.recursive
-				and _current_obj[LOCAL_ATTR_TYPE] in
-					("container", "organizational-unit",)
+				and _current_obj[LOCAL_ATTR_TYPE]
+				in (
+					"container",
+					"organizational-unit",
+				)
 				and common_name.lower() != "system"
 			):
 				children = self.__get_children__(entry.entry_dn)

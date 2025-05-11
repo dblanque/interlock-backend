@@ -38,7 +38,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class GPOViewSet(BaseViewSet): # pragma: no cover
+class GPOViewSet(BaseViewSet):  # pragma: no cover
 	@auth_required
 	@admin_required
 	def list(self, request):
@@ -58,8 +58,7 @@ class GPOViewSet(BaseViewSet): # pragma: no cover
 
 			### List GPOs here
 			self.ldap_filter_object = LDAPFilter.and_(
-				LDAPFilter.has("gpLink"),
-				LDAPFilter.has(LDAP_ATTR_OBJECT_CLASS)
+				LDAPFilter.has("gpLink"), LDAPFilter.has(LDAP_ATTR_OBJECT_CLASS)
 			).to_string()
 			try:
 				self.ldap_connection.search(
@@ -71,7 +70,12 @@ class GPOViewSet(BaseViewSet): # pragma: no cover
 				self.ldap_connection.unbind()
 				raise
 			data["gpos"] = []
-			data["headers"] = [LDAP_ATTR_FULL_NAME, "gPCFileSysPath", "dn", "flags"]
+			data["headers"] = [
+				LDAP_ATTR_FULL_NAME,
+				"gPCFileSysPath",
+				"dn",
+				"flags",
+			]
 			for i in self.ldap_connection.entries:
 				data["gpos"].append(i.entry_attributes_as_dict)
 
@@ -84,13 +88,18 @@ class GPOViewSet(BaseViewSet): # pragma: no cover
 						raise
 				if LDAP_ATTR_SECURITY_ID in gpo:
 					try:
-						gpo[LDAP_ATTR_SECURITY_ID] = SID(gpo[LDAP_ATTR_SECURITY_ID]).__str__()
+						gpo[LDAP_ATTR_SECURITY_ID] = SID(
+							gpo[LDAP_ATTR_SECURITY_ID]
+						).__str__()
 					except:
 						raise
 
 			self.ldap_filter_object = LDAPFilter.and_(
 				LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "*"),
-				LDAPFilter.eq(LDAP_ATTR_DN, "CN={6AC1786C-016F-11D2-945F-00C04FB984F9},CN=Policies,CN=System,DC=brconsulting")
+				LDAPFilter.eq(
+					LDAP_ATTR_DN,
+					"CN={6AC1786C-016F-11D2-945F-00C04FB984F9},CN=Policies,CN=System,DC=brconsulting",
+				),
 			).to_string()
 			try:
 				self.ldap_connection.search(

@@ -220,6 +220,7 @@ def test_init_with_existing_instance(mocker):
 	mock_resync.assert_not_called()
 	assert new_instance.uuid == original_uuid
 
+
 def test_resync_with_defaults(mocker):
 	m_logger = mocker.patch("core.models.ldap_settings_runtime.logger")
 	mocker.patch.object(RuntimeSettingsSingleton, "__init__", return_value=None)
@@ -282,6 +283,7 @@ def test_resync_returns_false_on_exception(mocker):
 	)
 	assert instance.resync() is False
 	m_postsync.assert_not_called()
+
 
 def test_get_settings_no_preset():
 	m_settings = get_settings("non-existing-uuid")

@@ -27,10 +27,13 @@ BUILTIN_USERS = (
 	("krbtgt", 502),
 )
 
+
 class UserViewsetFilterAttributeBuilder:
 	def __init__(self, settings: RuntimeSettingsSingleton):
 		if not isinstance(settings, RuntimeSettingsSingleton):
-			raise TypeError("Initialization for cls requires RuntimeSettingsSingleton instance.")
+			raise TypeError(
+				"Initialization for cls requires RuntimeSettingsSingleton instance."
+			)
 		self.RuntimeSettings = settings
 
 	def get_list_attrs(self):

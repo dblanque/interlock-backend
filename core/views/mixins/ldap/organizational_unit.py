@@ -348,7 +348,9 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 		Returns:
 			str: New Distinguished Name for LDAP Entry / Object
 		"""
-		if getattr(self, "connection", None) and not hasattr(self, "ldap_connection"):
+		if getattr(self, "connection", None) and not hasattr(
+			self, "ldap_connection"
+		):
 			self.ldap_connection = self.connection
 
 		try:
@@ -442,7 +444,9 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 		try:
 			responsible_user = self.request.user
 		except:
-			responsible_user = User.objects.get(_distinguished_name=self.ldap_connection.user)
+			responsible_user = User.objects.get(
+				_distinguished_name=self.ldap_connection.user
+			)
 		DBLogMixin.log(
 			user=responsible_user.id,
 			operation_type=LOG_ACTION_UPDATE,

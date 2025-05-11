@@ -96,7 +96,11 @@ def recursive_member_search(
 	connection.search(
 		RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
 		ldap_filter_object,
-		attributes=[LDAP_ATTR_GROUP_MEMBERS, LDAP_ATTR_OBJECT_CLASS, LDAP_ATTR_DN],
+		attributes=[
+			LDAP_ATTR_GROUP_MEMBERS,
+			LDAP_ATTR_OBJECT_CLASS,
+			LDAP_ATTR_DN,
+		],
 	)
 	for e in connection.entries:
 		e_object_classes = getldapattr(e, LDAP_ATTR_OBJECT_CLASS)
@@ -120,14 +124,18 @@ def recursive_member_search(
 	return False
 
 
-def sync_user_relations(user: User, ldap_attributes: dict[list], *, connection=None):
+def sync_user_relations(
+	user: User, ldap_attributes: dict[list], *, connection=None
+):
 	_username_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME]
 	_username: str = ldap_attributes.get(_username_field, [])[0]
 	_distinguished_name = ldap_attributes.get(LDAP_ATTR_DN, [])[0]
 	if not _username:
 		raise ValueError("Username not present in User LDAP Attributes.")
 	if not _distinguished_name:
-		raise ValueError("Distinguished Name not present in User LDAP Attributes.")
+		raise ValueError(
+			"Distinguished Name not present in User LDAP Attributes."
+		)
 
 	# Set user as LDAP Type for Distinguished Name getter/setter to work
 	user.user_type = USER_TYPE_LDAP
@@ -368,10 +376,12 @@ class LDAPConnector(object):
 		if exc_value:
 			if isinstance(exc_value, LDAPOperationResult):
 				logger.exception(exc_value)
-				raise exc_base.LDAPBackendException(data={
-					"code": exc_value.description,
-					"detail": exc_value.message,
-				})
+				raise exc_base.LDAPBackendException(
+					data={
+						"code": exc_value.description,
+						"detail": exc_value.message,
+					}
+				)
 			else:
 				logger.exception(exc_value)
 				raise exc_value

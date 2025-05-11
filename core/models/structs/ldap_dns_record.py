@@ -147,7 +147,12 @@ RECORD_MAPPINGS = {
 		"name": "SRV",
 		"class": "DNS_RPC_RECORD_SRV",
 		"main_field": LDNS_ATTR_SRV_TARGET,
-		"fields": [LDNS_ATTR_SRV_PRIORITY, LDNS_ATTR_SRV_WEIGHT, LDNS_ATTR_SRV_PORT, LDNS_ATTR_SRV_TARGET],
+		"fields": [
+			LDNS_ATTR_SRV_PRIORITY,
+			LDNS_ATTR_SRV_WEIGHT,
+			LDNS_ATTR_SRV_PORT,
+			LDNS_ATTR_SRV_TARGET,
+		],
 		"multi_record": True,
 	},
 	RecordTypes.DNS_RECORD_TYPE_PTR.value: {
@@ -210,7 +215,9 @@ def record_to_dict(record: "DNS_RECORD", ts=False):
 			record_dict[LDNS_ATTR_TOMBSTONED] = ts.lower() == "true"
 	elif isinstance(ts, Iterable):
 		if len(ts) >= 1:
-			record_dict[LDNS_ATTR_TOMBSTONED] = ts[0] == True or str(ts[0]).lower() == "true"
+			record_dict[LDNS_ATTR_TOMBSTONED] = (
+				ts[0] == True or str(ts[0]).lower() == "true"
+			)
 
 	record_dict[LDNS_ATTR_TYPE] = record[LDNS_ATTR_STRUCT_TYPE]
 	record_dict[LDNS_ATTR_TYPE_NAME] = rtype
@@ -219,13 +226,16 @@ def record_to_dict(record: "DNS_RECORD", ts=False):
 	# If the Record Type is Mapped to a Class
 	if record[LDNS_ATTR_STRUCT_TYPE] in RECORD_MAPPINGS:
 		# Initialize the class with the record Data key
-		data = getattr(thismodule, RECORD_MAPPINGS[record[LDNS_ATTR_STRUCT_TYPE]]["class"])(
-			record[LDNS_ATTR_STRUCT_DATA]
-		)
+		data = getattr(
+			thismodule, RECORD_MAPPINGS[record[LDNS_ATTR_STRUCT_TYPE]]["class"]
+		)(record[LDNS_ATTR_STRUCT_DATA])
 
 		# ! Print class ! #
 		logger.debug(
-			getattr(thismodule, RECORD_MAPPINGS[record[LDNS_ATTR_STRUCT_TYPE]]["class"])
+			getattr(
+				thismodule,
+				RECORD_MAPPINGS[record[LDNS_ATTR_STRUCT_TYPE]]["class"],
+			)
 		)
 
 		fqdnFields = [
@@ -236,18 +246,22 @@ def record_to_dict(record: "DNS_RECORD", ts=False):
 			LDNS_ATTR_SOA_EMAIL,
 		]
 		# For each value field mapped for this Record Type set it
-		for valueField in RECORD_MAPPINGS[record[LDNS_ATTR_STRUCT_TYPE]]["fields"]:
+		for valueField in RECORD_MAPPINGS[record[LDNS_ATTR_STRUCT_TYPE]][
+			"fields"
+		]:
 			try:
 				if valueField == LDNS_ATTR_TOMBSTONE_TIME:
 					record_dict[valueField] = data.toDatetime()
 				elif (
 					valueField == LDNS_ATTR_IPV4
-					and record[LDNS_ATTR_STRUCT_TYPE] == RecordTypes.DNS_RECORD_TYPE_A.value
+					and record[LDNS_ATTR_STRUCT_TYPE]
+					== RecordTypes.DNS_RECORD_TYPE_A.value
 				):
 					record_dict[valueField] = data.formatCanonical()
 				elif (
 					valueField == LDNS_ATTR_IPV6
-					and record[LDNS_ATTR_STRUCT_TYPE] == RecordTypes.DNS_RECORD_TYPE_AAAA.value
+					and record[LDNS_ATTR_STRUCT_TYPE]
+					== RecordTypes.DNS_RECORD_TYPE_AAAA.value
 				):
 					record_dict[valueField] = data.formatCanonical()
 				elif valueField == LDNS_ATTR_STRING_DATA:
@@ -316,7 +330,7 @@ class DNS_RPC_NAME(Structure):
 
 	structure = (
 		(LDNS_ATTR_STRUCT_NAME_LENGTH, "B-dnsName"),
-		(LDNS_ATTR_STRUCT_DNS_NAME, ":")
+		(LDNS_ATTR_STRUCT_DNS_NAME, ":"),
 	)
 
 	def toString(self):
@@ -349,7 +363,7 @@ class DNS_COUNT_NAME(Structure):
 	structure = (
 		(LDNS_ATTR_STRUCT_LENGTH, "B-RawName"),
 		(LDNS_ATTR_STRUCT_LABEL_COUNT, "B"),
-		(LDNS_ATTR_STRUCT_RAW_NAME, ":")
+		(LDNS_ATTR_STRUCT_RAW_NAME, ":"),
 	)
 
 	def insert_field_to_struct(self, fieldName=None, fieldStructVal=None):
@@ -376,9 +390,13 @@ class DNS_COUNT_NAME(Structure):
 		labels = []
 		for i in range(self[LDNS_ATTR_STRUCT_LABEL_COUNT]):
 			try:
-				nextlen = unpack("B", self[LDNS_ATTR_STRUCT_RAW_NAME][ind : ind + 1])[0]
+				nextlen = unpack(
+					"B", self[LDNS_ATTR_STRUCT_RAW_NAME][ind : ind + 1]
+				)[0]
 				labels.append(
-					self[LDNS_ATTR_STRUCT_RAW_NAME][ind + 1 : ind + 1 + nextlen].decode("utf-8")
+					self[LDNS_ATTR_STRUCT_RAW_NAME][
+						ind + 1 : ind + 1 + nextlen
+					].decode("utf-8")
 				)
 				ind += nextlen + 1
 			except Exception as e:
@@ -570,7 +588,7 @@ class DNS_RPC_RECORD_NAME_PREFERENCE(Structure):
 
 	structure = (
 		(LDNS_ATTR_MX_PRIORITY, ">H"),
-		(LDNS_ATTR_MX_SERVER, ":", DNS_COUNT_NAME)
+		(LDNS_ATTR_MX_SERVER, ":", DNS_COUNT_NAME),
 	)
 
 

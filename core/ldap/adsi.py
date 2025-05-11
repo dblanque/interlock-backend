@@ -305,6 +305,7 @@ def join_ldap_filter(
 	else:
 		return combined_filter
 
+
 def bin_as_str(value: str | int):
 	if isinstance(value, int) and value < 0:
 		raise ValueError("Integer value must be greater than 0")

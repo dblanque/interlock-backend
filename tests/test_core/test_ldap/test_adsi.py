@@ -161,6 +161,7 @@ def test_join_ldap_filter_raises_invalid_expression():
 	with pytest.raises(ValueError):
 		join_ldap_filter("", "objectClass=person", "A")
 
+
 @pytest.mark.parametrize(
 	"input_value, expected",
 	(

@@ -102,7 +102,8 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			connection.search(
 				search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
 				search_filter=LDAPFilter.eq(
-					LDAP_ATTR_OBJECT_CLASS, "group").to_string(),
+					LDAP_ATTR_OBJECT_CLASS, "group"
+				).to_string(),
 				search_scope=ldap3.SUBTREE,
 				attributes=attributes,
 			)
@@ -164,9 +165,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		return data, headers
 
 	def fetch_group(self):
-		_username_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS[
-			"username"
-		]
+		_username_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
 
 		self.ldap_connection.search(
 			search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
@@ -175,11 +174,15 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		)
 		group_obj = LDAPGroup(entry=self.ldap_connection.entries[0])
 
-		attr_members = getldapattrvalue(group_obj.entry, LDAP_ATTR_GROUP_MEMBERS, [])
+		attr_members = getldapattrvalue(
+			group_obj.entry, LDAP_ATTR_GROUP_MEMBERS, []
+		)
 		member_list = []
 		if attr_members:
 			attr_members = (
-				attr_members if isinstance(attr_members, list) else [attr_members]
+				attr_members
+				if isinstance(attr_members, list)
+				else [attr_members]
 			)
 
 			# Expand members to objects
@@ -196,7 +199,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 							LDAP_ATTR_LAST_NAME,
 							LDAP_ATTR_OBJECT_CATEGORY,
 							LDAP_ATTR_OBJECT_CLASS,
-						]
+						],
 					).attributes
 				)
 			group_obj.attributes[LOCAL_ATTR_GROUP_MEMBERS] = member_list
@@ -275,9 +278,13 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		)
 		group_types = group_obj.attributes.get(LOCAL_ATTR_GROUP_TYPE, [])
 		if LDAPGroupTypes.TYPE_SYSTEM.name in group_types:
-			if not LDAPGroupTypes.TYPE_SYSTEM.name in data.get(LOCAL_ATTR_GROUP_TYPE):
+			if not LDAPGroupTypes.TYPE_SYSTEM.name in data.get(
+				LOCAL_ATTR_GROUP_TYPE
+			):
 				raise serializers.ValidationError(
-					{LOCAL_ATTR_GROUP_TYPE: "System Group cannot have its SYSTEM flag removed."}
+					{
+						LOCAL_ATTR_GROUP_TYPE: "System Group cannot have its SYSTEM flag removed."
+					}
 				)
 		if not group_obj.exists:
 			raise exc_groups.GroupDoesNotExist

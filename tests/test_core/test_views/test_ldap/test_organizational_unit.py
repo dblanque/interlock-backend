@@ -1,6 +1,7 @@
 ########################### Standard Pytest Imports ############################
 import pytest
 from pytest_mock import MockerFixture, MockType
+
 ################################################################################
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from core.models.user import User
@@ -20,11 +21,13 @@ from rest_framework.test import APIClient
 from rest_framework.response import Response
 from rest_framework import status
 
+
 @pytest.fixture(autouse=True)
 def f_log_mixin(mocker: MockerFixture):
 	m_log_mixin = mocker.Mock(name="f_log_mixin")
 	mocker.patch("core.views.ldap.organizational_unit.DBLogMixin", m_log_mixin)
 	return m_log_mixin
+
 
 @pytest.fixture(autouse=True)
 def f_logger(mocker: MockerFixture) -> Logger:
@@ -32,75 +35,88 @@ def f_logger(mocker: MockerFixture) -> Logger:
 	mocker.patch("core.views.ldap.organizational_unit.logger", m_logger)
 	return m_logger
 
+
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector) -> MockType:
 	"""Fixture to mock LDAPConnector and its context manager."""
-	return g_ldap_connector(patch_path="core.views.ldap.organizational_unit.LDAPConnector")
+	return g_ldap_connector(
+		patch_path="core.views.ldap.organizational_unit.LDAPConnector"
+	)
+
 
 @pytest.fixture
 def f_runtime_settings(
-	mocker: MockerFixture,
-	g_runtime_settings: RuntimeSettingsSingleton
+	mocker: MockerFixture, g_runtime_settings: RuntimeSettingsSingleton
 ):
-	mocker.patch("core.views.ldap.organizational_unit.RuntimeSettings", g_runtime_settings)
+	mocker.patch(
+		"core.views.ldap.organizational_unit.RuntimeSettings",
+		g_runtime_settings,
+	)
 	return g_runtime_settings
+
 
 @pytest.fixture(autouse=True)
 def f_interlock_ldap_enabled(g_interlock_ldap_enabled):
 	return g_interlock_ldap_enabled
 
+
 class TestList:
 	endpoint = "/api/ldap/ou/"
 
-	def test_ldap_tree_raises(self, mocker: MockerFixture, admin_user_client: APIClient):
+	def test_ldap_tree_raises(
+		self, mocker: MockerFixture, admin_user_client: APIClient
+	):
 		mocker.patch(
 			"core.views.ldap.organizational_unit.LDAPTree",
-			side_effect=Exception
+			side_effect=Exception,
 		)
 		response: Response = admin_user_client.get(self.endpoint)
 		assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 		assert response.data["code"] == "ldap_tree_err"
 
 	def test_success_with_perf_counter(
-			self,
-			mocker: MockerFixture,
-			admin_user: User,
-			admin_user_client: APIClient,
-			f_ldap_connector: LDAPConnectorMock,
-			f_runtime_settings: RuntimeSettingsSingleton,
-			f_log_mixin: LogMixin
-		):
+		self,
+		mocker: MockerFixture,
+		admin_user: User,
+		admin_user_client: APIClient,
+		f_ldap_connector: LDAPConnectorMock,
+		f_runtime_settings: RuntimeSettingsSingleton,
+		f_log_mixin: LogMixin,
+	):
 		# Mock Perfcounter setting
 		mocker.patch(
-			"core.views.ldap.organizational_unit.DIRTREE_PERF_LOGGING",
-			True
+			"core.views.ldap.organizational_unit.DIRTREE_PERF_LOGGING", True
 		)
-		m_perf_counter = mocker.patch("core.views.ldap.organizational_unit.perf_counter")
+		m_perf_counter = mocker.patch(
+			"core.views.ldap.organizational_unit.perf_counter"
+		)
 
 		m_ldap_tree_instance = mocker.Mock()
 		m_ldap_tree_instance.children = ["children"]
 		m_ldap_tree_cls = mocker.patch(
 			"core.views.ldap.organizational_unit.LDAPTree",
-			return_value=m_ldap_tree_instance
+			return_value=m_ldap_tree_instance,
 		)
 		response: Response = admin_user_client.get(self.endpoint)
-		m_ldap_tree_cls.assert_called_once_with(**{
-			"connection": f_ldap_connector.connection,
-			"recursive": True,
-			"ldap_filter": "(|(objectCategory=organizationalUnit)(objectCategory=top)(objectCategory=container)(objectClass=builtinDomain))",
-			"ldap_attrs": [
-				# User Attrs
-				"objectClass",
-				"objectCategory",
-				f_runtime_settings.LDAP_OU_FIELD,
-				# Group Attrs
-				"cn",
-				"member",
-				"distinguishedName",
-				"groupType",
-				"objectSid",
-			],
-		})
+		m_ldap_tree_cls.assert_called_once_with(
+			**{
+				"connection": f_ldap_connector.connection,
+				"recursive": True,
+				"ldap_filter": "(|(objectCategory=organizationalUnit)(objectCategory=top)(objectCategory=container)(objectClass=builtinDomain))",
+				"ldap_attrs": [
+					# User Attrs
+					"objectClass",
+					"objectCategory",
+					f_runtime_settings.LDAP_OU_FIELD,
+					# Group Attrs
+					"cn",
+					"member",
+					"distinguishedName",
+					"groupType",
+					"objectSid",
+				],
+			}
+		)
 		m_perf_counter.call_count == 2
 		f_log_mixin.log.assert_called_once_with(
 			user=admin_user.id,
@@ -111,74 +127,74 @@ class TestList:
 		assert response.status_code == status.HTTP_200_OK
 		assert response.data.get("ldapObjectList") == ["children"]
 
+
 class TestDirtree:
 	endpoint = "/api/ldap/ou/dirtree/"
 
-	def test_ldap_tree_raises(self, mocker: MockerFixture, admin_user_client: APIClient):
+	def test_ldap_tree_raises(
+		self, mocker: MockerFixture, admin_user_client: APIClient
+	):
 		# Mock process_ldap_filter
 		m_filter = mocker.Mock(name="m_filter")
 		m_filter_str = "fake_filter"
 		m_filter.to_string = mocker.Mock(
-			name="m_filter_to_string",
-			return_value=m_filter_str
+			name="m_filter_to_string", return_value=m_filter_str
 		)
 		mocker.patch.object(
 			LDAPOrganizationalUnitViewSet,
 			"process_ldap_filter",
-			return_value=m_filter
+			return_value=m_filter,
 		)
 
 		# Mock LDAPTree
 		mocker.patch(
 			"core.views.ldap.organizational_unit.LDAPTree",
-			side_effect=Exception
+			side_effect=Exception,
 		)
 		response: Response = admin_user_client.post(self.endpoint)
 		assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 		assert response.data["code"] == "ldap_tree_err"
 
 	def test_success_with_perf_counter(
-			self,
-			mocker: MockerFixture,
-			admin_user: User,
-			admin_user_client: APIClient,
-			f_ldap_connector: LDAPConnectorMock,
-			f_runtime_settings: RuntimeSettingsSingleton,
-			f_log_mixin: LogMixin,
-		):
+		self,
+		mocker: MockerFixture,
+		admin_user: User,
+		admin_user_client: APIClient,
+		f_ldap_connector: LDAPConnectorMock,
+		f_runtime_settings: RuntimeSettingsSingleton,
+		f_log_mixin: LogMixin,
+	):
 		# Mock process_ldap_filter
 		m_filter = mocker.Mock(name="m_filter")
 		m_filter_str = "fake_filter"
 		m_filter.to_string = mocker.Mock(
-			name="m_filter_to_string",
-			return_value=m_filter_str
+			name="m_filter_to_string", return_value=m_filter_str
 		)
 		m_process_ldap_filter = mocker.patch.object(
 			LDAPOrganizationalUnitViewSet,
 			"process_ldap_filter",
-			return_value=m_filter
+			return_value=m_filter,
 		)
 
 		# Mock Perfcounter setting
 		mocker.patch(
-			"core.views.ldap.organizational_unit.DIRTREE_PERF_LOGGING",
-			True
+			"core.views.ldap.organizational_unit.DIRTREE_PERF_LOGGING", True
 		)
-		m_perf_counter = mocker.patch("core.views.ldap.organizational_unit.perf_counter")
+		m_perf_counter = mocker.patch(
+			"core.views.ldap.organizational_unit.perf_counter"
+		)
 
 		# Mock LDAPTree
 		m_ldap_tree_instance = mocker.Mock()
 		m_ldap_tree_instance.children = ["children"]
 		m_ldap_tree_cls = mocker.patch(
 			"core.views.ldap.organizational_unit.LDAPTree",
-			return_value=m_ldap_tree_instance
+			return_value=m_ldap_tree_instance,
 		)
 
 		# Execute
 		response: Response = admin_user_client.post(
-			self.endpoint,
-			data={"filter":{}},
-			format="json"
+			self.endpoint, data={"filter": {}}, format="json"
 		)
 
 		# Assertions
@@ -186,22 +202,24 @@ class TestDirtree:
 			data_filter={},
 			default_filter=None,
 		)
-		m_ldap_tree_cls.assert_called_once_with(**{
-			"connection": f_ldap_connector.connection,
-			"recursive": True,
-			"ldap_filter": m_filter_str,
-			"ldap_attrs": [
-				# User Attrs
-				"objectClass",
-				"objectCategory",
-				f_runtime_settings.LDAP_OU_FIELD,
-				# Group Attrs
-				"cn",
-				"member",
-				"distinguishedName",
-				"groupType",
-			],
-		})
+		m_ldap_tree_cls.assert_called_once_with(
+			**{
+				"connection": f_ldap_connector.connection,
+				"recursive": True,
+				"ldap_filter": m_filter_str,
+				"ldap_attrs": [
+					# User Attrs
+					"objectClass",
+					"objectCategory",
+					f_runtime_settings.LDAP_OU_FIELD,
+					# Group Attrs
+					"cn",
+					"member",
+					"distinguishedName",
+					"groupType",
+				],
+			}
+		)
 		m_perf_counter.call_count == 2
 		f_log_mixin.log.assert_called_once_with(
 			user=admin_user.id,
@@ -233,8 +251,7 @@ class TestMove:
 		f_ldap_connector: LDAPConnectorMock,
 	):
 		m_move_or_rename_object = mocker.patch.object(
-			LDAPOrganizationalUnitViewSet,
-			"move_or_rename_object"
+			LDAPOrganizationalUnitViewSet, "move_or_rename_object"
 		)
 
 		# Execute
@@ -246,7 +263,7 @@ class TestMove:
 					"distinguishedName": distinguished_name,
 				}
 			},
-			format="json"
+			format="json",
 		)
 		f_ldap_connector.cls_mock.assert_not_called()
 		m_move_or_rename_object.assert_not_called()
@@ -261,8 +278,7 @@ class TestMove:
 		f_ldap_connector: LDAPConnectorMock,
 	):
 		m_move_or_rename_object = mocker.patch.object(
-			LDAPOrganizationalUnitViewSet,
-			"move_or_rename_object"
+			LDAPOrganizationalUnitViewSet, "move_or_rename_object"
 		)
 		m_distinguished_name = "mock_dn"
 		m_ldap_path = "mock_path"
@@ -276,7 +292,7 @@ class TestMove:
 					"destination": m_ldap_path,
 				}
 			},
-			format="json"
+			format="json",
 		)
 		m_move_or_rename_object.assert_called_once_with(
 			distinguished_name=m_distinguished_name,
@@ -284,6 +300,7 @@ class TestMove:
 		)
 		f_ldap_connector.cls_mock.assert_called_once_with(admin_user)
 		assert response.status_code == status.HTTP_200_OK
+
 
 class TestRename:
 	endpoint = "/api/ldap/ou/rename/"
@@ -305,8 +322,7 @@ class TestRename:
 		f_ldap_connector: LDAPConnectorMock,
 	):
 		m_move_or_rename_object = mocker.patch.object(
-			LDAPOrganizationalUnitViewSet,
-			"move_or_rename_object"
+			LDAPOrganizationalUnitViewSet, "move_or_rename_object"
 		)
 
 		# Execute
@@ -318,7 +334,7 @@ class TestRename:
 					"distinguishedName": distinguished_name,
 				}
 			},
-			format="json"
+			format="json",
 		)
 		f_ldap_connector.cls_mock.assert_not_called()
 		m_move_or_rename_object.assert_not_called()
@@ -333,8 +349,7 @@ class TestRename:
 		f_ldap_connector: LDAPConnectorMock,
 	):
 		m_move_or_rename_object = mocker.patch.object(
-			LDAPOrganizationalUnitViewSet,
-			"move_or_rename_object"
+			LDAPOrganizationalUnitViewSet, "move_or_rename_object"
 		)
 		m_distinguished_name = "mock_dn"
 		m_new_rdn = "mock_rdn"
@@ -348,7 +363,7 @@ class TestRename:
 					"newRDN": m_new_rdn,
 				}
 			},
-			format="json"
+			format="json",
 		)
 		m_move_or_rename_object.assert_called_once_with(
 			distinguished_name=m_distinguished_name,
@@ -356,6 +371,7 @@ class TestRename:
 		)
 		f_ldap_connector.cls_mock.assert_called_once_with(admin_user)
 		assert response.status_code == status.HTTP_200_OK
+
 
 class TestInsert:
 	endpoint = "/api/ldap/ou/insert/"
@@ -370,14 +386,13 @@ class TestInsert:
 		f_ldap_connector.connection.add.assert_not_called()
 		f_ldap_connector.cls_mock.assert_not_called()
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
-		assert "ldapObject dict is required in data" in response.data.get("detail")
+		assert "ldapObject dict is required in data" in response.data.get(
+			"detail"
+		)
 
 	@pytest.mark.parametrize(
 		"object_type",
-		(
-			"some_bad_type",
-			None
-		),
+		("some_bad_type", None),
 	)
 	def test_raises_bad_request_on_type(
 		self,
@@ -389,13 +404,13 @@ class TestInsert:
 		response: Response = admin_user_client.post(
 			self.endpoint,
 			data={
-				"ldapObject":{
+				"ldapObject": {
 					"name": "mock_name",
 					"path": "mock_path",
 					"type": object_type,
 				}
 			},
-			format="json"
+			format="json",
 		)
 		f_ldap_connector.connection.add.assert_not_called()
 		f_ldap_connector.cls_mock.assert_not_called()
@@ -425,9 +440,7 @@ class TestInsert:
 
 		# Execute
 		response: Response = admin_user_client.post(
-			self.endpoint,
-			data={"ldapObject": m_data},
-			format="json"
+			self.endpoint, data={"ldapObject": m_data}, format="json"
 		)
 		f_ldap_connector.connection.add.assert_not_called()
 		f_ldap_connector.cls_mock.assert_not_called()
@@ -460,13 +473,14 @@ class TestInsert:
 		# Execute
 		response: Response = admin_user_client.post(
 			self.endpoint,
-			data={"ldapObject": {
+			data={
+				"ldapObject": {
 					"name": "mock_name",
 					"path": "mock_path",
 					"type": "ou",
 				}
 			},
-			format="json"
+			format="json",
 		)
 
 		# Assertions
@@ -507,16 +521,16 @@ class TestInsert:
 
 		# Execute
 		response: Response = admin_user_client.post(
-			self.endpoint,
-			data={"ldapObject": m_ldap_object},
-			format="json"
+			self.endpoint, data={"ldapObject": m_ldap_object}, format="json"
 		)
 
 		# Assertions
 		f_ldap_connector.cls_mock.assert_called_once_with(admin_user)
 		f_ldap_connector.connection.add.assert_called_once_with(
 			dn=f"{prefix}={m_name},{m_path}",
-			object_class=object_type if object_type != "ou" else "organizationalUnit",
+			object_class=object_type
+			if object_type != "ou"
+			else "organizationalUnit",
 			attributes=expected_attrs,
 		)
 		f_log_mixin.log.assert_called_once_with(
@@ -526,6 +540,7 @@ class TestInsert:
 			log_target=m_name,
 		)
 		assert response.status_code == status.HTTP_200_OK
+
 
 class TestDelete:
 	endpoint = "/api/ldap/ou/delete/"
@@ -537,9 +552,7 @@ class TestDelete:
 	):
 		# Execute
 		response: Response = admin_user_client.post(
-			self.endpoint,
-			data={"distinguishedName": None},
-			format="json"
+			self.endpoint, data={"distinguishedName": None}, format="json"
 		)
 		f_ldap_connector.cls_mock.assert_not_called()
 		assert response.status_code == status.HTTP_409_CONFLICT
@@ -558,9 +571,7 @@ class TestDelete:
 
 		# Execute
 		response: Response = admin_user_client.post(
-			self.endpoint,
-			data={"distinguishedName": "mock_dn"},
-			format="json"
+			self.endpoint, data={"distinguishedName": "mock_dn"}, format="json"
 		)
 		f_ldap_connector.connection.delete.assert_called_once_with(dn="mock_dn")
 		f_ldap_connector.cls_mock.assert_called_once_with(admin_user)
@@ -576,8 +587,8 @@ class TestDelete:
 		# Execute
 		response: Response = admin_user_client.post(
 			self.endpoint,
-			data={"name":"mock_name","distinguishedName": "mock_dn"},
-			format="json"
+			data={"name": "mock_name", "distinguishedName": "mock_dn"},
+			format="json",
 		)
 		f_ldap_connector.connection.delete.assert_called_once_with(dn="mock_dn")
 		f_ldap_connector.cls_mock.assert_called_once_with(admin_user)

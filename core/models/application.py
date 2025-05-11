@@ -19,6 +19,7 @@ def generate_client_id() -> str:
 			return client_id
 		tries += 1
 
+
 def generate_client_secret() -> str:
 	"""Generates a 48 character urlsafe token."""
 	_urlsafe_token = secrets.token_urlsafe(48)

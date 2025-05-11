@@ -43,6 +43,7 @@ import logging
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
+
 class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 	@action(detail=False, methods=["get"])
 	@auth_required
@@ -81,7 +82,6 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 			data["debug"] = INTERLOCK_DEBUG
 		return Response(data={"code": code, "code_msg": "ok", "details": data})
 
-
 	def validate_zones_filter(self, data: dict) -> str:
 		"""Validate Zones Filter for zones fetching endpoint"""
 		zone_filter = None
@@ -103,7 +103,9 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 				try:
 					domain_validator(target_zone)
 				except Exception as e:
-					raise exc_dns.DNSFieldValidatorFailed(data={"dnsZone": target_zone})
+					raise exc_dns.DNSFieldValidatorFailed(
+						data={"dnsZone": target_zone}
+					)
 		else:
 			target_zone = RuntimeSettings.LDAP_DOMAIN
 		return target_zone
@@ -116,9 +118,8 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 		user: User = request.user
 		request_data: dict = request.data
 		target_zone = self.validate_zones_filter(data=request_data)
-		response_data=self.get_zone_records(
-			user = user,
-			target_zone = target_zone
+		response_data = self.get_zone_records(
+			user=user, target_zone=target_zone
 		)
 
 		return Response(
@@ -180,8 +181,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 			raise exc_dns.DNSZoneNotDeletable
 
 		result_zone, result_forest = self.delete_zone(
-			user=user,
-			target_zone=target_zone
+			user=user, target_zone=target_zone
 		)
 
 		return Response(

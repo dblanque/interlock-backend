@@ -29,8 +29,10 @@ from ldap3 import Entry as LDAPEntry
 from typing import overload
 from logging import getLogger
 from core.models.ldap_object import LDAPObject, LDAPObjectTypes
+
 ################################################################################
 logger = getLogger()
+
 
 class LDAPUser(LDAPObject):
 	type = LDAPObjectTypes.USER
@@ -72,7 +74,9 @@ class LDAPUser(LDAPObject):
 
 		# Type check Entry
 		if self.entry and not isinstance(self.entry, LDAPEntry):
-			raise TypeError("LDAPUser entry must attr must be of type ldap3.Entry")
+			raise TypeError(
+				"LDAPUser entry must attr must be of type ldap3.Entry"
+			)
 
 		if not self.connection and not self.entry:
 			raise Exception(
@@ -90,13 +94,13 @@ class LDAPUser(LDAPObject):
 				if not isinstance(_entry_dn, str):
 					raise TypeError("entry_dn must be of type str")
 				self.search_filter = LDAPFilter.eq(
-					LDAP_ATTR_DN,
-					_entry_dn
+					LDAP_ATTR_DN, _entry_dn
 				).to_string()
-		elif self.distinguished_name and isinstance(self.distinguished_name, str):
+		elif self.distinguished_name and isinstance(
+			self.distinguished_name, str
+		):
 			self.search_filter = LDAPFilter.eq(
-				LDAP_ATTR_DN,
-				self.distinguished_name
+				LDAP_ATTR_DN, self.distinguished_name
 			).to_string()
 		elif self.username and isinstance(self.username, str):
 			_USER_CLASSES = {
@@ -107,13 +111,12 @@ class LDAPUser(LDAPObject):
 			}
 			self.search_filter = LDAPFilter.and_(
 				LDAPFilter.or_(
-					*[LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, auth_class)
-	   				for auth_class in _USER_CLASSES]
+					*[
+						LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, auth_class)
+						for auth_class in _USER_CLASSES
+					]
 				),
-				LDAPFilter.eq(
-					LDAP_ATTR_USERNAME_SAMBA_ADDS,
-					self.username
-				)
+				LDAPFilter.eq(LDAP_ATTR_USERNAME_SAMBA_ADDS, self.username),
 			).to_string()
 
 	@overload
@@ -127,8 +130,7 @@ class LDAPUser(LDAPObject):
 		excluded_attributes: list[str] = None,
 		required_attributes: list[str] = None,
 		attributes: dict = None,
-	) -> None:
-		...
+	) -> None: ...
 
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
@@ -160,8 +162,12 @@ class LDAPUser(LDAPObject):
 			self.attributes[LOCAL_ATTR_COUNTRY_DCC] = ""
 			self.attributes[LOCAL_ATTR_COUNTRY_ISO] = ""
 		else:
-			self.attributes[LOCAL_ATTR_COUNTRY_DCC] = LDAP_COUNTRIES[value]["dccCode"]
-			self.attributes[LOCAL_ATTR_COUNTRY_ISO] = LDAP_COUNTRIES[value]["isoCode"]
+			self.attributes[LOCAL_ATTR_COUNTRY_DCC] = LDAP_COUNTRIES[value][
+				"dccCode"
+			]
+			self.attributes[LOCAL_ATTR_COUNTRY_ISO] = LDAP_COUNTRIES[value][
+				"isoCode"
+			]
 
 		for attr in _COUNTRY_ATTRS:
 			if not attr in self.parsed_specials:
@@ -171,13 +177,17 @@ class LDAPUser(LDAPObject):
 		if value is None:
 			return
 		if value and isinstance(value, list):
-			self.attributes[LOCAL_ATTR_UAC] = calc_permissions(permission_list=value)
+			self.attributes[LOCAL_ATTR_UAC] = calc_permissions(
+				permission_list=value
+			)
 		else:
-			self.attributes[LOCAL_ATTR_UAC] = calc_permissions([LDAP_UF_NORMAL_ACCOUNT])
+			self.attributes[LOCAL_ATTR_UAC] = calc_permissions(
+				[LDAP_UF_NORMAL_ACCOUNT]
+			)
 		if not LOCAL_ATTR_UAC in self.parsed_specials:
 			self.parsed_specials.append(LOCAL_ATTR_UAC)
 
-	def parse_group_operations(self, groups_to_add = None, groups_to_remove = None):
+	def parse_group_operations(self, groups_to_add=None, groups_to_remove=None):
 		# De-duplicate group ops
 		if groups_to_add:
 			groups_to_add = set(groups_to_add)
@@ -207,8 +217,9 @@ class LDAPUser(LDAPObject):
 		if not self.entry:
 			raise ValueError("No LDAP Entry for LDAPObjectUser")
 		if not LDAP_ATTR_UAC in self.entry.entry_attributes:
-			raise ValueError("%s attribute is required in entry search" \
-				% (LDAP_ATTR_UAC))
+			raise ValueError(
+				"%s attribute is required in entry search" % (LDAP_ATTR_UAC)
+			)
 
 		return not list_user_perms(
 			user=self.entry,

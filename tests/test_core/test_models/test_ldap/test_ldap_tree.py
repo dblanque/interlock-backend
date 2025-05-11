@@ -5,6 +5,7 @@ from core.models.ldap_object import LDAPObject
 from core.config.runtime import RuntimeSettings
 from ldap3 import LEVEL
 
+
 # Create a spy wrapper to track calls AND execute original
 def init_spy(self, *args, **kwargs):
 	"""Wrapper that calls original __init__ and records the call"""

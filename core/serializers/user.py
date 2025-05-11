@@ -21,19 +21,23 @@ from core.serializers.ldap import (
 	website_validator,
 )
 
+
 def validate_password_match(password: str, password_confirm: str) -> str:
 	"""Validates password match with confirm field, returns value if valid"""
 	# Only validate if password is being set/changed
 	if password:
 		if not password_confirm:
 			raise serializers.ValidationError(
-				{LOCAL_ATTR_PASSWORD_CONFIRM: "Password confirmation is required when setting password"}
+				{
+					LOCAL_ATTR_PASSWORD_CONFIRM: "Password confirmation is required when setting password"
+				}
 			)
 		if password != password_confirm:
 			raise serializers.ValidationError(
 				{LOCAL_ATTR_PASSWORD_CONFIRM: "Passwords do not match"}
 			)
 	return password
+
 
 class UserSerializer(serializers.ModelSerializer):
 	password_confirm = serializers.CharField(
@@ -53,7 +57,9 @@ class UserSerializer(serializers.ModelSerializer):
 			LOCAL_ATTR_PASSWORD_CONFIRM,
 		)
 		extra_kwargs = {
-			LOCAL_ATTR_PASSWORD: {'write_only': True}  # Also hide password in responses
+			LOCAL_ATTR_PASSWORD: {
+				"write_only": True
+			}  # Also hide password in responses
 		}
 
 	def validate(self, data: dict):
@@ -66,12 +72,18 @@ class UserSerializer(serializers.ModelSerializer):
 		data.pop(LOCAL_ATTR_PASSWORD_CONFIRM, None)
 		return data
 
+
 class LDAPUserSerializer(serializers.Serializer):
 	name = serializers.CharField(required=False)
 	# Distinguished Name
 	distinguished_name = DistinguishedNameField(required=False)
 	# Username
-	username = serializers.CharField(required=False, min_length=1, max_length=21, validators=[ldap_user_validator_se])
+	username = serializers.CharField(
+		required=False,
+		min_length=1,
+		max_length=21,
+		validators=[ldap_user_validator_se],
+	)
 	# Email
 	email = serializers.CharField(
 		allow_blank=True,
@@ -80,9 +92,7 @@ class LDAPUserSerializer(serializers.Serializer):
 		validators=[validate_email],
 	)
 	password = serializers.CharField(
-		allow_blank=True,
-		required=False,
-		write_only=True
+		allow_blank=True, required=False, write_only=True
 	)
 	password_confirm = serializers.CharField(
 		required=False,
@@ -108,7 +118,7 @@ class LDAPUserSerializer(serializers.Serializer):
 		allow_blank=True,
 		allow_null=True,
 		required=False,
-		validators=[website_validator]
+		validators=[website_validator],
 	)
 	# Phone Number
 	phone = serializers.CharField(
@@ -116,7 +126,7 @@ class LDAPUserSerializer(serializers.Serializer):
 		allow_null=True,
 		required=False,
 		max_length=33,
-		min_length=2
+		min_length=2,
 	)
 	# Street Address
 	street_address = serializers.CharField(
@@ -124,7 +134,7 @@ class LDAPUserSerializer(serializers.Serializer):
 		allow_null=True,
 		required=False,
 		max_length=254,
-		min_length=2
+		min_length=2,
 	)
 	# Postal Code
 	postal_code = serializers.CharField(
@@ -153,9 +163,7 @@ class LDAPUserSerializer(serializers.Serializer):
 	)
 	# Number Code for Country
 	country_code_dcc = serializers.IntegerField(
-		allow_null=True,
-		required=False,
-		validators=[country_dcc_validator]
+		allow_null=True, required=False, validators=[country_dcc_validator]
 	)
 	# Two letter Country Code
 	country_code_iso = serializers.CharField(
@@ -163,7 +171,7 @@ class LDAPUserSerializer(serializers.Serializer):
 		allow_null=True,
 		max_length=3,
 		required=False,
-		validators=[country_iso_validator]
+		validators=[country_iso_validator],
 	)
 	user_principal_name = serializers.CharField(required=False)
 	user_account_control = serializers.IntegerField(required=False)
@@ -191,7 +199,9 @@ class LDAPUserSerializer(serializers.Serializer):
 	bad_password_count = serializers.IntegerField(required=False)
 	password_set_at = serializers.IntegerField(required=False)
 	primary_group_id = serializers.IntegerField(required=False)
-	object_class = serializers.ListField(required=False, child=serializers.CharField())
+	object_class = serializers.ListField(
+		required=False, child=serializers.CharField()
+	)
 	object_category = serializers.CharField(required=False)
 	object_security_id = serializers.CharField(required=False)
 	object_relative_id = serializers.IntegerField(required=False)
@@ -199,12 +209,18 @@ class LDAPUserSerializer(serializers.Serializer):
 	is_enabled = serializers.BooleanField(required=False)
 	permissions = serializers.ListField(
 		required=False,
-		child=serializers.CharField(validators=[ldap_permission_validator])
+		child=serializers.CharField(validators=[ldap_permission_validator]),
 	)
 	# TODO - Serialize groups with LDAPGroupSerializer
-	groups = serializers.ListField(required=False, child=serializers.DictField())
-	groups_to_add = serializers.ListField(required=False, child=DistinguishedNameField())
-	groups_to_remove = serializers.ListField(required=False, child=DistinguishedNameField())
+	groups = serializers.ListField(
+		required=False, child=serializers.DictField()
+	)
+	groups_to_add = serializers.ListField(
+		required=False, child=DistinguishedNameField()
+	)
+	groups_to_remove = serializers.ListField(
+		required=False, child=DistinguishedNameField()
+	)
 
 	def validate(self, data: dict):
 		"""Handle extra validation"""

@@ -8,7 +8,10 @@ from rest_framework import status
 def f_interlock_ldap_disabled(g_interlock_ldap_disabled):
 	return g_interlock_ldap_disabled
 
-def test_ldap_backend_disabled(g_ldap_domain_endpoints, admin_user_client: APIClient):
+
+def test_ldap_backend_disabled(
+	g_ldap_domain_endpoints, admin_user_client: APIClient
+):
 	url, method = g_ldap_domain_endpoints
 	method = getattr(admin_user_client, method)
 	response: Response = method(url)

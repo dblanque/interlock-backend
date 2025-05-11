@@ -183,7 +183,11 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				)
 
 		return Response(
-			data={"code": code, "code_msg": code_msg, "data": data[LOCAL_ATTR_USERNAME]}
+			data={
+				"code": code,
+				"code_msg": code_msg,
+				"data": data[LOCAL_ATTR_USERNAME],
+			}
 		)
 
 	@auth_required
@@ -201,7 +205,10 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		).get_update_attrs()
 		########################################################################
 		user_to_update = data.get(LOCAL_ATTR_USERNAME, None)
-		EXCLUDE_KEYS = (LOCAL_ATTR_LAST_LOGIN_WIN32, LOCAL_ATTR_PWD_SET_AT,)
+		EXCLUDE_KEYS = (
+			LOCAL_ATTR_LAST_LOGIN_WIN32,
+			LOCAL_ATTR_PWD_SET_AT,
+		)
 		for k in EXCLUDE_KEYS:
 			data.pop(k, None)
 
@@ -212,8 +219,9 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		data = serializer.validated_data
 
 		if user_to_update == user.username:
-			if (ldap_adsi.LDAP_UF_ACCOUNT_DISABLE in
-	   				data.get(LOCAL_ATTR_PERMISSIONS, [])):
+			if ldap_adsi.LDAP_UF_ACCOUNT_DISABLE in data.get(
+				LOCAL_ATTR_PERMISSIONS, []
+			):
 				raise exc_user.UserAntiLockout
 
 		# Open LDAP Connection
@@ -247,10 +255,15 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		code = 0
 		code_msg = "ok"
 
-		for required_key in (LOCAL_ATTR_USERNAME, "enabled",):
+		for required_key in (
+			LOCAL_ATTR_USERNAME,
+			"enabled",
+		):
 			if required_key not in data or data.get(required_key, None) is None:
 				raise BadRequest(
-					data={"detail":f"{required_key} key must be in dictionary."}
+					data={
+						"detail": f"{required_key} key must be in dictionary."
+					}
 				)
 		username = data.pop(LOCAL_ATTR_USERNAME)
 		enabled = data.pop("enabled")
@@ -300,7 +313,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			LOCAL_ATTR_USERNAME,
 			data.get(
 				RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME], None
-			)
+			),
 		)
 
 		if not username:
@@ -339,17 +352,17 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		# Get username from data
 		username = data.get(
-			LOCAL_ATTR_USERNAME, 
+			LOCAL_ATTR_USERNAME,
 			data.get(
 				RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME], None
-			)
+			),
 		)
 		password = data.get(LOCAL_ATTR_PASSWORD, None)
 		password_confirm = data.get(LOCAL_ATTR_PASSWORD_CONFIRM, None)
 
 		if not username or not password:
 			raise exc_base.BadRequest
-		
+
 		if password != password_confirm:
 			raise exc_user.UserPasswordsDontMatch
 
@@ -410,9 +423,8 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		username = data.get(
 			LOCAL_ATTR_USERNAME,
 			data.get(
-				RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
-				None
-			)
+				RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME], None
+			),
 		)
 		if not username:
 			raise exc_base.BadRequest
@@ -451,7 +463,12 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		code = 0
 		code_msg = "ok"
 		data = request.data
-		DATA_HEADERS = ("headers", "users", LOCAL_ATTR_PATH, "mapping",)
+		DATA_HEADERS = (
+			"headers",
+			"users",
+			LOCAL_ATTR_PATH,
+			"mapping",
+		)
 		imported_users = []
 		skipped_users = []
 		failed_users = []
@@ -487,8 +504,8 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		# Key exclusion
 		EXCLUDE_KEYS = (
 			MAPPED_PWD_KEY,
-			LOCAL_ATTR_DN,			# We don't want any front-end generated DN
-			LOCAL_ATTR_DN_SHORT,	# We don't want any front-end generated DN
+			LOCAL_ATTR_DN,  # We don't want any front-end generated DN
+			LOCAL_ATTR_DN_SHORT,  # We don't want any front-end generated DN
 		)
 		########################################################################
 
@@ -529,11 +546,13 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				mapped_row = {} if HEADER_MAPPING else row
 				if HEADER_MAPPING:
 					if not len(HEADER_MAPPING) == len(row):
-						raise ValidationError({
-							"message":"Key map length mismatch with user data",
-							"headers": HEADER_MAPPING.values(),
-							"row": row.values()
-						})
+						raise ValidationError(
+							{
+								"message": "Key map length mismatch with user data",
+								"headers": HEADER_MAPPING.values(),
+								"row": row.values(),
+							}
+						)
 
 					for key, mapped_key in HEADER_MAPPING.items():
 						mapped_row[key] = row[mapped_key]
@@ -547,7 +566,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 						{
 							LOCAL_ATTR_USERNAME: row[MAPPED_USER_KEY],
 							"stage": "serializer_validation",
-							"detail": serializer.errors
+							"detail": serializer.errors,
 						}
 					)
 					continue
@@ -572,10 +591,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				set_pwd = False
 				if user_placeholder_password:
 					set_pwd = True
-				elif (
-					MAPPED_PWD_KEY in data["headers"]
-					and row[MAPPED_PWD_KEY]
-				):
+				elif MAPPED_PWD_KEY in data["headers"] and row[MAPPED_PWD_KEY]:
 					set_pwd = True
 
 				if set_pwd:
@@ -623,15 +639,15 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		data = request.data
 
 		# Validate data keys
-		if any(v not in data for v in ["users", LOCAL_ATTR_PERMISSIONS, "values"]):
+		if any(
+			v not in data for v in ["users", LOCAL_ATTR_PERMISSIONS, "values"]
+		):
 			raise exc_base.BadRequest
 
 		values = data.get("values", {})
 		permissions = data.get(LOCAL_ATTR_PERMISSIONS, [])
 
-		EXCLUDE_KEYS = [
-			RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_EMAIL]
-		]
+		EXCLUDE_KEYS = [RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_EMAIL]]
 		for k in EXCLUDE_KEYS:
 			values.pop(k, None)
 
@@ -662,7 +678,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 						{
 							LOCAL_ATTR_USERNAME: user_to_update,
 							"stage": "serializer_validation",
-							"detail": serializer.errors
+							"detail": serializer.errors,
 						}
 					)
 					continue
@@ -752,7 +768,9 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			else:
 				raise exc_user.CouldNotUnlockUser
 
-		return Response(data={"code": code, "code_msg": code_msg, "data": response_result})
+		return Response(
+			data={"code": code, "code_msg": code_msg, "data": response_result}
+		)
 
 	@action(detail=False, methods=["post"])
 	@auth_required
@@ -805,7 +823,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			if k in data:
 				logger.warning(
 					"User %s requested password with malformed data.",
-					user.username
+					user.username,
 				)
 				raise exc_base.BadRequest
 
@@ -972,16 +990,18 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 				self.ldap_filter_object = LDAPFilter.eq(
 					LDAP_ATTR_OBJECT_CLASS,
-					RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
+					RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
 				)
 
 				# Add filter for username
 				self.ldap_filter_object = LDAPFilter.and_(
 					self.ldap_filter_object,
 					LDAPFilter.eq(
-						RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
-						user_search
-					)
+						RuntimeSettings.LDAP_AUTH_USER_FIELDS[
+							LOCAL_ATTR_USERNAME
+						],
+						user_search,
+					),
 				).to_string()
 
 				self.ldap_connection.search(
@@ -1005,7 +1025,9 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 							user_data[str_key] = str_value
 					if (
 						attr_key
-						== RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME]
+						== RuntimeSettings.LDAP_AUTH_USER_FIELDS[
+							LOCAL_ATTR_USERNAME
+						]
 					):
 						user_data[LOCAL_ATTR_USERNAME] = str_value
 

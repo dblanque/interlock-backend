@@ -7,17 +7,20 @@ from core.constants.attrs import (
 	LOCAL_ATTR_GROUP_SCOPE,
 )
 
+
 def group_type_validator(v: str):
 	try:
 		LDAPGroupTypes(v)
 	except:
 		raise serializers.ValidationError("Group Type is invalid")
 
+
 def group_scope_validator(v: str):
 	try:
 		LDAPGroupTypes(v)
 	except:
 		raise serializers.ValidationError("Group Scope is invalid")
+
 
 class LDAPGroupSerializer(serializers.Serializer):
 	# Common Name
@@ -30,24 +33,47 @@ class LDAPGroupSerializer(serializers.Serializer):
 		required=False,
 		validators=[validate_email],
 	)
-	group_types = serializers.ListField(required=False, child=serializers.CharField(validators=[group_type_validator]), max_length=2)
-	group_scopes = serializers.ListField(required=False, child=serializers.CharField(validators=[group_scope_validator]), max_length=1)
-	object_class = serializers.ListField(required=False, child=serializers.CharField())
+	group_types = serializers.ListField(
+		required=False,
+		child=serializers.CharField(validators=[group_type_validator]),
+		max_length=2,
+	)
+	group_scopes = serializers.ListField(
+		required=False,
+		child=serializers.CharField(validators=[group_scope_validator]),
+		max_length=1,
+	)
+	object_class = serializers.ListField(
+		required=False, child=serializers.CharField()
+	)
 	object_category = serializers.CharField(required=False)
 	object_security_id = serializers.CharField(required=False)
 	object_relative_id = serializers.IntegerField(required=False)
-	members = serializers.ListField(required=False, child=DistinguishedNameField())
-	members_to_add = serializers.ListField(required=False, child=DistinguishedNameField())
-	members_to_remove = serializers.ListField(required=False, child=DistinguishedNameField())
+	members = serializers.ListField(
+		required=False, child=DistinguishedNameField()
+	)
+	members_to_add = serializers.ListField(
+		required=False, child=DistinguishedNameField()
+	)
+	members_to_remove = serializers.ListField(
+		required=False, child=DistinguishedNameField()
+	)
 
 	def validate(self, data: dict):
 		"""Handle extra validation"""
 		group_types = data.get(LOCAL_ATTR_GROUP_TYPE, None)
 		group_scopes = data.get(LOCAL_ATTR_GROUP_SCOPE, None)
-		if not all(bool(x) for x in (group_types, group_scopes,)):
-			raise serializers.ValidationError({
-				LOCAL_ATTR_GROUP_TYPE:
-					"Group Type updates require both %s and %s" % 
-					(LOCAL_ATTR_GROUP_TYPE, LOCAL_ATTR_GROUP_SCOPE)
-			})
+		if not all(
+			bool(x)
+			for x in (
+				group_types,
+				group_scopes,
+			)
+		):
+			raise serializers.ValidationError(
+				{
+					LOCAL_ATTR_GROUP_TYPE: "Group Type updates require both %s and %s"
+					% (LOCAL_ATTR_GROUP_TYPE, LOCAL_ATTR_GROUP_SCOPE)
+				}
+			)
 		return data

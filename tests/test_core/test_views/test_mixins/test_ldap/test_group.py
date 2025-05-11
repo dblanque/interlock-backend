@@ -413,7 +413,9 @@ class TestGroupMixinCRUD:
 			LDAP_ATTR_GROUP_TYPE,
 			LDAP_ATTR_GROUP_MEMBERS,
 		]
-		f_group_mixin.ldap_filter_object = LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "group")
+		f_group_mixin.ldap_filter_object = LDAPFilter.eq(
+			LDAP_ATTR_OBJECT_CLASS, "group"
+		)
 		m_group_1: LDAPEntry = fc_group_entry(groupname="Test Group 1")
 		m_group_2: LDAPEntry = fc_group_entry(
 			groupname="Test Group 2",
@@ -422,7 +424,11 @@ class TestGroupMixinCRUD:
 		)
 		f_group_mixin.ldap_connection.entries = [m_group_1, m_group_2]
 		groups, headers = f_group_mixin.list_groups()
-		assert headers == [LDAP_ATTR_COMMON_NAME, LDAP_ATTR_GROUP_TYPE, "hasMembers"]
+		assert headers == [
+			LDAP_ATTR_COMMON_NAME,
+			LDAP_ATTR_GROUP_TYPE,
+			"hasMembers",
+		]
 		assert len(groups) == 2
 		assert groups[0].get(LDAP_ATTR_DN) == m_group_1.entry_dn
 		assert groups[1].get(LDAP_ATTR_DN) == m_group_2.entry_dn
@@ -755,9 +761,7 @@ class TestGroupMixinCRUD:
 	@staticmethod
 	def test_update_raises_dn_validation_error(f_group_mixin: GroupViewMixin):
 		with pytest.raises(exc_ldap.DistinguishedNameValidationError):
-			f_group_mixin.update_group(
-				data={LDAP_ATTR_DN: "Sasdadad"}
-			)
+			f_group_mixin.update_group(data={LDAP_ATTR_DN: "Sasdadad"})
 
 	@staticmethod
 	def test_update_raises_group_does_not_exist(

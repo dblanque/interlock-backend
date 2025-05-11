@@ -2,6 +2,7 @@
 import pytest
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
+
 ################################################################################
 from core.ldap.security_identifier import SID
 from core.models.ldap_object import (
@@ -21,9 +22,15 @@ from copy import deepcopy
 from ldap3 import Attribute as LDAPAttribute
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 
+
 @pytest.fixture(autouse=True)
-def f_runtime_settings(mocker: MockerFixture, g_runtime_settings: RuntimeSettingsSingleton):
-	return mocker.patch("core.models.ldap_object.RuntimeSettings", g_runtime_settings)
+def f_runtime_settings(
+	mocker: MockerFixture, g_runtime_settings: RuntimeSettingsSingleton
+):
+	return mocker.patch(
+		"core.models.ldap_object.RuntimeSettings", g_runtime_settings
+	)
+
 
 @pytest.fixture
 def f_object_args(f_connection, f_runtime_settings: RuntimeSettingsSingleton):
@@ -203,7 +210,11 @@ def test_init_raises_kwarg_exception(object_args, expected_exc_msg_match):
 	ids=lambda x: "With auto_fetch" if x else "Without auto_fetch",
 )
 def test_init(
-	mocker: MockerFixture, f_connection, f_runtime_settings: RuntimeSettingsSingleton, auto_fetch, f_object_args
+	mocker: MockerFixture,
+	f_connection,
+	f_runtime_settings: RuntimeSettingsSingleton,
+	auto_fetch,
+	f_object_args,
 ):
 	object_args = f_object_args()
 	m_set_kwargs: MockType = mocker.patch.object(LDAPObject, "__set_kwargs__")
@@ -237,9 +248,7 @@ def test_init(
 		m_fetch_object.assert_not_called()
 
 
-def test_dunder_set_kwargs(
-	mocker: MockerFixture, f_connection, f_object_args
-):
+def test_dunder_set_kwargs(mocker: MockerFixture, f_connection, f_object_args):
 	object_args = f_object_args()
 	mocker.patch.object(LDAPObject, "__fetch_object__")
 	m_ldap_object = LDAPObject(**object_args)
@@ -572,6 +581,7 @@ def test_dunder_get_common_name_handles_malformed_dn(
 	# Assert
 	assert result == "not"
 
+
 def test_dunder_mapped_attrs(f_object_entry_user, f_object_args, f_connection):
 	# Setup
 	object_args = f_object_args()
@@ -586,7 +596,10 @@ def test_dunder_mapped_attrs(f_object_entry_user, f_object_args, f_connection):
 			continue
 		assert _ldap_alias in ldap_obj.attributes.keys()
 
-def test_dunder_get_and_set_attrs(f_object_entry_user, f_object_args, f_connection):
+
+def test_dunder_get_and_set_attrs(
+	f_object_entry_user, f_object_args, f_connection
+):
 	# Setup
 	object_args = f_object_args()
 	ldap_obj = LDAPObject(auto_fetch=False, **object_args)

@@ -1,6 +1,7 @@
 ########################### Standard Pytest Imports ############################
 import pytest
 from pytest_mock import MockerFixture, MockType
+
 ################################################################################
 from tests.test_core.type_hints import LDAPConnectorMock
 from core.views.mixins.ldap.user import LDAPUserMixin

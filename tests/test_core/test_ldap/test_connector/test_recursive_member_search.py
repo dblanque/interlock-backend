@@ -2,6 +2,7 @@
 import pytest
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
+
 ################################################################################
 from core.ldap.defaults import LDAP_AUTH_SEARCH_BASE
 from core.ldap.connector import recursive_member_search

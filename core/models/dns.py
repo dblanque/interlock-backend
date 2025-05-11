@@ -301,9 +301,7 @@ class LDAPRecordMixin:
 					)
 					try:
 						logger.error(
-							record_to_dict(
-								DNS_RECORD(self.structure.getData())
-							)
+							record_to_dict(DNS_RECORD(self.structure.getData()))
 						)
 					except:
 						pass
@@ -340,9 +338,7 @@ class LDAPRecordMixin:
 				)
 				try:
 					logger.error(
-						record_to_dict(
-							DNS_RECORD(self.structure.getData())
-						)
+						record_to_dict(DNS_RECORD(self.structure.getData()))
 					)
 				except:
 					pass
@@ -827,9 +823,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			except Exception as e:
 				logger.exception(e)
 				try:
-					logger.error(
-						record_to_dict(DNS_RECORD(result), ts=False)
-					)
+					logger.error(record_to_dict(DNS_RECORD(result), ts=False))
 				except:  # pragma: no cover
 					pass
 				raise e
@@ -852,7 +846,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 					self.distinguished_name,
 					{"dnsRecord": [(MODIFY_ADD, self.structure.getData())]},
 				)
-		
+
 		result = self.connection.result
 		self.fetch()
 		return result
@@ -869,7 +863,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 
 		search_filter = LDAPFilter.and_(
 			LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "dnsNode"),
-			LDAPFilter.eq(LDAP_ATTR_DN, self.distinguished_name)
+			LDAPFilter.eq(LDAP_ATTR_DN, self.distinguished_name),
 		).to_string()
 		attributes = ["dnsRecord", "dNSTombstoned", "name"]
 
