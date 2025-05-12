@@ -131,7 +131,7 @@ def f_ldap_domain(f_runtime_settings: RuntimeSettingsSingleton):
 
 @pytest.fixture
 def f_auth_field_username(f_runtime_settings: RuntimeSettingsSingleton):
-	return f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
+	return f_runtime_settings.LDAP_FIELD_MAP["username"]
 
 
 @pytest.fixture

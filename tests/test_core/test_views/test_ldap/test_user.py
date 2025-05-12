@@ -242,7 +242,7 @@ class TestInsert:
 			username="testuser",
 			email=None
 			if not use_email
-			else m_data.get(f_runtime_settings.LDAP_AUTH_USER_FIELDS["email"]),
+			else m_data.get(f_runtime_settings.LDAP_FIELD_MAP["email"]),
 		)
 		m_ldap_user_insert.assert_called_once_with(
 			user_data=expected_m_data_call
@@ -300,7 +300,7 @@ class TestInsert:
 			username="testuser",
 			email=None
 			if not use_email
-			else m_data.get(f_runtime_settings.LDAP_AUTH_USER_FIELDS["email"]),
+			else m_data.get(f_runtime_settings.LDAP_FIELD_MAP["email"]),
 		)
 		m_ldap_user_insert.assert_not_called()
 		m_ldap_set_password.assert_not_called()

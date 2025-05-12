@@ -13,6 +13,7 @@ from enum import Enum
 
 # Interlock Imports
 from django.core.exceptions import ObjectDoesNotExist
+from interlock_backend.settings import DEFAULT_SUPERUSER_USERNAME
 from core.ldap import defaults
 from interlock_backend.encrypt import aes_decrypt
 
@@ -37,9 +38,9 @@ def get_setting_list(preset_id: int = 1):
 	"""
 
 	data = {}
-	userQuerySet = User.objects.filter(username="admin")
+	userQuerySet = User.objects.filter(username=DEFAULT_SUPERUSER_USERNAME)
 	if userQuerySet.count() > 0:
-		defaultAdmin = userQuerySet.get(username="admin")
+		defaultAdmin = userQuerySet.get(username=DEFAULT_SUPERUSER_USERNAME)
 		data["DEFAULT_ADMIN"] = not defaultAdmin.deleted
 	else:
 		data["DEFAULT_ADMIN"] = False

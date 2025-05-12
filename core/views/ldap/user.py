@@ -111,7 +111,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		# TODO - Add DN support?
 		user_search = None
 		for _k in (
-			RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
+			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
 			LOCAL_ATTR_USERNAME,
 		):
 			if not user_search:
@@ -165,7 +165,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			self.ldap_user_exists(
 				username=user_username,
 				email=data.get(
-					RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_EMAIL],
+					RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_EMAIL],
 					None,
 				),
 			)
@@ -312,7 +312,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		username = data.get(
 			LOCAL_ATTR_USERNAME,
 			data.get(
-				RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME], None
+				RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME], None
 			),
 		)
 
@@ -354,7 +354,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		username = data.get(
 			LOCAL_ATTR_USERNAME,
 			data.get(
-				RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME], None
+				RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME], None
 			),
 		)
 		password = data.get(LOCAL_ATTR_PASSWORD, None)
@@ -423,7 +423,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		username = data.get(
 			LOCAL_ATTR_USERNAME,
 			data.get(
-				RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME], None
+				RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME], None
 			),
 		)
 		if not username:
@@ -647,7 +647,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		values = data.get("values", {})
 		permissions = data.get(LOCAL_ATTR_PERMISSIONS, [])
 
-		EXCLUDE_KEYS = [RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_EMAIL]]
+		EXCLUDE_KEYS = [RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_EMAIL]]
 		for k in EXCLUDE_KEYS:
 			values.pop(k, None)
 
@@ -816,7 +816,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		ALERT_KEYS = (
 			LOCAL_ATTR_USERNAME,
-			RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
+			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
 			LDAP_ATTR_DN,
 		)
 		for k in ALERT_KEYS:
@@ -837,7 +837,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			ldap_user_entry = self.get_user_object(
 				ldap_user_search,
 				attributes=[
-					RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
+					RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
 					LDAP_ATTR_DN,
 					LDAP_ATTR_UAC,
 				],
@@ -895,7 +895,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		BAD_KEYS = [
 			LOCAL_ATTR_USERNAME,
-			RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
+			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
 		]
 		for k in BAD_KEYS:
 			if k in data:
@@ -939,8 +939,8 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			pass
 
 		if django_user:
-			for key in RuntimeSettings.LDAP_AUTH_USER_FIELDS:
-				mapped_key = RuntimeSettings.LDAP_AUTH_USER_FIELDS[key]
+			for key in RuntimeSettings.LDAP_FIELD_MAP:
+				mapped_key = RuntimeSettings.LDAP_FIELD_MAP[key]
 				if mapped_key in data:
 					setattr(django_user, key, data[mapped_key])
 				if "mail" not in data:
@@ -997,7 +997,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				self.ldap_filter_object = LDAPFilter.and_(
 					self.ldap_filter_object,
 					LDAPFilter.eq(
-						RuntimeSettings.LDAP_AUTH_USER_FIELDS[
+						RuntimeSettings.LDAP_FIELD_MAP[
 							LOCAL_ATTR_USERNAME
 						],
 						user_search,
@@ -1025,7 +1025,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 							user_data[str_key] = str_value
 					if (
 						attr_key
-						== RuntimeSettings.LDAP_AUTH_USER_FIELDS[
+						== RuntimeSettings.LDAP_FIELD_MAP[
 							LOCAL_ATTR_USERNAME
 						]
 					):

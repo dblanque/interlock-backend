@@ -3,14 +3,14 @@ from pytest_mock import MockType
 from core.ldap.connector import sync_user_relations
 from core.ldap.defaults import (
 	LDAP_AUTH_SEARCH_BASE,
-	LDAP_AUTH_USER_FIELDS,
+	LDAP_FIELD_MAP,
 	LDAP_DOMAIN,
 )
 
 
 def m_user_as_ldap_attributes(m_user: dict):
 	return {
-		LDAP_AUTH_USER_FIELDS["username"]: m_user.username,
+		LDAP_FIELD_MAP["username"]: m_user.username,
 		"distinguishedName": m_user.dn,
 		"mail": m_user.email,
 	}

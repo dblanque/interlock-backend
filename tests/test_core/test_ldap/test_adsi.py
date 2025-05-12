@@ -1,6 +1,6 @@
 import pytest
 from pytest_mock import MockType
-from core.ldap.defaults import LDAP_AUTH_USER_FIELDS
+from core.ldap.defaults import LDAP_FIELD_MAP
 from core.ldap.adsi import (
 	join_ldap_filter,
 	LDAP_FILTER_AND,
@@ -482,7 +482,7 @@ def test_list_user_perms_user_dict_has_no_uac(mocker):
 )
 def test_list_user_perms_user_dict(userAccountControl, perm_search, expected):
 	user = {
-		LDAP_AUTH_USER_FIELDS["username"]: "testuser",
+		LDAP_FIELD_MAP["username"]: "testuser",
 		"userAccountControl": sum_permissions(userAccountControl),
 	}
 	assert list_user_perms(user, perm_search, False).sort() == expected

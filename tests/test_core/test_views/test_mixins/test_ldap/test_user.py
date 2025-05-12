@@ -80,12 +80,12 @@ def f_runtime_settings(mocker, g_runtime_settings):
 
 @pytest.fixture
 def f_auth_field_username(f_runtime_settings: RuntimeSettingsSingleton):
-	return f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
+	return f_runtime_settings.LDAP_FIELD_MAP["username"]
 
 
 @pytest.fixture
 def f_auth_field_email(f_runtime_settings: RuntimeSettingsSingleton):
-	return f_runtime_settings.LDAP_AUTH_USER_FIELDS["email"]
+	return f_runtime_settings.LDAP_FIELD_MAP["email"]
 
 
 @pytest.fixture
@@ -334,11 +334,11 @@ class TestLDAPUserMixin:
 		m_entry = mocker.Mock()
 		setattr(
 			m_entry,
-			f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"],
+			f_runtime_settings.LDAP_FIELD_MAP["username"],
 			username,
 		)
 		setattr(
-			m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["email"], email
+			m_entry, f_runtime_settings.LDAP_FIELD_MAP["email"], email
 		)
 		f_user_mixin.ldap_connection.entries = [m_entry]
 
@@ -798,7 +798,7 @@ class TestLDAPUserMixin:
 
 		# Test
 		username = getldapattrvalue(
-			m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
+			m_entry, f_runtime_settings.LDAP_FIELD_MAP["username"]
 		)
 		result = f_user_mixin.ldap_user_update(
 			username, user_data, permission_list
@@ -815,7 +815,7 @@ class TestLDAPUserMixin:
 		)
 		m_user_cls.objects.get.assert_called_once()
 		m_django_user.email = user_data.get(
-			f_runtime_settings.LDAP_AUTH_USER_FIELDS["email"], None
+			f_runtime_settings.LDAP_FIELD_MAP["email"], None
 		)
 		m_django_user.save.assert_called_once()
 
@@ -834,7 +834,7 @@ class TestLDAPUserMixin:
 		mocker.patch("core.ldap.adsi.calc_permissions", side_effect=Exception)
 
 		username = getldapattrvalue(
-			m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
+			m_entry, f_runtime_settings.LDAP_FIELD_MAP["username"]
 		)
 		with pytest.raises(exc_user.UserPermissionError):
 			f_user_mixin.ldap_user_update(
@@ -857,7 +857,7 @@ class TestLDAPUserMixin:
 		)
 
 		username = getldapattrvalue(
-			m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
+			m_entry, f_runtime_settings.LDAP_FIELD_MAP["username"]
 		)
 		with pytest.raises(exc_user.UserCountryUpdateError):
 			f_user_mixin.ldap_user_update(
@@ -880,7 +880,7 @@ class TestLDAPUserMixin:
 		)
 
 		username = getldapattrvalue(
-			m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
+			m_entry, f_runtime_settings.LDAP_FIELD_MAP["username"]
 		)
 		with pytest.raises(exc_user.BadGroupSelection):
 			f_user_mixin.ldap_user_update(
@@ -909,7 +909,7 @@ class TestLDAPUserMixin:
 		)
 
 		username = getldapattrvalue(
-			m_entry, f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
+			m_entry, f_runtime_settings.LDAP_FIELD_MAP["username"]
 		)
 		with pytest.raises(exc_user.UserUpdateError):
 			f_user_mixin.ldap_user_update(
@@ -933,7 +933,7 @@ class TestLDAPUserMixin:
 		)
 		m_data = {LDAP_ATTR_FIRST_NAME: "new_name"}
 		username = m_entry.entry_attributes_as_dict[
-			f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
+			f_runtime_settings.LDAP_FIELD_MAP["username"]
 		][0]
 		f_user_mixin.ldap_user_update(username, m_data, [LDAP_UF_LOCKOUT])
 		f_user_mixin.ldap_user_update_keys.assert_called_once_with(
@@ -1292,7 +1292,7 @@ class TestLDAPUserMixin:
 			log_target_class=LOG_CLASS_USER,
 			log_target=getldapattrvalue(
 				m_user_entry,
-				f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"],
+				f_runtime_settings.LDAP_FIELD_MAP["username"],
 			),
 		)
 		m_get_group_attributes.call_count == 2

@@ -165,7 +165,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		return data, headers
 
 	def fetch_group(self):
-		_username_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
+		_username_field = RuntimeSettings.LDAP_FIELD_MAP["username"]
 
 		self.ldap_connection.search(
 			search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,

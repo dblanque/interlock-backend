@@ -33,6 +33,10 @@ from core.views.mixins.logs import LogMixin
 from core.constants.attrs import (
 	LOCAL_ATTR_DN,
 	LOCAL_ATTR_USERNAME,
+	LOCAL_ATTR_FIRST_NAME,
+	LOCAL_ATTR_LAST_NAME,
+	LOCAL_ATTR_EMAIL,
+
 	LDAP_ATTR_EMAIL,
 	LDAP_ATTR_DN,
 	LDAP_ATTR_OBJECT_CLASS,
@@ -127,7 +131,7 @@ def recursive_member_search(
 def sync_user_relations(
 	user: User, ldap_attributes: dict[list], *, connection=None
 ):
-	_username_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME]
+	_username_field = RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME]
 	_username: str = ldap_attributes.get(_username_field, [])[0]
 	_distinguished_name = ldap_attributes.get(LDAP_ATTR_DN, [])[0]
 	if not _username:
@@ -179,15 +183,15 @@ def authenticate(*args, **kwargs):
 	The user identifier should be keyword arguments matching the fields
 	in settings.LDAP_AUTH_USER_LOOKUP_FIELDS, plus a `password` argument.
 	"""
-	username = kwargs["username"]
+	username = kwargs[LOCAL_ATTR_USERNAME]
 	if username == DEFAULT_SUPERUSER_USERNAME:
 		return None
 	password = kwargs.pop("password", None)
-	auth_user_lookup_fields = RuntimeSettings.LDAP_AUTH_USER_LOOKUP_FIELDS
+	_auth_lookup_fields = RuntimeSettings.LDAP_AUTH_USER_LOOKUP_FIELDS
 	ldap_kwargs = {
 		key: value
 		for (key, value) in kwargs.items()
-		if key in auth_user_lookup_fields
+		if key in _auth_lookup_fields
 	}
 
 	# Check that this is valid login data.
@@ -468,8 +472,8 @@ class LDAPConnector(object):
 		for field in RuntimeSettings.LDAP_AUTH_USER_LOOKUP_FIELDS:
 			lookup_filters.append(
 				LDAPFilter.eq(
-					RuntimeSettings.LDAP_AUTH_USER_FIELDS[field],
-					kwargs["username"],
+					RuntimeSettings.LDAP_FIELD_MAP[field],
+					kwargs[LOCAL_ATTR_USERNAME],
 				)
 			)
 		search_filter = LDAPFilter.or_(*lookup_filters).to_string()
@@ -487,14 +491,21 @@ class LDAPConnector(object):
 		return None
 
 	def _get_user_fields(self, attributes) -> dict:
+		_valid_sync_attrs = (
+			LOCAL_ATTR_DN,
+			LOCAL_ATTR_USERNAME,
+			LOCAL_ATTR_FIRST_NAME,
+			LOCAL_ATTR_LAST_NAME,
+			LOCAL_ATTR_EMAIL,
+		)
 		_fields = {
 			local_attr_name: (
 				attributes[ldap_attr_name][0]
 				if isinstance(attributes[ldap_attr_name], (list, tuple))
 				else attributes[ldap_attr_name]
 			)
-			for local_attr_name, ldap_attr_name in RuntimeSettings.LDAP_AUTH_USER_FIELDS.items()
-			if ldap_attr_name in attributes
+			for local_attr_name, ldap_attr_name in RuntimeSettings.LDAP_FIELD_MAP.items()
+			if ldap_attr_name in attributes and local_attr_name in _valid_sync_attrs
 		}
 		return import_func(RuntimeSettings.LDAP_AUTH_CLEAN_USER_DATA)(_fields)
 

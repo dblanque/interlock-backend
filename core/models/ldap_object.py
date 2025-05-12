@@ -393,7 +393,8 @@ class LDAPObject:
 	def get_local_alias_for_ldap_key(self, v: str, default: str = None): ...
 
 	def get_local_alias_for_ldap_key(self, v: str, *args, **kwargs):
-		for local_alias, ldap_alias in LOCAL_ATTRS_MAP.items():
+		_map = RuntimeSettings.LDAP_FIELD_MAP
+		for local_alias, ldap_alias in _map.items():
 			if ldap_alias == v:
 				return local_alias
 		if args:
@@ -448,6 +449,7 @@ class LDAPObject:
 		return has_changed
 
 	def create(self):
+		_map = RuntimeSettings.LDAP_FIELD_MAP
 		if self.entry:
 			raise Exception("There is already an existing LDAP Entry.")
 		attrs = {}
@@ -483,7 +485,7 @@ class LDAPObject:
 			):
 				continue
 
-			ldap_alias = LOCAL_ATTRS_MAP[local_alias]
+			ldap_alias = _map[local_alias]
 			if local_value:
 				attrs[ldap_alias] = local_value
 
@@ -501,6 +503,7 @@ class LDAPObject:
 		)
 
 	def update(self) -> bool:
+		_map = RuntimeSettings.LDAP_FIELD_MAP
 		if not self.entry:
 			raise ValueError(
 				"An existing LDAP Entry is required to perform an update"
@@ -524,7 +527,7 @@ class LDAPObject:
 				continue
 
 			# Ignore if local and remote values explicitly None
-			ldap_alias = LOCAL_ATTRS_MAP[local_alias]
+			ldap_alias = _map[local_alias]
 			if not self.value_has_changed(local_alias, ldap_alias):
 				continue
 

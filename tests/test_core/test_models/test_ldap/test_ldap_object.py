@@ -11,7 +11,6 @@ from core.models.ldap_object import (
 	DEFAULT_CONTAINER_TYPES,
 )
 from core.constants.attrs import (
-	LOCAL_ATTRS_MAP,
 	LDAP_ATTR_FIRST_NAME,
 	LOCAL_ATTR_FIRST_NAME,
 	LDAP_ATTR_LAST_NAME,
@@ -230,7 +229,7 @@ def test_init(
 	assert m_ldap_object.connection == f_connection
 	assert (
 		m_ldap_object.username_identifier
-		== f_runtime_settings.LDAP_AUTH_USER_FIELDS["username"]
+		== f_runtime_settings.LDAP_FIELD_MAP["username"]
 	)
 	assert m_ldap_object.excluded_attributes == []
 	assert m_ldap_object.required_attributes == DEFAULT_REQUIRED_LDAP_ATTRS
@@ -582,7 +581,7 @@ def test_dunder_get_common_name_handles_malformed_dn(
 	assert result == "not"
 
 
-def test_dunder_mapped_attrs(f_object_entry_user, f_object_args, f_connection):
+def test_dunder_mapped_attrs(f_object_entry_user, f_object_args, f_connection, f_runtime_settings):
 	# Setup
 	object_args = f_object_args()
 	ldap_obj = LDAPObject(auto_fetch=False, **object_args)
@@ -591,7 +590,7 @@ def test_dunder_mapped_attrs(f_object_entry_user, f_object_args, f_connection):
 
 	result = ldap_obj.__mapped_attrs__()
 	assert isinstance(result, dict)
-	for _local_alias, _ldap_alias in LOCAL_ATTRS_MAP.items():
+	for _local_alias, _ldap_alias in f_runtime_settings.LDAP_FIELD_MAP.items():
 		if not _local_alias in result:
 			continue
 		assert _ldap_alias in ldap_obj.attributes.keys()

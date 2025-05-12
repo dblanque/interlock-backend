@@ -440,7 +440,7 @@ def list_user_perms(
 
 	user_permissions: list = parse_permissions_int(
 		raw_user_permissions=raw_user_permissions,
-		user_name=str(user[RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]]),
+		user_name=str(user[RuntimeSettings.LDAP_FIELD_MAP["username"]]),
 	)
 	if isinstance(perm_search, str):
 		return perm_search in user_permissions

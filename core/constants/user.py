@@ -41,7 +41,7 @@ class UserViewsetFilterAttributeBuilder:
 			LDAP_ATTR_FIRST_NAME,
 			LDAP_ATTR_LAST_NAME,
 			LDAP_ATTR_FULL_NAME,
-			self.RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
+			self.RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
 			LDAP_ATTR_EMAIL,
 			LDAP_ATTR_DN,
 			LDAP_ATTR_UAC,
@@ -52,7 +52,7 @@ class UserViewsetFilterAttributeBuilder:
 			LDAP_ATTR_FIRST_NAME,
 			LDAP_ATTR_LAST_NAME,
 			LDAP_ATTR_FULL_NAME,
-			self.RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
+			self.RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
 			LDAP_ATTR_EMAIL,
 			LDAP_ATTR_PHONE,
 			LDAP_ATTR_ADDRESS,
@@ -81,7 +81,7 @@ class UserViewsetFilterAttributeBuilder:
 
 	def get_update_attrs(self):
 		return [
-			self.RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
+			self.RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
 			LDAP_ATTR_DN,
 			LDAP_ATTR_UPN,
 			LDAP_ATTR_UAC,
@@ -89,7 +89,7 @@ class UserViewsetFilterAttributeBuilder:
 
 	def get_bulk_insert_attrs(self):
 		return [
-			self.RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
+			self.RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
 			LDAP_ATTR_DN,
 			LDAP_ATTR_UPN,
 		]

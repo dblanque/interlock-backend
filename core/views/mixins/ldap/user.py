@@ -169,14 +169,14 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		# User ID Filter Setup
 		id_filter = None
 		if username:
-			_username_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
+			_username_field = RuntimeSettings.LDAP_FIELD_MAP["username"]
 			id_filter = join_ldap_filter(
 				id_filter,
 				f"{_username_field}={username}",
 				expression=id_filter_op,
 			)
 		if email:
-			_email_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"]
+			_email_field = RuntimeSettings.LDAP_FIELD_MAP["email"]
 			id_filter = join_ldap_filter(
 				id_filter,
 				f"{_email_field}={email}",
@@ -210,8 +210,8 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			else:
 				return
 
-		_username_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"]
-		_email_field = RuntimeSettings.LDAP_AUTH_USER_FIELDS["email"]
+		_username_field = RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME]
+		_email_field = RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_EMAIL]
 		for entry in self.ldap_connection.entries:
 			entry: LDAPEntry
 			if username and email:
@@ -260,7 +260,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 
 		if not attributes:
 			attributes = [
-				RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
+				RuntimeSettings.LDAP_FIELD_MAP["username"],
 				LDAP_ATTR_DN,
 			]
 		if not object_class_filter:
@@ -470,8 +470,8 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			pass
 
 		if django_user:
-			for key in RuntimeSettings.LDAP_AUTH_USER_FIELDS:
-				mapped_key = RuntimeSettings.LDAP_AUTH_USER_FIELDS[key]
+			for key in RuntimeSettings.LDAP_FIELD_MAP:
+				mapped_key = RuntimeSettings.LDAP_FIELD_MAP[key]
 				if mapped_key in data:
 					setattr(django_user, key, data[mapped_key])
 			django_user.save()
@@ -572,9 +572,9 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 				"username or email args are required for ldap_user_exists call."
 			)
 		ldap_attributes = [
-			RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_USERNAME],
+			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
 			LDAP_ATTR_DN,
-			RuntimeSettings.LDAP_AUTH_USER_FIELDS[LOCAL_ATTR_EMAIL],
+			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_EMAIL],
 		]
 		self.get_user_object(
 			username=username, email=email, attributes=ldap_attributes

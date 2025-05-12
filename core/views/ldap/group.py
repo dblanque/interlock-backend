@@ -146,7 +146,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		self.ldap_filter_object = LDAPFilter.or_(
 			LDAPFilter.eq(LDAP_ATTR_COMMON_NAME, group_cn),
 			LDAPFilter.eq(
-				RuntimeSettings.LDAP_AUTH_USER_FIELDS["username"],
+				RuntimeSettings.LDAP_FIELD_MAP["username"],
 				group_cn,
 			),
 		).to_string()
