@@ -629,11 +629,9 @@ def test_ldap_connection(
 	ldapAuthUseTLS,
 	ldapAuthTLSVersion,
 ):
-	format_username = import_func(RuntimeSettings.LDAP_AUTH_FORMAT_USERNAME)
-
-	if password != ldapAuthConnectionPassword and username != "admin":
+	if password != ldapAuthConnectionPassword and username != DEFAULT_SUPERUSER_USERNAME:
 		password = password
-	elif username == "admin":
+	elif username == DEFAULT_SUPERUSER_USERNAME:
 		user_dn = ldapAuthConnectionUser
 		password = ldapAuthConnectionPassword
 

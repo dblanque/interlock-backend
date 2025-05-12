@@ -1,12 +1,12 @@
 from rest_framework import serializers as serializers
 from rest_framework_simplejwt import serializers as jwt_serializers
 from core.models.choices.log import LOG_CLASS_USER, LOG_ACTION_LOGIN
-from core.config.runtime import RuntimeSettings
 from core.models.user import User
 from core.exceptions import otp as exc_otp
 from core.views.mixins.logs import LogMixin
 from rest_framework.exceptions import AuthenticationFailed
 from core.views.mixins.totp import get_user_totp_device, validate_user_otp
+from interlock_backend.settings import DEFAULT_SUPERUSER_USERNAME
 import re
 
 DBLogMixin = LogMixin()
@@ -53,7 +53,7 @@ class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
 		data["last_name"] = self.user.last_name or ""
 		data["email"] = self.user.email or ""
 		data["user_type"] = self.user.user_type or ""
-		if self.user.is_superuser or self.user.username == "admin":
+		if self.user.is_superuser or self.user.username == DEFAULT_SUPERUSER_USERNAME:
 			data["admin_allowed"] = True
 
 		DBLogMixin.log(
