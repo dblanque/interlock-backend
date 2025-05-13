@@ -132,7 +132,7 @@ class LDAPGroup(LDAPObject):
 		if set(_parsed_types) != set(self.attributes[LOCAL_ATTR_GROUP_TYPE]):
 			raise ValueError("Could not properly parse group type")
 		if set(_parsed_scopes) != set(self.attributes[LOCAL_ATTR_GROUP_SCOPE]):
-			raise ValueError("Could not properly parse group type")
+			raise ValueError("Could not properly parse group scope")
 
 		self.attributes[LOCAL_ATTR_GROUP_TYPE] = _sum
 
@@ -140,6 +140,9 @@ class LDAPGroup(LDAPObject):
 			self.parsed_specials.append(LOCAL_ATTR_GROUP_TYPE)
 
 	def parse_common_name(self):
+		"""Renames Group Object as per LDAP Requirements for Common Name
+		modifications in Group Object types.
+		"""
 		# Set Common Name
 		original_cn: str = safe_rdn(self.distinguished_name)[0]
 		original_cn = original_cn.split("=")[-1]
