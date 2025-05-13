@@ -1,8 +1,10 @@
+########################### Standard Pytest Imports ############################
 import pytest
-
+from pytest_mock import MockerFixture
+################################################################################
 
 @pytest.fixture
-def f_connection(mocker):
+def f_connection(mocker: MockerFixture):
 	m_connection = mocker.MagicMock()
 	m_connection.add = mocker.MagicMock(return_value=None)
 	m_connection.modify = mocker.MagicMock(return_value=None)
