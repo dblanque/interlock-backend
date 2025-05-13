@@ -39,6 +39,8 @@ def country_validator(v: str):
 
 def country_dcc_validator(v: int):
 	try:
+		if v == 0:
+			return True
 		for codes in LDAP_COUNTRIES.values():
 			if int(codes.get("dccCode")) == v:
 				return v
