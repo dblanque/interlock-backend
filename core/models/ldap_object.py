@@ -115,12 +115,11 @@ class LDAPObject:
 
 	# Type Hints
 	type = LDAPObjectTypes.GENERIC
-	distinguished_name: str
+	distinguished_name: str = None
 	attributes: dict = None
 	connection: LDAPConnectionProtocol = None
 	entry: LDAPEntry = None
 	excluded_attributes: list[str] = None
-	required_attributes: list[str] = None
 	search_attrs: list[str] | str = ALL_OPERATIONAL_ATTRIBUTES
 	search_filter: str = None
 	search_base: str = None
@@ -146,7 +145,6 @@ class LDAPObject:
 		search_base: str = None,
 		search_attrs: list[str] = None,
 		excluded_attributes: list[str] = None,
-		required_attributes: list[str] = None,
 		attributes: dict = None,
 		skip_fetch: bool = False,
 	) -> None: ...
@@ -156,14 +154,13 @@ class LDAPObject:
 		self.entry = kwargs.pop("entry", None)
 		self.connection = kwargs.pop("connection", None)
 		self.distinguished_name = kwargs.pop(LOCAL_ATTR_DN, None)
-		self.__validate_kwargs__(kwargs)
+		self.__validate_init__(**kwargs)
 
 		self.search_base = RuntimeSettings.LDAP_AUTH_SEARCH_BASE
 		self.parsed_specials = []
 		self.attributes = {}
 		self.excluded_attributes = []
-		self.required_attributes = DEFAULT_REQUIRED_LDAP_ATTRS
-		self.__set_kwargs__(kwargs)
+		self.__set_kwargs__(**kwargs)
 
 		if not self.entry and not skip_fetch:
 			self.__fetch_object__()
@@ -171,15 +168,28 @@ class LDAPObject:
 		elif self.entry and not self.attributes:
 			self.__sync_object__()
 
-	def __validate_kwargs__(self, kwargs: dict):
-		if self.entry and not isinstance(self.entry, LDAPEntry):
-			raise TypeError(
-				"LDAPObject entry must attr must be of type ldap3.Entry"
-			)
+	def __set_dn_and_filter_from_entry__(self):
+		_entry_dn = getattr(self.entry, "entry_dn", "")
+		if not isinstance(_entry_dn, str):
+			raise TypeError("entry_dn must be of type str")
+		self.distinguished_name = _entry_dn
+		self.search_filter = LDAPFilter.eq(
+			LDAP_ATTR_DN, _entry_dn
+		).to_string()
+
+	def __validate_init__(self, **kwargs):
+		"""Function that may be overridden by subclasses for connection and
+		detail validation.
+		"""
+		if self.entry is not None:
+			if not isinstance(self.entry, LDAPEntry):
+				raise TypeError(
+					"LDAPObject entry must be of type ldap3.Entry"
+				)
 
 		if not self.connection and not self.entry:
 			raise Exception(
-				"LDAPObject requires an LDAP Connection or an Entry to Initialize"
+				"LDAPObject requires an LDAP Connection or Entry to Initialize"
 			)
 		elif self.connection and not self.distinguished_name:
 			raise Exception(
@@ -187,13 +197,7 @@ class LDAPObject:
 			)
 
 		if self.entry:
-			_entry_dn = getattr(self.entry, "entry_dn", "")
-			if _entry_dn:
-				if not isinstance(_entry_dn, str):
-					raise TypeError("entry_dn must be of type str")
-				self.search_filter = LDAPFilter.eq(
-					LDAP_ATTR_DN, _entry_dn
-				).to_string()
+			self.__set_dn_and_filter_from_entry__()
 		elif self.distinguished_name and isinstance(
 			self.distinguished_name, str
 		):
@@ -201,12 +205,21 @@ class LDAPObject:
 				LDAP_ATTR_DN, self.distinguished_name
 			).to_string()
 
-	def __set_kwargs__(self, kwargs):
-		# Set passed kwargs from Object Call
-		for kw in kwargs:
-			setattr(self, kw, kwargs[kw])
+	def __set_search_attrs__(self, search_attrs: list | tuple | set):
+		if not search_attrs:
+			return
 
-		if self.search_attrs in (ALL_OPERATIONAL_ATTRIBUTES, ALL_ATTRIBUTES):
+		if not isinstance(search_attrs, (set, tuple, list, str)):
+			raise TypeError(
+				"search_attrs must be of type set, tuple, list, or str")
+
+		# Convert to list if iterable
+		if isinstance(search_attrs, (set, tuple,)):
+			self.search_attrs = list(search_attrs)
+		else:
+			self.search_attrs = search_attrs
+
+		if self.search_attrs in (ALL_OPERATIONAL_ATTRIBUTES, ALL_ATTRIBUTES,):
 			return
 
 		# Remove excluded attributes
@@ -214,16 +227,23 @@ class LDAPObject:
 			if attr in self.search_attrs:
 				self.search_attrs.remove(attr)
 
-		# Set required attributes, these are unremovable from the tree searches
-		for attr in self.required_attributes:
-			if attr not in self.search_attrs:
-				self.search_attrs.append(attr)
-
 		# Add primary_group_id fetching if groups are fetched,
 		# as the primary group is not included in memberOf
 		if LDAP_ATTR_USER_GROUPS in self.search_attrs:
 			if not LDAP_ATTR_PRIMARY_GROUP_ID in self.search_attrs:
 				self.search_attrs.append(LDAP_ATTR_PRIMARY_GROUP_ID)
+		
+		if isinstance(self.search_attrs, list):
+			self.search_attrs = tuple(self.search_attrs)
+
+	def __set_kwargs__(self, **kwargs):
+		"""Function to set kwargs after defaults have been set."""
+		# Set passed kwargs from Object Call
+		for kw in kwargs:
+			setattr(self, kw, kwargs[kw])
+		
+		self.__set_search_attrs__(
+			kwargs.pop("search_attrs", ALL_OPERATIONAL_ATTRIBUTES))
 
 	def __get_connection__(self):
 		return self.connection
@@ -250,13 +270,13 @@ class LDAPObject:
 				)
 				pass
 
-	def parse_special_ldap_attributes(self):
+	def parse_special_ldap_attributes(self): # pragma: no cover
 		"""
 		Special LDAP Attribute parsing function (LDAP -> LOCAL Translation)
 		"""
 		return
 
-	def parse_special_attributes(self):
+	def parse_special_attributes(self): # pragma: no cover
 		"""
 		Special LOCAL Attribute parsing function (LOCAL -> LDAP Translation)
 		"""
@@ -305,6 +325,8 @@ class LDAPObject:
 			self.attributes[LOCAL_ATTR_BUILT_IN] = True
 
 		for attr_key in self.entry.entry_attributes:
+			if attr_key in (self.excluded_attributes or []):
+				continue
 			attr_value = getldapattrvalue(self.entry, attr_key)
 			local_key = self.get_local_alias_for_ldap_key(attr_key, None)
 			if not local_key:
@@ -357,35 +379,35 @@ class LDAPObject:
 		except Exception as e:
 			raise ValueError("Error setting LDAP Object Entry Result") from e
 
-	def __ldap_attrs__(self):
-		if not self.attributes:
+	def __ldap_attrs__(self) -> list:
+		if not self.entry:
 			return []
-		return list(self.attributes.keys())
+		return self.entry.entry_attributes
 
 	def __get_common_name__(self, dn: str):
 		return str(dn).split(",")[0].split("=")[-1]
 
-	def pre_create(self):
+	def pre_create(self): # pragma: no cover
 		"""Pre Creation operations"""
 		return
 
-	def pre_update(self):
+	def pre_update(self): # pragma: no cover
 		"""Pre Creation operations"""
 		return
 
-	def pre_delete(self):
+	def pre_delete(self): # pragma: no cover
 		"""Pre Creation operations"""
 		return
 
-	def post_create(self):
+	def post_create(self): # pragma: no cover
 		"""Post Creation operations"""
 		return
 
-	def post_update(self):
+	def post_update(self): # pragma: no cover
 		"""Post Creation operations"""
 		return
 
-	def post_delete(self):
+	def post_delete(self): # pragma: no cover
 		"""Post Creation operations"""
 		return
 
@@ -408,7 +430,7 @@ class LDAPObject:
 		self.__fetch_object__()
 		return bool(self.connection.entries)
 
-	def value_has_changed(self, local_alias: str, ldap_alias: str, /) -> bool:
+	def value_changed(self, local_alias: str, ldap_alias: str, /) -> bool:
 		"""Checks if a local value differs from its entry counterpart
 
 		Positional args only.
@@ -528,7 +550,7 @@ class LDAPObject:
 
 			# Ignore if local and remote values explicitly None
 			ldap_alias = _map[local_alias]
-			if not self.value_has_changed(local_alias, ldap_alias):
+			if not self.value_changed(local_alias, ldap_alias):
 				continue
 
 			# If local value empty

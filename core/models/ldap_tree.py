@@ -103,7 +103,7 @@ class LDAPTree(LDAPObject):
 
 		self.children = self.__fetch_tree__()
 
-	def __validate_kwargs__(self, kwargs):
+	def __validate_init__(self, kwargs):
 		"""Super class override."""
 		if not self.connection:
 			raise Exception(

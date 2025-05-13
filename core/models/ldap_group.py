@@ -218,7 +218,7 @@ class LDAPGroup(LDAPObject):
 		self.post_create()
 		self.parse_common_name()
 
-	def __validate_kwargs__(self, kwargs: dict):
+	def __validate_init__(self, **kwargs):
 		kw_common_name = kwargs.pop("common_name", None)
 		self.groupname = kwargs.pop(LDAP_ATTR_COMMON_NAME, kw_common_name)
 
@@ -238,13 +238,7 @@ class LDAPGroup(LDAPObject):
 				)
 
 		if self.entry:
-			_entry_dn = getattr(self.entry, "entry_dn", "")
-			if _entry_dn:
-				if not isinstance(_entry_dn, str):
-					raise TypeError("entry_dn must be of type str")
-				self.search_filter = LDAPFilter.eq(
-					LDAP_ATTR_DN, _entry_dn
-				).to_string()
+			self.__set_dn_and_filter_from_entry__()
 		elif self.distinguished_name and isinstance(
 			self.distinguished_name, str
 		):
