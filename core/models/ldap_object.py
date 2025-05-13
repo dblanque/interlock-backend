@@ -115,6 +115,7 @@ class LDAPObject:
 
 	# Type Hints
 	type = LDAPObjectTypes.GENERIC
+	fetched: bool = False
 	distinguished_name: str = None
 	attributes: dict = None
 	connection: LDAPConnectionProtocol = None
@@ -141,7 +142,6 @@ class LDAPObject:
 		entry: LDAPEntry = None,
 		connection: LDAPConnectionProtocol = None,
 		distinguished_name: str = None,
-		username: str = None,
 		search_base: str = None,
 		search_attrs: list[str] = None,
 		excluded_attributes: list[str] = None,
@@ -208,6 +208,8 @@ class LDAPObject:
 	def __set_search_attrs__(self, search_attrs: list | tuple | set):
 		if not search_attrs:
 			return
+		elif search_attrs in (ALL_OPERATIONAL_ATTRIBUTES, ALL_ATTRIBUTES,):
+			return
 
 		if not isinstance(search_attrs, (set, tuple, list, str)):
 			raise TypeError(
@@ -219,8 +221,6 @@ class LDAPObject:
 		else:
 			self.search_attrs = search_attrs
 
-		if self.search_attrs in (ALL_OPERATIONAL_ATTRIBUTES, ALL_ATTRIBUTES,):
-			return
 
 		# Remove excluded attributes
 		for attr in self.excluded_attributes:
@@ -260,9 +260,6 @@ class LDAPObject:
 				continue
 			try:
 				_v = int(self.attributes[fld])
-				if fld == LOCAL_ATTR_COUNTRY_DCC and _v == 0:
-					self.attributes.pop(fld, None)
-					continue
 				self.attributes[fld] = _v
 			except:
 				logger.error(
@@ -300,9 +297,8 @@ class LDAPObject:
 		else:
 			distinguished_name: str = self.distinguished_name
 		self.attributes = {}
-		self.attributes[LOCAL_ATTR_NAME] = distinguished_name.split(",")[
-			0
-		].split("=")[1]
+		self.attributes[LOCAL_ATTR_NAME] = distinguished_name.split(",")[0]\
+			.split("=")[1]
 		self.attributes[LOCAL_ATTR_DN] = distinguished_name
 		self.attributes[LOCAL_ATTR_TYPE] = (
 			LDAPObjectTypes.GENERIC.value.lower()
@@ -378,13 +374,18 @@ class LDAPObject:
 			self.distinguished_name = self.entry.entry_dn
 		except Exception as e:
 			raise ValueError("Error setting LDAP Object Entry Result") from e
+		self.fetched = True
 
 	def __ldap_attrs__(self) -> list:
 		if not self.entry:
 			return []
 		return self.entry.entry_attributes
 
-	def __get_common_name__(self, dn: str):
+	def __get_common_name__(self, dn: str = None):
+		if not dn and not self.distinguished_name:
+			raise ValueError("dn value is required")
+		if not dn:
+			dn = self.distinguished_name
 		return str(dn).split(",")[0].split("=")[-1]
 
 	def pre_create(self): # pragma: no cover
@@ -415,8 +416,7 @@ class LDAPObject:
 	def get_local_alias_for_ldap_key(self, v: str, default: str = None): ...
 
 	def get_local_alias_for_ldap_key(self, v: str, *args, **kwargs):
-		_map = RuntimeSettings.LDAP_FIELD_MAP
-		for local_alias, ldap_alias in _map.items():
+		for local_alias, ldap_alias in RuntimeSettings.LDAP_FIELD_MAP.items():
 			if ldap_alias == v:
 				return local_alias
 		if args:
@@ -427,8 +427,9 @@ class LDAPObject:
 
 	@property
 	def exists(self) -> bool:
+		"""Re-fetches entry and checks if it exists."""
 		self.__fetch_object__()
-		return bool(self.connection.entries)
+		return bool(self.entry)
 
 	def value_changed(self, local_alias: str, ldap_alias: str, /) -> bool:
 		"""Checks if a local value differs from its entry counterpart
@@ -436,9 +437,9 @@ class LDAPObject:
 		Positional args only.
 		"""
 		if not local_alias:
-			raise ValueError("local_alias cannot be falsy")
+			raise ValueError("local_alias is falsy or unmapped")
 		if not ldap_alias:
-			raise ValueError("ldap_alias cannot be falsy")
+			raise ValueError("ldap_alias is falsy or unmapped")
 		if not isinstance(local_alias, str):
 			raise TypeError("local_alias must be of type str")
 		if not isinstance(ldap_alias, str):
@@ -453,7 +454,9 @@ class LDAPObject:
 			entry_value = int(entry_value)
 			local_value = int(local_value)
 		elif isinstance(entry_value, list) or isinstance(local_value, list):
-			# Have to contrast with single value sets, edge-case.
+			# Have to contrast with value sets, as LDAP can sometimes return
+			# single element list/arrays, and we want to ensure de-duplicated
+			# lists.
 			if isinstance(entry_value, str):
 				entry_value = {entry_value}
 			elif isinstance(entry_value, list):
@@ -467,6 +470,7 @@ class LDAPObject:
 				local_value = set(local_value)
 			else:
 				logger.warning("Bad value type for ldap %s field", ldap_alias)
+		# For verbosity
 		has_changed = entry_value != local_value
 		return has_changed
 
