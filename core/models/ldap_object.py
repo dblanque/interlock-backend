@@ -267,13 +267,13 @@ class LDAPObject:
 				)
 				pass
 
-	def parse_special_ldap_attributes(self): # pragma: no cover
+	def parse_read_special_attributes(self): # pragma: no cover
 		"""
 		Special LDAP Attribute parsing function (LDAP -> LOCAL Translation)
 		"""
 		return
 
-	def parse_special_attributes(self): # pragma: no cover
+	def parse_write_special_attributes(self): # pragma: no cover
 		"""
 		Special LOCAL Attribute parsing function (LOCAL -> LDAP Translation)
 		"""
@@ -349,7 +349,7 @@ class LDAPObject:
 			elif attr_value and not attr_key in ATTRS_SPECIAL_LDAP:
 				self.attributes[local_key] = attr_value
 
-		self.parse_special_ldap_attributes()
+		self.parse_read_special_attributes()
 		self.__sync_int_fields__()
 		return
 
@@ -500,7 +500,7 @@ class LDAPObject:
 			)
 			_object_class = "group"
 
-		self.parse_special_attributes()
+		self.parse_write_special_attributes()
 		for local_alias, local_value in self.attributes.items():
 			# Ignore if immutable or special
 			if local_alias in ATTRS_IMMUTABLE:
@@ -539,7 +539,7 @@ class LDAPObject:
 		if not isinstance(self.entry, LDAPEntry):
 			raise TypeError("self.entry must be of type ldap3.Entry")
 
-		self.parse_special_attributes()
+		self.parse_write_special_attributes()
 		replace_attrs = {}
 		delete_attrs = {}
 		for local_alias, local_value in self.attributes.items():

@@ -129,14 +129,14 @@ class LDAPUser(LDAPObject):
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
 
-	def parse_special_attributes(self):
-		self.parse_country(self.attributes.get(LOCAL_ATTR_COUNTRY, None))
-		self.parse_permissions(
+	def parse_write_special_attributes(self):
+		self.parse_write_country(self.attributes.get(LOCAL_ATTR_COUNTRY, None))
+		self.parse_write_permissions(
 			self.attributes.get(LOCAL_ATTR_PERMISSIONS, None)
 		)
 
 	def post_create(self):
-		self.parse_group_operations(
+		self.perform_group_operations(
 			groups_to_add=self.attributes.get(LOCAL_ATTR_USER_ADD_GROUPS, []),
 			groups_to_remove=self.attributes.get(LOCAL_ATTR_USER_RM_GROUPS, []),
 		)
@@ -144,7 +144,7 @@ class LDAPUser(LDAPObject):
 	def post_update(self):
 		self.post_create()
 
-	def parse_country(self, value: str = None):
+	def parse_write_country(self, value: str = None):
 		_COUNTRY_ATTRS = (
 			LOCAL_ATTR_COUNTRY,
 			LOCAL_ATTR_COUNTRY_DCC,
@@ -167,7 +167,7 @@ class LDAPUser(LDAPObject):
 			if not attr in self.parsed_specials:
 				self.parsed_specials.append(attr)
 
-	def parse_permissions(self, value: list[str]):
+	def parse_write_permissions(self, value: list[str]):
 		if value is None:
 			return
 		if value and isinstance(value, list):
@@ -181,7 +181,7 @@ class LDAPUser(LDAPObject):
 		if not LOCAL_ATTR_UAC in self.parsed_specials:
 			self.parsed_specials.append(LOCAL_ATTR_UAC)
 
-	def parse_group_operations(self, groups_to_add=None, groups_to_remove=None):
+	def perform_group_operations(self, groups_to_add=None, groups_to_remove=None):
 		# De-duplicate group ops
 		if groups_to_add:
 			groups_to_add = set(groups_to_add)

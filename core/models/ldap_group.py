@@ -69,7 +69,7 @@ class LDAPGroup(LDAPObject):
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
 
-	def get_group_types(self, group_type: int = None) -> list[str]:
+	def parse_read_group_type_scope(self, group_type: int = None) -> tuple[list[str], list[str]]:
 		"""Get group types and scopes from integer value"""
 		sum = 0
 		_scopes = []
@@ -107,7 +107,8 @@ class LDAPGroup(LDAPObject):
 
 		return _types, _scopes
 
-	def parse_group_type_and_scope(self):
+	def parse_write_group_type_scope(self) -> int:
+		"""Convert front-end generated type and scope to LDAP acceptable int."""
 		group_types = self.attributes.get(LOCAL_ATTR_GROUP_TYPE, [])
 		group_scopes = self.attributes.get(LOCAL_ATTR_GROUP_SCOPE, [])
 		if not group_types or not group_scopes:
@@ -128,7 +129,7 @@ class LDAPGroup(LDAPObject):
 		_sum = _type + _scope
 
 		# Validate
-		_parsed_types, _parsed_scopes = self.get_group_types(_sum)
+		_parsed_types, _parsed_scopes = self.parse_read_group_type_scope(_sum)
 		if set(_parsed_types) != set(self.attributes[LOCAL_ATTR_GROUP_TYPE]):
 			raise ValueError("Could not properly parse group type")
 		if set(_parsed_scopes) != set(self.attributes[LOCAL_ATTR_GROUP_SCOPE]):
@@ -138,8 +139,9 @@ class LDAPGroup(LDAPObject):
 
 		if not LOCAL_ATTR_GROUP_TYPE in self.parsed_specials:
 			self.parsed_specials.append(LOCAL_ATTR_GROUP_TYPE)
+		return _sum
 
-	def parse_common_name(self):
+	def parse_write_common_name(self):
 		"""Renames Group Object as per LDAP Requirements for Common Name
 		modifications in Group Object types.
 		"""
@@ -164,7 +166,7 @@ class LDAPGroup(LDAPObject):
 				)
 			)
 
-	def parse_group_operations(
+	def perform_member_operations(
 		self, members_to_add=None, members_to_remove=None
 	):
 		try:
@@ -193,22 +195,22 @@ class LDAPGroup(LDAPObject):
 				data={"ldap_response": self.connection.result}
 			)
 
-	def parse_special_attributes(self):
-		self.parse_group_type_and_scope()
+	def parse_write_special_attributes(self):
+		self.parse_write_group_type_scope()
 
-	def parse_special_ldap_attributes(self):
+	def parse_read_special_attributes(self):
 		for attr_key in ATTRS_SPECIAL_LDAP:
 			if not attr_key in self.entry.entry_attributes:
 				continue
 
 			attr_value = getldapattrvalue(self.entry, attr_key)
 			if attr_key == LDAP_ATTR_GROUP_TYPE:
-				group_types, group_scopes = self.get_group_types(attr_value)
+				group_types, group_scopes = self.parse_read_group_type_scope(attr_value)
 				self.attributes[LOCAL_ATTR_GROUP_TYPE] = group_types
 				self.attributes[LOCAL_ATTR_GROUP_SCOPE] = group_scopes
 
 	def post_create(self):
-		self.parse_group_operations(
+		self.perform_member_operations(
 			members_to_add=self.attributes.get(
 				LOCAL_ATTR_GROUP_ADD_MEMBERS, []
 			),
@@ -219,7 +221,7 @@ class LDAPGroup(LDAPObject):
 
 	def post_update(self):
 		self.post_create()
-		self.parse_common_name()
+		self.parse_write_common_name()
 
 	def __validate_init__(self, **kwargs):
 		kw_common_name = kwargs.pop("common_name", None)
