@@ -266,7 +266,8 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 		with transaction.atomic():
 			param_name: str
-			param_value: dict
+			param_value: dict | str | bool | int | list[str]
+			# Interlock Settings
 			for param_name, param_value in local_settings.items():
 				if not param_name in INTERLOCK_SETTING_MAP:
 					raise exc_set.SettingTypeDoesNotMatch(
@@ -296,6 +297,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 				except ObjectDoesNotExist:
 					InterlockSetting.objects.create(**kwdata)
 
+			# LDAP Settings
 			for param_name, param_value in ldap_settings.items():
 				if not param_name in LDAP_SETTING_MAP:
 					raise exc_set.SettingTypeDoesNotMatch(
@@ -333,6 +335,15 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 					if param_type == TYPE_AES_ENCRYPT.lower():
 						kwdata["value"] = aes_encrypt(param_value)
+					elif param_name == "LDAP_FIELD_MAP":
+						param_value: dict
+						for _k, _v in param_value.items():
+							_v: str
+							if _v.lower() in ("none","null",):
+								if _k in defaults.LDAP_AUTH_USER_LOOKUP_FIELDS:
+									raise ValueError(f"{_k} is not a nullable field.")
+								param_value[_k] = None
+						kwdata["value"] = param_value
 					else:
 						kwdata["value"] = param_value
 
