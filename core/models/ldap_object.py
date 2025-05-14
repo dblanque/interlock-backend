@@ -28,6 +28,7 @@ from ldap3 import (
 	MODIFY_DELETE,
 	MODIFY_REPLACE,
 )
+from ldap3.utils.dn import safe_rdn
 from typing import overload
 from enum import Enum
 from logging import getLogger
@@ -283,34 +284,34 @@ class LDAPObject:
 		if not self.entry:
 			return
 
-		# Set DN from Abstract Entry object (LDAP3)
-		# Set searchResult attributes
+		# Set initial data
+		self.attributes = {}
+
+		# Set Distinguished Name from entry or self attribute.
 		if self.entry:
 			distinguished_name: str = self.entry.entry_dn
-			if LDAP_ATTR_OBJECT_CATEGORY in self.entry.entry_attributes:
-				self.type = (
-					getldapattrvalue(self.entry, LDAP_ATTR_OBJECT_CATEGORY)
-					.split(",")[0]
-					.split("=")[1]
-				)
-				self.type = LDAPObjectTypes(self.type.lower())
 		else:
 			distinguished_name: str = self.distinguished_name
-		self.attributes = {}
-		self.attributes[LOCAL_ATTR_NAME] = distinguished_name.split(",")[0]\
-			.split("=")[1]
 		self.attributes[LOCAL_ATTR_DN] = distinguished_name
+
+		# Set object type and category
+		if self.entry:
+			if LDAP_ATTR_OBJECT_CATEGORY in self.entry.entry_attributes:
+				_object_category = getldapattrvalue(self.entry, LDAP_ATTR_OBJECT_CATEGORY)
+				self.type = self.__get_common_name__(_object_category)
+				self.type = LDAPObjectTypes(self.type.lower())
+				self.attributes[LOCAL_ATTR_OBJECT_CATEGORY] = \
+					self.__get_common_name__(_object_category)
+
+		# Set Name and Type
+		self.attributes[LOCAL_ATTR_NAME] = self.__get_common_name__(distinguished_name)
 		self.attributes[LOCAL_ATTR_TYPE] = (
 			LDAPObjectTypes.GENERIC.value.lower()
 			if not self.type.value
 			else self.type.value.lower()
 		)
-		if LDAP_ATTR_OBJECT_CATEGORY in self.entry.entry_attributes:
-			self.attributes[LOCAL_ATTR_OBJECT_CATEGORY] = (
-				getldapattrvalue(self.entry, LDAP_ATTR_OBJECT_CATEGORY)
-				.split(",")[0]
-				.split("=")[1]
-			)
+
+		# Check if object is built-in
 		entry_object_classes: LDAPAttribute = getldapattrvalue(
 			self.entry, LDAP_ATTR_OBJECT_CLASS, []
 		)
@@ -320,6 +321,7 @@ class LDAPObject:
 		):
 			self.attributes[LOCAL_ATTR_BUILT_IN] = True
 
+		# Parse and set attributes with local alias
 		for attr_key in self.entry.entry_attributes:
 			if attr_key in (self.excluded_attributes or []):
 				continue
@@ -342,8 +344,8 @@ class LDAPObject:
 					self.attributes[LOCAL_ATTR_RELATIVE_ID] = rid
 				except Exception as e:
 					logger.error(
-						"Could not translate SID Byte Array for "
-						+ distinguished_name
+						"Could not translate SID Byte Array for %s",
+						distinguished_name
 					)
 					logger.exception(e)
 			elif attr_value and not attr_key in ATTRS_SPECIAL_LDAP:
@@ -382,11 +384,15 @@ class LDAPObject:
 		return self.entry.entry_attributes
 
 	def __get_common_name__(self, dn: str = None):
+		"""Parses common name from distinguished name."""
+		if dn and not isinstance(dn, str):
+			raise TypeError("dn must be of type str or None.")
 		if not dn and not self.distinguished_name:
-			raise ValueError("dn value is required")
+			raise ValueError("dn value is required if self has no distinguished_name attribute.")
 		if not dn:
 			dn = self.distinguished_name
-		return str(dn).split(",")[0].split("=")[-1]
+		_rdn: str = safe_rdn(dn)[0]
+		return _rdn.split("=")[-1]
 
 	def pre_create(self): # pragma: no cover
 		"""Pre Creation operations"""
@@ -427,9 +433,16 @@ class LDAPObject:
 
 	@property
 	def exists(self) -> bool:
-		"""Re-fetches entry and checks if it exists."""
-		self.__fetch_object__()
-		return bool(self.entry)
+		"""Fetches LDAP Entry and checks if it exists in backend LDAP Server."""
+		if not self.connection or not self.connection.bound:
+			raise Exception("A bound LDAP Connection is required to check if the object exists.")
+		self.connection.search(
+			search_base=self.search_base,
+			search_filter=self.search_filter,
+			search_scope=SUBTREE,
+			attributes=[LDAP_ATTR_DN],
+		)
+		return bool(self.connection.entries)
 
 	def value_changed(self, local_alias: str, ldap_alias: str, /) -> bool:
 		"""Checks if a local value differs from its entry counterpart
@@ -451,25 +464,26 @@ class LDAPObject:
 		if entry_value is None and local_value is None:
 			return False
 		if local_alias in self.int_fields:
-			entry_value = int(entry_value)
-			local_value = int(local_value)
+			if entry_value:
+				entry_value = int(entry_value)
+			if local_value:
+				local_value = int(local_value)
 		elif isinstance(entry_value, list) or isinstance(local_value, list):
 			# Have to contrast with value sets, as LDAP can sometimes return
 			# single element list/arrays, and we want to ensure de-duplicated
 			# lists.
 			if isinstance(entry_value, str):
-				entry_value = {entry_value}
-			elif isinstance(entry_value, list):
-				entry_value = set(entry_value)
-			else:
+				entry_value = [entry_value]
+			elif not isinstance(entry_value, list):
 				logger.warning("Bad value type for local %s field", local_alias)
+			entry_value = set(entry_value)
 
 			if isinstance(local_value, str):
-				local_value = {local_value}
-			elif isinstance(local_value, list):
-				local_value = set(local_value)
-			else:
+				local_value = [local_value]
+			elif not isinstance(local_value, list):
 				logger.warning("Bad value type for ldap %s field", ldap_alias)
+			local_value = set(local_value)
+
 		# For verbosity
 		has_changed = entry_value != local_value
 		return has_changed
@@ -558,10 +572,10 @@ class LDAPObject:
 				continue
 
 			# If local value empty
-			if not local_value and not local_value is False:
+			if local_value is None:
 				delete_attrs[ldap_alias] = [(MODIFY_DELETE, [])]
 			else:
-				replace_attrs[ldap_alias] = [(MODIFY_REPLACE, local_value)]
+				replace_attrs[ldap_alias] = [(MODIFY_REPLACE, [local_value])]
 
 		attrs = replace_attrs | delete_attrs
 
