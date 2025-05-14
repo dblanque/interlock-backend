@@ -74,7 +74,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 	@auth_required
 	@admin_required
-	def list(self, request, pk=None):
+	def list(self, request: Request, pk=None):
 		code = 0
 		active_preset = self.get_active_settings_preset()
 
@@ -108,7 +108,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@action(detail=True, methods=["get"])
 	@auth_required
 	@admin_required
-	def fetch(self, request, pk):
+	def fetch(self, request: Request, pk):
 		preset_id = int(pk)
 		code = 0
 
@@ -145,7 +145,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
-	def preset_create(self, request, pk=None):
+	def preset_create(self, request: Request, pk=None):
 		code = 0
 		if not "label" in request.data:
 			raise exc_base.MissingDataKey(data={"detail": "label"})
@@ -166,7 +166,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
-	def preset_delete(self, request, pk=None):
+	def preset_delete(self, request: Request, pk=None):
 		data: dict = request.data
 		code = 0
 		if not "id" in data:
@@ -183,7 +183,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
-	def preset_enable(self, request, pk=None):
+	def preset_enable(self, request: Request, pk=None):
 		data: dict = request.data
 		code = 0
 		if not "id" in data:
@@ -207,7 +207,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
-	def preset_rename(self, request, pk=None):
+	def preset_rename(self, request: Request, pk=None):
 		data: dict = request.data
 		code = 0
 		for k in ["id", "label"]:
@@ -238,7 +238,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
-	def save(self, request, pk=None):
+	def save(self, request: Request, pk=None):
 		data_preset: dict = request.data["preset"]
 		data_settings: dict = request.data["settings"]
 		code = 0
@@ -386,7 +386,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@action(detail=False, methods=["get"])
 	@auth_required
 	@admin_required
-	def reset(self, request, pk=None):
+	def reset(self, request: Request, pk=None):
 		data: dict = request.data
 		code = 0
 		active_preset = self.get_active_settings_preset()
@@ -399,7 +399,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
-	def test(self, request, pk=None):
+	def test(self, request: Request, pk=None):
 		data: dict = request.data
 		code = 0
 
