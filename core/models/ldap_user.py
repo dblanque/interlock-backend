@@ -150,18 +150,17 @@ class LDAPUser(LDAPObject):
 			LOCAL_ATTR_COUNTRY_DCC,
 			LOCAL_ATTR_COUNTRY_ISO,
 		)
-		if value is None:
-			return
-		if value == "":
-			self.attributes[LOCAL_ATTR_COUNTRY_DCC] = ""
-			self.attributes[LOCAL_ATTR_COUNTRY_ISO] = ""
-		else:
+		if value:
 			self.attributes[LOCAL_ATTR_COUNTRY_DCC] = LDAP_COUNTRIES[value][
 				"dccCode"
 			]
 			self.attributes[LOCAL_ATTR_COUNTRY_ISO] = LDAP_COUNTRIES[value][
 				"isoCode"
 			]
+		elif not value:
+			self.attributes[LOCAL_ATTR_COUNTRY] = None
+			self.attributes[LOCAL_ATTR_COUNTRY_DCC] = 0
+			self.attributes[LOCAL_ATTR_COUNTRY_ISO] = None
 
 		for attr in _COUNTRY_ATTRS:
 			if not attr in self.parsed_specials:
