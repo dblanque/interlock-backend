@@ -537,6 +537,22 @@ class TestDunderFetchObject:
 		assert m_object.entry == m_entry
 		assert m_object.distinguished_name == m_entry.entry_dn
 
+class TestDunderLdapAttrs:
+	@staticmethod
+	def test_no_entry(mocker: MockerFixture):
+		mocker.patch.object(LDAPObject, "__init__", return_value=None)
+		m_object = LDAPObject()
+		assert m_object.__ldap_attrs__() == []
+
+	@staticmethod
+	def test_with_entry(mocker: MockerFixture):
+		mocker.patch.object(LDAPObject, "__init__", return_value=None)
+		m_object = LDAPObject()
+		m_entry = mocker.Mock()
+		m_entry.entry_attributes = "m_attrs"
+		m_object.entry = m_entry
+		assert m_object.__ldap_attrs__() == m_entry.entry_attributes
+
 class TestGetCommonName:
 	@staticmethod
 	def test_ddr_get_common_name_extracts_cn_from_dn(
@@ -977,8 +993,21 @@ class TestUpdate:
 		ldap_obj.parsed_specials = []
 		ldap_obj.type = LDAPObjectTypes.USER
 		ldap_obj.attributes = {
-			LOCAL_ATTR_PHONE: "",
+			# Test unchanged value
+			# Normal
+			LOCAL_ATTR_CITY: getldapattrvalue(ldap_obj.entry, LDAP_ATTR_CITY),
+			# Test unparsed special attr
+			LOCAL_ATTR_COUNTRY: getldapattrvalue(
+				ldap_obj.entry,
+				LDAP_ATTR_COUNTRY
+			),
+			# Test immutable attr
+			LOCAL_ATTR_SECURITY_ID: "some_security_id",
+			# Changed values
+			# Replace
 			LOCAL_ATTR_ADDRESS: "Mock Address 1234",
+			# Delete
+			LOCAL_ATTR_PHONE: "",
 			LOCAL_ATTR_POSTAL_CODE: None,
 		}
 
