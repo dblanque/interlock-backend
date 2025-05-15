@@ -6,7 +6,7 @@ from datetime import datetime
 from core.views.mixins.utils import is_non_str_iterable
 from core.constants.attrs import *
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
-from ldap3 import Attribute as LDAPAttribute
+from ldap3 import Attribute as LDAPAttribute, Entry as LDAPEntry
 
 @pytest.fixture
 def f_object_attrs_user(f_runtime_settings: RuntimeSettingsSingleton) -> dict:
@@ -104,7 +104,7 @@ def f_object_entry_user(f_object_attrs_user, mocker: MockerFixture):
 		if not attrs:
 			attrs = {}
 		m_attrs: dict = f_object_attrs_user() | attrs
-		m_entry = mocker.Mock(spec=FakeLDAPUserEntry)
+		m_entry = mocker.Mock(spec=LDAPEntry)
 		for attr, val in m_attrs.items():
 			m_attr = mocker.Mock(spec=LDAPAttribute)
 			m_attr.value = val

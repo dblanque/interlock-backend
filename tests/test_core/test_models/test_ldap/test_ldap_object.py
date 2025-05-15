@@ -12,6 +12,8 @@ from ldap3 import (
 	ALL_OPERATIONAL_ATTRIBUTES,
 	ALL_ATTRIBUTES,
 	SUBTREE,
+	MODIFY_DELETE,
+	MODIFY_REPLACE,
 )
 from ldap3.core.exceptions import LDAPInvalidDnError
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
@@ -928,7 +930,71 @@ class TestCreate:
 		m_post_create.assert_called_once()
 
 class TestUpdate:
-	pass
+	@staticmethod
+	def test_raises_no_existing_entry(mocker: MockerFixture):
+		mocker.patch.object(LDAPObject, "__init__", return_value=None)
+		ldap_obj = LDAPObject()
+		ldap_obj.entry = None
+		with pytest.raises(Exception, match="existing LDAP Entry is required"):
+			ldap_obj.update()
+
+	@staticmethod
+	def test_raises_entry_type_error(mocker: MockerFixture):
+		mocker.patch.object(LDAPObject, "__init__", return_value=None)
+		ldap_obj = LDAPObject()
+		ldap_obj.entry = {"some": "dict"}
+		with pytest.raises(TypeError, match="must be of type ldap3.Entry"):
+			ldap_obj.update()
+
+	@staticmethod
+	def test_raises_attributes_must_be_set(mocker: MockerFixture):
+		mocker.patch.object(LDAPObject, "__init__", return_value=None)
+		ldap_obj = LDAPObject()
+		ldap_obj.entry = mocker.Mock(spec=LDAPEntry)
+		with pytest.raises(ValueError, match="attributes must be set"):
+			ldap_obj.update()
+
+	@staticmethod
+	def test_success(
+		mocker: MockerFixture,
+		f_connection: LDAPConnectionProtocol,
+		f_object_entry_user,
+	):
+		mocker.patch.object(LDAPObject, "__init__", return_value=None)
+		m_parse_write_special_attributes = mocker.patch.object(
+			LDAPObject,
+			"parse_write_special_attributes"
+		)
+		m_pre_update = mocker.patch.object(LDAPObject, "pre_update")
+		m_post_update = mocker.patch.object(LDAPObject, "post_update")
+		ldap_obj = LDAPObject()
+		ldap_obj.entry = f_object_entry_user()
+		ldap_obj.distinguished_name = ldap_obj.entry.entry_dn
+		ldap_obj.connection = f_connection
+		m_result = mocker.Mock(name="m_result")
+		m_result.description = "success"
+		ldap_obj.connection.result = m_result
+		ldap_obj.parsed_specials = []
+		ldap_obj.type = LDAPObjectTypes.USER
+		ldap_obj.attributes = {
+			LOCAL_ATTR_PHONE: "",
+			LOCAL_ATTR_ADDRESS: "Mock Address 1234",
+			LOCAL_ATTR_POSTAL_CODE: None,
+		}
+
+		# Execution & Assertions
+		assert ldap_obj.update() is True
+		m_parse_write_special_attributes.assert_called_once()
+		ldap_obj.connection.modify.assert_called_once_with(
+			dn=ldap_obj.distinguished_name,
+			changes={
+				LDAP_ATTR_ADDRESS: [(MODIFY_REPLACE, ["Mock Address 1234"])],
+				LDAP_ATTR_PHONE: [(MODIFY_DELETE, [])],
+				LDAP_ATTR_POSTAL_CODE: [(MODIFY_DELETE, [])],
+			},
+		)
+		m_pre_update.assert_called_once()
+		m_post_update.assert_called_once()
 
 class TestDelete:
 	@staticmethod
