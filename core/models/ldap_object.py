@@ -489,29 +489,24 @@ class LDAPObject:
 		return has_changed
 
 	def create(self):
-		_map = RuntimeSettings.LDAP_FIELD_MAP
 		if self.entry:
 			raise Exception("There is already an existing LDAP Entry.")
 		attrs = {}
 		_object_class = None
 		if self.type == LDAPObjectTypes.USER:
-			self.attributes[LOCAL_ATTR_OBJECT_CLASS] = list(
-				{
-					RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
-					"top",
-					"person",
-					"organizationalPerson",
-					"user",
-				}
-			)
+			self.attributes[LOCAL_ATTR_OBJECT_CLASS] = list({
+				RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
+				"top",
+				"person",
+				"organizationalPerson",
+				"user",
+			})
 			_object_class = RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
 		elif self.type == LDAPObjectTypes.GROUP:
-			self.attributes[LOCAL_ATTR_OBJECT_CLASS] = list(
-				{
-					"top",
-					"group",
-				}
-			)
+			self.attributes[LOCAL_ATTR_OBJECT_CLASS] = list({
+				"top",
+				"group",
+			})
 			_object_class = "group"
 
 		self.parse_write_special_attributes()
@@ -525,7 +520,7 @@ class LDAPObject:
 			):
 				continue
 
-			ldap_alias = _map[local_alias]
+			ldap_alias = RuntimeSettings.LDAP_FIELD_MAP[local_alias]
 			if local_value:
 				attrs[ldap_alias] = local_value
 
@@ -543,15 +538,14 @@ class LDAPObject:
 		)
 
 	def update(self) -> bool:
-		_map = RuntimeSettings.LDAP_FIELD_MAP
 		if not self.entry:
 			raise ValueError(
 				"An existing LDAP Entry is required to perform an update"
 			)
+		elif not isinstance(self.entry, LDAPEntry):
+			raise TypeError("self.entry must be of type ldap3.Entry")
 		if not self.attributes:
 			raise ValueError("New attributes must be set to perform an update")
-		if not isinstance(self.entry, LDAPEntry):
-			raise TypeError("self.entry must be of type ldap3.Entry")
 
 		self.parse_write_special_attributes()
 		replace_attrs = {}
@@ -567,7 +561,7 @@ class LDAPObject:
 				continue
 
 			# Ignore if local and remote values explicitly None
-			ldap_alias = _map[local_alias]
+			ldap_alias = RuntimeSettings.LDAP_FIELD_MAP[local_alias]
 			if not self.value_changed(local_alias, ldap_alias):
 				continue
 
@@ -591,13 +585,13 @@ class LDAPObject:
 		return True
 
 	def delete(self) -> bool:
+		if not self.entry and not self.distinguished_name:
+			raise Exception("Deletion requires a valid dn or entry.")
 		self.pre_delete()
 		if self.entry:
 			self.connection.delete(dn=self.entry.entry_dn)
 		elif self.distinguished_name:
 			self.connection.delete(dn=self.distinguished_name)
-		else:
-			raise Exception("Deletion requires a valid dn or entry.")
 		self.post_delete()
 		return (
 			getattr(self.connection.result, "description", "").lower()
