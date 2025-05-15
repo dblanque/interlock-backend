@@ -807,7 +807,55 @@ class TestValueChanged:
 		assert m_object.attributes.get(local_alias) == entry_value
 		assert not m_object.value_changed(local_alias, ldap_alias)
 
-# test create
-# test update
-# test delete
-# test save
+class TestCreate:
+	pass
+
+class TestUpdate:
+	pass
+
+class TestDelete:
+	pass
+
+class TestSave:
+	@staticmethod
+	def test_raises_exception(mocker: MockerFixture):
+		mocker.patch.object(LDAPObject, "__init__", return_value=None)
+		mocker.patch.object(LDAPObject, "create", return_value=False)
+		mocker.patch.object(LDAPObject, "update", return_value=False)
+		ldap_obj = LDAPObject()
+		ldap_obj.connection = None
+		ldap_obj.entry = None
+		with pytest.raises(Exception, match="requires a bound LDAP Connection"):
+			ldap_obj.save()
+
+	@staticmethod
+	def test_success_create(
+		mocker: MockerFixture,
+		f_connection: LDAPConnectionProtocol,
+	):
+		mocker.patch.object(LDAPObject, "__init__", return_value=None)
+		m_create = mocker.patch.object(LDAPObject, "create", return_value=True)
+		m_update = mocker.patch.object(LDAPObject, "update", return_value=True)
+		ldap_obj = LDAPObject()
+		ldap_obj.connection = f_connection
+		ldap_obj.entry = None
+
+		assert ldap_obj.save()
+		m_create.assert_called_once()
+		m_update.assert_not_called()
+
+	@staticmethod
+	def test_success_update(
+		mocker: MockerFixture,
+		f_connection: LDAPConnectionProtocol,
+	):
+		mocker.patch.object(LDAPObject, "__init__", return_value=None)
+		m_create = mocker.patch.object(LDAPObject, "create", return_value=True)
+		m_update = mocker.patch.object(LDAPObject, "update", return_value=True)
+		ldap_obj = LDAPObject()
+		ldap_obj.connection = f_connection
+		ldap_obj.entry = "mock_entry"
+
+		assert ldap_obj.save()
+		m_create.assert_not_called()
+		m_update.assert_called_once()
