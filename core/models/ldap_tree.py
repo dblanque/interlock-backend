@@ -44,7 +44,7 @@ class LDAPTree(LDAPObject):
 		connection: LDAPConnectionProtocol = None,
 		distinguished_name: str = None,
 		search_base: str = None,
-		excluded_attributes: list[str] = None,
+		excluded_ldap_attributes: list[str] = None,
 		required_attributes: list[str] = None,
 		recursive: bool = False,
 		test_fetch: bool = False,

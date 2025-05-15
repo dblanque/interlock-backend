@@ -119,11 +119,12 @@ class LDAPUser(LDAPObject):
 		entry: LDAPEntry = None,
 		connection: LDAPConnectionProtocol = None,
 		distinguished_name: str = None,
-		username: str = None,
 		search_base: str = None,
-		excluded_attributes: list[str] = None,
-		required_attributes: list[str] = None,
+		search_attrs: list[str] = None,
+		excluded_ldap_attributes: list[str] = None,
 		attributes: dict = None,
+		skip_fetch: bool = False,
+		username: str = None,
 	) -> None: ...
 
 	def __init__(self, **kwargs):

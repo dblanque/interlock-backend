@@ -121,7 +121,7 @@ class LDAPObject:
 	attributes: dict = None
 	connection: LDAPConnectionProtocol = None
 	entry: LDAPEntry = None
-	excluded_attributes: list[str] = None
+	excluded_ldap_attributes: list[str] = None
 	search_attrs: list[str] | str = ALL_OPERATIONAL_ATTRIBUTES
 	search_filter: str = None
 	search_base: str = None
@@ -145,7 +145,7 @@ class LDAPObject:
 		distinguished_name: str = None,
 		search_base: str = None,
 		search_attrs: list[str] = None,
-		excluded_attributes: list[str] = None,
+		excluded_ldap_attributes: list[str] = None,
 		attributes: dict = None,
 		skip_fetch: bool = False,
 	) -> None: ...
@@ -160,7 +160,7 @@ class LDAPObject:
 		self.search_base = RuntimeSettings.LDAP_AUTH_SEARCH_BASE
 		self.parsed_specials = []
 		self.attributes = {}
-		self.excluded_attributes = []
+		self.excluded_ldap_attributes = []
 		self.__set_kwargs__(**kwargs)
 
 		if not self.entry and not skip_fetch:
@@ -210,6 +210,7 @@ class LDAPObject:
 		if not search_attrs:
 			return
 		elif search_attrs in (ALL_OPERATIONAL_ATTRIBUTES, ALL_ATTRIBUTES,):
+			self.search_attrs = search_attrs
 			return
 
 		if not isinstance(search_attrs, (set, tuple, list, str)):
@@ -224,7 +225,7 @@ class LDAPObject:
 
 
 		# Remove excluded attributes
-		for attr in self.excluded_attributes:
+		for attr in self.excluded_ldap_attributes:
 			if attr in self.search_attrs:
 				self.search_attrs.remove(attr)
 
@@ -323,7 +324,7 @@ class LDAPObject:
 
 		# Parse and set attributes with local alias
 		for attr_key in self.entry.entry_attributes:
-			if attr_key in (self.excluded_attributes or []):
+			if attr_key in (self.excluded_ldap_attributes or []):
 				continue
 			attr_value = getldapattrvalue(self.entry, attr_key)
 			local_key = self.get_local_alias_for_ldap_key(attr_key, None)
@@ -348,6 +349,8 @@ class LDAPObject:
 						distinguished_name
 					)
 					logger.exception(e)
+			elif attr_key == LDAP_ATTR_BAD_PWD_COUNT:
+				self.attributes[local_key] = attr_value
 			elif attr_value and not attr_key in ATTRS_SPECIAL_LDAP:
 				self.attributes[local_key] = attr_value
 
@@ -362,6 +365,7 @@ class LDAPObject:
 			search_scope=SUBTREE,
 			attributes=self.search_attrs,
 		)
+		self.fetched = True
 		search_result = self.connection.entries
 		if not search_result:
 			self.entry = None
@@ -376,7 +380,6 @@ class LDAPObject:
 			self.distinguished_name = self.entry.entry_dn
 		except Exception as e:
 			raise ValueError("Error setting LDAP Object Entry Result") from e
-		self.fetched = True
 
 	def __ldap_attrs__(self) -> list:
 		if not self.entry:
@@ -434,15 +437,12 @@ class LDAPObject:
 	@property
 	def exists(self) -> bool:
 		"""Fetches LDAP Entry and checks if it exists in backend LDAP Server."""
-		if not self.connection or not self.connection.bound:
-			raise Exception("A bound LDAP Connection is required to check if the object exists.")
-		self.connection.search(
-			search_base=self.search_base,
-			search_filter=self.search_filter,
-			search_scope=SUBTREE,
-			attributes=[LDAP_ATTR_DN],
-		)
-		return bool(self.connection.entries)
+		if not self.connection:
+			raise Exception("An LDAP Connection is required to check if the object exists.")
+		if not self.connection.bound:
+			raise Exception("LDAP Connection must be bound to check if the object exists.")
+		self.__fetch_object__()
+		return bool(self.entry)
 
 	def value_changed(self, local_alias: str, ldap_alias: str, /) -> bool:
 		"""Checks if a local value differs from its entry counterpart
