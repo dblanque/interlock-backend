@@ -67,6 +67,7 @@ DEFAULT_CONTAINER_TYPES = {
 
 # Immutable Attributes, these are read only
 ATTRS_IMMUTABLE = {
+	LOCAL_ATTR_DN,
 	LOCAL_ATTR_TYPE,
 	LOCAL_ATTR_PATH,
 	LOCAL_ATTR_BAD_PWD_COUNT,
@@ -566,7 +567,7 @@ class LDAPObject:
 				continue
 
 			# If local value empty
-			if local_value is None:
+			if not local_value:
 				delete_attrs[ldap_alias] = [(MODIFY_DELETE, [])]
 			else:
 				replace_attrs[ldap_alias] = [(MODIFY_REPLACE, [local_value])]
