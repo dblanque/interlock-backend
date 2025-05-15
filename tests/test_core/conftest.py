@@ -11,6 +11,7 @@ from core.models.interlock_settings import (
 	INTERLOCK_SETTING_ENABLE_LDAP,
 	TYPE_BOOL,
 )
+from copy import deepcopy
 
 
 @pytest.fixture
@@ -49,9 +50,8 @@ def g_runtime_settings(mocker: MockerFixture) -> RuntimeSettingsFactory:
 		if setting_key.startswith("__") and setting_key.endswith("__"):
 			continue
 		setting_value = getattr(ldap_defaults, setting_key, None)
-		setattr(mock, setting_key, setting_value)
+		setattr(mock, setting_key, deepcopy(setting_value))
 	return mock
-
 
 class ConnectorFactory(Protocol):
 	def __call__(
