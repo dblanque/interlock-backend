@@ -1,5 +1,4 @@
 import pytest
-from pytest_mock import MockType
 from core.models.ldap_tree import LDAPTree
 from core.models.ldap_object import LDAPObject
 from core.config.runtime import RuntimeSettings
