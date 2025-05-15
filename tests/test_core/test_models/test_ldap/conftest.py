@@ -6,16 +6,13 @@ from datetime import datetime
 from core.views.mixins.utils import is_non_str_iterable
 from core.constants.attrs import *
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
-from ldap3 import (
-	Attribute as LDAPAttribute,
-	Entry as LDAPEntry
-)
+from ldap3 import Attribute as LDAPAttribute
 
 @pytest.fixture
 def f_object_attrs_user(f_runtime_settings: RuntimeSettingsSingleton) -> dict:
-	def maker():
+	def maker(**kwargs):
 		fake_date = datetime.today().strftime(LDAP_DATE_FORMAT)
-		return {
+		fake_user = {
 			LDAP_ATTR_DN: f"CN=Test User,OU=Administrators,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
 			LDAP_ATTR_FIRST_NAME: "Test",
 			LDAP_ATTR_LAST_NAME: "User",
@@ -45,8 +42,11 @@ def f_object_attrs_user(f_runtime_settings: RuntimeSettingsSingleton) -> dict:
 			LDAP_ATTR_BAD_PWD_COUNT: 0,
 			LDAP_ATTR_PWD_SET_AT: "fake_pwd_last_set",
 			LDAP_ATTR_ACCOUNT_TYPE: 805306368,
-			LDAP_ATTR_USER_GROUPS: f"CN=Administrators,CN=Builtin,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
+			LDAP_ATTR_USER_GROUPS: [f"CN=Administrators,CN=Builtin,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}", f"CN=Some Group,OU=Some OU,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}"],
 		}
+		for kw, val in kwargs.items():
+			fake_user[kw] = val
+		return fake_user
 	return maker
 
 
