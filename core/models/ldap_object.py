@@ -604,13 +604,13 @@ class LDAPObject:
 			== "success"
 		)
 
-	def save(self):
+	def save(self) -> bool:
 		if not self.connection or not self.connection.bound:
 			raise Exception(
-				"LDAPObject requires a bound connection to save modifications"
+				"LDAPObject requires a bound LDAP Connection to save modifications"
 			)
 
 		if not self.entry:
-			self.create()
+			return self.create()
 		else:
-			self.update()
+			return self.update()
