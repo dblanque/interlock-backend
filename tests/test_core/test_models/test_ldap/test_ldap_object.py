@@ -54,12 +54,12 @@ def f_user_expected_keys():
 
 @pytest.fixture(autouse=True)
 def f_runtime_settings(
-	mocker: MockerFixture, g_runtime_settings: RuntimeSettingsSingleton
+	mocker: MockerFixture,
+	g_runtime_settings: RuntimeSettingsSingleton,
 ):
 	return mocker.patch(
 		"core.models.ldap_object.RuntimeSettings", g_runtime_settings
 	)
-
 
 @pytest.fixture
 def f_object_args(f_connection, f_runtime_settings: RuntimeSettingsSingleton):
@@ -439,10 +439,8 @@ class TestDunderSyncObject:
 	def test_success_with_builtin_attr(
 		mocker: MockerFixture,
 		f_object_entry_user: LDAPEntry,
-		f_runtime_settings: RuntimeSettingsSingleton,
 	):
 		mocker.patch.object(LDAPObject, "__init__", return_value=None)
-		f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_ADDRESS] = None
 		m_object = LDAPObject()
 		m_object.entry = f_object_entry_user({
 			LDAP_ATTR_OBJECT_CLASS: [
@@ -629,7 +627,11 @@ class TestGetLocalAliasForLDAPKey:
 			(LOCAL_ATTR_GROUP_TYPE, LDAP_ATTR_GROUP_TYPE,),
 		),
 	)
-	def test_success(local_alias: str, ldap_alias: str, mocker: MockerFixture):
+	def test_success(
+		local_alias: str,
+		ldap_alias: str,
+		mocker: MockerFixture,
+	):
 		mocker.patch.object(LDAPObject, "__init__", return_value=None)
 		ldap_obj = LDAPObject()
 		assert ldap_obj.get_local_alias_for_ldap_key(ldap_alias) == local_alias
@@ -808,13 +810,187 @@ class TestValueChanged:
 		assert not m_object.value_changed(local_alias, ldap_alias)
 
 class TestCreate:
-	pass
+	@staticmethod
+	def test_raises_existing_entry(mocker: MockerFixture):
+		mocker.patch.object(LDAPObject, "__init__", return_value=None)
+		ldap_obj = LDAPObject()
+		ldap_obj.entry = mocker.Mock(name="m_entry")
+		with pytest.raises(Exception, match="existing LDAP Entry"):
+			ldap_obj.create()
+
+	@staticmethod
+	def test_success_user_ldap_object(
+		mocker: MockerFixture,
+		f_connection: LDAPConnectionProtocol,
+		f_runtime_settings: RuntimeSettingsSingleton,
+	):
+		mocker.patch.object(LDAPObject, "__init__", return_value=None)
+		m_parse_write_special_attributes = mocker.patch.object(
+			LDAPObject,
+			"parse_write_special_attributes"
+		)
+		m_pre_create = mocker.patch.object(LDAPObject, "pre_create")
+		m_post_create = mocker.patch.object(LDAPObject, "post_create")
+		ldap_obj = LDAPObject()
+		ldap_obj.distinguished_name = "mock_dn"
+		ldap_obj.connection = f_connection
+		m_result = mocker.Mock(name="m_result")
+		m_result.description = "success"
+		ldap_obj.connection.result = m_result
+		ldap_obj.entry = None
+		ldap_obj.parsed_specials = []
+		ldap_obj.type = LDAPObjectTypes.USER
+		ldap_obj.attributes = {
+			LOCAL_ATTR_FIRST_NAME: "Test",
+			LOCAL_ATTR_LAST_NAME: "User",
+			LOCAL_ATTR_FULL_NAME: "Test User",
+			LOCAL_ATTR_PHONE: "+5491112345678",
+			LOCAL_ATTR_ADDRESS: "Mock Address 1234",
+			LOCAL_ATTR_POSTAL_CODE: "CODE1234",
+			# Special User attr that cannot be parsed by LDAPObject super-class
+			LOCAL_ATTR_COUNTRY: "Argentina",
+			# Attribute that is immutable
+			LOCAL_ATTR_SECURITY_ID: "SID_IS_IMMUTABLE",
+		}
+
+		# Execution & Assertions
+		assert ldap_obj.create() is True
+		m_parse_write_special_attributes.assert_called_once()
+		ldap_obj.connection.add.assert_called_once_with(
+			dn=ldap_obj.distinguished_name,
+			object_class=f_runtime_settings.LDAP_AUTH_OBJECT_CLASS,
+			attributes={
+				LDAP_ATTR_FIRST_NAME: "Test",
+				LDAP_ATTR_LAST_NAME: "User",
+				LDAP_ATTR_FULL_NAME: "Test User",
+				LDAP_ATTR_PHONE: "+5491112345678",
+				LDAP_ATTR_ADDRESS: "Mock Address 1234",
+				LDAP_ATTR_POSTAL_CODE: "CODE1234",
+				LDAP_ATTR_OBJECT_CLASS: list({
+				f_runtime_settings.LDAP_AUTH_OBJECT_CLASS,
+					"top",
+					"person",
+					"organizationalPerson",
+					"user",
+				}),
+			},
+		)
+		m_pre_create.assert_called_once()
+		m_post_create.assert_called_once()
+
+	@staticmethod
+	def test_success_group_ldap_object(
+		mocker: MockerFixture,
+		f_connection: LDAPConnectionProtocol,
+	):
+		mocker.patch.object(LDAPObject, "__init__", return_value=None)
+		m_parse_write_special_attributes = mocker.patch.object(
+			LDAPObject,
+			"parse_write_special_attributes"
+		)
+		m_pre_create = mocker.patch.object(LDAPObject, "pre_create")
+		m_post_create = mocker.patch.object(LDAPObject, "post_create")
+		ldap_obj = LDAPObject()
+		ldap_obj.distinguished_name = "mock_dn"
+		ldap_obj.connection = f_connection
+		m_result = mocker.Mock(name="m_result")
+		m_result.description = "success"
+		ldap_obj.connection.result = m_result
+		ldap_obj.entry = None
+		ldap_obj.parsed_specials = []
+		ldap_obj.type = LDAPObjectTypes.GROUP
+		ldap_obj.attributes = {
+			LOCAL_ATTR_NAME: "Test Group",
+			LOCAL_ATTR_EMAIL: "mail@example.com",
+			# Special Group attrs that cannot be parsed by LDAPObject
+			LOCAL_ATTR_GROUP_TYPE: ["some_type"],
+			LOCAL_ATTR_GROUP_SCOPE: ["some_scope"],
+			LOCAL_ATTR_GROUP_MEMBERS: ["member_01", "member_02"],
+			# Attribute that is immutable
+			LOCAL_ATTR_SECURITY_ID: "SID_IS_IMMUTABLE",
+		}
+
+		# Execution & Assertions
+		assert ldap_obj.create() is True
+		m_parse_write_special_attributes.assert_called_once()
+		ldap_obj.connection.add.assert_called_once_with(
+			dn=ldap_obj.distinguished_name,
+			object_class="group",
+			attributes={
+				LDAP_ATTR_EMAIL: "mail@example.com",
+				LDAP_ATTR_OBJECT_CLASS: list({
+					"top",
+					"group",
+				}),
+			},
+		)
+		m_pre_create.assert_called_once()
+		m_post_create.assert_called_once()
 
 class TestUpdate:
 	pass
 
 class TestDelete:
-	pass
+	@staticmethod
+	def test_success_delete_from_entry_dn(
+		mocker: MockerFixture,
+		f_connection: LDAPConnectionProtocol,
+	):
+		mocker.patch.object(LDAPObject, "__init__", return_value=None)
+		m_pre_delete = mocker.patch.object(LDAPObject, "pre_delete")
+		m_post_delete = mocker.patch.object(LDAPObject, "post_delete")
+		m_entry = mocker.Mock(spec=LDAPEntry)
+		m_entry.entry_dn = "mock_dn"
+		ldap_obj = LDAPObject()
+		ldap_obj.entry = m_entry
+		f_connection.result = mocker.Mock(name="m_result")
+		f_connection.result.description = "success"
+		ldap_obj.connection = f_connection
+
+		assert ldap_obj.delete() is True
+		ldap_obj.connection.delete.assert_called_once_with(
+			dn=m_entry.entry_dn
+		)
+		m_pre_delete.assert_called_once()
+		m_post_delete.assert_called_once()
+
+	@staticmethod
+	def test_success_delete_from_self_dn(
+		mocker: MockerFixture,
+		f_connection: LDAPConnectionProtocol,
+	):
+		mocker.patch.object(LDAPObject, "__init__", return_value=None)
+		m_pre_delete = mocker.patch.object(LDAPObject, "pre_delete")
+		m_post_delete = mocker.patch.object(LDAPObject, "post_delete")
+		ldap_obj = LDAPObject()
+		ldap_obj.distinguished_name = "mock_dn"
+		f_connection.result = mocker.Mock(name="m_result")
+		f_connection.result.description = "success"
+		ldap_obj.connection = f_connection
+
+		assert ldap_obj.delete() is True
+		ldap_obj.connection.delete.assert_called_once_with(
+			dn=ldap_obj.distinguished_name
+		)
+		m_pre_delete.assert_called_once()
+		m_post_delete.assert_called_once()
+
+	@staticmethod
+	def test_raises_entry_or_dn_required(
+		mocker: MockerFixture,
+		f_connection: LDAPConnectionProtocol,
+	):
+		mocker.patch.object(LDAPObject, "__init__", return_value=None)
+		m_pre_delete = mocker.patch.object(LDAPObject, "pre_delete")
+		m_post_delete = mocker.patch.object(LDAPObject, "post_delete")
+		ldap_obj = LDAPObject()
+		ldap_obj.connection = f_connection
+
+		with pytest.raises(Exception, match="requires a valid dn or entry"):
+			ldap_obj.delete()
+		ldap_obj.connection.delete.assert_not_called()
+		m_pre_delete.assert_not_called()
+		m_post_delete.assert_not_called()
 
 class TestSave:
 	@staticmethod
