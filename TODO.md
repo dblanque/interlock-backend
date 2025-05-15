@@ -14,6 +14,7 @@
 * Add logging to all Application model operations <t>
 
 ## Issues
+* Add LDAP_DEFAULT_USER_CLASSES, LDAP_DEFAULT_GROUP_CLASSES to ldap settings
 * Move interlock_rsa to class instances
 * Add local user/asg bulk actions
 * Add OIDC Prompt Features?
