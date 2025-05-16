@@ -155,14 +155,16 @@ def sync_user_relations(
 		raise ValueError("Username not present in User LDAP Attributes.")
 	else:
 		_username: str = _username[0] \
-			if isinstance(_username, list) else _username
+			if isinstance(_username, (list, tuple, set)) \
+			else _username
 	if not _distinguished_name:
 		raise ValueError(
 			"Distinguished Name not present in User LDAP Attributes."
 		)
 	else:
 		_distinguished_name: str = _distinguished_name[0] \
-			if isinstance(_distinguished_name, list) else _distinguished_name
+			if isinstance(_distinguished_name, (list, tuple, set)) \
+			else _distinguished_name
 
 	# Set user as LDAP Type for Distinguished Name getter/setter to work
 	user.user_type = USER_TYPE_LDAP
