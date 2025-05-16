@@ -1,6 +1,12 @@
 import pytest
 from pytest_mock import MockType
 from core.ldap.connector import sync_user_relations
+from core.constants.attrs import (
+	LOCAL_ATTR_USERNAME,
+	LOCAL_ATTR_EMAIL,
+	LOCAL_ATTR_DN,
+	LDAP_ATTR_USERNAME_SAMBA_ADDS,
+)
 from core.ldap.defaults import (
 	LDAP_AUTH_SEARCH_BASE,
 	LDAP_FIELD_MAP,
@@ -10,9 +16,9 @@ from core.ldap.defaults import (
 
 def m_user_as_ldap_attributes(m_user: dict):
 	return {
-		LDAP_FIELD_MAP["username"]: m_user.username,
-		"distinguishedName": m_user.dn,
-		"mail": m_user.email,
+		LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME]: [m_user.username],
+		LDAP_FIELD_MAP[LOCAL_ATTR_DN]: [m_user.distinguished_name],
+		LDAP_FIELD_MAP[LOCAL_ATTR_EMAIL]: [m_user.email],
 	}
 
 
@@ -25,7 +31,7 @@ def m_user_as_ldap_attributes(m_user: dict):
 			# user
 			{
 				"username": "Administrator",
-				"dn": f"cn=Administrator,{LDAP_AUTH_SEARCH_BASE}",
+				"distinguished_name": f"cn=Administrator,{LDAP_AUTH_SEARCH_BASE}",
 				"email": f"admin@{LDAP_DOMAIN}",
 				"is_staff": False,
 				"is_superuser": False,
@@ -38,7 +44,7 @@ def m_user_as_ldap_attributes(m_user: dict):
 			# user
 			{
 				"username": "testuser",
-				"dn": f"cn=testuser,{LDAP_AUTH_SEARCH_BASE}",
+				"distinguished_name": f"cn=testuser,{LDAP_AUTH_SEARCH_BASE}",
 				"email": f"testuser@{LDAP_DOMAIN}",
 				"is_staff": False,
 				"is_superuser": False,
@@ -51,7 +57,7 @@ def m_user_as_ldap_attributes(m_user: dict):
 			# user
 			{
 				"username": "testuser",
-				"dn": f"cn=testuser,{LDAP_AUTH_SEARCH_BASE}",
+				"distinguished_name": f"cn=testuser,{LDAP_AUTH_SEARCH_BASE}",
 				"email": f"testuser@{LDAP_DOMAIN}",
 				"is_staff": True,
 				"is_superuser": True,
@@ -90,9 +96,11 @@ def test_sync_user_relations_admin_user(
 def test_sync_user_relations_no_distinguished_name(mocker):
 	with pytest.raises(
 		ValueError,
-		match="distinguishedName not present in User LDAP Attributes.",
+		match="Distinguished Name not present in User LDAP Attributes.",
 	):
-		sync_user_relations(mocker.Mock(), {}, connection=mocker.Mock())
+		sync_user_relations(mocker.Mock(), {
+			LDAP_ATTR_USERNAME_SAMBA_ADDS: ["testuser"]
+		}, connection=mocker.Mock())
 
 
 @pytest.mark.parametrize(
@@ -102,7 +110,7 @@ def test_sync_user_relations_no_distinguished_name(mocker):
 		# Was in ADMIN_GROUP_TO_SEARCH, attributes not synced
 		{
 			"username": "testuser",
-			"dn": f"cn=testuser,{LDAP_AUTH_SEARCH_BASE}",
+			"distinguished_name": f"cn=testuser,{LDAP_AUTH_SEARCH_BASE}",
 			"email": f"testuser@{LDAP_DOMAIN}",
 			"is_staff": True,
 			"is_superuser": True,
@@ -110,7 +118,7 @@ def test_sync_user_relations_no_distinguished_name(mocker):
 		# Always was normal user
 		{
 			"username": "testuser",
-			"dn": f"cn=testuser,{LDAP_AUTH_SEARCH_BASE}",
+			"distinguished_name": f"cn=testuser,{LDAP_AUTH_SEARCH_BASE}",
 			"email": f"testuser@{LDAP_DOMAIN}",
 			"is_staff": False,
 			"is_superuser": False,
@@ -142,7 +150,7 @@ def test_sync_user_relations_normal_user(
 def m_user_data():
 	return {
 		"username": "testuser",
-		"dn": f"cn=testuser,{LDAP_AUTH_SEARCH_BASE}",
+		"distinguished_name": f"cn=testuser,{LDAP_AUTH_SEARCH_BASE}",
 		"email": f"testuser@{LDAP_DOMAIN}",
 		"is_staff": False,
 		"is_superuser": False,
@@ -169,7 +177,7 @@ def test_sync_user_relations_dn_as_tuple(
 	)
 	sync_user_relations(m_user, ldap_attributes, connection=f_ldap_connection)
 
-	assert a_user.dn == m_user.dn
+	assert a_user.distinguished_name == m_user.distinguished_name
 	assert m_user.is_staff is False
 	assert m_user.is_superuser is False
 	m_user.save.assert_called_once()
