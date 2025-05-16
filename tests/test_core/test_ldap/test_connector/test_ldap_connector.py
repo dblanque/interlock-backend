@@ -16,20 +16,23 @@ from core.models.choices.log import (
 from core.models.user import USER_TYPE_LDAP
 from inspect import getfullargspec
 from copy import deepcopy
+from tests.test_core.conftest import RuntimeSettingsFactory
+from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 import ssl
 
+@pytest.fixture(autouse=True)
+def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
+	return g_runtime_settings(patch_path="core.ldap.connector.RuntimeSettings")
 
 @pytest.fixture
 def f_ldap_connector(
 	mocker,
-	f_runtime_settings,
 	f_user,
 	f_ldap_connection,
 	f_tls,
 	f_server,
 	f_server_pool,
 ):
-	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
 	mocker.patch("core.ldap.connector.ldap3.Server", return_value=f_server)
 	mocker.patch(
 		"core.ldap.connector.ldap3.ServerPool", return_value=f_server_pool
@@ -52,10 +55,9 @@ def f_ldap_connector(
 	ids=lambda x: "Is authenticating" if x else "Is not authenticating",
 )
 def test_enter_context_manager(
-	authenticating, mocker, f_user, f_runtime_settings
+	authenticating, mocker, f_user
 ):
 	# Mock RuntimeSettings
-	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
 	mocker.patch("core.ldap.connector.aes_decrypt", return_value="somepassword")
 
 	# Mock DBLogMixin.log
@@ -90,10 +92,9 @@ def test_enter_context_manager(
 	ids=lambda x: "Is authenticating" if x else "Is not authenticating",
 )
 def test_exit_context_manager(
-	authenticating, mocker, f_user, f_runtime_settings, f_ldap_connection
+	authenticating, mocker, f_user, f_ldap_connection
 ):
 	# Mock RuntimeSettings
-	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
 	mocker.patch("core.ldap.connector.aes_decrypt", return_value="somepassword")
 
 	# Mock DBLogMixin.log
@@ -144,7 +145,6 @@ def test_init_with_valid_user(
 	f_user,
 	f_ldap_connection,
 	f_server_pool,
-	f_runtime_settings,
 	f_tls,
 ):
 	connector_kwargs = {"force_admin": force_admin}
@@ -153,10 +153,7 @@ def test_init_with_valid_user(
 			expected_dn = f_admin_dn
 		else:
 			connector_kwargs["user"] = f_user
-			expected_dn = f_user.dn
-
-	# Mock RuntimeSettings
-	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
+			expected_dn = f_user.distinguished_name
 
 	# Mock ldap3.Connection
 	mocker.patch(
@@ -176,22 +173,17 @@ def test_init_with_valid_user(
 		assert connector.user_dn.lower() == expected_dn
 
 
-def test_init_with_invalid_user(mocker, f_runtime_settings):
-	# Mock RuntimeSettings
-	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
-
+def test_init_with_invalid_user(mocker):
 	# Test with no user
 	with pytest.raises(Exception, match="No valid user in LDAP Connector."):
 		LDAPConnector(user=None)
 
 
-def test_init_with_invalid_user_dn(mocker, f_runtime_settings):
-	# Mock RuntimeSettings
-	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
+def test_init_with_invalid_user_dn(mocker, f_runtime_settings: RuntimeSettingsSingleton):
 	mocker.patch("core.ldap.connector.aes_decrypt", return_value="somepassword")
 	f_runtime_settings.LDAP_AUTH_CONNECTION_USER_DN = None
 	m_user = mocker.MagicMock()
-	m_user.dn = None
+	m_user.distinguished_name = None
 	m_user.user_type = USER_TYPE_LDAP
 
 	# Test with no user
@@ -202,12 +194,12 @@ def test_init_with_invalid_user_dn(mocker, f_runtime_settings):
 
 
 @pytest.fixture
-def tls_version_enum(f_runtime_settings):
+def tls_version_enum(f_runtime_settings: RuntimeSettingsSingleton):
 	return f_runtime_settings.LDAP_AUTH_TLS_VERSION
 
 
 @pytest.fixture
-def tls_version_str(f_runtime_settings):
+def tls_version_str(f_runtime_settings: RuntimeSettingsSingleton):
 	return getattr(ssl, f_runtime_settings.LDAP_AUTH_TLS_VERSION.name)
 
 
@@ -219,7 +211,7 @@ def tls_version_str(f_runtime_settings):
 	),
 )
 def test_log_init(
-	tls_version, mocker, f_ldap_connector, f_runtime_settings, request
+	tls_version, mocker, f_ldap_connector, request
 ):
 	_tls_version = request.getfixturevalue(tls_version)
 	m_logger: MockType = mocker.patch("core.ldap.connector.logger")
@@ -240,13 +232,12 @@ def test_bind_success(
 	use_tls,
 	mocker,
 	f_user,
-	f_runtime_settings,
+	f_runtime_settings: RuntimeSettingsSingleton,
 	f_ldap_connection,
 	f_server_pool,
 	f_tls,
 ):
 	# Mock RuntimeSettings
-	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
 	f_runtime_settings.LDAP_AUTH_USE_TLS = use_tls
 
 	# Mock ldap3.Connection
@@ -277,11 +268,8 @@ def test_bind_success(
 
 
 def test_bind_connection_raises_ldap_exception(
-	mocker, f_user, f_runtime_settings, f_server_pool, f_tls
+	mocker, f_user, f_server_pool, f_tls
 ):
-	# Mock RuntimeSettings
-	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
-
 	# Patch connector classes
 	mocker.patch(
 		"core.ldap.connector.ldap3.Connection", side_effect=LDAPException
@@ -305,10 +293,8 @@ def test_bind_connection_raises_ldap_exception(
 
 
 def test_bind_raises_ldap_exception(
-	mocker, f_user, f_runtime_settings, f_ldap_connection, f_server_pool, f_tls
+	mocker, f_user, f_ldap_connection, f_server_pool, f_tls
 ):
-	# Mock RuntimeSettings
-	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
 
 	# Patch connector classes
 	f_ldap_connection.bind.side_effect = LDAPException
@@ -345,10 +331,10 @@ def test_rebind_success(
 	)
 	f_ldap_connection.result = "result"
 
-	result = f_ldap_connector.rebind(f_user.dn, "somepassword")
+	result = f_ldap_connector.rebind(f_user.distinguished_name, "somepassword")
 	assert result == f_ldap_connection.result
 	f_ldap_connection.rebind.assert_called_once_with(
-		user=f_user.dn, password="somepassword", read_server_info=True
+		user=f_user.distinguished_name, password="somepassword", read_server_info=True
 	)
 
 
@@ -369,7 +355,7 @@ def test_rebind_password_exception(
 		ValueError,
 		match="Password length smaller than one, unbinding connection.",
 	):
-		f_ldap_connector.rebind(f_user.dn, None)
+		f_ldap_connector.rebind(f_user.distinguished_name, None)
 
 
 def test_rebind_ldap_exception(
@@ -381,13 +367,13 @@ def test_rebind_ldap_exception(
 	f_ldap_connection.rebind.side_effect = LDAPException
 
 	f_ldap_connector.connection = f_ldap_connection
-	assert f_ldap_connector.rebind(f_user.dn, "somepassword") is None
+	assert f_ldap_connector.rebind(f_user.distinguished_name, "somepassword") is None
 
 
 def test_get_user_success(
 	mocker,
 	f_user,
-	f_runtime_settings,
+	f_runtime_settings: RuntimeSettingsSingleton,
 	f_ldap_connection,
 	f_ldap_connector,
 ):
@@ -422,10 +408,8 @@ def test_get_user_success(
 
 
 def test_get_user_failure(
-	mocker, f_ldap_connector, f_runtime_settings, f_ldap_connection
+	mocker, f_ldap_connector, f_ldap_connection
 ):
-	# Mock RuntimeSettings
-	mocker.patch("core.ldap.connector.RuntimeSettings", f_runtime_settings)
 
 	# Patch connector classes
 	mocker.patch(
