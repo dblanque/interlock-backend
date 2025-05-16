@@ -1,6 +1,6 @@
-# Create/Complete tests for
+# Create/Complete/Fix tests for
 * core.models.ldap_group
-* core.models.ldap_object
+* core.models.ldap_object <d>
 * core.models.ldap_tree
 * core.models.ldap_user
 * core.ldap.ldap_settings
