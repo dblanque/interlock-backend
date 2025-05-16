@@ -68,6 +68,24 @@ class LDAPUser(LDAPObject):
 		LDAP_ATTR_INITIALS,
 	)
 
+	@overload
+	def __init__(
+		self,
+		entry: LDAPEntry = None,
+		connection: LDAPConnectionProtocol = None,
+		distinguished_name: str = None,
+		search_base: str = None,
+		search_attrs: list[str] = None,
+		excluded_ldap_attributes: list[str] = None,
+		attributes: dict = None,
+		skip_fetch: bool = False,
+		username: str = None,
+	) -> None: ...
+
+	# Only defined explicitly for overload definition
+	def __init__(self, **kwargs): # pragma: no cover
+		super().__init__(**kwargs)
+
 	def __validate_init__(self, **kwargs):
 		kw_samaccountname = kwargs.pop(LDAP_ATTR_USERNAME_SAMBA_ADDS, None)
 		self.username = kwargs.pop(LOCAL_ATTR_USERNAME, kw_samaccountname)
@@ -112,23 +130,6 @@ class LDAPUser(LDAPObject):
 				),
 				LDAPFilter.eq(LDAP_ATTR_USERNAME_SAMBA_ADDS, self.username),
 			).to_string()
-
-	@overload
-	def __init__(
-		self,
-		entry: LDAPEntry = None,
-		connection: LDAPConnectionProtocol = None,
-		distinguished_name: str = None,
-		search_base: str = None,
-		search_attrs: list[str] = None,
-		excluded_ldap_attributes: list[str] = None,
-		attributes: dict = None,
-		skip_fetch: bool = False,
-		username: str = None,
-	) -> None: ...
-
-	def __init__(self, **kwargs):
-		super().__init__(**kwargs)
 
 	def parse_write_special_attributes(self):
 		self.parse_write_country(self.attributes.get(LOCAL_ATTR_COUNTRY, None))

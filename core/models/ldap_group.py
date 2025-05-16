@@ -67,8 +67,42 @@ class LDAPGroup(LDAPObject):
 		groupname: str = None,
 	) -> None: ...
 
-	def __init__(self, **kwargs):
+	# Only defined explicitly for overload definition
+	def __init__(self, **kwargs): # pragma: no cover
 		super().__init__(**kwargs)
+
+	def __validate_init__(self, **kwargs):
+		kw_common_name = kwargs.pop("common_name", None)
+		self.groupname = kwargs.pop(LDAP_ATTR_COMMON_NAME, kw_common_name)
+
+		if self.entry and not isinstance(self.entry, LDAPEntry):
+			raise TypeError(
+				f"LDAPGroup entry must attr must be of type ldap3.Entry"
+			)
+
+		if not self.connection and not self.entry:
+			raise Exception(
+				f"LDAPGroup requires an LDAP Connection or an Entry to Initialize"
+			)
+		elif self.connection:
+			if not self.distinguished_name and not self.groupname:
+				raise Exception(
+					f"LDAPGroup requires a distinguished_name or groupname to search for the object"
+				)
+
+		if self.entry:
+			self.__set_dn_and_filter_from_entry__()
+		elif self.distinguished_name and isinstance(
+			self.distinguished_name, str
+		):
+			self.search_filter = LDAPFilter.eq(
+				LDAP_ATTR_DN, self.distinguished_name
+			).to_string()
+		elif self.groupname and isinstance(self.groupname, str):
+			self.search_filter = LDAPFilter.and_(
+				LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "group"),
+				LDAPFilter.eq(LDAP_ATTR_COMMON_NAME, self.groupname),
+			).to_string()
 
 	def parse_read_group_type_scope(self, group_type: int = None) -> tuple[list[str], list[str]]:
 		"""Get group types and scopes from integer value"""
@@ -223,36 +257,3 @@ class LDAPGroup(LDAPObject):
 	def post_update(self):
 		self.post_create()
 		self.parse_write_common_name()
-
-	def __validate_init__(self, **kwargs):
-		kw_common_name = kwargs.pop("common_name", None)
-		self.groupname = kwargs.pop(LDAP_ATTR_COMMON_NAME, kw_common_name)
-
-		if self.entry and not isinstance(self.entry, LDAPEntry):
-			raise TypeError(
-				f"LDAPGroup entry must attr must be of type ldap3.Entry"
-			)
-
-		if not self.connection and not self.entry:
-			raise Exception(
-				f"LDAPGroup requires an LDAP Connection or an Entry to Initialize"
-			)
-		elif self.connection:
-			if not self.distinguished_name and not self.groupname:
-				raise Exception(
-					f"LDAPGroup requires a distinguished_name or groupname to search for the object"
-				)
-
-		if self.entry:
-			self.__set_dn_and_filter_from_entry__()
-		elif self.distinguished_name and isinstance(
-			self.distinguished_name, str
-		):
-			self.search_filter = LDAPFilter.eq(
-				LDAP_ATTR_DN, self.distinguished_name
-			).to_string()
-		elif self.groupname and isinstance(self.groupname, str):
-			self.search_filter = LDAPFilter.and_(
-				LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "group"),
-				LDAPFilter.eq(LDAP_ATTR_COMMON_NAME, self.groupname),
-			).to_string()
