@@ -27,6 +27,7 @@ from core.exceptions import (
 )
 from core.views.mixins.logs import LogMixin
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
+from tests.test_core.conftest import RuntimeSettingsFactory
 from ldap3 import (
 	Entry as LDAPEntry,
 	SUBTREE,
@@ -56,13 +57,8 @@ MockLDAPConnector = Union[LDAPConnector, MockType]
 
 
 @pytest.fixture
-def f_runtime_settings(
-	mocker: MockerFixture, g_runtime_settings: RuntimeSettingsSingleton
-):
-	mocker.patch(
-		"core.views.mixins.ldap.group.RuntimeSettings", g_runtime_settings
-	)
-	return g_runtime_settings
+def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
+	return g_runtime_settings("core.views.mixins.ldap.group.RuntimeSettings")
 
 
 @pytest.fixture(autouse=True)

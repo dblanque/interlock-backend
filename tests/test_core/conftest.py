@@ -37,21 +37,24 @@ def teardown_interlock_setting(db):
 
 
 class RuntimeSettingsFactory(Protocol):
-	def __call__(self) -> RuntimeSettingsSingleton: ...
-
+	def __call__(self, patch_path: str) -> RuntimeSettingsSingleton: ...
 
 @pytest.fixture
 def g_runtime_settings(mocker: MockerFixture) -> RuntimeSettingsFactory:
-	mock: MockType = mocker.MagicMock(spec=RuntimeSettingsSingleton)
-	attributes = getmembers(
-		RuntimeSettingsSingleton, lambda a: not (isroutine(a))
-	)
-	for setting_key, default_value in attributes:
-		if setting_key.startswith("__") and setting_key.endswith("__"):
-			continue
-		setting_value = getattr(ldap_defaults, setting_key, None)
-		setattr(mock, setting_key, deepcopy(setting_value))
-	return mock
+	def maker(patch_path: str = None):
+		mock: MockType = mocker.MagicMock(spec=RuntimeSettingsSingleton)
+		attributes = getmembers(
+			RuntimeSettingsSingleton, lambda a: not (isroutine(a))
+		)
+		for setting_key, default_value in attributes:
+			if setting_key.startswith("__") and setting_key.endswith("__"):
+				continue
+			setting_value = getattr(ldap_defaults, setting_key, None)
+			setattr(mock, setting_key, deepcopy(setting_value))
+		if patch_path:
+			mocker.patch(patch_path, mock)
+		return mock
+	return maker
 
 class ConnectorFactory(Protocol):
 	def __call__(

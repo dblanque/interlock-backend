@@ -5,6 +5,7 @@ from pytest_mock import MockerFixture
 
 ################################################################################
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
+from tests.test_core.conftest import RuntimeSettingsFactory
 from core.models.user import User
 from core.models.interlock_settings import (
 	InterlockSetting,
@@ -18,11 +19,8 @@ from core.models.validators.ldap import domain_validator
 
 
 @pytest.fixture
-def f_runtime_settings(
-	mocker: MockerFixture, g_runtime_settings: RuntimeSettingsSingleton
-):
-	mocker.patch("core.views.ldap.domain.RuntimeSettings", g_runtime_settings)
-	return g_runtime_settings
+def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
+	return g_runtime_settings(patch_path="core.views.ldap.domain.RuntimeSettings")
 
 
 @pytest.fixture(autouse=True)

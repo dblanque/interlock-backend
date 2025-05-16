@@ -12,6 +12,7 @@ from core.models.choices.log import (
 	LOG_CLASS_USER,
 	LOG_EXTRA_USER_END_USER_UPDATE,
 )
+from tests.test_core.conftest import RuntimeSettingsFactory
 
 
 @pytest.fixture
@@ -27,10 +28,10 @@ def test_user():
 
 
 @pytest.fixture
-def f_runtime_settings(mocker, g_runtime_settings):
-	mocker.patch("core.views.mixins.logs.RuntimeSettings", g_runtime_settings)
-	g_runtime_settings.LDAP_LOG_MAX = 5
-	return g_runtime_settings
+def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
+	mock = g_runtime_settings("core.views.mixins.logs.RuntimeSettings")
+	mock.LDAP_LOG_MAX = 5
+	return mock
 
 
 @pytest.mark.django_db

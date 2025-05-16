@@ -6,7 +6,18 @@ from datetime import datetime
 from core.views.mixins.utils import is_non_str_iterable
 from core.constants.attrs import *
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
+from tests.test_core.conftest import RuntimeSettingsFactory
 from ldap3 import Attribute as LDAPAttribute, Entry as LDAPEntry
+
+@pytest.fixture(autouse=True)
+def f_runtime_settings(
+	mocker: MockerFixture,
+	g_runtime_settings: RuntimeSettingsFactory,
+):
+	mock = g_runtime_settings()
+	mocker.patch("core.models.ldap_object.RuntimeSettings", mock)
+	mocker.patch("core.models.ldap_user.RuntimeSettings", mock)
+	return mock
 
 @pytest.fixture
 def f_object_attrs_user(f_runtime_settings: RuntimeSettingsSingleton) -> dict:
@@ -142,4 +153,14 @@ def f_object_entry_group(f_object_attrs_group, mocker: MockerFixture):
 		m_entry.entry_dn = m_attrs["distinguishedName"]
 		return m_entry
 
+	return maker
+
+@pytest.fixture
+def f_object_args(f_connection, f_runtime_settings: RuntimeSettingsSingleton):
+	def maker(**kwargs):
+		return {
+			"connection": f_connection,
+			"distinguished_name": f"cn=testobject,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
+			**kwargs,
+		}
 	return maker

@@ -21,8 +21,8 @@ from core.exceptions import otp as exc_otp
 from django.contrib.auth.models import User
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from pytest_mock import MockerFixture, MockType
-from typing import Union
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
+from tests.test_core.conftest import RuntimeSettingsFactory
 
 # ----------------------------------- FIXTURES ---------------------------------#
 
@@ -54,12 +54,8 @@ def f_logger(mocker: MockerFixture) -> MockType:
 
 
 @pytest.fixture(autouse=True)
-def f_runtime_settings(
-	mocker: MockerFixture, g_runtime_settings: RuntimeSettingsSingleton
-) -> Union[RuntimeSettingsSingleton, MockType]:
-	return mocker.patch(
-		"core.views.mixins.totp.RuntimeSettings", g_runtime_settings
-	)
+def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
+	g_runtime_settings("core.views.mixins.totp.RuntimeSettings")
 
 
 # -------------------------------- TEST CLASSES --------------------------------#

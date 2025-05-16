@@ -35,16 +35,15 @@ from core.exceptions import (
 )
 from datetime import datetime
 from pytest_mock import MockType
-
+from tests.test_core.conftest import RuntimeSettingsFactory
 
 TODAY_DATETIME = datetime.today()
 TODAY_STR = TODAY_DATETIME.strftime(DATE_FMT)
 
 
 @pytest.fixture
-def f_runtime_settings(g_runtime_settings, mocker):
-	mocker.patch("core.models.dns.RuntimeSettings", g_runtime_settings)
-	return g_runtime_settings
+def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
+	return g_runtime_settings(patch_path="core.models.dns.RuntimeSettings")
 
 
 def get_mock_serial(serial: int = 1):

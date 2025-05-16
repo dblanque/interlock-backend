@@ -9,6 +9,7 @@ from core.views.ldap.user import LDAPUserViewSet
 from rest_framework.test import APIClient
 from core.exceptions.ldap import CouldNotOpenConnection
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
+from tests.test_core.conftest import RuntimeSettingsFactory
 from core.ldap.adsi import (
 	LDAP_UF_DONT_EXPIRE_PASSWD,
 	LDAP_UF_ACCOUNT_DISABLE,
@@ -57,11 +58,8 @@ def f_interlock_ldap_enabled(g_interlock_ldap_enabled):
 
 
 @pytest.fixture
-def f_runtime_settings(
-	mocker: MockerFixture, g_runtime_settings: RuntimeSettingsSingleton
-):
-	mocker.patch("core.views.ldap.user.RuntimeSettings", g_runtime_settings)
-	return g_runtime_settings
+def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
+	return g_runtime_settings("core.views.ldap.user.RuntimeSettings")
 
 
 class TestList:

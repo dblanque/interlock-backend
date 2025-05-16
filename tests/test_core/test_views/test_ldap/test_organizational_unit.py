@@ -4,6 +4,7 @@ from pytest_mock import MockerFixture, MockType
 
 ################################################################################
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
+from tests.test_core.conftest import RuntimeSettingsFactory
 from core.models.user import User
 from core.views.ldap.organizational_unit import LDAPOrganizationalUnitViewSet
 from core.models.choices.log import (
@@ -45,14 +46,8 @@ def f_ldap_connector(g_ldap_connector) -> MockType:
 
 
 @pytest.fixture
-def f_runtime_settings(
-	mocker: MockerFixture, g_runtime_settings: RuntimeSettingsSingleton
-):
-	mocker.patch(
-		"core.views.ldap.organizational_unit.RuntimeSettings",
-		g_runtime_settings,
-	)
-	return g_runtime_settings
+def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
+	return g_runtime_settings("core.views.ldap.organizational_unit.RuntimeSettings")
 
 
 @pytest.fixture(autouse=True)

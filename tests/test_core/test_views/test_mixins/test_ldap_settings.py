@@ -10,7 +10,7 @@ from core.models.user import User, USER_TYPE_LDAP
 from core.models.ldap_settings import LDAPPreset
 from core.exceptions import ldap as exc_ldap
 from core.views.mixins.ldap_settings import SettingsViewMixin
-
+from tests.test_core.conftest import RuntimeSettingsFactory
 
 @pytest.fixture(autouse=True)
 def auto_teardown():
@@ -19,9 +19,8 @@ def auto_teardown():
 
 
 @pytest.fixture(autouse=True)
-def f_runtime_settings(mocker, g_runtime_settings):
-	mocker.patch("core.views.mixins.ldap_settings.RuntimeSettings")
-	return g_runtime_settings
+def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
+	return g_runtime_settings("core.views.mixins.ldap_settings.RuntimeSettings")
 
 
 @pytest.fixture

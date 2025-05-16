@@ -54,26 +54,6 @@ def f_user_expected_keys():
 		LOCAL_ATTR_USER_GROUPS,
 	)
 
-@pytest.fixture(autouse=True)
-def f_runtime_settings(
-	mocker: MockerFixture,
-	g_runtime_settings: RuntimeSettingsSingleton,
-):
-	return mocker.patch(
-		"core.models.ldap_object.RuntimeSettings", g_runtime_settings
-	)
-
-@pytest.fixture
-def f_object_args(f_connection, f_runtime_settings: RuntimeSettingsSingleton):
-	def maker(**kwargs):
-		return {
-			"connection": f_connection,
-			"distinguished_name": f"cn=testobject,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
-			**kwargs,
-		}
-
-	return maker
-
 class TestInit:
 	@staticmethod
 	@pytest.mark.parametrize(
@@ -166,58 +146,55 @@ class TestInit:
 		m_sync_object.assert_called_once()
 
 class TestDunderValidateInit:
-	@staticmethod
-	def test_raises_no_entry(mocker: MockerFixture):
-		mocker.patch.object(LDAPObject, "__init__", return_value=None)
-		m_ldap_object = LDAPObject()
+	test_cls = LDAPObject
+
+	def test_raises_no_entry(self, mocker: MockerFixture):
+		mocker.patch.object(self.test_cls, "__init__", return_value=None)
+		m_ldap_object = self.test_cls()
 		m_ldap_object.entry = False
 		with pytest.raises(TypeError, match="type ldap3.Entry"):
 			m_ldap_object.__validate_init__()
 
-	@staticmethod
-	def test_raises_entry_dn_bad_type(mocker: MockerFixture):
-		mocker.patch.object(LDAPObject, "__init__", return_value=None)
-		m_ldap_object = LDAPObject()
+	def test_raises_entry_dn_bad_type(self, mocker: MockerFixture):
+		mocker.patch.object(self.test_cls, "__init__", return_value=None)
+		m_ldap_object = self.test_cls()
 		m_entry = mocker.Mock(spec=LDAPEntry)
 		m_entry.entry_dn = False
 		m_ldap_object.entry = m_entry
 		with pytest.raises(TypeError, match="type str"):
 			m_ldap_object.__validate_init__()
 
-	@staticmethod
-	def test_raises_no_connection(mocker: MockerFixture):
-		mocker.patch.object(LDAPObject, "__init__", return_value=None)
-		m_ldap_object = LDAPObject()
+	def test_raises_no_connection(self, mocker: MockerFixture):
+		mocker.patch.object(self.test_cls, "__init__", return_value=None)
+		m_ldap_object = self.test_cls()
 		m_ldap_object.connection = None
 		m_ldap_object.entry = None
 		with pytest.raises(Exception, match="LDAP Connection or Entry"):
 			m_ldap_object.__validate_init__()
 
-	@staticmethod
-	def test_raises_no_connection_or_entry(mocker: MockerFixture):
-		mocker.patch.object(LDAPObject, "__init__", return_value=None)
-		m_ldap_object = LDAPObject()
+	def test_raises_no_connection_or_entry(self, mocker: MockerFixture):
+		mocker.patch.object(self.test_cls, "__init__", return_value=None)
+		m_ldap_object = self.test_cls()
 		m_ldap_object.distinguished_name = "mock_dn"
 
 		with pytest.raises(Exception, match="requires an LDAP Connection or Entry"):
 			m_ldap_object.__validate_init__()
 
-	@staticmethod
-	def test_raises_no_dn(mocker: MockerFixture, f_connection):
-		mocker.patch.object(LDAPObject, "__init__", return_value=None)
-		m_ldap_object = LDAPObject()
+	def test_raises_no_dn(self, mocker: MockerFixture, f_connection):
+		mocker.patch.object(self.test_cls, "__init__", return_value=None)
+		m_ldap_object = self.test_cls()
 		m_ldap_object.connection = f_connection
 		with pytest.raises(Exception, match="requires a Distinguished Name"):
 			m_ldap_object.__validate_init__()
 
-	@staticmethod
 	def test_success(
+		self,
 		mocker: MockerFixture,
 		f_connection,
 		f_object_args,
 	):
-		mocker.patch.object(LDAPObject, "__init__", return_value=None)
-		m_ldap_object = LDAPObject()
+		mocker.patch.object(self.test_cls, "__init__", return_value=None)
+		m_ldap_object = self.test_cls()
 		m_distinguished_name = "mock_dn"
 		m_ldap_object.connection = f_connection
 		m_ldap_object.distinguished_name = m_distinguished_name
@@ -230,7 +207,7 @@ class TestDunderValidateInit:
 		).to_string()
 
 		# With Entry
-		m_ldap_object = LDAPObject()
+		m_ldap_object = self.test_cls()
 		m_entry = mocker.Mock(spec=LDAPEntry)
 		m_args = f_object_args()
 		m_entry.entry_dn = m_args[LOCAL_ATTR_DN]
@@ -241,13 +218,13 @@ class TestDunderValidateInit:
 			m_args[LOCAL_ATTR_DN]
 		).to_string()
 
-	@staticmethod
 	def test_only_with_entry_dn(
+		self,
 		mocker: MockerFixture,
-		f_object_args
+		f_object_args,
 	):
-		mocker.patch.object(LDAPObject, "__init__", return_value=None)
-		m_ldap_object = LDAPObject()
+		mocker.patch.object(self.test_cls, "__init__", return_value=None)
+		m_ldap_object = self.test_cls()
 		m_entry = mocker.Mock(spec=LDAPEntry)
 		m_args = f_object_args()
 		m_entry.entry_dn = m_args[LOCAL_ATTR_DN]

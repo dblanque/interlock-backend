@@ -37,6 +37,7 @@ from oidc_provider.models import Client, UserConsent
 from django.http import QueryDict
 from typing import Protocol
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
+from tests.test_core.conftest import RuntimeSettingsFactory
 
 ################################################################################
 ################################# FIXTURES #####################################
@@ -130,8 +131,8 @@ def f_ldap_connector(g_ldap_connector) -> MockType:
 
 
 @pytest.fixture(autouse=True)
-def f_runtime_settings(g_runtime_settings):
-	return g_runtime_settings
+def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
+	return g_runtime_settings()
 
 
 class OidcUriFactory(Protocol):

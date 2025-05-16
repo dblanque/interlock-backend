@@ -52,7 +52,7 @@ from core.constants.attrs import (
 	LDAP_ATTR_UAC,
 	LDAP_ATTR_OBJECT_CLASS,
 )
-
+from tests.test_core.conftest import RuntimeSettingsFactory
 
 @pytest.fixture
 def f_user_mixin(mocker):
@@ -71,11 +71,8 @@ def f_log_mixin(mocker):
 
 
 @pytest.fixture(autouse=True)
-def f_runtime_settings(mocker, g_runtime_settings):
-	mocker.patch(
-		"core.views.mixins.ldap.user.RuntimeSettings", g_runtime_settings
-	)
-	return g_runtime_settings
+def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
+	return g_runtime_settings("core.views.mixins.ldap.user.RuntimeSettings")
 
 
 @pytest.fixture

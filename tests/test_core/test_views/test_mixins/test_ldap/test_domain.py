@@ -10,6 +10,7 @@ from core.ldap.connector import LDAPConnector
 from core.ldap.defaults import LDAP_DOMAIN
 from core.views.mixins.ldap.domain import DomainViewMixin
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
+from tests.test_core.conftest import RuntimeSettingsFactory
 from core.views.mixins.logs import LogMixin
 from core.models.choices.log import (
 	LOG_ACTION_READ,
@@ -36,12 +37,8 @@ def f_log_mixin(mocker: MockerFixture) -> LogMixin:
 
 
 @pytest.fixture(autouse=True)
-def f_runtime_settings(mocker: MockerFixture, g_runtime_settings):
-	mocker.patch(
-		"core.views.mixins.ldap.domain.RuntimeSettings", g_runtime_settings
-	)
-	return g_runtime_settings
-
+def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
+	return g_runtime_settings("core.views.mixins.ldap.domain.RuntimeSettings")
 
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector):
