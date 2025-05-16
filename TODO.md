@@ -15,7 +15,7 @@
 
 ## Issues
 * Add LDAP_DEFAULT_USER_CLASSES, LDAP_DEFAULT_GROUP_CLASSES to ldap settings
-* Move interlock_rsa to class instances
+* Move Interlock RSA Key to class instances as a singleton. <d>
 * Add local user/asg bulk actions
 * Add OIDC Prompt Features?
 	* login
@@ -25,7 +25,9 @@
 * Add rsa encryption key re-generation in settings (must de-crypt and re-encrypt data)
 * Add logging to all Application Security Group model operations
 * Add logging to all TOTP operations
-* Add LDAP User Pruning
+* Add LDAP User Syncing <d>
+* Add LDAP User Purging <d>
+* Add LDAP User Pruning <d>
 * Add Application Group LDAP Object Pruning
 * Add exception chaining where necessary
 * Check totp support for non admin users
