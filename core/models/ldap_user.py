@@ -90,31 +90,7 @@ class LDAPUser(LDAPObject):
 		kw_samaccountname = kwargs.pop(LDAP_ATTR_USERNAME_SAMBA_ADDS, None)
 		self.username = kwargs.pop(LOCAL_ATTR_USERNAME, kw_samaccountname)
 
-		# Type check Entry
-		if self.entry and not isinstance(self.entry, LDAPEntry):
-			raise TypeError(
-				"LDAPUser entry must attr must be of type ldap3.Entry"
-			)
-
-		if not self.connection and not self.entry:
-			raise Exception(
-				"LDAPUser requires an LDAP Connection or an Entry to Initialize"
-			)
-		elif self.connection:
-			if not self.distinguished_name and not self.username:
-				raise Exception(
-					"LDAPUser requires a distinguished_name or username to search for the object"
-				)
-
-		if self.entry:
-			self.__set_dn_and_filter_from_entry__()
-		elif self.distinguished_name and isinstance(
-			self.distinguished_name, str
-		):
-			self.search_filter = LDAPFilter.eq(
-				LDAP_ATTR_DN, self.distinguished_name
-			).to_string()
-		elif self.username and isinstance(self.username, str):
+		if self.username:
 			_USER_CLASSES = {
 				RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
 				"user",
@@ -130,6 +106,8 @@ class LDAPUser(LDAPObject):
 				),
 				LDAPFilter.eq(LDAP_ATTR_USERNAME_SAMBA_ADDS, self.username),
 			).to_string()
+		else:
+			super().__validate_init__(**kwargs)
 
 	def parse_write_special_attributes(self):
 		self.parse_write_country(self.attributes.get(LOCAL_ATTR_COUNTRY, None))
@@ -153,9 +131,9 @@ class LDAPUser(LDAPObject):
 			LOCAL_ATTR_COUNTRY_ISO,
 		)
 		if value:
-			self.attributes[LOCAL_ATTR_COUNTRY_DCC] = LDAP_COUNTRIES[value][
+			self.attributes[LOCAL_ATTR_COUNTRY_DCC] = int(LDAP_COUNTRIES[value][
 				"dccCode"
-			]
+			])
 			self.attributes[LOCAL_ATTR_COUNTRY_ISO] = LDAP_COUNTRIES[value][
 				"isoCode"
 			]
@@ -169,8 +147,10 @@ class LDAPUser(LDAPObject):
 				self.parsed_specials.append(attr)
 
 	def parse_write_permissions(self, value: list[str]):
+		# If value is None then no changes were received for this field
 		if value is None:
 			return
+
 		if value and isinstance(value, list):
 			self.attributes[LOCAL_ATTR_UAC] = calc_permissions(
 				permission_list=value
@@ -192,8 +172,9 @@ class LDAPUser(LDAPObject):
 		if groups_to_add and groups_to_remove:
 			if groups_to_add == groups_to_remove:
 				raise exc_user.BadGroupSelection
-			if any(a == b for a, b in zip(groups_to_add, groups_to_remove)):
-				raise exc_user.BadGroupSelection
+			for a in groups_to_add:
+				if a in groups_to_remove:
+					raise exc_user.BadGroupSelection
 
 		# Group Add
 		if groups_to_add:
@@ -210,7 +191,7 @@ class LDAPUser(LDAPObject):
 	@property
 	def is_enabled(self):
 		if not self.entry:
-			raise ValueError("No LDAP Entry for LDAPObjectUser")
+			raise ValueError("An LDAP Entry is required to check if the User is enabled on the server.")
 		if not LDAP_ATTR_UAC in self.entry.entry_attributes:
 			raise ValueError(
 				"%s attribute is required in entry search" % (LDAP_ATTR_UAC)
