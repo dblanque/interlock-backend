@@ -497,7 +497,7 @@ class LDAPObject:
 		if self.type == LDAPObjectTypes.USER:
 			self.attributes[LOCAL_ATTR_OBJECT_CLASS] = list({
 				RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
-				"top",
+				"top", # Required by LDAP spec
 				"person",
 				"organizationalPerson",
 				"user",
@@ -505,7 +505,7 @@ class LDAPObject:
 			_object_class = RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
 		elif self.type == LDAPObjectTypes.GROUP:
 			self.attributes[LOCAL_ATTR_OBJECT_CLASS] = list({
-				"top",
+				"top", # Required by LDAP spec
 				"group",
 			})
 			_object_class = "group"
