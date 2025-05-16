@@ -157,7 +157,7 @@ def m_user_data():
 	}
 
 
-def test_sync_user_relations_dn_as_tuple(
+def test_sync_user_relations_dn_from_list(
 	m_user_data: dict, mocker, f_runtime_settings, f_ldap_connection
 ):
 	mocker.patch("core.config.runtime.RuntimeSettings", f_runtime_settings)
@@ -172,9 +172,6 @@ def test_sync_user_relations_dn_as_tuple(
 	)
 
 	ldap_attributes = m_user_as_ldap_attributes(a_user)
-	ldap_attributes["distinguishedName"] = (
-		ldap_attributes["distinguishedName"],
-	)
 	sync_user_relations(m_user, ldap_attributes, connection=f_ldap_connection)
 
 	assert a_user.distinguished_name == m_user.distinguished_name
