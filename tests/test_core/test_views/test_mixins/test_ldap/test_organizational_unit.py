@@ -17,9 +17,13 @@ from core.views.mixins.ldap.organizational_unit import (
 	LDAP_DEFAULT_DIRTREE_FILTER,
 )
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
+from tests.test_core.conftest import RuntimeSettingsFactory
 from core.exceptions import ldap as exc_ldap, dirtree as exc_dirtree
 from rest_framework.exceptions import ValidationError
 
+@pytest.fixture(autouse=True)
+def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
+	return g_runtime_settings(patch_path="core.views.mixins.ldap.organizational_unit.RuntimeSettings")
 
 @pytest.fixture
 def f_logger(mocker: MockerFixture):
@@ -400,8 +404,8 @@ def test_process_ldap_filter_with_data_and_defaults(
 
 
 @pytest.fixture
-def f_distinguished_name(g_runtime_settings: RuntimeSettingsSingleton):
-	return f"CN=test,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
+def f_distinguished_name(f_runtime_settings: RuntimeSettingsSingleton):
+	return f"CN=test,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
 
 
 def test_move_or_rename_object_raises_dn_validation_exception(
@@ -420,10 +424,10 @@ def test_move_or_rename_object_raises_dn_validation_exception(
 
 def test_move_or_rename_raises_no_rdn_or_target(
 	f_ou_mixin: OrganizationalUnitMixin,
-	g_runtime_settings: RuntimeSettingsSingleton,
+	f_runtime_settings: RuntimeSettingsSingleton,
 ):
 	m_distinguishedName = (
-		f"PA=something,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
+		f"PA=something,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
 	)
 	with pytest.raises(exc_dirtree.DirtreeDistinguishedNameConflict):
 		f_ou_mixin.move_or_rename_object(distinguished_name=m_distinguishedName)
@@ -431,10 +435,10 @@ def test_move_or_rename_raises_no_rdn_or_target(
 
 def test_move_or_rename_raises_bad_dn_identifier(
 	f_ou_mixin: OrganizationalUnitMixin,
-	g_runtime_settings: RuntimeSettingsSingleton,
+	f_runtime_settings: RuntimeSettingsSingleton,
 ):
 	m_distinguishedName = (
-		f"PA=something,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
+		f"PA=something,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
 	)
 	with pytest.raises(exc_ldap.LDIFBadField) as e:
 		f_ou_mixin.move_or_rename_object(
@@ -519,11 +523,11 @@ def test_move_or_rename_object_rename_only(
 
 def test_move_or_rename_object_move_only(
 	f_ou_mixin: OrganizationalUnitMixin,
-	g_runtime_settings: RuntimeSettingsSingleton,
+	f_runtime_settings: RuntimeSettingsSingleton,
 	f_distinguished_name: str,
 	f_log_mixin: LogMixin,
 ):
-	m_target_path = f"OU=SomeUnit,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
+	m_target_path = f"OU=SomeUnit,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
 	m_rdn = f_distinguished_name.split(",")[0]
 	expected_dn = f"{m_rdn},{m_target_path}"
 	f_ou_mixin.move_or_rename_object(
@@ -551,11 +555,11 @@ def test_move_or_rename_object_move_only(
 def test_move_or_rename_object_both_ops(
 	target_rdn: str,
 	f_ou_mixin: OrganizationalUnitMixin,
-	g_runtime_settings: RuntimeSettingsSingleton,
+	f_runtime_settings: RuntimeSettingsSingleton,
 	f_distinguished_name: str,
 	f_log_mixin: LogMixin,
 ):
-	m_target_path = f"OU=SomeUnit,{g_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
+	m_target_path = f"OU=SomeUnit,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
 	expected_rdn = (
 		f"CN={target_rdn}" if not target_rdn.startswith("CN=") else target_rdn
 	)
