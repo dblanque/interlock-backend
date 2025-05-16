@@ -36,12 +36,9 @@ from core.constants.attrs import (
 	LOCAL_ATTR_FIRST_NAME,
 	LOCAL_ATTR_LAST_NAME,
 	LOCAL_ATTR_EMAIL,
-
-	LDAP_ATTR_EMAIL,
-	LDAP_ATTR_DN,
-	LDAP_ATTR_OBJECT_CLASS,
-	LDAP_ATTR_GROUP_MEMBERS,
-	LDAP_ATTR_SECURITY_ID,
+	LOCAL_ATTR_OBJECT_CLASS,
+	LOCAL_ATTR_GROUP_MEMBERS,
+	LOCAL_ATTR_SECURITY_ID,
 )
 from core.constants.user import BUILTIN_ADMIN
 from core.models.user import (
@@ -94,22 +91,37 @@ def recursive_member_search(
 
 	# Add filter for username
 	ldap_filter_object = LDAPFilter.and_(
-		LDAPFilter.eq(LDAP_ATTR_DN, group_dn),
-		LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "group"),
+		LDAPFilter.eq(
+			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_DN],
+			group_dn
+		),
+		LDAPFilter.eq(
+			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
+			"group"
+		),
 	).to_string()
 	connection.search(
 		RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
 		ldap_filter_object,
 		attributes=[
-			LDAP_ATTR_GROUP_MEMBERS,
-			LDAP_ATTR_OBJECT_CLASS,
-			LDAP_ATTR_DN,
+			RuntimeSettings.LDAP_FIELD_MAP[fld] for fld in
+			(
+				LOCAL_ATTR_GROUP_MEMBERS,
+				LOCAL_ATTR_OBJECT_CLASS,
+				LOCAL_ATTR_DN,
+			)
 		],
 	)
 	for e in connection.entries:
-		e_object_classes = getldapattr(e, LDAP_ATTR_OBJECT_CLASS)
+		e_object_classes = getldapattr(
+			e,
+			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
+		)
 		if "group" in e_object_classes.values:
-			e_member = getldapattr(e, LDAP_ATTR_GROUP_MEMBERS)
+			e_member = getldapattr(
+				e,
+				RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_GROUP_MEMBERS]
+			)
 			# Check if member in group directly
 			if user_dn in e_member.values:
 				return True
@@ -131,9 +143,14 @@ def recursive_member_search(
 def sync_user_relations(
 	user: User, ldap_attributes: dict[list], *, connection=None
 ):
+	# Field defs
 	_username_field = RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME]
+	_email_field = RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_EMAIL]
+	_sid_field = RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_SECURITY_ID]
+	_dn_field = RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_DN]
+
 	_username: str = ldap_attributes.get(_username_field, [])[0]
-	_distinguished_name = ldap_attributes.get(LDAP_ATTR_DN, [])[0]
+	_distinguished_name = ldap_attributes.get(_dn_field, [])[0]
 	if not _username:
 		raise ValueError("Username not present in User LDAP Attributes.")
 	if not _distinguished_name:
@@ -148,7 +165,7 @@ def sync_user_relations(
 		# Attempt Security ID Matching, ignore if failed
 		sid_matches = False
 		try:
-			sid = SID(ldap_attributes[LDAP_ATTR_SECURITY_ID])
+			sid = SID(ldap_attributes[_sid_field])
 			sid_matches = sid.subauthorities[-1] == BUILTIN_ADMIN[1]
 		except:
 			sid_matches = True
@@ -164,14 +181,14 @@ def sync_user_relations(
 	):
 		user.is_staff = True
 		user.is_superuser = True
-		if LDAP_ATTR_EMAIL in ldap_attributes:
-			user.email = ldap_attributes[LDAP_ATTR_EMAIL][0] or ""
+		if _email_field in ldap_attributes:
+			user.email = ldap_attributes[_email_field][0] or ""
 		user.save()
 	else:
 		user.is_staff = False
 		user.is_superuser = False
-		if LDAP_ATTR_EMAIL in ldap_attributes:
-			user.email = ldap_attributes[LDAP_ATTR_EMAIL][0] or ""
+		if _email_field in ldap_attributes:
+			user.email = ldap_attributes[_email_field][0] or ""
 		user.save()
 
 
