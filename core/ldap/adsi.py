@@ -12,6 +12,7 @@
 
 # ---------------------------------- IMPORTS -----------------------------------#
 from core.config.runtime import RuntimeSettings
+from core.constants.attrs import LOCAL_ATTR_UAC, LOCAL_ATTR_USERNAME
 from typing import Union, Literal, TypedDict, Required
 from ldap3 import Entry as LDAPEntry
 from core.views.mixins.utils import getldapattrvalue
@@ -200,6 +201,7 @@ class LengthError(Exception):
 
 
 def merge_val_bin(perm_a: str, perm_b: str):
+	"""Merge Binary Permission Values"""
 	r = []
 	if not isinstance(perm_a, str) or not isinstance(perm_b, str):
 		raise TypeError("perm_a and perm_b must be binary values as string.")
@@ -367,7 +369,7 @@ def parse_permissions_int(
 	for n in range(0, 32):  # Loop for each bit in 0-32
 		i += 1
 		if (
-			raw_user_permissions[n] == "1"
+			int(raw_user_permissions[n]) == 1
 		):  # If permission matches enter for loop to
 			# search which one it is in the dictionary
 			for perm_name in LDAP_PERMS:
@@ -415,20 +417,24 @@ def list_user_perms(
 	"""
 	# Cast raw integer user permissions as string
 	uac_value = None
+	_uac_field = RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_UAC]
+	_username_field = RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME]
 	if user_is_object is True or isinstance(user, LDAPEntry):
 		user: LDAPEntry
-		if not hasattr(user, "userAccountControl"):
+		if not hasattr(user, _uac_field):
 			raise ValueError(
-				"User object does not contain a userAccountControl attribute."
+				f"User object does not contain a {_uac_field} attribute."
 			)
-		uac_value = getldapattrvalue(user, "userAccountControl", None)
+		uac_value = getldapattrvalue(user, _uac_field, None)
+		username = getldapattrvalue(user, _username_field, "")
 	else:
 		user: dict
-		if not "userAccountControl" in user:
+		if not _uac_field in user:
 			raise ValueError(
-				"User dictionary does not contain a userAccountControl key."
+				f"User dictionary does not contain a {_uac_field} key."
 			)
-		uac_value = user["userAccountControl"]
+		uac_value = user.get(_uac_field, None)
+		username = user.get(_username_field, "")
 
 	if uac_value is None:
 		raise ValueError("Unable to process User Account Control value.")
@@ -440,7 +446,7 @@ def list_user_perms(
 
 	user_permissions: list = parse_permissions_int(
 		raw_user_permissions=raw_user_permissions,
-		user_name=str(user[RuntimeSettings.LDAP_FIELD_MAP["username"]]),
+		user_name=username,
 	)
 	if isinstance(perm_search, str):
 		return perm_search in user_permissions
