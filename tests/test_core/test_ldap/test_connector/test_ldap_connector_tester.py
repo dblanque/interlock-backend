@@ -1,5 +1,8 @@
+########################### Standard Pytest Imports ############################
 import pytest
-from unittest.mock import MagicMock, patch
+from pytest import FixtureRequest
+from pytest_mock import MockerFixture, MockType
+################################################################################
 from ldap3 import ServerPool, Connection
 from ldap3.core.exceptions import LDAPException
 import ssl
@@ -56,7 +59,7 @@ def f_tls_params(f_base_params):
 	return params
 
 
-def test_successful_connection(f_base_params, mocker):
+def test_successful_connection(f_base_params, mocker: MockerFixture):
 	# Mock dependencies
 	m_server_pool = mocker.MagicMock(spec=ServerPool)
 	m_connection = mocker.MagicMock(spec=Connection)
@@ -68,9 +71,6 @@ def test_successful_connection(f_base_params, mocker):
 		"core.ldap.connector.ldap3.Connection", return_value=m_connection
 	)
 	mocker.patch("core.ldap.connector.ldap3.Server")
-	m_format = mocker.patch(
-		"core.ldap.connector.import_func", return_value=lambda x: x
-	)
 
 	# Execute
 	result = func_test_ldap_connection(**f_base_params)
@@ -78,10 +78,9 @@ def test_successful_connection(f_base_params, mocker):
 	# Assertions
 	assert result == m_connection
 	m_connection.bind.assert_called_once()
-	m_format.assert_called_once()
 
 
-def test_admin_connection_credentials(f_admin_params, mocker):
+def test_admin_connection_credentials(f_admin_params, mocker: MockerFixture):
 	# Mock dependencies
 	m_connection = mocker.patch(
 		"core.ldap.connector.ldap3.Connection",
@@ -99,7 +98,7 @@ def test_admin_connection_credentials(f_admin_params, mocker):
 	assert kwargs["password"] == f_admin_params["ldapAuthConnectionPassword"]
 
 
-def test_invalid_timeout_fallbacks(f_invalid_timeout_params, mocker):
+def test_invalid_timeout_fallbacks(f_invalid_timeout_params, mocker: MockerFixture):
 	# Mock logger
 	m_logger = mocker.patch("core.ldap.connector.logger")
 	mocker.patch("core.ldap.connector.ldap3.Connection")
@@ -118,7 +117,7 @@ def test_invalid_timeout_fallbacks(f_invalid_timeout_params, mocker):
 	)
 
 
-def test_tls_connection(f_tls_params, mocker):
+def test_tls_connection(f_tls_params, mocker: MockerFixture):
 	# Mock dependencies
 	m_connection = mocker.MagicMock(spec=Connection)
 	mocker.patch(
@@ -138,7 +137,7 @@ def test_tls_connection(f_tls_params, mocker):
 	m_connection.start_tls.assert_called_once()
 
 
-def test_connection_failure(f_base_params, mocker):
+def test_connection_failure(f_base_params, mocker: MockerFixture):
 	# Mock failure
 	mocker.patch(
 		"core.ldap.connector.ldap3.Connection", side_effect=LDAPException
@@ -150,7 +149,7 @@ def test_connection_failure(f_base_params, mocker):
 		func_test_ldap_connection(**f_base_params)
 
 
-def test_bind_failure(f_base_params, mocker):
+def test_bind_failure(f_base_params, mocker: MockerFixture):
 	# Mock connection succeeds but bind fails
 	m_connection = mocker.MagicMock(spec=Connection)
 	m_connection.bind.side_effect = LDAPException("Bind failed")
@@ -171,7 +170,7 @@ def test_bind_failure(f_base_params, mocker):
 		(["ldap://s1", "ldap://s2"], ["ldap://s1", "ldap://s2"]),
 	],
 )
-def test_url_handling(url_input, expected, f_base_params, mocker):
+def test_url_handling(url_input, expected, f_base_params, mocker: MockerFixture):
 	# Mock dependencies
 	mocker.patch(
 		"core.ldap.connector.ldap3.Connection",
@@ -197,7 +196,7 @@ def test_url_handling(url_input, expected, f_base_params, mocker):
 		]
 
 
-def test_url_handling_exception(f_base_params, mocker):
+def test_url_handling_exception(f_base_params, mocker: MockerFixture):
 	# Mock dependencies
 	mocker.patch(
 		"core.ldap.connector.ldap3.Connection",
