@@ -15,6 +15,7 @@ from core.constants.attrs import *
 from core.config.runtime import RuntimeSettings
 from core.ldap.adsi import LDAP_BUILTIN_OBJECTS
 from core.ldap.security_identifier import SID
+from core.views.mixins.utils import getlocalkeyforldapattr
 
 ### Others
 from core.type_hints.connector import LDAPConnectionProtocol
@@ -328,7 +329,7 @@ class LDAPObject:
 			if attr_key in (self.excluded_ldap_attributes or []):
 				continue
 			attr_value = getldapattrvalue(self.entry, attr_key)
-			local_key = self.get_local_alias_for_ldap_key(attr_key, None)
+			local_key = getlocalkeyforldapattr(attr_key, None)
 			if not local_key:
 				continue
 
@@ -421,19 +422,6 @@ class LDAPObject:
 	def post_delete(self): # pragma: no cover
 		"""Post Creation operations"""
 		return
-
-	@overload
-	def get_local_alias_for_ldap_key(self, v: str, default: str = None): ...
-
-	def get_local_alias_for_ldap_key(self, v: str, *args, **kwargs):
-		for local_alias, ldap_alias in RuntimeSettings.LDAP_FIELD_MAP.items():
-			if ldap_alias == v:
-				return local_alias
-		if args:
-			return args[0]
-		elif "default" in kwargs:
-			return kwargs.pop("default")
-		raise ValueError(f"No alias for ldap key ({v})")
 
 	@property
 	def exists(self) -> bool:
