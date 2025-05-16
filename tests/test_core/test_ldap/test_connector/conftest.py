@@ -8,7 +8,7 @@ from tests.test_core.conftest import RuntimeSettingsFactory
 
 @pytest.fixture
 def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
-	return g_runtime_settings
+	return g_runtime_settings()
 
 
 @pytest.fixture
@@ -49,7 +49,7 @@ def f_user(mocker: MockerFixture, f_user_dn: str) -> Union[MockType, User]:
 	m_user.save = mocker.Mock(name="m_user_save")
 	m_user.username = "testuser"
 	m_user.user_type = USER_TYPE_LDAP
-	m_user.dn = f_user_dn
+	m_user.distinguished_name = f_user_dn
 	m_user.encrypted_password = (
 		"encrypted_aes_key",
 		"ciphertext",
