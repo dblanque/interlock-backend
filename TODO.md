@@ -1,8 +1,8 @@
 # Create/Complete/Fix tests for
-* core.models.ldap_group
 * core.models.ldap_object <d>
+* core.models.ldap_user <d>
+* core.models.ldap_group
 * core.models.ldap_tree
-* core.models.ldap_user
 * core.ldap.ldap_settings
 * core.serializers.group
 * core.views.mixins.domain
