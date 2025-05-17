@@ -17,6 +17,8 @@ def f_runtime_settings(
 	mock = g_runtime_settings()
 	mocker.patch("core.models.ldap_object.RuntimeSettings", mock)
 	mocker.patch("core.models.ldap_user.RuntimeSettings", mock)
+	mocker.patch("core.models.ldap_group.RuntimeSettings", mock)
+	mocker.patch("core.views.mixins.utils.RuntimeSettings", mock)
 	return mock
 
 @pytest.fixture
