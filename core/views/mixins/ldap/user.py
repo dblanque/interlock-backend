@@ -483,8 +483,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			pass
 
 		if django_user:
-			for key in RuntimeSettings.LDAP_FIELD_MAP:
-				mapped_key = RuntimeSettings.LDAP_FIELD_MAP[key]
+			for key, mapped_key in RuntimeSettings.LDAP_FIELD_MAP.items():
 				if mapped_key in data:
 					setattr(django_user, key, data[mapped_key])
 			django_user.save()
