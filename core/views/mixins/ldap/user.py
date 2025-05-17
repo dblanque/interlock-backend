@@ -154,32 +154,35 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			id_filter_op = ldap_adsi.LDAP_FILTER_OR
 
 		# Class Filter Setup
+		_OBJECT_CLASS_FIELD = RuntimeSettings\
+			.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS]
 		class_filter = join_ldap_filter(
 			None,
-			f"{LDAP_ATTR_OBJECT_CLASS}={RuntimeSettings.LDAP_AUTH_OBJECT_CLASS}",
+			f"{_OBJECT_CLASS_FIELD}={RuntimeSettings.LDAP_AUTH_OBJECT_CLASS}",
 		)
 		# Exclude Computer Accounts if settings allow it
 		if RuntimeSettings.EXCLUDE_COMPUTER_ACCOUNTS:
 			class_filter = join_ldap_filter(
 				class_filter,
-				f"{LDAP_ATTR_OBJECT_CLASS}=computer",
+				f"{_OBJECT_CLASS_FIELD}=computer",
 				negate_add=True,
 			)
 
 		# User ID Filter Setup
 		id_filter = None
 		if username:
-			_username_field = RuntimeSettings.LDAP_FIELD_MAP["username"]
+			_USERNAME_FIELD = RuntimeSettings\
+				.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME]
 			id_filter = join_ldap_filter(
 				id_filter,
-				f"{_username_field}={username}",
+				f"{_USERNAME_FIELD}={username}",
 				expression=id_filter_op,
 			)
 		if email:
-			_email_field = RuntimeSettings.LDAP_FIELD_MAP["email"]
+			_EMAIL_FIELD = RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_EMAIL]
 			id_filter = join_ldap_filter(
 				id_filter,
-				f"{_email_field}={email}",
+				f"{_EMAIL_FIELD}={email}",
 				expression=id_filter_op,
 			)
 		return join_ldap_filter(class_filter, id_filter)
@@ -260,8 +263,8 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 
 		if not attributes:
 			attributes = [
-				RuntimeSettings.LDAP_FIELD_MAP["username"],
-				LDAP_ATTR_DN,
+				RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
+				RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_DN],
 			]
 		if not object_class_filter:
 			object_class_filter = self.get_user_object_filter(
@@ -287,7 +290,8 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		user_list = []
 		if not self.ldap_filter_object:
 			self.ldap_filter_object = LDAPFilter.eq(
-				LDAP_ATTR_OBJECT_CLASS, RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
+				RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
+				RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
 			)
 		if not self.ldap_filter_attr:
 			self.ldap_filter_attr = self.filter_attr_builder(
@@ -304,13 +308,19 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			self.ldap_filter_object = LDAPFilter.and_(
 				self.ldap_filter_object,
 				LDAPFilter.not_(
-					LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "computer")
+					LDAPFilter.eq(
+						RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
+						"computer"
+					)
 				),
 			)
 
 		# Exclude Contacts
 		filter_contacts = LDAPFilter.not_(
-			LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "contact")
+			LDAPFilter.eq(
+				RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
+				"contact"
+			)
 		)
 		if self.ldap_filter_object.type == LDAPFilterType.AND:
 			self.ldap_filter_object.children.append(filter_contacts)
@@ -341,8 +351,11 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 				user_dict[LOCAL_ATTR_IS_ENABLED] = user_object.is_enabled
 			except Exception as e:
 				username_or_dn = user_dict.get(
-					LDAP_ATTR_DN,
-					user_dict.get(LDAP_ATTR_USERNAME_SAMBA_ADDS, ""),
+					RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_DN],
+					user_dict.get(
+						RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
+						"" # Default
+					),
 				)
 				logger.exception(e)
 				logger.error(
@@ -374,9 +387,9 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		# Remove attributes to return as table headers
 		valid_attributes: list = self.ldap_filter_attr
 		remove_attributes = [
-			LDAP_ATTR_DN,
-			LDAP_ATTR_UAC,
-			LDAP_ATTR_FULL_NAME,
+			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_DN],
+			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_UAC],
+			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_FULL_NAME],
 		]
 		for attr in remove_attributes:
 			if attr in valid_attributes:
@@ -573,7 +586,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			)
 		ldap_attributes = [
 			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
-			LDAP_ATTR_DN,
+			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_DN],
 			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_EMAIL],
 		]
 		self.get_user_object(
@@ -623,9 +636,11 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		member_of_objects: list[dict] = []
 		user_dict[LOCAL_ATTR_USER_GROUPS] = []
 		try:
-			if LDAP_ATTR_USER_GROUPS in user_obj.entry.entry_attributes:
+			_USER_GROUPS_FIELD = RuntimeSettings\
+				.LDAP_FIELD_MAP[LOCAL_ATTR_USER_GROUPS]
+			if _USER_GROUPS_FIELD in user_obj.entry.entry_attributes:
 				user_groups = getldapattrvalue(
-					user_obj.entry, LDAP_ATTR_USER_GROUPS
+					user_obj.entry, _USER_GROUPS_FIELD
 				)
 				if user_groups:
 					if isinstance(user_groups, (list, tuple, set)):
@@ -645,7 +660,9 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 						)
 
 			### Also add default Users Group to be available as Selectable PID
-			if LDAP_ATTR_PRIMARY_GROUP_ID in self.ldap_filter_attr:
+			_PRIMARY_GROUP_ID_FIELD = RuntimeSettings\
+				.LDAP_FIELD_MAP[LOCAL_ATTR_PRIMARY_GROUP_ID]
+			if _PRIMARY_GROUP_ID_FIELD in self.ldap_filter_attr:
 				_primary_group_id = user_dict[LOCAL_ATTR_PRIMARY_GROUP_ID]
 				if not any(
 					_g.get(LOCAL_ATTR_RELATIVE_ID, None) == _primary_group_id
@@ -730,9 +747,10 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			logger.exception(e)
 			raise exc_user.UserPermissionError
 
+		_UAC_FIELD = RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_UAC]
 		self.ldap_connection.modify(
 			user_entry.entry_dn,
-			{LDAP_ATTR_UAC: [(MODIFY_REPLACE, [new_permissions])]},
+			{_UAC_FIELD: [(MODIFY_REPLACE, [new_permissions])]},
 		)
 
 		try:
