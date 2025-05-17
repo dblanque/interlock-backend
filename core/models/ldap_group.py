@@ -133,13 +133,13 @@ class LDAPGroup(LDAPObject):
 
 	def parse_write_group_type_scope(self) -> int:
 		"""Convert front-end generated type and scope to LDAP acceptable int."""
-		group_types = self.attributes.get(LOCAL_ATTR_GROUP_TYPE, [])
-		group_scopes = self.attributes.get(LOCAL_ATTR_GROUP_SCOPE, [])
+		group_types = self.attributes.pop(LOCAL_ATTR_GROUP_TYPE, [])
+		group_scopes = self.attributes.pop(LOCAL_ATTR_GROUP_SCOPE, [])
 		if not group_types or not group_scopes:
 			return
 
 		_type = 0
-		for t in set(self.attributes[LOCAL_ATTR_GROUP_TYPE]):
+		for t in set(group_types):
 			t: str
 			if t.lower() == LDAPGroupTypes.TYPE_SECURITY.name.lower():
 				_type -= LDAPGroupTypes[t].value
@@ -147,16 +147,14 @@ class LDAPGroup(LDAPObject):
 				_type += LDAPGroupTypes[t].value
 
 		_scope = 0
-		_scope += LDAPGroupTypes[
-			self.attributes[LOCAL_ATTR_GROUP_SCOPE][0]
-		].value
+		_scope += LDAPGroupTypes[ group_scopes[0] ].value
 		_sum = _type + _scope
 
 		# Validate
 		_parsed_types, _parsed_scopes = self.parse_read_group_type_scope(_sum)
-		if set(_parsed_types) != set(self.attributes[LOCAL_ATTR_GROUP_TYPE]):
+		if set(_parsed_types) != set(group_types):
 			raise ValueError("Could not properly parse group type")
-		if set(_parsed_scopes) != set(self.attributes[LOCAL_ATTR_GROUP_SCOPE]):
+		if set(_parsed_scopes) != set(group_scopes):
 			raise ValueError("Could not properly parse group scope")
 
 		self.attributes[LOCAL_ATTR_GROUP_TYPE] = _sum
