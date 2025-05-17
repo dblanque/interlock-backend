@@ -6,14 +6,11 @@
 # Module: core.models.ldap_group
 # Contains the Models for generic LDAP Objects
 #
-# ---------------------------------- IMPORTS -----------------------------------#
-### Django
-from django.utils.translation import gettext_lazy as _
+# ---------------------------------- IMPORTS ----------------------------------#
 
 ### Interlock
 from core.exceptions import (
 	groups as exc_group,
-	dirtree as exc_dirtree,
 	ldap as exc_ldap,
 )
 from core.constants.attrs import *
@@ -32,6 +29,7 @@ from core.models.ldap_object import (
 	LDAPObjectTypes,
 	ATTRS_SPECIAL_LDAP,
 )
+from core.config.runtime import RuntimeSettings
 from core.ldap.types.group import LDAPGroupTypes
 
 ################################################################################
@@ -73,7 +71,10 @@ class LDAPGroup(LDAPObject):
 
 	def __validate_init__(self, **kwargs):
 		kw_common_name = kwargs.pop("common_name", None)
-		self.groupname = kwargs.pop(LDAP_ATTR_COMMON_NAME, kw_common_name)
+		self.groupname = kwargs.pop(
+			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_NAME],
+			kw_common_name
+		)
 
 		if self.entry and not isinstance(self.entry, LDAPEntry):
 			raise TypeError(
@@ -96,12 +97,19 @@ class LDAPGroup(LDAPObject):
 			self.distinguished_name, str
 		):
 			self.search_filter = LDAPFilter.eq(
-				LDAP_ATTR_DN, self.distinguished_name
+				RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_DN],
+				self.distinguished_name,
 			).to_string()
 		elif self.groupname and isinstance(self.groupname, str):
 			self.search_filter = LDAPFilter.and_(
-				LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "group"),
-				LDAPFilter.eq(LDAP_ATTR_COMMON_NAME, self.groupname),
+				LDAPFilter.eq(
+					RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
+					"group",
+				),
+				LDAPFilter.eq(
+					RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_NAME],
+					self.groupname,
+				),
 			).to_string()
 
 	def parse_read_group_type_scope(self, group_type: int = None) -> tuple[list[str], list[str]]:
@@ -239,7 +247,7 @@ class LDAPGroup(LDAPObject):
 				continue
 
 			attr_value = getldapattrvalue(self.entry, attr_key)
-			if attr_key == LDAP_ATTR_GROUP_TYPE:
+			if attr_key == RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_GROUP_TYPE]:
 				group_types, group_scopes = self.parse_read_group_type_scope(attr_value)
 				self.attributes[LOCAL_ATTR_GROUP_TYPE] = group_types
 				self.attributes[LOCAL_ATTR_GROUP_SCOPE] = group_scopes

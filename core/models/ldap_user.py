@@ -6,9 +6,7 @@
 # Module: core.models.ldap_user
 # Contains the Models for generic LDAP Objects
 #
-# ---------------------------------- IMPORTS -----------------------------------#
-### Django
-from django.utils.translation import gettext_lazy as _
+# ---------------------------------- IMPORTS ----------------------------------#
 
 ### Interlock
 from core.exceptions import users as exc_user
@@ -192,9 +190,10 @@ class LDAPUser(LDAPObject):
 	def is_enabled(self):
 		if not self.entry:
 			raise ValueError("An LDAP Entry is required to check if the User is enabled on the server.")
-		if not LDAP_ATTR_UAC in self.entry.entry_attributes:
+		_UAC_FIELD = RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_UAC]
+		if not _UAC_FIELD in self.entry.entry_attributes:
 			raise ValueError(
-				"%s attribute is required in entry search" % (LDAP_ATTR_UAC)
+				"%s attribute is required in entry search" % (_UAC_FIELD)
 			)
 
 		return not list_user_perms(
