@@ -21,11 +21,11 @@ class TestDunderValidateInit(SuperDunderValidateInit):
 
 	def test_only_with_common_name(self, mocker: MockerFixture):
 		mocker.patch.object(self.test_cls, "__init__", return_value=None)
-		m_ldap_object = self.test_cls()
-		m_ldap_object.__validate_init__(**{
+		m_ldap_group = self.test_cls()
+		m_ldap_group.__validate_init__(**{
 			LOCAL_ATTR_NAME: "Test Group"
 		})
-		result_filter = LDAPFilter.from_string(m_ldap_object.search_filter)
+		result_filter = LDAPFilter.from_string(m_ldap_group.search_filter)
 		assert result_filter.children[1].type == LDAPFilterType.EQUALITY
 		assert result_filter.children[1].attribute == LDAP_ATTR_COMMON_NAME
 		assert result_filter.children[1].value == "Test Group"
@@ -196,15 +196,15 @@ class TestParseReadGroupTypeScope:
 		expected_scopes
 	):
 		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
-		m_ldap_object = LDAPGroup()
-		group_types, group_scopes = m_ldap_object.parse_read_group_type_scope(v)
+		m_ldap_group = LDAPGroup()
+		group_types, group_scopes = m_ldap_group.parse_read_group_type_scope(v)
 		assert group_types == expected_types
 		assert group_scopes == expected_scopes
 
 	def test_success_from_str(self, mocker: MockerFixture):
 		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
-		m_ldap_object = LDAPGroup()
-		group_types, group_scopes = m_ldap_object.parse_read_group_type_scope(
+		m_ldap_group = LDAPGroup()
+		group_types, group_scopes = m_ldap_group.parse_read_group_type_scope(
 			str(LDAPGroupTypes.TYPE_DISTRIBUTION.value + LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value)
 		)
 		assert group_types == [LDAPGroupTypes.TYPE_DISTRIBUTION.name]
@@ -212,9 +212,9 @@ class TestParseReadGroupTypeScope:
 
 	def test_raises_from_str(self, mocker: MockerFixture):
 		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
-		m_ldap_object = LDAPGroup()
+		m_ldap_group = LDAPGroup()
 		with pytest.raises(ValueError, match="could not be cast"):
-			m_ldap_object.parse_read_group_type_scope(
+			m_ldap_group.parse_read_group_type_scope(
 				"some_str"
 			)
 
@@ -229,15 +229,15 @@ class TestParseReadGroupTypeScope:
 	)
 	def test_raises_type_error(self, mocker: MockerFixture, bad_value):
 		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
-		m_ldap_object = LDAPGroup()
+		m_ldap_group = LDAPGroup()
 		with pytest.raises(TypeError, match="must be of type"):
-			m_ldap_object.parse_read_group_type_scope(bad_value)
+			m_ldap_group.parse_read_group_type_scope(bad_value)
 
 	def test_raises_from_invalid_int(self, mocker: MockerFixture):
 		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
-		m_ldap_object = LDAPGroup()
+		m_ldap_group = LDAPGroup()
 		with pytest.raises(ValueError, match="group type integer calculation"):
-			m_ldap_object.parse_read_group_type_scope(1234)
+			m_ldap_group.parse_read_group_type_scope(1234)
 
 class TestParseWriteGroupTypeScope:
 	@pytest.mark.parametrize(
@@ -298,16 +298,16 @@ class TestParseWriteGroupTypeScope:
 			"parse_read_group_type_scope",
 			return_value = (m_types, m_scopes,),
 		)
-		m_ldap_object = LDAPGroup()
-		m_ldap_object.parsed_specials = []
-		m_ldap_object.attributes = {
+		m_ldap_group = LDAPGroup()
+		m_ldap_group.parsed_specials = []
+		m_ldap_group.attributes = {
 			LOCAL_ATTR_GROUP_TYPE: m_types,
 			LOCAL_ATTR_GROUP_SCOPE: m_scopes,
 		}
-		m_ldap_object.parse_write_group_type_scope()
+		m_ldap_group.parse_write_group_type_scope()
 		m_parse_read.assert_called_once_with(expected)
-		assert set(m_ldap_object.parsed_specials) == {LOCAL_ATTR_GROUP_TYPE}
-		assert m_ldap_object.attributes.get(LOCAL_ATTR_GROUP_TYPE) == expected
+		assert set(m_ldap_group.parsed_specials) == {LOCAL_ATTR_GROUP_TYPE}
+		assert m_ldap_group.attributes.get(LOCAL_ATTR_GROUP_TYPE) == expected
 
 	@pytest.mark.parametrize(
 		"m_types, m_scopes",
@@ -335,17 +335,17 @@ class TestParseWriteGroupTypeScope:
 		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
 		m_parse_read = mocker.patch.object(
 			LDAPGroup, "parse_read_group_type_scope")
-		m_ldap_object = LDAPGroup()
-		m_ldap_object.parsed_specials = []
-		m_ldap_object.attributes = {}
+		m_ldap_group = LDAPGroup()
+		m_ldap_group.parsed_specials = []
+		m_ldap_group.attributes = {}
 		if m_types:
-			m_ldap_object.attributes[LOCAL_ATTR_GROUP_TYPE] = m_types
+			m_ldap_group.attributes[LOCAL_ATTR_GROUP_TYPE] = m_types
 		if m_scopes:
-			m_ldap_object.attributes[LOCAL_ATTR_GROUP_SCOPE] = m_scopes
-		m_ldap_object.parse_write_group_type_scope()
+			m_ldap_group.attributes[LOCAL_ATTR_GROUP_SCOPE] = m_scopes
+		m_ldap_group.parse_write_group_type_scope()
 		m_parse_read.assert_not_called()
-		assert m_ldap_object.parsed_specials == []
-		assert LOCAL_ATTR_GROUP_TYPE not in m_ldap_object.attributes
+		assert m_ldap_group.parsed_specials == []
+		assert LOCAL_ATTR_GROUP_TYPE not in m_ldap_group.attributes
 
 class TestParseWriteCommonName:
 	@pytest.mark.parametrize(
@@ -374,19 +374,19 @@ class TestParseWriteCommonName:
 			"move_or_rename_object",
 			return_value = m_new_dn
 		)
-		m_ldap_object = LDAPGroup()
-		m_ldap_object.distinguished_name = m_old_dn
-		m_ldap_object.attributes = {
+		m_ldap_group = LDAPGroup()
+		m_ldap_group.distinguished_name = m_old_dn
+		m_ldap_group.attributes = {
 			LOCAL_ATTR_NAME: m_name,
 		}
 
-		m_ldap_object.parse_write_common_name()
+		m_ldap_group.parse_write_common_name()
 		m_move_or_rename.assert_called_once_with(
-			m_ldap_object,
+			m_ldap_group,
 			distinguished_name=m_old_dn,
 			target_rdn=m_name,
 		)
-		assert m_ldap_object.distinguished_name == m_new_dn
+		assert m_ldap_group.distinguished_name == m_new_dn
 
 	def test_raises_bad_cn_parts(
 		self,
@@ -400,16 +400,16 @@ class TestParseWriteCommonName:
 		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
 		m_move_or_rename = mocker.patch.object(
 			OrganizationalUnitMixin, "move_or_rename_object")
-		m_ldap_object = LDAPGroup()
-		m_ldap_object.distinguished_name = m_old_dn
-		m_ldap_object.attributes = {
+		m_ldap_group = LDAPGroup()
+		m_ldap_group.distinguished_name = m_old_dn
+		m_ldap_group.attributes = {
 			LOCAL_ATTR_NAME: m_name,
 		}
 
 		with pytest.raises(exc_ldap.DistinguishedNameValidationError):
-			m_ldap_object.parse_write_common_name()
+			m_ldap_group.parse_write_common_name()
 		m_move_or_rename.assert_not_called()
-		assert m_ldap_object.distinguished_name == m_old_dn
+		assert m_ldap_group.distinguished_name == m_old_dn
 
 class TestPerformMemberOperations:
 	def test_success(

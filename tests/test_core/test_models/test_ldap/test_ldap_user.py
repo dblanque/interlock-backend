@@ -35,11 +35,11 @@ class TestDunderValidateInit(SuperDunderValidateInit):
 
 	def test_only_with_username(self, mocker: MockerFixture):
 		mocker.patch.object(self.test_cls, "__init__", return_value=None)
-		m_ldap_object = self.test_cls()
-		m_ldap_object.__validate_init__(**{
+		m_ldap_user = self.test_cls()
+		m_ldap_user.__validate_init__(**{
 			LOCAL_ATTR_USERNAME: "testuser"
 		})
-		result_filter = LDAPFilter.from_string(m_ldap_object.search_filter)
+		result_filter = LDAPFilter.from_string(m_ldap_user.search_filter)
 		assert result_filter.children[1].type == LDAPFilterType.EQUALITY
 		assert result_filter.children[1].attribute == LDAP_ATTR_USERNAME_SAMBA_ADDS
 		assert result_filter.children[1].value == "testuser"
