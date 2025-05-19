@@ -9,6 +9,7 @@ from core.views.ldap.group import LDAPGroupsViewSet
 from rest_framework.test import APIClient
 from rest_framework.response import Response
 from rest_framework import status
+from core.constants.attrs import LOCAL_ATTR_NAME
 
 
 @pytest.fixture(autouse=True)
@@ -61,14 +62,13 @@ class TestFetch:
 		mocker.patch.object(
 			LDAPGroupsViewSet,
 			"fetch_group",
-			return_value=("group_dict", "headers"),
+			return_value=("group_dict"),
 		)
 		response: Response = admin_user_client.post(
 			self.endpoint, data={"group": "mock_dn"}
 		)
 		assert response.status_code == status.HTTP_200_OK
 		assert response.data.get("data") == "group_dict"
-		assert response.data.get("headers") == "headers"
 
 
 class TestInsert:
@@ -92,13 +92,13 @@ class TestInsert:
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert (
 			response.data.get("detail")
-			== "group dict should have a cn key containing the Group Common Name."
+			== "group dict requires a name key containing the Group Common Name."
 		)
 
 	def test_success(self, mocker: MockerFixture, admin_user_client: APIClient):
 		mocker.patch.object(LDAPGroupsViewSet, "create_group")
 		response: Response = admin_user_client.post(
-			self.endpoint, data={"group": {"cn": "mock_cn"}}, format="json"
+			self.endpoint, data={"group": {LOCAL_ATTR_NAME: "mock_cn"}}, format="json"
 		)
 		assert response.status_code == status.HTTP_200_OK
 
