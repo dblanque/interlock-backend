@@ -158,7 +158,7 @@ class TestUserModel:
 		[
 			("first_name", 255),
 			("last_name", 255),
-			("_distinguished_name", 128),
+			("distinguished_name", 128),
 		],
 	)
 	def test_max_length_constraints(self, field_name, max_length):
@@ -170,7 +170,7 @@ class TestUserModel:
 		user = User.objects.create(
 			username="test_max_length_constraints",
 			password=self.default_password,
-			user_type=USER_TYPE_LOCAL,
+			user_type=USER_TYPE_LDAP,
 		)
 
 		# Try to set the long string on the field

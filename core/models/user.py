@@ -23,7 +23,6 @@ from django.utils.translation import gettext_lazy as _
 
 from core.models.base import BaseModel
 from interlock_backend.settings import (
-	SECRET_KEY_FALLBACKS,
 	DEFAULT_SUPERUSER_USERNAME,
 	DEFAULT_SUPERUSER_PASSWORD,
 )
@@ -304,5 +303,20 @@ class User(BaseUser):
 		else:
 			self._distinguished_name = v
 
+	def __setattr__(self, name, value):
+		if name == "distinguished_name":
+			if self.user_type != USER_TYPE_LDAP:
+				super().__setattr__("_distinguished_name", None)
+			else:
+				super().__setattr__("_distinguished_name", value)
+		else:
+			super().__setattr__(name, value)
+
 	def is_user_local(self):
 		return self.user_type == USER_TYPE_LOCAL
+
+	def save(self, *args, **kwargs):
+		"""Ensure consistency on save"""
+		if self.user_type != USER_TYPE_LDAP:
+			self.distinguished_name = None
+		super().save(*args, **kwargs)
