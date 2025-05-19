@@ -15,6 +15,7 @@ from core.exceptions import (
 )
 
 ### Models
+from impacket.structure import Structure
 from typing import Union
 from core.models.structs import ldap_dns_record as ldr
 from core.models.structs.ldap_dns_record import (
@@ -507,6 +508,7 @@ def record_type_main_field(t: RecordTypes | int | str) -> str:
 
 
 class LDAPRecord(LDAPDNS, LDAPRecordMixin):
+	record_cls: Structure
 	raw_entry: LDAPRecordEntry
 	entry: dict
 	name: str
