@@ -66,17 +66,15 @@ class LDAPGroup(LDAPObject):
 	) -> None: ...
 
 	# Only defined explicitly for overload definition
-	def __init__(self, **kwargs): # pragma: no cover
+	def __init__(self, **kwargs):  # pragma: no cover
 		super().__init__(**kwargs)
 
 	def __validate_init__(self, **kwargs):
 		kw_common_name = kwargs.pop(
-			"common_name", 
-			kwargs.pop(LOCAL_ATTR_NAME, None)
+			"common_name", kwargs.pop(LOCAL_ATTR_NAME, None)
 		)
 		self.groupname = kwargs.pop(
-			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_NAME],
-			kw_common_name
+			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_NAME], kw_common_name
 		)
 
 		if self.groupname and isinstance(self.groupname, str):
@@ -93,12 +91,16 @@ class LDAPGroup(LDAPObject):
 		else:
 			super().__validate_init__(**kwargs)
 
-	def parse_read_group_type_scope(self, group_type: int = None) -> tuple[list[str], list[str]]:
+	def parse_read_group_type_scope(
+		self, group_type: int = None
+	) -> tuple[list[str], list[str]]:
 		"""Get group types and scopes from integer value"""
 		sum = 0
 		_scopes = []
 		_types = []
-		if not isinstance(group_type, (int, str)) or isinstance(group_type, bool):
+		if not isinstance(group_type, (int, str)) or isinstance(
+			group_type, bool
+		):
 			raise TypeError("group_type must be of type int or str")
 
 		if isinstance(group_type, str):
@@ -147,7 +149,7 @@ class LDAPGroup(LDAPObject):
 				_type += LDAPGroupTypes[t].value
 
 		_scope = 0
-		_scope += LDAPGroupTypes[ group_scopes[0] ].value
+		_scope += LDAPGroupTypes[group_scopes[0]].value
 		_sum = _type + _scope
 
 		# Validate
@@ -226,8 +228,13 @@ class LDAPGroup(LDAPObject):
 				continue
 
 			attr_value = getldapattrvalue(self.entry, attr_key)
-			if attr_key == RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_GROUP_TYPE]:
-				group_types, group_scopes = self.parse_read_group_type_scope(attr_value)
+			if (
+				attr_key
+				== RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_GROUP_TYPE]
+			):
+				group_types, group_scopes = self.parse_read_group_type_scope(
+					attr_value
+				)
 				self.attributes[LOCAL_ATTR_GROUP_TYPE] = group_types
 				self.attributes[LOCAL_ATTR_GROUP_SCOPE] = group_scopes
 

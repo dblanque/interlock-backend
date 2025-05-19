@@ -91,21 +91,17 @@ def recursive_member_search(
 
 	# Add filter for username
 	ldap_filter_object = LDAPFilter.and_(
+		LDAPFilter.eq(RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_DN], group_dn),
 		LDAPFilter.eq(
-			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_DN],
-			group_dn
-		),
-		LDAPFilter.eq(
-			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
-			"group"
+			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS], "group"
 		),
 	).to_string()
 	connection.search(
 		RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
 		ldap_filter_object,
 		attributes=[
-			RuntimeSettings.LDAP_FIELD_MAP[fld] for fld in
-			(
+			RuntimeSettings.LDAP_FIELD_MAP[fld]
+			for fld in (
 				LOCAL_ATTR_GROUP_MEMBERS,
 				LOCAL_ATTR_OBJECT_CLASS,
 				LOCAL_ATTR_DN,
@@ -119,8 +115,7 @@ def recursive_member_search(
 		)
 		if "group" in e_object_classes.values:
 			e_member = getldapattr(
-				e,
-				RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_GROUP_MEMBERS]
+				e, RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_GROUP_MEMBERS]
 			)
 			# Check if member in group directly
 			if user_dn in e_member.values:
@@ -154,17 +149,21 @@ def sync_user_relations(
 	if not _username:
 		raise ValueError("Username not present in User LDAP Attributes.")
 	else:
-		_username: str = _username[0] \
-			if isinstance(_username, (list, tuple, set)) \
+		_username: str = (
+			_username[0]
+			if isinstance(_username, (list, tuple, set))
 			else _username
+		)
 	if not _distinguished_name:
 		raise ValueError(
 			"Distinguished Name not present in User LDAP Attributes."
 		)
 	else:
-		_distinguished_name: str = _distinguished_name[0] \
-			if isinstance(_distinguished_name, (list, tuple, set)) \
+		_distinguished_name: str = (
+			_distinguished_name[0]
+			if isinstance(_distinguished_name, (list, tuple, set))
 			else _distinguished_name
+		)
 
 	# Set user as LDAP Type for Distinguished Name getter/setter to work
 	user.user_type = USER_TYPE_LDAP
@@ -531,7 +530,8 @@ class LDAPConnector(object):
 				else attributes[ldap_attr_name]
 			)
 			for local_attr_name, ldap_attr_name in RuntimeSettings.LDAP_FIELD_MAP.items()
-			if ldap_attr_name in attributes and local_attr_name in _valid_sync_attrs
+			if ldap_attr_name in attributes
+			and local_attr_name in _valid_sync_attrs
 		}
 		return import_func(RuntimeSettings.LDAP_AUTH_CLEAN_USER_DATA)(_fields)
 
@@ -655,7 +655,10 @@ def test_ldap_connection(
 	ldapAuthUseTLS,
 	ldapAuthTLSVersion,
 ):
-	if password != ldapAuthConnectionPassword and username != DEFAULT_SUPERUSER_USERNAME:
+	if (
+		password != ldapAuthConnectionPassword
+		and username != DEFAULT_SUPERUSER_USERNAME
+	):
 		password = password
 	elif username == DEFAULT_SUPERUSER_USERNAME:
 		user_dn = ldapAuthConnectionUser

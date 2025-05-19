@@ -54,6 +54,7 @@ from core.constants.attrs import (
 )
 from tests.test_core.conftest import RuntimeSettingsFactory
 
+
 @pytest.fixture
 def f_user_mixin(mocker):
 	mixin = LDAPUserMixin()
@@ -154,6 +155,7 @@ def fc_user_entry(
 			mock.entry_attributes.append(k)
 		mock.entry_dn = attrs["distinguishedName"]
 		return mock
+
 	return maker
 
 
@@ -333,9 +335,7 @@ class TestLDAPUserMixin:
 			f_runtime_settings.LDAP_FIELD_MAP["username"],
 			username,
 		)
-		setattr(
-			m_entry, f_runtime_settings.LDAP_FIELD_MAP["email"], email
-		)
+		setattr(m_entry, f_runtime_settings.LDAP_FIELD_MAP["email"], email)
 		f_user_mixin.ldap_connection.entries = [m_entry]
 
 		m_get_user_entry = mocker.patch.object(f_user_mixin, "get_user_entry")

@@ -2,6 +2,7 @@
 import pytest
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
+
 ################################################################################
 from core.models.ldap_group import LDAPGroup
 from .test_ldap_object import TestDunderValidateInit as SuperDunderValidateInit
@@ -16,23 +17,25 @@ from core.exceptions import (
 	groups as exc_group,
 )
 
+
 class TestDunderValidateInit(SuperDunderValidateInit):
 	test_cls = LDAPGroup
 
 	def test_only_with_common_name(self, mocker: MockerFixture):
 		mocker.patch.object(self.test_cls, "__init__", return_value=None)
 		m_ldap_group = self.test_cls()
-		m_ldap_group.__validate_init__(**{
-			LOCAL_ATTR_NAME: "Test Group"
-		})
+		m_ldap_group.__validate_init__(**{LOCAL_ATTR_NAME: "Test Group"})
 		result_filter = LDAPFilter.from_string(m_ldap_group.search_filter)
 		assert result_filter.children[1].type == LDAPFilterType.EQUALITY
 		assert result_filter.children[1].attribute == LDAP_ATTR_COMMON_NAME
 		assert result_filter.children[1].value == "Test Group"
 
+
 def parse_read_group_type_scope_ids(v):
 	if isinstance(v, list):
 		return ",".join(v)
+
+
 class TestParseReadGroupTypeScope:
 	@pytest.mark.parametrize(
 		"v, expected_types, expected_scopes",
@@ -41,8 +44,8 @@ class TestParseReadGroupTypeScope:
 			pytest.param(
 				# Int to parse
 				(
-					-LDAPGroupTypes.TYPE_SECURITY.value +
-					LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
+					-LDAPGroupTypes.TYPE_SECURITY.value
+					+ LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
 				),
 				# Expected results
 				[LDAPGroupTypes.TYPE_SECURITY.name],
@@ -51,8 +54,8 @@ class TestParseReadGroupTypeScope:
 			pytest.param(
 				# Int to parse
 				(
-					-LDAPGroupTypes.TYPE_SECURITY.value +
-					LDAPGroupTypes.SCOPE_UNIVERSAL.value
+					-LDAPGroupTypes.TYPE_SECURITY.value
+					+ LDAPGroupTypes.SCOPE_UNIVERSAL.value
 				),
 				# Expected results
 				[LDAPGroupTypes.TYPE_SECURITY.name],
@@ -61,8 +64,8 @@ class TestParseReadGroupTypeScope:
 			pytest.param(
 				# Int to parse
 				(
-					-LDAPGroupTypes.TYPE_SECURITY.value +
-					LDAPGroupTypes.SCOPE_GLOBAL.value
+					-LDAPGroupTypes.TYPE_SECURITY.value
+					+ LDAPGroupTypes.SCOPE_GLOBAL.value
 				),
 				# Expected results
 				[LDAPGroupTypes.TYPE_SECURITY.name],
@@ -72,8 +75,8 @@ class TestParseReadGroupTypeScope:
 			pytest.param(
 				# Int to parse
 				(
-					-LDAPGroupTypes.TYPE_DISTRIBUTION.value +
-					LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
+					-LDAPGroupTypes.TYPE_DISTRIBUTION.value
+					+ LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
 				),
 				# Expected results
 				[LDAPGroupTypes.TYPE_DISTRIBUTION.name],
@@ -82,8 +85,8 @@ class TestParseReadGroupTypeScope:
 			pytest.param(
 				# Int to parse
 				(
-					-LDAPGroupTypes.TYPE_DISTRIBUTION.value +
-					LDAPGroupTypes.SCOPE_UNIVERSAL.value
+					-LDAPGroupTypes.TYPE_DISTRIBUTION.value
+					+ LDAPGroupTypes.SCOPE_UNIVERSAL.value
 				),
 				# Expected results
 				[LDAPGroupTypes.TYPE_DISTRIBUTION.name],
@@ -92,8 +95,8 @@ class TestParseReadGroupTypeScope:
 			pytest.param(
 				# Int to parse
 				(
-					-LDAPGroupTypes.TYPE_DISTRIBUTION.value +
-					LDAPGroupTypes.SCOPE_GLOBAL.value
+					-LDAPGroupTypes.TYPE_DISTRIBUTION.value
+					+ LDAPGroupTypes.SCOPE_GLOBAL.value
 				),
 				# Expected results
 				[LDAPGroupTypes.TYPE_DISTRIBUTION.name],
@@ -103,9 +106,9 @@ class TestParseReadGroupTypeScope:
 			pytest.param(
 				# Int to parse
 				(
-					-LDAPGroupTypes.TYPE_SECURITY.value +
-					LDAPGroupTypes.TYPE_SYSTEM.value +
-					LDAPGroupTypes.SCOPE_GLOBAL.value
+					-LDAPGroupTypes.TYPE_SECURITY.value
+					+ LDAPGroupTypes.TYPE_SYSTEM.value
+					+ LDAPGroupTypes.SCOPE_GLOBAL.value
 				),
 				# Expected results
 				[
@@ -117,9 +120,9 @@ class TestParseReadGroupTypeScope:
 			pytest.param(
 				# Int to parse
 				(
-					-LDAPGroupTypes.TYPE_SECURITY.value +
-					LDAPGroupTypes.TYPE_SYSTEM.value +
-					LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
+					-LDAPGroupTypes.TYPE_SECURITY.value
+					+ LDAPGroupTypes.TYPE_SYSTEM.value
+					+ LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
 				),
 				# Expected results
 				[
@@ -131,9 +134,9 @@ class TestParseReadGroupTypeScope:
 			pytest.param(
 				# Int to parse
 				(
-					-LDAPGroupTypes.TYPE_SECURITY.value +
-					LDAPGroupTypes.TYPE_SYSTEM.value +
-					LDAPGroupTypes.SCOPE_UNIVERSAL.value
+					-LDAPGroupTypes.TYPE_SECURITY.value
+					+ LDAPGroupTypes.TYPE_SYSTEM.value
+					+ LDAPGroupTypes.SCOPE_UNIVERSAL.value
 				),
 				# Expected results
 				[
@@ -146,9 +149,9 @@ class TestParseReadGroupTypeScope:
 			pytest.param(
 				# Int to parse
 				(
-					-LDAPGroupTypes.TYPE_DISTRIBUTION.value +
-					LDAPGroupTypes.TYPE_SYSTEM.value +
-					LDAPGroupTypes.SCOPE_GLOBAL.value
+					-LDAPGroupTypes.TYPE_DISTRIBUTION.value
+					+ LDAPGroupTypes.TYPE_SYSTEM.value
+					+ LDAPGroupTypes.SCOPE_GLOBAL.value
 				),
 				# Expected results
 				[
@@ -160,9 +163,9 @@ class TestParseReadGroupTypeScope:
 			pytest.param(
 				# Int to parse
 				(
-					-LDAPGroupTypes.TYPE_DISTRIBUTION.value +
-					LDAPGroupTypes.TYPE_SYSTEM.value +
-					LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
+					-LDAPGroupTypes.TYPE_DISTRIBUTION.value
+					+ LDAPGroupTypes.TYPE_SYSTEM.value
+					+ LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
 				),
 				# Expected results
 				[
@@ -174,9 +177,9 @@ class TestParseReadGroupTypeScope:
 			pytest.param(
 				# Int to parse
 				(
-					-LDAPGroupTypes.TYPE_DISTRIBUTION.value +
-					LDAPGroupTypes.TYPE_SYSTEM.value +
-					LDAPGroupTypes.SCOPE_UNIVERSAL.value
+					-LDAPGroupTypes.TYPE_DISTRIBUTION.value
+					+ LDAPGroupTypes.TYPE_SYSTEM.value
+					+ LDAPGroupTypes.SCOPE_UNIVERSAL.value
 				),
 				# Expected results
 				[
@@ -186,14 +189,10 @@ class TestParseReadGroupTypeScope:
 				[LDAPGroupTypes.SCOPE_UNIVERSAL.name],
 			),
 		),
-		ids=parse_read_group_type_scope_ids
+		ids=parse_read_group_type_scope_ids,
 	)
 	def test_success(
-		self,
-		mocker: MockerFixture,
-		v,
-		expected_types,
-		expected_scopes
+		self, mocker: MockerFixture, v, expected_types, expected_scopes
 	):
 		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
 		m_ldap_group = LDAPGroup()
@@ -205,7 +204,10 @@ class TestParseReadGroupTypeScope:
 		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
 		m_ldap_group = LDAPGroup()
 		group_types, group_scopes = m_ldap_group.parse_read_group_type_scope(
-			str(LDAPGroupTypes.TYPE_DISTRIBUTION.value + LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value)
+			str(
+				LDAPGroupTypes.TYPE_DISTRIBUTION.value
+				+ LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
+			)
 		)
 		assert group_types == [LDAPGroupTypes.TYPE_DISTRIBUTION.name]
 		assert group_scopes == [LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.name]
@@ -214,9 +216,7 @@ class TestParseReadGroupTypeScope:
 		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
 		m_ldap_group = LDAPGroup()
 		with pytest.raises(ValueError, match="could not be cast"):
-			m_ldap_group.parse_read_group_type_scope(
-				"some_str"
-			)
+			m_ldap_group.parse_read_group_type_scope("some_str")
 
 	@pytest.mark.parametrize(
 		"bad_value",
@@ -239,6 +239,7 @@ class TestParseReadGroupTypeScope:
 		with pytest.raises(ValueError, match="group type integer calculation"):
 			m_ldap_group.parse_read_group_type_scope(1234)
 
+
 class TestParseWriteGroupTypeScope:
 	@pytest.mark.parametrize(
 		"m_types, m_scopes, expected",
@@ -247,16 +248,16 @@ class TestParseWriteGroupTypeScope:
 				[LDAPGroupTypes.TYPE_SECURITY.name],
 				[LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.name],
 				(
-					-LDAPGroupTypes.TYPE_SECURITY.value +
-					LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
+					-LDAPGroupTypes.TYPE_SECURITY.value
+					+ LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
 				),
 			),
 			(
 				[LDAPGroupTypes.TYPE_DISTRIBUTION.name],
 				[LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.name],
 				(
-					LDAPGroupTypes.TYPE_DISTRIBUTION.value +
-					LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
+					LDAPGroupTypes.TYPE_DISTRIBUTION.value
+					+ LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
 				),
 			),
 			(
@@ -266,9 +267,9 @@ class TestParseWriteGroupTypeScope:
 				],
 				[LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.name],
 				(
-					-LDAPGroupTypes.TYPE_SECURITY.value +
-					LDAPGroupTypes.TYPE_SYSTEM.value +
-					LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
+					-LDAPGroupTypes.TYPE_SECURITY.value
+					+ LDAPGroupTypes.TYPE_SYSTEM.value
+					+ LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
 				),
 			),
 			(
@@ -278,9 +279,9 @@ class TestParseWriteGroupTypeScope:
 				],
 				[LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.name],
 				(
-					LDAPGroupTypes.TYPE_DISTRIBUTION.value +
-					LDAPGroupTypes.TYPE_SYSTEM.value +
-					LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
+					LDAPGroupTypes.TYPE_DISTRIBUTION.value
+					+ LDAPGroupTypes.TYPE_SYSTEM.value
+					+ LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
 				),
 			),
 		),
@@ -290,13 +291,16 @@ class TestParseWriteGroupTypeScope:
 		m_types: list[LDAPGroupTypes],
 		m_scopes: list[LDAPGroupTypes],
 		expected: int,
-		mocker: MockerFixture
+		mocker: MockerFixture,
 	):
 		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
 		m_parse_read = mocker.patch.object(
 			LDAPGroup,
 			"parse_read_group_type_scope",
-			return_value = (m_types, m_scopes,),
+			return_value=(
+				m_types,
+				m_scopes,
+			),
 		)
 		m_ldap_group = LDAPGroup()
 		m_ldap_group.parsed_specials = []
@@ -334,7 +338,8 @@ class TestParseWriteGroupTypeScope:
 	):
 		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
 		m_parse_read = mocker.patch.object(
-			LDAPGroup, "parse_read_group_type_scope")
+			LDAPGroup, "parse_read_group_type_scope"
+		)
 		m_ldap_group = LDAPGroup()
 		m_ldap_group.parsed_specials = []
 		m_ldap_group.attributes = {}
@@ -346,6 +351,7 @@ class TestParseWriteGroupTypeScope:
 		m_parse_read.assert_not_called()
 		assert m_ldap_group.parsed_specials == []
 		assert LOCAL_ATTR_GROUP_TYPE not in m_ldap_group.attributes
+
 
 class TestParseWriteCommonName:
 	@pytest.mark.parametrize(
@@ -372,7 +378,7 @@ class TestParseWriteCommonName:
 		m_move_or_rename = mocker.patch.object(
 			OrganizationalUnitMixin,
 			"move_or_rename_object",
-			return_value = m_new_dn
+			return_value=m_new_dn,
 		)
 		m_ldap_group = LDAPGroup()
 		m_ldap_group.distinguished_name = m_old_dn
@@ -399,7 +405,8 @@ class TestParseWriteCommonName:
 		)
 		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
 		m_move_or_rename = mocker.patch.object(
-			OrganizationalUnitMixin, "move_or_rename_object")
+			OrganizationalUnitMixin, "move_or_rename_object"
+		)
 		m_ldap_group = LDAPGroup()
 		m_ldap_group.distinguished_name = m_old_dn
 		m_ldap_group.attributes = {
@@ -410,6 +417,7 @@ class TestParseWriteCommonName:
 			m_ldap_group.parse_write_common_name()
 		m_move_or_rename.assert_not_called()
 		assert m_ldap_group.distinguished_name == m_old_dn
+
 
 class TestPerformMemberOperations:
 	def test_success(
@@ -430,16 +438,14 @@ class TestPerformMemberOperations:
 			members_to_add=m_add_members,
 			members_to_remove=m_rm_members,
 		)
-		f_connection.extend.microsoft\
-			.add_members_to_groups.assert_called_once_with(
-				members=m_add_members,
-				groups="mock_dn",
-			)
-		f_connection.extend.microsoft\
-			.remove_members_from_groups.assert_called_once_with(
-				members=m_rm_members,
-				groups="mock_dn",
-			)
+		f_connection.extend.microsoft.add_members_to_groups.assert_called_once_with(
+			members=m_add_members,
+			groups="mock_dn",
+		)
+		f_connection.extend.microsoft.remove_members_from_groups.assert_called_once_with(
+			members=m_rm_members,
+			groups="mock_dn",
+		)
 		assert set(m_ldap_group.parsed_specials) == {
 			LOCAL_ATTR_GROUP_ADD_MEMBERS,
 			LOCAL_ATTR_GROUP_RM_MEMBERS,
@@ -452,8 +458,9 @@ class TestPerformMemberOperations:
 	):
 		m_logger = mocker.patch("core.models.ldap_group.logger")
 		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
-		f_connection.extend.microsoft.add_members_to_groups\
-			.side_effect = Exception
+		f_connection.extend.microsoft.add_members_to_groups.side_effect = (
+			Exception
+		)
 		f_connection.result = "bad_result"
 		m_add_members = ["mock_member_1", "mock_member_2"]
 		m_rm_members = ["mock_member_3", "mock_member_4"]
@@ -469,13 +476,11 @@ class TestPerformMemberOperations:
 				members_to_remove=m_rm_members,
 			)
 		m_logger.exception.assert_called_once()
-		f_connection.extend.microsoft\
-			.add_members_to_groups.assert_called_once_with(
-				members=m_add_members,
-				groups="mock_dn",
-			)
-		f_connection.extend.microsoft\
-			.remove_members_from_groups.assert_not_called()
+		f_connection.extend.microsoft.add_members_to_groups.assert_called_once_with(
+			members=m_add_members,
+			groups="mock_dn",
+		)
+		f_connection.extend.microsoft.remove_members_from_groups.assert_not_called()
 		assert not m_ldap_group.parsed_specials
 
 	def test_remove_members_raises(
@@ -485,8 +490,9 @@ class TestPerformMemberOperations:
 	):
 		m_logger = mocker.patch("core.models.ldap_group.logger")
 		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
-		f_connection.extend.microsoft.remove_members_from_groups\
-			.side_effect = Exception
+		f_connection.extend.microsoft.remove_members_from_groups.side_effect = (
+			Exception
+		)
 		f_connection.result = "bad_result"
 		m_add_members = ["mock_member_1", "mock_member_2"]
 		m_rm_members = ["mock_member_3", "mock_member_4"]
@@ -502,19 +508,18 @@ class TestPerformMemberOperations:
 				members_to_remove=m_rm_members,
 			)
 		m_logger.exception.assert_called_once()
-		f_connection.extend.microsoft\
-			.add_members_to_groups.assert_called_once_with(
-				members=m_add_members,
-				groups="mock_dn",
-			)
-		f_connection.extend.microsoft\
-			.remove_members_from_groups.assert_called_once_with(
-				members=m_rm_members,
-				groups="mock_dn",
-			)
+		f_connection.extend.microsoft.add_members_to_groups.assert_called_once_with(
+			members=m_add_members,
+			groups="mock_dn",
+		)
+		f_connection.extend.microsoft.remove_members_from_groups.assert_called_once_with(
+			members=m_rm_members,
+			groups="mock_dn",
+		)
 		assert set(m_ldap_group.parsed_specials) == {
 			LOCAL_ATTR_GROUP_ADD_MEMBERS
 		}
+
 
 class TestParseWriteSpecialAttributes:
 	def test_success(
@@ -523,12 +528,12 @@ class TestParseWriteSpecialAttributes:
 	):
 		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
 		m_parse_write_group_ts = mocker.patch.object(
-			LDAPGroup,
-			"parse_write_group_type_scope"
+			LDAPGroup, "parse_write_group_type_scope"
 		)
 		m_ldap_group = LDAPGroup()
 		m_ldap_group.parse_write_special_attributes()
 		m_parse_write_group_ts.assert_called_once()
+
 
 class TestParseReadSpecialAttributes:
 	def test_success(
@@ -539,11 +544,14 @@ class TestParseReadSpecialAttributes:
 		m_parse_read_group_ts = mocker.patch.object(
 			LDAPGroup,
 			"parse_read_group_type_scope",
-			return_value=("m_types","m_scopes",)
+			return_value=(
+				"m_types",
+				"m_scopes",
+			),
 		)
 		m_group_type = (
-			-LDAPGroupTypes.TYPE_SECURITY.value +
-			LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
+			-LDAPGroupTypes.TYPE_SECURITY.value
+			+ LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value
 		)
 		m_attr = mocker.Mock(name="m_group_type")
 		m_attr.value = m_group_type
@@ -557,6 +565,7 @@ class TestParseReadSpecialAttributes:
 		m_ldap_group.parse_read_special_attributes()
 		m_parse_read_group_ts.assert_called_once_with(m_group_type)
 
+
 class TestPostCreate:
 	def test_success(
 		self,
@@ -564,9 +573,7 @@ class TestPostCreate:
 	):
 		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
 		m_perform_member_operations = mocker.patch.object(
-			LDAPGroup,
-			"perform_member_operations",
-			return_value=None
+			LDAPGroup, "perform_member_operations", return_value=None
 		)
 		m_ldap_group = LDAPGroup()
 		m_ldap_group.attributes = {
@@ -585,9 +592,7 @@ class TestPostCreate:
 	):
 		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
 		m_perform_member_operations = mocker.patch.object(
-			LDAPGroup,
-			"perform_member_operations",
-			return_value=None
+			LDAPGroup, "perform_member_operations", return_value=None
 		)
 		m_ldap_group = LDAPGroup()
 		m_ldap_group.attributes = {}
@@ -597,6 +602,7 @@ class TestPostCreate:
 			members_to_remove=[],
 		)
 
+
 class TestPostUpdate:
 	def test_success(
 		self,
@@ -605,14 +611,10 @@ class TestPostUpdate:
 		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
 		m_ldap_group = LDAPGroup()
 		m_post_create = mocker.patch.object(
-			LDAPGroup,
-			"post_create",
-			return_value=None
+			LDAPGroup, "post_create", return_value=None
 		)
 		m_parse_write_common_name = mocker.patch.object(
-			LDAPGroup,
-			"parse_write_common_name",
-			return_value=None
+			LDAPGroup, "parse_write_common_name", return_value=None
 		)
 		m_ldap_group.post_update()
 		m_post_create.assert_called_once()

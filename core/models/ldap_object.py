@@ -173,9 +173,7 @@ class LDAPObject:
 		if not isinstance(_entry_dn, str):
 			raise TypeError("entry_dn must be of type str")
 		self.distinguished_name = _entry_dn
-		self.search_filter = LDAPFilter.eq(
-			LDAP_ATTR_DN, _entry_dn
-		).to_string()
+		self.search_filter = LDAPFilter.eq(LDAP_ATTR_DN, _entry_dn).to_string()
 
 	def __validate_init__(self, **kwargs):
 		"""Function that may be overridden by subclasses for connection and
@@ -183,9 +181,7 @@ class LDAPObject:
 		"""
 		if self.entry is not None:
 			if not isinstance(self.entry, LDAPEntry):
-				raise TypeError(
-					"LDAPObject entry must be of type ldap3.Entry"
-				)
+				raise TypeError("LDAPObject entry must be of type ldap3.Entry")
 
 		if not self.connection and not self.entry:
 			raise Exception(
@@ -208,20 +204,29 @@ class LDAPObject:
 	def __set_search_attrs__(self, search_attrs: list | tuple | set):
 		if not search_attrs:
 			return
-		elif search_attrs in (ALL_OPERATIONAL_ATTRIBUTES, ALL_ATTRIBUTES,):
+		elif search_attrs in (
+			ALL_OPERATIONAL_ATTRIBUTES,
+			ALL_ATTRIBUTES,
+		):
 			self.search_attrs = search_attrs
 			return
 
 		if not isinstance(search_attrs, (set, tuple, list, str)):
 			raise TypeError(
-				"search_attrs must be of type set, tuple, list, or str")
+				"search_attrs must be of type set, tuple, list, or str"
+			)
 
 		# Convert to list if iterable
-		if isinstance(search_attrs, (set, tuple,)):
+		if isinstance(
+			search_attrs,
+			(
+				set,
+				tuple,
+			),
+		):
 			self.search_attrs = list(search_attrs)
 		else:
 			self.search_attrs = search_attrs
-
 
 		# Remove excluded attributes
 		for attr in self.excluded_ldap_attributes:
@@ -233,7 +238,7 @@ class LDAPObject:
 		if LDAP_ATTR_USER_GROUPS in self.search_attrs:
 			if not LDAP_ATTR_PRIMARY_GROUP_ID in self.search_attrs:
 				self.search_attrs.append(LDAP_ATTR_PRIMARY_GROUP_ID)
-		
+
 		if isinstance(self.search_attrs, list):
 			self.search_attrs = tuple(self.search_attrs)
 
@@ -242,9 +247,10 @@ class LDAPObject:
 		# Set passed kwargs from Object Call
 		for kw in kwargs:
 			setattr(self, kw, kwargs[kw])
-		
+
 		self.__set_search_attrs__(
-			kwargs.pop("search_attrs", ALL_OPERATIONAL_ATTRIBUTES))
+			kwargs.pop("search_attrs", ALL_OPERATIONAL_ATTRIBUTES)
+		)
 
 	def __get_connection__(self):
 		return self.connection
@@ -268,13 +274,13 @@ class LDAPObject:
 				)
 				pass
 
-	def parse_read_special_attributes(self): # pragma: no cover
+	def parse_read_special_attributes(self):  # pragma: no cover
 		"""
 		Special LDAP Attribute parsing function (LDAP -> LOCAL Translation)
 		"""
 		return
 
-	def parse_write_special_attributes(self): # pragma: no cover
+	def parse_write_special_attributes(self):  # pragma: no cover
 		"""
 		Special LOCAL Attribute parsing function (LOCAL -> LDAP Translation)
 		"""
@@ -297,14 +303,19 @@ class LDAPObject:
 		# Set object type and category
 		if self.entry:
 			if LDAP_ATTR_OBJECT_CATEGORY in self.entry.entry_attributes:
-				_object_category = getldapattrvalue(self.entry, LDAP_ATTR_OBJECT_CATEGORY)
+				_object_category = getldapattrvalue(
+					self.entry, LDAP_ATTR_OBJECT_CATEGORY
+				)
 				self.type = self.__get_common_name__(_object_category)
 				self.type = LDAPObjectTypes(self.type.lower())
-				self.attributes[LOCAL_ATTR_OBJECT_CATEGORY] = \
+				self.attributes[LOCAL_ATTR_OBJECT_CATEGORY] = (
 					self.__get_common_name__(_object_category)
+				)
 
 		# Set Name and Type
-		self.attributes[LOCAL_ATTR_NAME] = self.__get_common_name__(distinguished_name)
+		self.attributes[LOCAL_ATTR_NAME] = self.__get_common_name__(
+			distinguished_name
+		)
 		self.attributes[LOCAL_ATTR_TYPE] = (
 			LDAPObjectTypes.GENERIC.value.lower()
 			if not self.type.value
@@ -345,7 +356,7 @@ class LDAPObject:
 				except Exception as e:
 					logger.error(
 						"Could not translate SID Byte Array for %s",
-						distinguished_name
+						distinguished_name,
 					)
 					logger.exception(e)
 			elif attr_key == LDAP_ATTR_BAD_PWD_COUNT:
@@ -390,33 +401,35 @@ class LDAPObject:
 		if dn and not isinstance(dn, str):
 			raise TypeError("dn must be of type str or None.")
 		if not dn and not self.distinguished_name:
-			raise ValueError("dn value is required if self has no distinguished_name attribute.")
+			raise ValueError(
+				"dn value is required if self has no distinguished_name attribute."
+			)
 		if not dn:
 			dn = self.distinguished_name
 		_rdn: str = safe_rdn(dn)[0]
 		return _rdn.split("=")[-1]
 
-	def pre_create(self): # pragma: no cover
+	def pre_create(self):  # pragma: no cover
 		"""Pre Creation operations"""
 		return
 
-	def pre_update(self): # pragma: no cover
+	def pre_update(self):  # pragma: no cover
 		"""Pre Creation operations"""
 		return
 
-	def pre_delete(self): # pragma: no cover
+	def pre_delete(self):  # pragma: no cover
 		"""Pre Creation operations"""
 		return
 
-	def post_create(self): # pragma: no cover
+	def post_create(self):  # pragma: no cover
 		"""Post Creation operations"""
 		return
 
-	def post_update(self): # pragma: no cover
+	def post_update(self):  # pragma: no cover
 		"""Post Creation operations"""
 		return
 
-	def post_delete(self): # pragma: no cover
+	def post_delete(self):  # pragma: no cover
 		"""Post Creation operations"""
 		return
 
@@ -424,9 +437,13 @@ class LDAPObject:
 	def exists(self) -> bool:
 		"""Fetches LDAP Entry and checks if it exists in backend LDAP Server."""
 		if not self.connection:
-			raise Exception("An LDAP Connection is required to check if the object exists.")
+			raise Exception(
+				"An LDAP Connection is required to check if the object exists."
+			)
 		if not self.connection.bound:
-			raise Exception("LDAP Connection must be bound to check if the object exists.")
+			raise Exception(
+				"LDAP Connection must be bound to check if the object exists."
+			)
 		self.__fetch_object__()
 		return bool(self.entry)
 
@@ -480,19 +497,23 @@ class LDAPObject:
 		attrs = {}
 		_object_class = None
 		if self.type == LDAPObjectTypes.USER:
-			self.attributes[LOCAL_ATTR_OBJECT_CLASS] = list({
-				RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
-				"top", # Required by LDAP spec
-				"person",
-				"organizationalPerson",
-				"user",
-			})
+			self.attributes[LOCAL_ATTR_OBJECT_CLASS] = list(
+				{
+					RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
+					"top",  # Required by LDAP spec
+					"person",
+					"organizationalPerson",
+					"user",
+				}
+			)
 			_object_class = RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
 		elif self.type == LDAPObjectTypes.GROUP:
-			self.attributes[LOCAL_ATTR_OBJECT_CLASS] = list({
-				"top", # Required by LDAP spec
-				"group",
-			})
+			self.attributes[LOCAL_ATTR_OBJECT_CLASS] = list(
+				{
+					"top",  # Required by LDAP spec
+					"group",
+				}
+			)
 			_object_class = "group"
 
 		self.parse_write_special_attributes()

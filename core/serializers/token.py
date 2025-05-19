@@ -53,7 +53,10 @@ class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
 		data["last_name"] = self.user.last_name or ""
 		data["email"] = self.user.email or ""
 		data["user_type"] = self.user.user_type or ""
-		if self.user.is_superuser or self.user.username == DEFAULT_SUPERUSER_USERNAME:
+		if (
+			self.user.is_superuser
+			or self.user.username == DEFAULT_SUPERUSER_USERNAME
+		):
 			data["admin_allowed"] = True
 
 		DBLogMixin.log(

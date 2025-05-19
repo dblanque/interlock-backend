@@ -2,6 +2,7 @@
 import pytest
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
+
 ################################################################################
 from ldap3 import ServerPool, Connection
 from ldap3.core.exceptions import LDAPException
@@ -98,7 +99,9 @@ def test_admin_connection_credentials(f_admin_params, mocker: MockerFixture):
 	assert kwargs["password"] == f_admin_params["ldapAuthConnectionPassword"]
 
 
-def test_invalid_timeout_fallbacks(f_invalid_timeout_params, mocker: MockerFixture):
+def test_invalid_timeout_fallbacks(
+	f_invalid_timeout_params, mocker: MockerFixture
+):
 	# Mock logger
 	m_logger = mocker.patch("core.ldap.connector.logger")
 	mocker.patch("core.ldap.connector.ldap3.Connection")
@@ -170,7 +173,9 @@ def test_bind_failure(f_base_params, mocker: MockerFixture):
 		(["ldap://s1", "ldap://s2"], ["ldap://s1", "ldap://s2"]),
 	],
 )
-def test_url_handling(url_input, expected, f_base_params, mocker: MockerFixture):
+def test_url_handling(
+	url_input, expected, f_base_params, mocker: MockerFixture
+):
 	# Mock dependencies
 	mocker.patch(
 		"core.ldap.connector.ldap3.Connection",

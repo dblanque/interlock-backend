@@ -14,47 +14,156 @@ from core.ldap.defaults import LDAP_LDIF_IDENTIFIERS
 import socket
 from core.constants.attrs import *
 
+
 class TestGetLocalAliasForLDAPKey:
 	@staticmethod
 	@pytest.mark.parametrize(
 		"local_alias, ldap_alias",
 		(
-			(LOCAL_ATTR_DN, LDAP_ATTR_DN,),
-			(LOCAL_ATTR_USERNAME, LDAP_ATTR_USERNAME_SAMBA_ADDS,),
-			(LOCAL_ATTR_EMAIL, LDAP_ATTR_EMAIL,),
-			(LOCAL_ATTR_PASSWORD, LDAP_ATTR_PASSWORD,),
-			(LOCAL_ATTR_FIRST_NAME, LDAP_ATTR_FIRST_NAME,),
-			(LOCAL_ATTR_LAST_NAME, LDAP_ATTR_LAST_NAME,),
-			(LOCAL_ATTR_FULL_NAME, LDAP_ATTR_FULL_NAME,),
-			(LOCAL_ATTR_INITIALS, LDAP_ATTR_INITIALS,),
-			(LOCAL_ATTR_PHONE, LDAP_ATTR_PHONE,),
-			(LOCAL_ATTR_ADDRESS, LDAP_ATTR_ADDRESS,),
-			(LOCAL_ATTR_POSTAL_CODE, LDAP_ATTR_POSTAL_CODE,),
-			(LOCAL_ATTR_CITY, LDAP_ATTR_CITY,),
-			(LOCAL_ATTR_STATE, LDAP_ATTR_STATE,),
-			(LOCAL_ATTR_COUNTRY, LDAP_ATTR_COUNTRY,),
-			(LOCAL_ATTR_COUNTRY_DCC, LDAP_ATTR_COUNTRY_DCC,),
-			(LOCAL_ATTR_COUNTRY_ISO, LDAP_ATTR_COUNTRY_ISO,),
-			(LOCAL_ATTR_WEBSITE, LDAP_ATTR_WEBSITE,),
-			(LOCAL_ATTR_UPN, LDAP_ATTR_UPN,),
-			(LOCAL_ATTR_UAC, LDAP_ATTR_UAC,),
-			(LOCAL_ATTR_CREATED, LDAP_ATTR_CREATED,),
-			(LOCAL_ATTR_MODIFIED, LDAP_ATTR_MODIFIED,),
-			(LOCAL_ATTR_LAST_LOGIN_WIN32, LDAP_ATTR_LAST_LOGIN,),
-			(LOCAL_ATTR_BAD_PWD_COUNT, LDAP_ATTR_BAD_PWD_COUNT,),
-			(LOCAL_ATTR_PWD_SET_AT, LDAP_ATTR_PWD_SET_AT,),
-			(LOCAL_ATTR_PRIMARY_GROUP_ID, LDAP_ATTR_PRIMARY_GROUP_ID,),
-			(LOCAL_ATTR_OBJECT_CLASS, LDAP_ATTR_OBJECT_CLASS,),
-			(LOCAL_ATTR_OBJECT_CATEGORY, LDAP_ATTR_OBJECT_CATEGORY,),
-			(LOCAL_ATTR_RELATIVE_ID, LDAP_ATTR_RELATIVE_ID,),
-			(LOCAL_ATTR_SECURITY_ID, LDAP_ATTR_SECURITY_ID,),
-			(LOCAL_ATTR_ACCOUNT_TYPE, LDAP_ATTR_ACCOUNT_TYPE,),
-			(LOCAL_ATTR_USER_GROUPS, LDAP_ATTR_USER_GROUPS,),
-			(LOCAL_ATTR_GROUP_MEMBERS, LDAP_ATTR_GROUP_MEMBERS,),
-			(LOCAL_ATTR_LOGON_TIMESTAMP, LDAP_ATTR_LOGON_TIMESTAMP,),
-			(LOCAL_ATTR_EXPIRES_AT, LDAP_ATTR_EXPIRES_AT,),
-			(LOCAL_ATTR_NAME, LDAP_ATTR_COMMON_NAME,),
-			(LOCAL_ATTR_GROUP_TYPE, LDAP_ATTR_GROUP_TYPE,),
+			(
+				LOCAL_ATTR_DN,
+				LDAP_ATTR_DN,
+			),
+			(
+				LOCAL_ATTR_USERNAME,
+				LDAP_ATTR_USERNAME_SAMBA_ADDS,
+			),
+			(
+				LOCAL_ATTR_EMAIL,
+				LDAP_ATTR_EMAIL,
+			),
+			(
+				LOCAL_ATTR_PASSWORD,
+				LDAP_ATTR_PASSWORD,
+			),
+			(
+				LOCAL_ATTR_FIRST_NAME,
+				LDAP_ATTR_FIRST_NAME,
+			),
+			(
+				LOCAL_ATTR_LAST_NAME,
+				LDAP_ATTR_LAST_NAME,
+			),
+			(
+				LOCAL_ATTR_FULL_NAME,
+				LDAP_ATTR_FULL_NAME,
+			),
+			(
+				LOCAL_ATTR_INITIALS,
+				LDAP_ATTR_INITIALS,
+			),
+			(
+				LOCAL_ATTR_PHONE,
+				LDAP_ATTR_PHONE,
+			),
+			(
+				LOCAL_ATTR_ADDRESS,
+				LDAP_ATTR_ADDRESS,
+			),
+			(
+				LOCAL_ATTR_POSTAL_CODE,
+				LDAP_ATTR_POSTAL_CODE,
+			),
+			(
+				LOCAL_ATTR_CITY,
+				LDAP_ATTR_CITY,
+			),
+			(
+				LOCAL_ATTR_STATE,
+				LDAP_ATTR_STATE,
+			),
+			(
+				LOCAL_ATTR_COUNTRY,
+				LDAP_ATTR_COUNTRY,
+			),
+			(
+				LOCAL_ATTR_COUNTRY_DCC,
+				LDAP_ATTR_COUNTRY_DCC,
+			),
+			(
+				LOCAL_ATTR_COUNTRY_ISO,
+				LDAP_ATTR_COUNTRY_ISO,
+			),
+			(
+				LOCAL_ATTR_WEBSITE,
+				LDAP_ATTR_WEBSITE,
+			),
+			(
+				LOCAL_ATTR_UPN,
+				LDAP_ATTR_UPN,
+			),
+			(
+				LOCAL_ATTR_UAC,
+				LDAP_ATTR_UAC,
+			),
+			(
+				LOCAL_ATTR_CREATED,
+				LDAP_ATTR_CREATED,
+			),
+			(
+				LOCAL_ATTR_MODIFIED,
+				LDAP_ATTR_MODIFIED,
+			),
+			(
+				LOCAL_ATTR_LAST_LOGIN_WIN32,
+				LDAP_ATTR_LAST_LOGIN,
+			),
+			(
+				LOCAL_ATTR_BAD_PWD_COUNT,
+				LDAP_ATTR_BAD_PWD_COUNT,
+			),
+			(
+				LOCAL_ATTR_PWD_SET_AT,
+				LDAP_ATTR_PWD_SET_AT,
+			),
+			(
+				LOCAL_ATTR_PRIMARY_GROUP_ID,
+				LDAP_ATTR_PRIMARY_GROUP_ID,
+			),
+			(
+				LOCAL_ATTR_OBJECT_CLASS,
+				LDAP_ATTR_OBJECT_CLASS,
+			),
+			(
+				LOCAL_ATTR_OBJECT_CATEGORY,
+				LDAP_ATTR_OBJECT_CATEGORY,
+			),
+			(
+				LOCAL_ATTR_RELATIVE_ID,
+				LDAP_ATTR_RELATIVE_ID,
+			),
+			(
+				LOCAL_ATTR_SECURITY_ID,
+				LDAP_ATTR_SECURITY_ID,
+			),
+			(
+				LOCAL_ATTR_ACCOUNT_TYPE,
+				LDAP_ATTR_ACCOUNT_TYPE,
+			),
+			(
+				LOCAL_ATTR_USER_GROUPS,
+				LDAP_ATTR_USER_GROUPS,
+			),
+			(
+				LOCAL_ATTR_GROUP_MEMBERS,
+				LDAP_ATTR_GROUP_MEMBERS,
+			),
+			(
+				LOCAL_ATTR_LOGON_TIMESTAMP,
+				LDAP_ATTR_LOGON_TIMESTAMP,
+			),
+			(
+				LOCAL_ATTR_EXPIRES_AT,
+				LDAP_ATTR_EXPIRES_AT,
+			),
+			(
+				LOCAL_ATTR_NAME,
+				LDAP_ATTR_COMMON_NAME,
+			),
+			(
+				LOCAL_ATTR_GROUP_TYPE,
+				LDAP_ATTR_GROUP_TYPE,
+			),
 		),
 	)
 	def test_success(
@@ -70,13 +179,18 @@ class TestGetLocalAliasForLDAPKey:
 
 	@staticmethod
 	def test_returns_args_default():
-		assert getlocalkeyforldapattr(
-			"some_bad_key", "mock_default") == "mock_default"
+		assert (
+			getlocalkeyforldapattr("some_bad_key", "mock_default")
+			== "mock_default"
+		)
 
 	@staticmethod
 	def test_returns_kwargs_default():
-		assert getlocalkeyforldapattr(
-			"some_bad_key", default="mock_default") == "mock_default"
+		assert (
+			getlocalkeyforldapattr("some_bad_key", default="mock_default")
+			== "mock_default"
+		)
+
 
 @pytest.fixture
 def f_socket(mocker: MockerFixture):

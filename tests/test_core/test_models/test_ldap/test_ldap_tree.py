@@ -1,6 +1,7 @@
 ########################### Standard Pytest Imports ############################
 import pytest
 from pytest_mock import MockerFixture
+
 ################################################################################
 from core.models.ldap_object import LDAPObjectTypes
 from tests.test_core.conftest import (
@@ -17,29 +18,39 @@ from tests.test_core.conftest import RuntimeSettingsFactory
 from tests.test_core.test_models.conftest import LDAPConnectionFactoryProtocol
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 
+
 # Create a spy wrapper to track calls AND execute original
 def init_spy(self, *args, **kwargs):
 	"""Wrapper that calls original __init__ and records the call"""
 	LDAPObject.__init__(self, *args, **kwargs)
 
+
 @pytest.fixture(autouse=True)
 def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
-	return g_runtime_settings(patch_path="core.models.ldap_tree.RuntimeSettings")
+	return g_runtime_settings(
+		patch_path="core.models.ldap_tree.RuntimeSettings"
+	)
+
 
 @pytest.fixture
 def f_tree_entry(fc_ldap_entry: LDAPEntryFactoryProtocol):
-	return fc_ldap_entry(**{
-		LDAP_ATTR_DN: "CN=Parent,DC=example,DC=com",
-		LDAP_ATTR_OBJECT_CATEGORY: "CN=Organizational-Unit,CN=Schema,CN=Configuration,DC=example,DC=com",
-		LDAP_ATTR_OBJECT_CLASS: ["top", "organizationalUnit"],
-	})
+	return fc_ldap_entry(
+		**{
+			LDAP_ATTR_DN: "CN=Parent,DC=example,DC=com",
+			LDAP_ATTR_OBJECT_CATEGORY: "CN=Organizational-Unit,CN=Schema,CN=Configuration,DC=example,DC=com",
+			LDAP_ATTR_OBJECT_CLASS: ["top", "organizationalUnit"],
+		}
+	)
+
 
 class TestLDAPTree:
 	def test_init_raises_no_connection(self):
 		with pytest.raises(Exception, match="requires an LDAP Connection"):
 			LDAPTree()
 
-	def test_init_sets_default_values(self, mocker: MockerFixture, f_connection):
+	def test_init_sets_default_values(
+		self, mocker: MockerFixture, f_connection
+	):
 		"""Test that LDAPTree initializes with correct default values"""
 		# Instantiate
 		tree = LDAPTree(connection=f_connection)
@@ -58,13 +69,10 @@ class TestLDAPTree:
 			"custom_attr": "value",
 		}
 		m_fetch_tree = mocker.patch.object(
-			LDAPTree,
-			"__fetch_tree__",
-			return_value=None
+			LDAPTree, "__fetch_tree__", return_value=None
 		)
 
-		tree = LDAPTree(
-			connection=f_connection, **custom_kwargs)
+		tree = LDAPTree(connection=f_connection, **custom_kwargs)
 
 		# Verify custom values
 		assert tree.recursive is True
@@ -73,11 +81,11 @@ class TestLDAPTree:
 		m_fetch_tree.assert_called_once()
 
 	def test_fetch_tree_basic(
-			self,
-			mocker: MockerFixture,
-			f_connection: LDAPConnectionProtocol,
-			f_tree_entry,
-		):
+		self,
+		mocker: MockerFixture,
+		f_connection: LDAPConnectionProtocol,
+		f_tree_entry,
+	):
 		"""Test basic tree fetching functionality"""
 		f_connection.entries = [f_tree_entry]
 
@@ -94,7 +102,10 @@ class TestLDAPTree:
 
 		assert len(tree.children) == 1
 		assert tree.children[0]["name"] == "Parent"
-		assert tree.children[0]["type"] == LDAPObjectTypes.ORGANIZATIONAL_UNIT.value
+		assert (
+			tree.children[0]["type"]
+			== LDAPObjectTypes.ORGANIZATIONAL_UNIT.value
+		)
 
 	def test_fetch_tree_recursive(
 		self,
@@ -150,36 +161,34 @@ class TestLDAPTree:
 		f_runtime_settings: RuntimeSettingsSingleton,
 	):
 		"""Test __get_children__ method"""
-		fake_entry_attrs = (LDAP_ATTR_OBJECT_CLASS, LDAP_ATTR_OBJECT_CATEGORY, LDAP_ATTR_COMMON_NAME)
+		fake_entry_attrs = (
+			LDAP_ATTR_OBJECT_CLASS,
+			LDAP_ATTR_OBJECT_CATEGORY,
+			LDAP_ATTR_COMMON_NAME,
+		)
 		# Setup mock search
 		mock_parent = mocker.Mock(name="mock_parent", spec=LDAPEntry)
 		mock_parent.entry_attributes = fake_entry_attrs
 		mock_parent.entry_dn = "OU=Parent,DC=example,DC=com"
 		mock_parent.objectClass = fc_ldap_attr(
-			LDAP_ATTR_OBJECT_CLASS,
-			["top", "organizationalUnit"]
+			LDAP_ATTR_OBJECT_CLASS, ["top", "organizationalUnit"]
 		)
 		mock_parent.objectCategory = fc_ldap_attr(
 			LDAP_ATTR_OBJECT_CATEGORY,
-			"CN=Organizational-Unit,CN=Schema,CN=Configuration,DC=example,DC=com"
+			"CN=Organizational-Unit,CN=Schema,CN=Configuration,DC=example,DC=com",
 		)
-		mock_parent.cn = fc_ldap_attr(
-			LDAP_ATTR_COMMON_NAME, "Parent"
-		)
+		mock_parent.cn = fc_ldap_attr(LDAP_ATTR_COMMON_NAME, "Parent")
 		mock_child = mocker.Mock(name="mock_child", spec=LDAPEntry)
 		mock_child.entry_attributes = fake_entry_attrs
 		mock_child.entry_dn = "CN=Child,OU=Parent,DC=example,DC=com"
 		mock_child.objectClass = fc_ldap_attr(
-			LDAP_ATTR_OBJECT_CLASS,
-			["top", "organizationalUnit"]
+			LDAP_ATTR_OBJECT_CLASS, ["top", "organizationalUnit"]
 		)
 		mock_child.objectCategory = fc_ldap_attr(
 			LDAP_ATTR_OBJECT_CATEGORY,
-			"CN=Organizational-Unit,CN=Schema,CN=Configuration,DC=example,DC=com"
+			"CN=Organizational-Unit,CN=Schema,CN=Configuration,DC=example,DC=com",
 		)
-		mock_child.cn = fc_ldap_attr(
-			LDAP_ATTR_COMMON_NAME, "Child"
-		)
+		mock_child.cn = fc_ldap_attr(LDAP_ATTR_COMMON_NAME, "Child")
 
 		# Mock Connection
 		f_connection = fc_connection()
@@ -191,7 +200,9 @@ class TestLDAPTree:
 		)
 
 		tree = LDAPTree(connection=f_connection)
-		resulting_children = tree.__get_children__("OU=Parent,DC=example,DC=com")
+		resulting_children = tree.__get_children__(
+			"OU=Parent,DC=example,DC=com"
+		)
 		resulting_child = resulting_children[0]
 
 		# Verify
@@ -210,14 +221,21 @@ class TestLDAPTree:
 
 		assert len(resulting_children) == 1
 		assert resulting_child[LOCAL_ATTR_NAME] == "Child"
-		assert resulting_child[LOCAL_ATTR_OBJECT_CATEGORY] == 'CN=Organizational-Unit,CN=Schema,CN=Configuration,DC=example,DC=com'
-		assert resulting_child[LOCAL_ATTR_TYPE] == LDAPObjectTypes.ORGANIZATIONAL_UNIT.value
-		assert resulting_child[LOCAL_ATTR_OBJECT_CLASS] == ['top', 'organizationalUnit']
+		assert (
+			resulting_child[LOCAL_ATTR_OBJECT_CATEGORY]
+			== "CN=Organizational-Unit,CN=Schema,CN=Configuration,DC=example,DC=com"
+		)
+		assert (
+			resulting_child[LOCAL_ATTR_TYPE]
+			== LDAPObjectTypes.ORGANIZATIONAL_UNIT.value
+		)
+		assert resulting_child[LOCAL_ATTR_OBJECT_CLASS] == [
+			"top",
+			"organizationalUnit",
+		]
 
 	def test_get_tree_count(
-		self,
-		mocker: MockerFixture,
-		f_connection: LDAPConnectionProtocol
+		self, mocker: MockerFixture, f_connection: LDAPConnectionProtocol
 	):
 		"""Test tree counting functionality"""
 		# Setup mock tree structure
@@ -231,7 +249,9 @@ class TestLDAPTree:
 					{
 						LOCAL_ATTR_ID: 3,
 						LOCAL_ATTR_NAME: "Child2",
-						"children": [{LOCAL_ATTR_ID: 4, LOCAL_ATTR_NAME: "Grandchild"}],
+						"children": [
+							{LOCAL_ATTR_ID: 4, LOCAL_ATTR_NAME: "Grandchild"}
+						],
 					},
 				],
 			}
@@ -248,11 +268,13 @@ class TestLDAPTree:
 	):
 		"""Test builtin object detection"""
 		# Setup builtin object
-		mock_entry = fc_ldap_entry(**{
-			LDAP_ATTR_DN: "CN=Builtin,DC=example,DC=com",
-			LDAP_ATTR_OBJECT_CATEGORY: "CN=Organizational-Unit,CN=Schema,CN=Configuration,DC=example,DC=com",
-			LDAP_ATTR_OBJECT_CLASS: ["top", "builtinDomain"]
-		})
+		mock_entry = fc_ldap_entry(
+			**{
+				LDAP_ATTR_DN: "CN=Builtin,DC=example,DC=com",
+				LDAP_ATTR_OBJECT_CATEGORY: "CN=Organizational-Unit,CN=Schema,CN=Configuration,DC=example,DC=com",
+				LDAP_ATTR_OBJECT_CLASS: ["top", "builtinDomain"],
+			}
+		)
 		f_connection.entries = [mock_entry]
 
 		tree = LDAPTree(connection=f_connection)

@@ -98,9 +98,11 @@ def test_sync_user_relations_no_distinguished_name(mocker):
 		ValueError,
 		match="Distinguished Name not present in User LDAP Attributes.",
 	):
-		sync_user_relations(mocker.Mock(), {
-			LDAP_ATTR_USERNAME_SAMBA_ADDS: ["testuser"]
-		}, connection=mocker.Mock())
+		sync_user_relations(
+			mocker.Mock(),
+			{LDAP_ATTR_USERNAME_SAMBA_ADDS: ["testuser"]},
+			connection=mocker.Mock(),
+		)
 
 
 @pytest.mark.parametrize(

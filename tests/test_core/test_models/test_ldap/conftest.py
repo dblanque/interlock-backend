@@ -1,6 +1,7 @@
 ########################### Standard Pytest Imports ############################
 import pytest
 from pytest_mock import MockerFixture
+
 ################################################################################
 from datetime import datetime
 from core.views.mixins.utils import is_non_str_iterable
@@ -8,6 +9,7 @@ from core.constants.attrs import *
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from tests.test_core.conftest import RuntimeSettingsFactory
 from ldap3 import Attribute as LDAPAttribute, Entry as LDAPEntry
+
 
 @pytest.fixture(autouse=True)
 def f_runtime_settings(
@@ -20,6 +22,7 @@ def f_runtime_settings(
 	mocker.patch("core.models.ldap_group.RuntimeSettings", mock)
 	mocker.patch("core.views.mixins.utils.RuntimeSettings", mock)
 	return mock
+
 
 @pytest.fixture
 def f_object_attrs_user(f_runtime_settings: RuntimeSettingsSingleton) -> dict:
@@ -46,7 +49,12 @@ def f_object_attrs_user(f_runtime_settings: RuntimeSettingsSingleton) -> dict:
 			LDAP_ATTR_PRIMARY_GROUP_ID: 513,
 			LDAP_ATTR_CREATED: fake_date,
 			LDAP_ATTR_MODIFIED: fake_date,
-			LDAP_ATTR_OBJECT_CLASS: ["top", "person", "organizationalPerson", "user"],
+			LDAP_ATTR_OBJECT_CLASS: [
+				"top",
+				"person",
+				"organizationalPerson",
+				"user",
+			],
 			LDAP_ATTR_OBJECT_CATEGORY: f"CN=Person,CN=Schema,CN=Configuration,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
 			# Expected SID: "S-1-5-21-123456789-1234567890-123456789-1105"
 			LDAP_ATTR_SECURITY_ID: b"\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00\x11^\xb3\x83j\x06\x94\x00\x80\xdbi\xaaQ\x04\x00\x00",
@@ -55,11 +63,15 @@ def f_object_attrs_user(f_runtime_settings: RuntimeSettingsSingleton) -> dict:
 			LDAP_ATTR_BAD_PWD_COUNT: 0,
 			LDAP_ATTR_PWD_SET_AT: "fake_pwd_last_set",
 			LDAP_ATTR_ACCOUNT_TYPE: 805306368,
-			LDAP_ATTR_USER_GROUPS: [f"CN=Administrators,CN=Builtin,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}", f"CN=Some Group,OU=Some OU,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}"],
+			LDAP_ATTR_USER_GROUPS: [
+				f"CN=Administrators,CN=Builtin,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
+				f"CN=Some Group,OU=Some OU,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
+			],
 		}
 		for kw, val in kwargs.items():
 			fake_user[kw] = val
 		return fake_user
+
 	return maker
 
 
@@ -75,6 +87,7 @@ def f_object_attrs_group(f_runtime_settings: RuntimeSettingsSingleton) -> dict:
 		}
 
 	return maker
+
 
 class FakeLDAPUserEntry:
 	def __new__(cls):
@@ -110,6 +123,7 @@ class FakeLDAPUserEntry:
 			LDAP_ATTR_USER_GROUPS,
 		):
 			setattr(cls, attr, None)
+
 
 @pytest.fixture
 def f_object_entry_user(f_object_attrs_user, mocker: MockerFixture):
@@ -157,6 +171,7 @@ def f_object_entry_group(f_object_attrs_group, mocker: MockerFixture):
 
 	return maker
 
+
 @pytest.fixture
 def f_object_args(f_connection, f_runtime_settings: RuntimeSettingsSingleton):
 	def maker(**kwargs):
@@ -165,4 +180,5 @@ def f_object_args(f_connection, f_runtime_settings: RuntimeSettingsSingleton):
 			"distinguished_name": f"cn=testobject,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
 			**kwargs,
 		}
+
 	return maker

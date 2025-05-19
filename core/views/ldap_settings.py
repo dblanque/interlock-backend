@@ -338,13 +338,20 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 						kwdata["value"] = aes_encrypt(param_value)
 					elif param_name == "LDAP_FIELD_MAP":
 						param_value: dict
-						_non_nullables = list(defaults.LDAP_AUTH_USER_LOOKUP_FIELDS)
+						_non_nullables = list(
+							defaults.LDAP_AUTH_USER_LOOKUP_FIELDS
+						)
 						_non_nullables.append(LOCAL_ATTR_DN)
 						for _k, _v in param_value.items():
 							_v: str
-							if _v.lower() in ("none","null",):
+							if _v.lower() in (
+								"none",
+								"null",
+							):
 								if _k in set(_non_nullables):
-									raise ValueError(f"{_k} is not a nullable field.")
+									raise ValueError(
+										f"{_k} is not a nullable field."
+									)
 								param_value[_k] = None
 						kwdata["value"] = param_value
 					else:

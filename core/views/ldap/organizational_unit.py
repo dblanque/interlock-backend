@@ -67,7 +67,8 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		code_msg = "ok"
 
 		search_attrs = [
-			v for v in (
+			v
+			for v in (
 				# User Attrs
 				LDAP_ATTR_OBJECT_CLASS,
 				LDAP_ATTR_OBJECT_CATEGORY,
@@ -78,7 +79,8 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				LDAP_ATTR_DN,
 				LDAP_ATTR_GROUP_TYPE,
 				LDAP_ATTR_SECURITY_ID,
-			) if v
+			)
+			if v
 		]
 
 		# Read-only end-point, build filters from default dictionary

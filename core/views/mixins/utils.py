@@ -13,8 +13,10 @@ from typing import Iterable, Any, overload
 from ldap3 import Entry as LDAPEntry, Attribute as LDAPAttribute
 from core.config.runtime import RuntimeSettings
 
+
 @overload
 def getlocalkeyforldapattr(v: str, default: str = None): ...
+
 
 def getlocalkeyforldapattr(v: str, *args, **kwargs):
 	"""Returns local alias for LDAP Attribute Key"""
@@ -26,6 +28,7 @@ def getlocalkeyforldapattr(v: str, *args, **kwargs):
 	elif "default" in kwargs:
 		return kwargs.pop("default")
 	raise ValueError(f"No alias for ldap key ({v})")
+
 
 @overload
 def getldapattrvalue(

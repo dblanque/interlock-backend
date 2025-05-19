@@ -12,6 +12,7 @@ from core.exceptions import ldap as exc_ldap
 from core.views.mixins.ldap_settings import SettingsViewMixin
 from tests.test_core.conftest import RuntimeSettingsFactory
 
+
 @pytest.fixture(autouse=True)
 def auto_teardown():
 	yield

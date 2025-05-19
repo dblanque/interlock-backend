@@ -20,7 +20,9 @@ from core.models.validators.ldap import domain_validator
 
 @pytest.fixture
 def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
-	return g_runtime_settings(patch_path="core.views.ldap.domain.RuntimeSettings")
+	return g_runtime_settings(
+		patch_path="core.views.ldap.domain.RuntimeSettings"
+	)
 
 
 @pytest.fixture(autouse=True)

@@ -40,6 +40,7 @@ def f_log_mixin(mocker: MockerFixture) -> LogMixin:
 def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
 	return g_runtime_settings("core.views.mixins.ldap.domain.RuntimeSettings")
 
+
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector):
 	return g_ldap_connector(

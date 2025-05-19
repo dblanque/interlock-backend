@@ -47,7 +47,9 @@ def f_ldap_connector(g_ldap_connector) -> MockType:
 
 @pytest.fixture
 def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
-	return g_runtime_settings("core.views.ldap.organizational_unit.RuntimeSettings")
+	return g_runtime_settings(
+		"core.views.ldap.organizational_unit.RuntimeSettings"
+	)
 
 
 @pytest.fixture(autouse=True)

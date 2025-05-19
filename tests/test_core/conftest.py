@@ -41,6 +41,7 @@ def teardown_interlock_setting(db):
 class RuntimeSettingsFactory(Protocol):
 	def __call__(self, patch_path: str) -> RuntimeSettingsSingleton: ...
 
+
 @pytest.fixture
 def g_runtime_settings(mocker: MockerFixture) -> RuntimeSettingsFactory:
 	def maker(patch_path: str = None):
@@ -56,7 +57,9 @@ def g_runtime_settings(mocker: MockerFixture) -> RuntimeSettingsFactory:
 		if patch_path:
 			mocker.patch(patch_path, mock)
 		return mock
+
 	return maker
+
 
 class ConnectorFactory(Protocol):
 	def __call__(
@@ -102,13 +105,19 @@ def g_ldap_connector(mocker: MockerFixture) -> ConnectorFactory:
 
 	return maker
 
+
 class LDAPAttributeFactoryProtocol(Protocol):
 	def __call__(self, attr: str, v) -> MockType: ...
+
 
 @pytest.fixture
 def fc_ldap_attr(mocker: MockerFixture) -> LDAPAttributeFactoryProtocol:
 	def maker(attr: str, v):
-		_SEQUENCE_TYPES = (list, tuple, set,)
+		_SEQUENCE_TYPES = (
+			list,
+			tuple,
+			set,
+		)
 		mock_attr = mocker.Mock(name=f"m_{attr}")
 		if not v in _SEQUENCE_TYPES:
 			mock_attr.value = v
@@ -119,10 +128,13 @@ def fc_ldap_attr(mocker: MockerFixture) -> LDAPAttributeFactoryProtocol:
 			mock_attr.value = v[0] if len(v) < 2 else v
 			mock_attr.values = v
 		return mock_attr
+
 	return maker
+
 
 class LDAPEntryFactoryProtocol(Protocol):
 	def __call__(self, spec: bool = False, **ldap_attrs): ...
+
 
 @pytest.fixture
 def fc_ldap_entry(
@@ -146,4 +158,5 @@ def fc_ldap_entry(
 		if distinguished_name:
 			mock.entry_dn = distinguished_name
 		return mock
+
 	return maker

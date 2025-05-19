@@ -81,7 +81,7 @@ class LDAPUser(LDAPObject):
 	) -> None: ...
 
 	# Only defined explicitly for overload definition
-	def __init__(self, **kwargs): # pragma: no cover
+	def __init__(self, **kwargs):  # pragma: no cover
 		super().__init__(**kwargs)
 
 	def __validate_init__(self, **kwargs):
@@ -129,9 +129,9 @@ class LDAPUser(LDAPObject):
 			LOCAL_ATTR_COUNTRY_ISO,
 		)
 		if value:
-			self.attributes[LOCAL_ATTR_COUNTRY_DCC] = int(LDAP_COUNTRIES[value][
-				"dccCode"
-			])
+			self.attributes[LOCAL_ATTR_COUNTRY_DCC] = int(
+				LDAP_COUNTRIES[value]["dccCode"]
+			)
 			self.attributes[LOCAL_ATTR_COUNTRY_ISO] = LDAP_COUNTRIES[value][
 				"isoCode"
 			]
@@ -160,7 +160,9 @@ class LDAPUser(LDAPObject):
 		if not LOCAL_ATTR_UAC in self.parsed_specials:
 			self.parsed_specials.append(LOCAL_ATTR_UAC)
 
-	def perform_group_operations(self, groups_to_add=None, groups_to_remove=None):
+	def perform_group_operations(
+		self, groups_to_add=None, groups_to_remove=None
+	):
 		# De-duplicate group ops
 		if groups_to_add:
 			groups_to_add = set(groups_to_add)
@@ -189,7 +191,9 @@ class LDAPUser(LDAPObject):
 	@property
 	def is_enabled(self):
 		if not self.entry:
-			raise ValueError("An LDAP Entry is required to check if the User is enabled on the server.")
+			raise ValueError(
+				"An LDAP Entry is required to check if the User is enabled on the server."
+			)
 		_UAC_FIELD = RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_UAC]
 		if not _UAC_FIELD in self.entry.entry_attributes:
 			raise ValueError(

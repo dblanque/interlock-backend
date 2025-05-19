@@ -154,8 +154,9 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			id_filter_op = ldap_adsi.LDAP_FILTER_OR
 
 		# Class Filter Setup
-		_OBJECT_CLASS_FIELD = RuntimeSettings\
-			.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS]
+		_OBJECT_CLASS_FIELD = RuntimeSettings.LDAP_FIELD_MAP[
+			LOCAL_ATTR_OBJECT_CLASS
+		]
 		class_filter = join_ldap_filter(
 			None,
 			f"{_OBJECT_CLASS_FIELD}={RuntimeSettings.LDAP_AUTH_OBJECT_CLASS}",
@@ -171,8 +172,9 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		# User ID Filter Setup
 		id_filter = None
 		if username:
-			_USERNAME_FIELD = RuntimeSettings\
-				.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME]
+			_USERNAME_FIELD = RuntimeSettings.LDAP_FIELD_MAP[
+				LOCAL_ATTR_USERNAME
+			]
 			id_filter = join_ldap_filter(
 				id_filter,
 				f"{_USERNAME_FIELD}={username}",
@@ -310,7 +312,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 				LDAPFilter.not_(
 					LDAPFilter.eq(
 						RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
-						"computer"
+						"computer",
 					)
 				),
 			)
@@ -319,7 +321,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		filter_contacts = LDAPFilter.not_(
 			LDAPFilter.eq(
 				RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
-				"contact"
+				"contact",
 			)
 		)
 		if self.ldap_filter_object.type == LDAPFilterType.AND:
@@ -354,7 +356,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 					RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_DN],
 					user_dict.get(
 						RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
-						"" # Default
+						"",  # Default
 					),
 				)
 				logger.exception(e)
@@ -483,7 +485,10 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			pass
 
 		if django_user:
-			for local_alias, ldap_alias in RuntimeSettings.LDAP_FIELD_MAP.items():
+			for (
+				local_alias,
+				ldap_alias,
+			) in RuntimeSettings.LDAP_FIELD_MAP.items():
 				if ldap_alias in data:
 					setattr(django_user, local_alias, data[ldap_alias])
 			django_user.save()
@@ -635,8 +640,9 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		member_of_objects: list[dict] = []
 		user_dict[LOCAL_ATTR_USER_GROUPS] = []
 		try:
-			_USER_GROUPS_FIELD = RuntimeSettings\
-				.LDAP_FIELD_MAP[LOCAL_ATTR_USER_GROUPS]
+			_USER_GROUPS_FIELD = RuntimeSettings.LDAP_FIELD_MAP[
+				LOCAL_ATTR_USER_GROUPS
+			]
 			if _USER_GROUPS_FIELD in user_obj.entry.entry_attributes:
 				user_groups = getldapattrvalue(
 					user_obj.entry, _USER_GROUPS_FIELD
@@ -659,8 +665,9 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 						)
 
 			### Also add default Users Group to be available as Selectable PID
-			_PRIMARY_GROUP_ID_FIELD = RuntimeSettings\
-				.LDAP_FIELD_MAP[LOCAL_ATTR_PRIMARY_GROUP_ID]
+			_PRIMARY_GROUP_ID_FIELD = RuntimeSettings.LDAP_FIELD_MAP[
+				LOCAL_ATTR_PRIMARY_GROUP_ID
+			]
 			if _PRIMARY_GROUP_ID_FIELD in self.ldap_filter_attr:
 				_primary_group_id = user_dict[LOCAL_ATTR_PRIMARY_GROUP_ID]
 				if not any(

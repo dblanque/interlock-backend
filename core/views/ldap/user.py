@@ -311,9 +311,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		# Get username from data
 		username = data.get(
 			LOCAL_ATTR_USERNAME,
-			data.get(
-				RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME], None
-			),
+			data.get(RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME], None),
 		)
 
 		if not username:
@@ -353,9 +351,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		# Get username from data
 		username = data.get(
 			LOCAL_ATTR_USERNAME,
-			data.get(
-				RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME], None
-			),
+			data.get(RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME], None),
 		)
 		password = data.get(LOCAL_ATTR_PASSWORD, None)
 		password_confirm = data.get(LOCAL_ATTR_PASSWORD_CONFIRM, None)
@@ -422,9 +418,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		# Get username from data
 		username = data.get(
 			LOCAL_ATTR_USERNAME,
-			data.get(
-				RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME], None
-			),
+			data.get(RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME], None),
 		)
 		if not username:
 			raise exc_base.BadRequest
@@ -997,9 +991,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				self.ldap_filter_object = LDAPFilter.and_(
 					self.ldap_filter_object,
 					LDAPFilter.eq(
-						RuntimeSettings.LDAP_FIELD_MAP[
-							LOCAL_ATTR_USERNAME
-						],
+						RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
 						user_search,
 					),
 				).to_string()
@@ -1025,9 +1017,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 							user_data[str_key] = str_value
 					if (
 						attr_key
-						== RuntimeSettings.LDAP_FIELD_MAP[
-							LOCAL_ATTR_USERNAME
-						]
+						== RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME]
 					):
 						user_data[LOCAL_ATTR_USERNAME] = str_value
 

@@ -106,9 +106,9 @@ class LDAPTree(LDAPObject):
 					LDAP_ATTR_GROUP_MEMBERS,
 					LDAP_ATTR_DN,
 					LDAP_ATTR_GROUP_TYPE,
-				)
+				),
 			),
-			**kwargs
+			**kwargs,
 		)
 
 		self.children = self.__fetch_tree__()

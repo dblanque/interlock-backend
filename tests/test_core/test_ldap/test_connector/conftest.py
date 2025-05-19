@@ -6,6 +6,7 @@ from core.ldap import defaults as ldap_defaults
 from typing import Union
 from tests.test_core.conftest import RuntimeSettingsFactory
 
+
 @pytest.fixture
 def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
 	return g_runtime_settings()

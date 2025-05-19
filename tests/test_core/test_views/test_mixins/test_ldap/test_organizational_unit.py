@@ -21,9 +21,13 @@ from tests.test_core.conftest import RuntimeSettingsFactory
 from core.exceptions import ldap as exc_ldap, dirtree as exc_dirtree
 from rest_framework.exceptions import ValidationError
 
+
 @pytest.fixture(autouse=True)
 def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
-	return g_runtime_settings(patch_path="core.views.mixins.ldap.organizational_unit.RuntimeSettings")
+	return g_runtime_settings(
+		patch_path="core.views.mixins.ldap.organizational_unit.RuntimeSettings"
+	)
+
 
 @pytest.fixture
 def f_logger(mocker: MockerFixture):
