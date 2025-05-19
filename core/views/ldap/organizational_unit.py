@@ -41,6 +41,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
+from core.constants.attrs import *
 from rest_framework import status
 from time import perf_counter
 from core.ldap.filter import LDAPFilter
@@ -66,24 +67,26 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 		code_msg = "ok"
 
 		search_attrs = [
-			# User Attrs
-			"objectClass",
-			"objectCategory",
-			RuntimeSettings.LDAP_OU_FIELD,
-			# Group Attrs
-			"cn",
-			"member",
-			"distinguishedName",
-			"groupType",
-			"objectSid",
+			v for v in (
+				# User Attrs
+				LDAP_ATTR_OBJECT_CLASS,
+				LDAP_ATTR_OBJECT_CATEGORY,
+				RuntimeSettings.LDAP_OU_FIELD,
+				# Group Attrs
+				LDAP_ATTR_COMMON_NAME,
+				LDAP_ATTR_GROUP_MEMBERS,
+				LDAP_ATTR_DN,
+				LDAP_ATTR_GROUP_TYPE,
+				LDAP_ATTR_SECURITY_ID,
+			) if v
 		]
 
 		# Read-only end-point, build filters from default dictionary
 		search_filter = LDAPFilter.or_(
-			LDAPFilter.eq("objectCategory", "organizationalUnit"),
-			LDAPFilter.eq("objectCategory", "top"),
-			LDAPFilter.eq("objectCategory", "container"),
-			LDAPFilter.eq("objectClass", "builtinDomain"),
+			LDAPFilter.eq(LDAP_ATTR_OBJECT_CATEGORY, "organizationalUnit"),
+			LDAPFilter.eq(LDAP_ATTR_OBJECT_CATEGORY, "top"),
+			LDAPFilter.eq(LDAP_ATTR_OBJECT_CATEGORY, "container"),
+			LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "builtinDomain"),
 		).to_string()
 
 		# Open LDAP Connection
@@ -152,15 +155,14 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 
 		ldap_filter_attr = [
 			# User Attrs
-			"objectClass",
-			"objectCategory",
+			LDAP_ATTR_OBJECT_CLASS,
+			LDAP_ATTR_OBJECT_CATEGORY,
 			RuntimeSettings.LDAP_OU_FIELD,
 			# Group Attrs
-			"cn",
-			"member",
-			"distinguishedName",
-			"groupType",
-			# "objectSid",
+			LDAP_ATTR_COMMON_NAME,
+			LDAP_ATTR_GROUP_MEMBERS,
+			LDAP_ATTR_DN,
+			LDAP_ATTR_GROUP_TYPE,
 		]
 
 		logger.debug("LDAP Filter constructed.")
