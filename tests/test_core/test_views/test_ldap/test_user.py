@@ -20,16 +20,7 @@ from core.exceptions import (
 	ldap as exc_ldap,
 	users as exc_users,
 )
-from core.constants.attrs import (
-	LOCAL_ATTR_USERNAME,
-	LDAP_ATTR_DN,
-	LDAP_ATTR_FULL_NAME,
-	LDAP_ATTR_FIRST_NAME,
-	LDAP_ATTR_LAST_NAME,
-	LDAP_ATTR_INITIALS,
-	LDAP_ATTR_USERNAME_SAMBA_ADDS,
-	LDAP_ATTR_EMAIL,
-)
+from core.constants.attrs.local import *
 from core.views.mixins.logs import LogMixin
 from core.models.choices.log import (
 	LOG_ACTION_UPDATE,
@@ -161,13 +152,13 @@ class TestInsert:
 		(
 			(
 				{
-					LDAP_ATTR_USERNAME_SAMBA_ADDS: "testuser",
-					"path": "OU=mock ou,DC=example,DC=com",
-					LDAP_ATTR_FIRST_NAME: "Test",
-					LDAP_ATTR_LAST_NAME: "User",
-					"password": "TestPassword",
-					"passwordConfirm": "TestPassword",
-					"permission_list": [
+					LOCAL_ATTR_USERNAME: "testuser",
+					LOCAL_ATTR_PATH: "OU=mock ou,DC=example,DC=com",
+					LOCAL_ATTR_FIRST_NAME: "Test",
+					LOCAL_ATTR_LAST_NAME: "User",
+					LOCAL_ATTR_PASSWORD: "TestPassword",
+					LOCAL_ATTR_PASSWORD_CONFIRM: "TestPassword",
+					LOCAL_ATTR_PERMISSIONS: [
 						LDAP_UF_DONT_EXPIRE_PASSWD,
 						LDAP_UF_NORMAL_ACCOUNT,
 					],
@@ -177,12 +168,12 @@ class TestInsert:
 			(
 				{
 					LOCAL_ATTR_USERNAME: "testuser",
-					"path": "OU=mock ou,DC=example,DC=com",
-					LDAP_ATTR_FIRST_NAME: "Test",
-					LDAP_ATTR_LAST_NAME: "User",
-					"password": "TestPassword",
-					"passwordConfirm": "TestPassword",
-					"permission_list": [
+					LOCAL_ATTR_PATH: "OU=mock ou,DC=example,DC=com",
+					LOCAL_ATTR_FIRST_NAME: "Test",
+					LOCAL_ATTR_LAST_NAME: "User",
+					LOCAL_ATTR_PASSWORD: "TestPassword",
+					LOCAL_ATTR_PASSWORD_CONFIRM: "TestPassword",
+					LOCAL_ATTR_PERMISSIONS: [
 						LDAP_UF_DONT_EXPIRE_PASSWD,
 						LDAP_UF_NORMAL_ACCOUNT,
 					],
@@ -203,16 +194,11 @@ class TestInsert:
 			f"CN=testuser,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
 		)
 		if use_email:
-			m_data[LDAP_ATTR_EMAIL] = (
+			m_data[LOCAL_ATTR_EMAIL] = (
 				f"testuser@{f_runtime_settings.LDAP_DOMAIN}"
 			)
 		expected_m_data_call = m_data.copy()
-		if LDAP_ATTR_USERNAME_SAMBA_ADDS in m_data:
-			expected_m_data_call[LOCAL_ATTR_USERNAME] = expected_m_data_call[
-				LDAP_ATTR_USERNAME_SAMBA_ADDS
-			]
-			expected_m_data_call.pop(LDAP_ATTR_USERNAME_SAMBA_ADDS, None)
-		expected_m_data_call.pop("passwordConfirm", None)
+		expected_m_data_call.pop(LOCAL_ATTR_PASSWORD_CONFIRM, None)
 
 		m_ldap_user_exists = mocker.patch.object(
 			LDAPUserViewSet, "ldap_user_exists", return_value=False
@@ -240,14 +226,16 @@ class TestInsert:
 			username="testuser",
 			email=None
 			if not use_email
-			else m_data.get(f_runtime_settings.LDAP_FIELD_MAP["email"]),
+			else m_data.get(
+				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_EMAIL]
+			),
 		)
 		m_ldap_user_insert.assert_called_once_with(
-			user_data=expected_m_data_call
+			data=expected_m_data_call
 		)
 		m_ldap_set_password.assert_called_once_with(
 			user_dn=m_distinguished_name,
-			user_pwd_new=m_data.get("password"),
+			user_pwd_new=m_data.get(LOCAL_ATTR_PASSWORD),
 			set_by_admin=True,
 		)
 
@@ -267,7 +255,7 @@ class TestInsert:
 	):
 		m_data = {LOCAL_ATTR_USERNAME: "testuser"}
 		if use_email:
-			m_data[LDAP_ATTR_EMAIL] = (
+			m_data[LOCAL_ATTR_EMAIL] = (
 				f"testuser@{f_runtime_settings.LDAP_DOMAIN}"
 			)
 
@@ -310,8 +298,8 @@ class TestInsert:
 	):
 		m_data = {
 			LOCAL_ATTR_USERNAME: "testuser",
-			"password": "1234",
-			"passwordConfirm": "4321",
+			LOCAL_ATTR_PASSWORD: "1234",
+			LOCAL_ATTR_PASSWORD_CONFIRM: "4321",
 		}
 		m_ldap_user_exists = mocker.patch.object(
 			LDAPUserViewSet,
@@ -335,7 +323,8 @@ class TestInsert:
 
 		# Asserts
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
-		assert response.data.get("code") == "user_passwords_dont_match"
+		assert response.data.get("errors")\
+			.get(LOCAL_ATTR_PASSWORD_CONFIRM)[0] == "Passwords do not match"
 		m_ldap_user_exists.assert_not_called()
 		m_ldap_user_insert.assert_not_called()
 		m_ldap_set_password.assert_not_called()
@@ -389,16 +378,13 @@ class TestUpdate:
 		]
 		m_data = {
 			LOCAL_ATTR_USERNAME: "testuser",
-			"path": "OU=mock ou,DC=example,DC=com",
-			LDAP_ATTR_EMAIL: f"testuser@{f_runtime_settings.LDAP_DOMAIN}",
-			LDAP_ATTR_FIRST_NAME: "Test",
-			LDAP_ATTR_LAST_NAME: "User",
-			"permission_list": m_perm_list,
+			LOCAL_ATTR_PATH: "OU=mock ou,DC=example,DC=com",
+			LOCAL_ATTR_EMAIL: f"testuser@{f_runtime_settings.LDAP_DOMAIN}",
+			LOCAL_ATTR_FIRST_NAME: "Test",
+			LOCAL_ATTR_LAST_NAME: "User",
+			LOCAL_ATTR_PERMISSIONS: m_perm_list,
 		}
 		expected_m_data = m_data.copy()
-		expected_m_data.pop("path", None)
-		expected_m_data.pop("permission_list", None)
-		expected_m_data.pop(LOCAL_ATTR_USERNAME, None)
 
 		m_ldap_user_exists = mocker.patch.object(
 			LDAPUserViewSet,
@@ -422,13 +408,9 @@ class TestUpdate:
 			return_exception=False,
 		)
 		m_ldap_user_exists.assert_any_call(
-			email=m_data.get(LDAP_ATTR_EMAIL),
+			email=m_data.get(LOCAL_ATTR_EMAIL),
 		)
-		m_ldap_user_update.assert_called_once_with(
-			username=m_data.get(LOCAL_ATTR_USERNAME),
-			user_data=expected_m_data,
-			permission_list=m_perm_list,
-		)
+		m_ldap_user_update.assert_called_once_with(data=expected_m_data)
 
 	def test_raises_anti_lockout(
 		self,
@@ -438,7 +420,7 @@ class TestUpdate:
 	):
 		m_data = {
 			LOCAL_ATTR_USERNAME: admin_user.username,
-			"permission_list": [
+			LOCAL_ATTR_PERMISSIONS: [
 				LDAP_UF_ACCOUNT_DISABLE,
 				LDAP_UF_NORMAL_ACCOUNT,
 			],
@@ -467,8 +449,8 @@ class TestUpdate:
 	@pytest.mark.parametrize(
 		"bad_key, bad_value",
 		(
-			("path", "some_bad_dn"),
-			("permission_list", "some_bad_perm"),
+			(LOCAL_ATTR_PATH, "some_bad_dn"),
+			(LOCAL_ATTR_PERMISSIONS, "some_bad_perm"),
 		),
 	)
 	def test_raises_serializer_bad_request(
@@ -481,8 +463,8 @@ class TestUpdate:
 		m_data = {LOCAL_ATTR_USERNAME: "testuser"}
 		m_data[bad_key] = bad_value
 		expected_m_data = m_data.copy()
-		expected_m_data.pop("path", None)
-		expected_m_data.pop("permission_list", None)
+		expected_m_data.pop(LOCAL_ATTR_PATH, None)
+		expected_m_data.pop(LOCAL_ATTR_PERMISSIONS, None)
 
 		m_ldap_user_exists = mocker.patch.object(
 			LDAPUserViewSet,
@@ -510,11 +492,11 @@ class TestUpdate:
 	):
 		m_data = {
 			LOCAL_ATTR_USERNAME: "testuser",
-			"path": "OU=mock ou,DC=example,DC=com",
+			LOCAL_ATTR_PATH: "OU=mock ou,DC=example,DC=com",
 		}
 		expected_m_data = m_data.copy()
-		expected_m_data.pop("path", None)
-		expected_m_data.pop("permission_list", None)
+		expected_m_data.pop(LOCAL_ATTR_PATH, None)
+		expected_m_data.pop(LOCAL_ATTR_PERMISSIONS, None)
 
 		m_ldap_user_exists = mocker.patch.object(
 			LDAPUserViewSet, "ldap_user_exists", return_value=False
@@ -720,8 +702,8 @@ class TestChangePassword:
 			{},
 			{LOCAL_ATTR_USERNAME: "testuser"},
 			{
-				"password": "1234",
-				"passwordConfirm": "4321",
+				LOCAL_ATTR_PASSWORD: "1234",
+				LOCAL_ATTR_PASSWORD_CONFIRM: "4321",
 			},
 		),
 	)
@@ -766,8 +748,8 @@ class TestChangePassword:
 		m_password = "MockPassword"
 		m_data = {
 			"username": m_user.username,
-			"password": m_password,
-			"passwordConfirm": m_password,
+			LOCAL_ATTR_PASSWORD: m_password,
+			LOCAL_ATTR_PASSWORD_CONFIRM: m_password,
 		}
 		m_ldap_user_exists = mocker.patch.object(
 			LDAPUserViewSet, "ldap_user_exists", return_value=True
@@ -794,7 +776,7 @@ class TestChangePassword:
 		m_get_user_object.assert_called_once_with(username=m_data["username"])
 		m_ldap_set_password.assert_called_once_with(
 			user_dn=m_user_entry.entry_dn,
-			user_pwd_new=m_data["password"],
+			user_pwd_new=m_data[LOCAL_ATTR_PASSWORD],
 			set_by_admin=True,
 		)
 		f_log_mixin.log.assert_called_once_with(
