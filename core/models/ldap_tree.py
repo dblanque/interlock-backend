@@ -14,6 +14,7 @@ from core.ldap.filter import LDAPFilter
 from core.constants.attrs import *
 
 ### Others
+from core.config.runtime import RuntimeSettings
 from core.views.mixins.utils import getldapattrvalue
 from core.type_hints.connector import LDAPConnectionProtocol
 from typing import overload
@@ -35,7 +36,6 @@ class LDAPTree(LDAPObject):
 
 	# Class attrs
 	recursive = False
-	test_fetch = False
 
 	@overload
 	def __init__(
@@ -44,23 +44,15 @@ class LDAPTree(LDAPObject):
 		connection: LDAPConnectionProtocol = None,
 		distinguished_name: str = None,
 		search_base: str = None,
+		search_attrs: list[str] = None,
 		excluded_ldap_attributes: list[str] = None,
-		required_attributes: list[str] = None,
+		attributes: dict = None,
 		recursive: bool = False,
-		test_fetch: bool = False,
+		children_object_type: type = list,
 	) -> None: ...
 
 	def __init__(self, **kwargs):
-		for a in (
-			"recursive",
-			"test_fetch",
-		):
-			if a in kwargs:
-				setattr(self, a, kwargs.pop(a))
-		kwargs.pop("skip_fetch", None)
-
-		super().__init__(skip_fetch=True, **kwargs)
-
+		"""LDAP Tree Initialization"""
 		# Set LDAPTree Default Values
 		self.subobject_id = 0
 		self.search_filter = LDAPFilter.and_(
@@ -92,18 +84,36 @@ class LDAPTree(LDAPObject):
 		).to_string()
 		self.children_object_type = list
 
-		# Set passed kwargs from Object Call
-		for kw in kwargs:
-			setattr(self, kw, kwargs[kw])
+		kwargs.pop("skip_fetch", None)
+		for kw in (
+			"children_object_type",
+			"recursive",
+		):
+			if kw in kwargs:
+				setattr(self, kw, kwargs.pop(kw))
 
-		# Set required attributes, these are unremovable from the tree searches
-		for attr in self.required_attributes:
-			if attr not in self.search_attrs:
-				self.search_attrs.append(attr)
+		super().__init__(
+			skip_fetch=True,
+			search_attrs=kwargs.pop(
+				"search_attrs",
+				(
+					# User Attrs
+					LDAP_ATTR_OBJECT_CLASS,
+					LDAP_ATTR_OBJECT_CATEGORY,
+					RuntimeSettings.LDAP_OU_FIELD,
+					# Group Attrs
+					LDAP_ATTR_COMMON_NAME,
+					LDAP_ATTR_GROUP_MEMBERS,
+					LDAP_ATTR_DN,
+					LDAP_ATTR_GROUP_TYPE,
+				)
+			),
+			**kwargs
+		)
 
 		self.children = self.__fetch_tree__()
 
-	def __validate_init__(self, kwargs):
+	def __validate_init__(self, **kwargs):
 		"""Super class override."""
 		if not self.connection:
 			raise Exception(
@@ -124,12 +134,9 @@ class LDAPTree(LDAPObject):
 		)
 		base_level: list = self.connection.entries
 		if self.children_object_type == list:
-			children = []
+			top_children = []
 		else:
-			children = {}
-
-		if self.test_fetch == True:
-			base_level = [base_level[0]]
+			top_children = {}
 
 		# For each entity in the base level list
 		for entry in base_level:
@@ -161,7 +168,7 @@ class LDAPTree(LDAPObject):
 			##################################
 			# Recursive Children Search Here #
 			##################################
-			if self.recursive == True:
+			if self.recursive:
 				_current_obj["children"] = self.__get_children__(
 					distinguished_name
 				)
@@ -169,18 +176,18 @@ class LDAPTree(LDAPObject):
 			# If children object type should be Array
 			if self.children_object_type == list:
 				###### Append subobject to Array ######
-				children.append(_current_obj)
+				top_children.append(_current_obj)
 
 				###### Increase subobject_id ######
 				self.subobject_id += 1
 			elif self.children_object_type == dict:
 				###### Append subobject to Dict ######
-				children[_current_obj[LOCAL_ATTR_DN]] = _current_obj
-				children[_current_obj[LOCAL_ATTR_DN]].pop(LOCAL_ATTR_DN)
+				top_children[_current_obj[LOCAL_ATTR_DN]] = _current_obj
+				top_children[_current_obj[LOCAL_ATTR_DN]].pop(LOCAL_ATTR_DN)
 
 				###### Increase subobject_id ######
 				self.subobject_id += 1
-		return children
+		return top_children
 
 	def __get_tree_count__(self):
 		count = 0
@@ -214,7 +221,7 @@ class LDAPTree(LDAPObject):
 		# If children object type should be Array
 		if self.children_object_type == list:
 			result = []
-		else:
+		elif self.children_object_type == dict:
 			result = {}
 
 		# Send Query to LDAP Server(s)
@@ -228,6 +235,10 @@ class LDAPTree(LDAPObject):
 		for entry in self.connection.entries:
 			entry: LDAPEntry  # Set the sub-object children
 			children = None
+
+			# Ignore self if somehow in search entries
+			if entry.entry_dn == distinguished_name:
+				continue
 
 			# Setup sub-object main attributes
 			self.subobject_id += 1
@@ -283,7 +294,10 @@ class LDAPTree(LDAPObject):
 				else:
 					_current_obj["children"].update(children)
 
-			result.append(_current_obj | _current_obj_tree_data)
+			if self.children_object_type == list:
+				result.append(_current_obj | _current_obj_tree_data)
+			elif self.children_object_type == dict:
+				result[entry.entry_dn] = _current_obj | _current_obj_tree_data
 
 		if result:
 			return result
