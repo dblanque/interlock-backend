@@ -21,6 +21,15 @@ from tests.test_core.type_hints import LDAPConnectorMock
 from rest_framework.test import APIClient
 from rest_framework.response import Response
 from rest_framework import status
+from core.constants.attrs.ldap import (
+	LDAP_ATTR_OBJECT_CLASS,
+	LDAP_ATTR_OBJECT_CATEGORY,
+	LDAP_ATTR_COMMON_NAME,
+	LDAP_ATTR_GROUP_MEMBERS,
+	LDAP_ATTR_DN,
+	LDAP_ATTR_GROUP_TYPE,
+	LDAP_ATTR_SECURITY_ID,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -99,18 +108,22 @@ class TestList:
 			**{
 				"connection": f_ldap_connector.connection,
 				"recursive": True,
-				"ldap_filter": "(|(objectCategory=organizationalUnit)(objectCategory=top)(objectCategory=container)(objectClass=builtinDomain))",
-				"ldap_attrs": [
-					# User Attrs
-					"objectClass",
-					"objectCategory",
-					f_runtime_settings.LDAP_OU_FIELD,
-					# Group Attrs
-					"cn",
-					"member",
-					"distinguishedName",
-					"groupType",
-					"objectSid",
+				"search_filter": "(|(objectCategory=organizationalUnit)(objectCategory=top)(objectCategory=container)(objectClass=builtinDomain))",
+				"search_attrs": [
+					v
+					for v in (
+						# User Attrs
+						LDAP_ATTR_OBJECT_CLASS,
+						LDAP_ATTR_OBJECT_CATEGORY,
+						f_runtime_settings.LDAP_OU_FIELD,
+						# Group Attrs
+						LDAP_ATTR_COMMON_NAME,
+						LDAP_ATTR_GROUP_MEMBERS,
+						LDAP_ATTR_DN,
+						LDAP_ATTR_GROUP_TYPE,
+						LDAP_ATTR_SECURITY_ID,
+					)
+					if v
 				],
 			}
 		)
@@ -203,17 +216,17 @@ class TestDirtree:
 			**{
 				"connection": f_ldap_connector.connection,
 				"recursive": True,
-				"ldap_filter": m_filter_str,
-				"ldap_attrs": [
+				"search_filter": m_filter_str,
+				"search_attrs": [
 					# User Attrs
-					"objectClass",
-					"objectCategory",
+					LDAP_ATTR_OBJECT_CLASS,
+					LDAP_ATTR_OBJECT_CATEGORY,
 					f_runtime_settings.LDAP_OU_FIELD,
 					# Group Attrs
-					"cn",
-					"member",
-					"distinguishedName",
-					"groupType",
+					LDAP_ATTR_COMMON_NAME,
+					LDAP_ATTR_GROUP_MEMBERS,
+					LDAP_ATTR_DN,
+					LDAP_ATTR_GROUP_TYPE,
 				],
 			}
 		)
