@@ -304,7 +304,7 @@ class TestLDAPDNS:
 	def test_list_dns_zones(self, mocker, f_runtime_settings, f_dns_zones):
 		m_connection = mocker.MagicMock()
 		mocker.patch(
-			"core.models.dns.dnstool.get_dns_zones", return_value=f_dns_zones
+			"core.models.dns.get_dns_zones", return_value=f_dns_zones
 		)
 		mocker.patch.object(LDAPDNS, "list_forest_zones", return_value=None)
 		ldap_dns = LDAPDNS(m_connection)
@@ -315,7 +315,7 @@ class TestLDAPDNS:
 	):
 		m_connection = mocker.MagicMock()
 		mocker.patch(
-			"core.models.dns.dnstool.get_dns_zones", return_value=f_forest_zones
+			"core.models.dns.get_dns_zones", return_value=f_forest_zones
 		)
 		mocker.patch.object(LDAPDNS, "list_dns_zones", return_value=None)
 		ldap_dns = LDAPDNS(m_connection)
@@ -1116,7 +1116,6 @@ class TestLDAPRecord:
 	@pytest.mark.parametrize(
 		"test_type",
 		(
-			RecordTypes.DNS_RECORD_TYPE_SIG.value,
 			RecordTypes.DNS_RECORD_TYPE_KEY.value,
 			RecordTypes.DNS_RECORD_TYPE_WINS.value,
 		),
@@ -1596,11 +1595,19 @@ class TestLDAPRecord:
 			test_values["nameTarget"]
 		)
 
-	def test_make_record_bytes_raises_unsupported(self, mocker):
+	@pytest.mark.parametrize(
+		"test_type",
+		(
+			RecordTypes.DNS_RECORD_TYPE_KEY.value,
+			RecordTypes.DNS_RECORD_TYPE_WINS.value,
+		),
+		ids=lambda x: RecordTypes(x).name + " raises DNSRecordTypeUnsupported",
+	)
+	def test_make_record_bytes_raises_unsupported(self, mocker, test_type):
 		mocker.patch.object(LDAPRecord, "__init__", return_value=None)
 		m_record = LDAPRecord()
 		m_record.name = "subdomain"
-		m_record.type = RecordTypes.DNS_RECORD_TYPE_SIG.value
+		m_record.type = test_type
 		m_record.mapping = RECORD_MAPPINGS[m_record.type]
 		with pytest.raises(exc_dns.DNSRecordTypeUnsupported):
 			m_record.make_record_bytes({}, serial=1)
@@ -1675,7 +1682,7 @@ class TestLDAPRecord:
 			del f_record_data_type_a["ttl"]
 
 		mocker.patch(
-			"core.models.dns.dnstool.DNS_RECORD", return_value="DNS_RECORD"
+			"core.models.dns.DNS_RECORD", return_value="DNS_RECORD"
 		)
 		m_record_to_dict: MockType = mocker.patch(
 			"core.models.dns.record_to_dict"
@@ -1724,7 +1731,7 @@ class TestLDAPRecord:
 	):
 		f_connection.add.side_effect = Exception
 		mocker.patch(
-			"core.models.dns.dnstool.DNS_RECORD", return_value="DNS_RECORD"
+			"core.models.dns.DNS_RECORD", return_value="DNS_RECORD"
 		)
 		mocker.patch("core.models.dns.record_to_dict")
 		f_record_instance_type_a.raw_entry = None
@@ -1748,7 +1755,7 @@ class TestLDAPRecord:
 		f_record_data_type_a: dict,
 	):
 		mocker.patch(
-			"core.models.dns.dnstool.DNS_RECORD", return_value="DNS_RECORD"
+			"core.models.dns.DNS_RECORD", return_value="DNS_RECORD"
 		)
 		mocker.patch.object(LDAPRecord, "record_in_entry", return_value=True)
 		f_record_instance_type_a.raw_entry = {"attributes": {}}
@@ -1772,7 +1779,7 @@ class TestLDAPRecord:
 		f_record_data_type_a: dict,
 	):
 		mocker.patch(
-			"core.models.dns.dnstool.DNS_RECORD", return_value="DNS_RECORD"
+			"core.models.dns.DNS_RECORD", return_value="DNS_RECORD"
 		)
 		mocker.patch("core.models.dns.record_to_dict")
 		mocker.patch.object(LDAPRecord, "record_in_entry", return_value=False)
@@ -1804,7 +1811,7 @@ class TestLDAPRecord:
 		f_record_data_type_soa: dict,
 	):
 		mocker.patch(
-			"core.models.dns.dnstool.DNS_RECORD", return_value="DNS_RECORD"
+			"core.models.dns.DNS_RECORD", return_value="DNS_RECORD"
 		)
 		mocker.patch("core.models.dns.record_to_dict")
 		mocker.patch.object(LDAPRecord, "record_in_entry", return_value=False)
@@ -1838,7 +1845,7 @@ class TestLDAPRecord:
 		f_record_data_type_a: dict,
 	):
 		mocker.patch(
-			"core.models.dns.dnstool.DNS_RECORD", return_value="DNS_RECORD"
+			"core.models.dns.DNS_RECORD", return_value="DNS_RECORD"
 		)
 		m_record_to_dict: MockType = mocker.patch(
 			"core.models.dns.record_to_dict"
@@ -1926,7 +1933,7 @@ class TestLDAPRecord:
 	):
 		# Mocks
 		mocker.patch(
-			"core.models.dns.dnstool.DNS_RECORD",
+			"core.models.dns.DNS_RECORD",
 			return_value=mocker.Mock(spec=DNS_RECORD),
 		)
 		mocker.patch(
@@ -2016,6 +2023,7 @@ class TestLDAPRecord:
 			],
 			auto_fetch=False,
 		)
+		m_record.dns_zones = f_dns_zones
 
 		# New record struct
 		m_new_bytes = b"new_record_bytes"
