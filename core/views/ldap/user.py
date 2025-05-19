@@ -78,7 +78,8 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		code_msg = "ok"
 
 		self.ldap_filter_object = LDAPFilter.eq(
-			LDAP_ATTR_OBJECT_CLASS, RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
+			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
+			RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
 		)
 		self.ldap_filter_attr = self.filter_attr_builder(
 			RuntimeSettings
@@ -139,8 +140,6 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		code_msg = "ok"
 		data: dict = request.data
 
-		if LDAP_ATTR_USERNAME_SAMBA_ADDS in data:
-			data[LOCAL_ATTR_USERNAME] = data.pop(LDAP_ATTR_USERNAME_SAMBA_ADDS)
 		user_username = data.get(LOCAL_ATTR_USERNAME, None)
 		if not user_username:
 			raise exc_base.MissingDataKey(data={"key": LOCAL_ATTR_USERNAME})
@@ -236,7 +235,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				raise exc_user.UserDoesNotExist
 
 			# Check if email overlaps with any other users
-			user_email = data.get(LDAP_ATTR_EMAIL, None)
+			user_email = data.get(LOCAL_ATTR_EMAIL, None)
 			if user_email:
 				self.ldap_user_exists(email=user_email)
 
@@ -270,7 +269,8 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		######################## Set LDAP Attributes ###########################
 		self.ldap_filter_object = LDAPFilter.eq(
-			LDAP_ATTR_OBJECT_CLASS, RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
+			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
+			RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
 		).to_string()
 		self.ldap_filter_attr = self.filter_attr_builder(
 			RuntimeSettings
@@ -709,7 +709,8 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		######################## Set LDAP Attributes ###########################
 		self.ldap_filter_object = LDAPFilter.eq(
-			LDAP_ATTR_OBJECT_CLASS, RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
+			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
+			RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
 		).to_string()
 		self.ldap_filter_attr = self.filter_attr_builder(
 			RuntimeSettings
@@ -810,8 +811,9 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		ALERT_KEYS = (
 			LOCAL_ATTR_USERNAME,
+			LOCAL_ATTR_DN,
 			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
-			LDAP_ATTR_DN,
+			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_DN],
 		)
 		for k in ALERT_KEYS:
 			if k in data:
@@ -832,8 +834,8 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				ldap_user_search,
 				attributes=[
 					RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
-					LDAP_ATTR_DN,
-					LDAP_ATTR_UAC,
+					RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_DN],
+					RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_UAC],
 				],
 			)
 			distinguished_name = str(ldap_user_entry.entry_dn)
@@ -983,7 +985,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				).get_fetch_me_attrs()
 
 				self.ldap_filter_object = LDAPFilter.eq(
-					LDAP_ATTR_OBJECT_CLASS,
+					RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
 					RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
 				)
 
