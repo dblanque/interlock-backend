@@ -40,7 +40,7 @@ class TestUserModel:
 			first_name="John",
 			last_name="Doe",
 			email="john.doe@example.com",
-			dn="cn=john,ou=users,dc=example,dc=com",
+			distinguished_name="cn=john,ou=users,dc=example,dc=com",
 			user_type=USER_TYPE_LDAP,
 			recovery_codes=["123456", "654321"],
 			is_enabled=False,
@@ -49,7 +49,7 @@ class TestUserModel:
 		assert user.first_name == "John"
 		assert user.last_name == "Doe"
 		assert user.email == "john.doe@example.com"
-		assert user.dn == "cn=john,ou=users,dc=example,dc=com"
+		assert user.distinguished_name == "cn=john,ou=users,dc=example,dc=com"
 		assert user.user_type == USER_TYPE_LDAP
 		assert user.recovery_codes == ["123456", "654321"]
 		assert user.is_enabled is False
@@ -61,7 +61,7 @@ class TestUserModel:
 			username="test_distinguished_name_ldap",
 			password=self.default_password,
 			user_type=USER_TYPE_LDAP,
-			dn="cn=test,ou=users,dc=example,dc=com",
+			distinguished_name="cn=test,ou=users,dc=example,dc=com",
 		)
 		assert user.distinguished_name == "cn=test,ou=users,dc=example,dc=com"
 
@@ -158,7 +158,7 @@ class TestUserModel:
 		[
 			("first_name", 255),
 			("last_name", 255),
-			("dn", 128),
+			("_distinguished_name", 128),
 		],
 	)
 	def test_max_length_constraints(self, field_name, max_length):
