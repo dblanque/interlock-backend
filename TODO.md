@@ -1,12 +1,12 @@
 # Create/Complete/Fix tests for
 * core.models.ldap_object <d>
 * core.models.ldap_user <d>
-* core.models.ldap_group
-* core.models.ldap_tree
-* core.ldap.ldap_settings
-* core.serializers.group
-* core.views.mixins.domain
-* core.views
+* core.models.ldap_group <d>
+* core.models.ldap_tree - MONDAY <d>
+* core.ldap.ldap_settings - TUESDAY
+* core.serializers.group - THURSDAY
+* core.views.mixins.domain - FRIDAY
+* core.views - NEXT WEEK
 
 # To test manually
 * Add OIDC Consent Features <t>
