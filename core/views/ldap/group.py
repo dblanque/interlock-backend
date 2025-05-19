@@ -138,7 +138,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		if not group_cn or not isinstance(group_cn, str):
 			raise exc_base.BadRequest(
 				data={
-					"detail": "group dict required a name key containing the Group Common Name."
+					"detail": "group dict requires a name key containing the Group Common Name."
 				}
 			)
 
