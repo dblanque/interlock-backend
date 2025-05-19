@@ -49,7 +49,7 @@ from core.views.mixins.logs import LogMixin
 # Others
 from core.constants.attrs import (
 	LOCAL_ATTR_ID,
-	LOCAL_USER_TYPE,
+	LOCAL_ATTR_USERTYPE,
 	LOCAL_ATTR_MODIFIED,
 	LOCAL_ATTR_CREATED,
 	LOCAL_ATTR_PASSWORD,
@@ -186,7 +186,7 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 			LOCAL_ATTR_ID,
 			LOCAL_ATTR_MODIFIED,
 			LOCAL_ATTR_CREATED,
-			LOCAL_USER_TYPE,
+			LOCAL_ATTR_USERTYPE,
 			LOCAL_ATTR_LAST_LOGIN_WIN32,
 			LOCAL_ATTR_DN,
 			LOCAL_ATTR_USERNAME,
