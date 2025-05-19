@@ -6,6 +6,8 @@ from core.ldap import defaults as ldap_defaults
 from core.ldap.connector import LDAPConnector
 from typing import Protocol
 from tests.test_core.type_hints import LDAPConnectorMock
+from core.constants.attrs import LDAP_ATTR_DN
+from ldap3 import Entry as LDAPEntry
 from core.models.interlock_settings import (
 	InterlockSetting,
 	INTERLOCK_SETTING_ENABLE_LDAP,
@@ -98,4 +100,50 @@ def g_ldap_connector(mocker: MockerFixture) -> ConnectorFactory:
 		m_connector.cls_mock = m_connector_cls
 		return m_connector
 
+	return maker
+
+class LDAPAttributeFactoryProtocol(Protocol):
+	def __call__(self, attr: str, v) -> MockType: ...
+
+@pytest.fixture
+def fc_ldap_attr(mocker: MockerFixture) -> LDAPAttributeFactoryProtocol:
+	def maker(attr: str, v):
+		_SEQUENCE_TYPES = (list, tuple, set,)
+		mock_attr = mocker.Mock(name=f"m_{attr}")
+		if not v in _SEQUENCE_TYPES:
+			mock_attr.value = v
+			mock_attr.values = [v]
+		elif isinstance(v, (bytes, bytearray)):
+			mock_attr.raw_values = [v]
+		else:
+			mock_attr.value = v[0] if len(v) < 2 else v
+			mock_attr.values = v
+		return mock_attr
+	return maker
+
+class LDAPEntryFactoryProtocol(Protocol):
+	def __call__(self, spec: bool = False, **ldap_attrs): ...
+
+@pytest.fixture
+def fc_ldap_entry(
+	mocker: MockerFixture,
+	fc_ldap_attr: LDAPAttributeFactoryProtocol,
+) -> LDAPEntryFactoryProtocol:
+	def maker(**kwargs):
+		if "spec" in kwargs:
+			mock: LDAPEntry = mocker.MagicMock(spec=kwargs.pop("spec"))
+		else:
+			mock: LDAPEntry = mocker.MagicMock()
+		mock.entry_attributes = []
+		mock.entry_attributes_as_dict = {}
+		for k, v in kwargs.items():
+			setattr(mock, k, fc_ldap_attr(k, v))
+			mock.entry_attributes_as_dict[k] = [v]
+			mock.entry_attributes.append(k)
+
+		# Set entry_dn
+		distinguished_name = kwargs.pop(LDAP_ATTR_DN, None)
+		if distinguished_name:
+			mock.entry_dn = distinguished_name
+		return mock
 	return maker
