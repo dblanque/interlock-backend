@@ -154,7 +154,6 @@ def fc_user_entry(
 			mock.entry_attributes.append(k)
 		mock.entry_dn = attrs["distinguishedName"]
 		return mock
-
 	return maker
 
 
