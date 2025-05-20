@@ -6,6 +6,7 @@
 # Module: core.constants.attrs.local
 
 LOCAL_ATTR_ID = "id"
+LOCAL_ATTR_VALUE = "value"
 LOCAL_ATTR_PATH = "path"
 LOCAL_ATTR_USERTYPE = "user_type"
 LOCAL_ATTR_USERNAME = "username"
