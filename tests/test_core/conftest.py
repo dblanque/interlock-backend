@@ -119,14 +119,14 @@ def fc_ldap_attr(mocker: MockerFixture) -> LDAPAttributeFactoryProtocol:
 			set,
 		)
 		mock_attr = mocker.Mock(name=f"m_{attr}")
-		if not v in _SEQUENCE_TYPES:
+		if not type(v) in _SEQUENCE_TYPES:
 			mock_attr.value = v
 			mock_attr.values = [v]
-		elif isinstance(v, (bytes, bytearray)):
 			mock_attr.raw_values = [v]
 		else:
 			mock_attr.value = v[0] if len(v) < 2 else v
 			mock_attr.values = v
+			mock_attr.raw_values = v
 		return mock_attr
 
 	return maker
@@ -148,9 +148,11 @@ def fc_ldap_entry(
 			mock: LDAPEntry = mocker.MagicMock()
 		mock.entry_attributes = []
 		mock.entry_attributes_as_dict = {}
+		mock.entry_raw_attributes = {}
 		for k, v in kwargs.items():
 			setattr(mock, k, fc_ldap_attr(k, v))
 			mock.entry_attributes_as_dict[k] = [v]
+			mock.entry_raw_attributes[k] = [v]
 			mock.entry_attributes.append(k)
 
 		# Set entry_dn
