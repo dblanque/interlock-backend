@@ -31,8 +31,7 @@ from core.models.choices.log import (
 )
 
 ### DNS Utilities
-from core.utils.dnstool import record_to_dict
-from core.utils import dnstool
+from core.utils.dnstool import record_to_dict, DNS_RECORD
 
 ### Exceptions
 from core.exceptions import dns as exc_dns
@@ -167,10 +166,8 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 					is_tombstoned = bool(
 						getldapattrvalue(entry, LDNS_ATTR_ENTRY_TOMBSTONED)
 					)
-					if is_tombstoned:
-						print()
 					try:
-						dr = dnstool.DNS_RECORD(record)
+						dr = DNS_RECORD(record)
 					except:
 						logger.error(
 							f"Could not parse struct values for record {record_name}"
