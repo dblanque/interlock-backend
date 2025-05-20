@@ -264,7 +264,7 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 		)
 		a_record.create(
 			values={
-				LDNS_ATTR_IPV4: ip_address,
+				LDNS_ATTR_IPV4_ADDRESS: ip_address,
 				LDNS_ATTR_TTL: ttl,
 				LDNS_ATTR_SERIAL: serial,
 			}
@@ -280,7 +280,7 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 		)
 		ns_record_a.create(
 			values={
-				LDNS_ATTR_IPV4: ip_address,
+				LDNS_ATTR_IPV4_ADDRESS: ip_address,
 				LDNS_ATTR_TTL: ttl,
 				LDNS_ATTR_SERIAL: serial,
 			}
@@ -303,7 +303,7 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 		)
 		aaaa_record.create(
 			values={
-				LDNS_ATTR_IPV6: ip_address,
+				LDNS_ATTR_IPV6_ADDRESS: ip_address,
 				LDNS_ATTR_TTL: ttl,
 				LDNS_ATTR_SERIAL: serial,
 			}
@@ -319,7 +319,7 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 		)
 		ns_record_aaaa.create(
 			values={
-				LDNS_ATTR_IPV6: ip_address,
+				LDNS_ATTR_IPV6_ADDRESS: ip_address,
 				LDNS_ATTR_TTL: ttl,
 				LDNS_ATTR_SERIAL: serial,
 			}

@@ -52,8 +52,8 @@ LDNS_ATTR_ENTRY_TOMBSTONED = "dNSTombstoned"
 # CNAME
 LDNS_ATTR_NAME_NODE = "nameNode"
 # IP Address
-LDNS_ATTR_IPV4 = "address"
-LDNS_ATTR_IPV6 = "ipv6Address"
+LDNS_ATTR_IPV4_ADDRESS = "address"
+LDNS_ATTR_IPV6_ADDRESS = "ipv6Address"
 # SOA
 LDNS_ATTR_SOA_SERIAL = "dwSerialNo"
 LDNS_ATTR_SOA_REFRESH = "dwRefresh"

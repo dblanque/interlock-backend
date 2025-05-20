@@ -43,13 +43,13 @@ RECORD_MAPPINGS = {
 	RecordTypes.DNS_RECORD_TYPE_A.value: {
 		"name": "A",
 		"class": "DNS_RPC_RECORD_A",
-		"fields": [LDNS_ATTR_IPV4],
+		"fields": [LDNS_ATTR_IPV4_ADDRESS],
 		"multi_record": True,
 	},
 	RecordTypes.DNS_RECORD_TYPE_AAAA.value: {
 		"name": "AAAA",
 		"class": "DNS_RPC_RECORD_AAAA",
-		"fields": [LDNS_ATTR_IPV6],
+		"fields": [LDNS_ATTR_IPV6_ADDRESS],
 		"multi_record": True,
 	},
 	RecordTypes.DNS_RECORD_TYPE_NS.value: {
@@ -253,13 +253,13 @@ def record_to_dict(record: "DNS_RECORD", ts=False):
 				if valueField == LDNS_ATTR_TOMBSTONE_TIME:
 					record_dict[valueField] = data.toDatetime()
 				elif (
-					valueField == LDNS_ATTR_IPV4
+					valueField == LDNS_ATTR_IPV4_ADDRESS
 					and record[LDNS_ATTR_STRUCT_TYPE]
 					== RecordTypes.DNS_RECORD_TYPE_A.value
 				):
 					record_dict[valueField] = data.formatCanonical()
 				elif (
-					valueField == LDNS_ATTR_IPV6
+					valueField == LDNS_ATTR_IPV6_ADDRESS
 					and record[LDNS_ATTR_STRUCT_TYPE]
 					== RecordTypes.DNS_RECORD_TYPE_AAAA.value
 				):
@@ -472,21 +472,22 @@ class DNS_RPC_RECORD_A(Structure):
 	[MS-DNSP] section 2.2.2.2.4.1
 	"""
 
-	structure = ((LDNS_ATTR_IPV4, ":"),)
+	structure = ((LDNS_ATTR_IPV4_ADDRESS, ":"),)
 
 	def formatCanonical(self):
 		"""
 		formatCanonical (IPv4)
 		Returns IPv4 Bytes as String Address
 		"""
-		return socket.inet_ntop(socket.AF_INET, self[LDNS_ATTR_IPV4])
+		return socket.inet_ntop(socket.AF_INET, self[LDNS_ATTR_IPV4_ADDRESS])
 
 	def fromCanonical(self, canonical):
 		"""
 		fromCanonical (IPv4)
 		Returns IPv4 String Address as Bytes
 		"""
-		self[LDNS_ATTR_IPV4] = socket.inet_pton(socket.AF_INET, canonical)
+		self[LDNS_ATTR_IPV4_ADDRESS] = socket.inet_pton(
+			socket.AF_INET, canonical)
 
 
 class DNS_RPC_RECORD_NODE_NAME(Structure):
@@ -627,14 +628,14 @@ class DNS_RPC_RECORD_AAAA(Structure):
 	[MS-DNSP] section 2.2.2.2.4.16
 	"""
 
-	structure = ((LDNS_ATTR_IPV6, "!16s"),)
+	structure = ((LDNS_ATTR_IPV6_ADDRESS, "!16s"),)
 
 	def formatCanonical(self):
 		"""
 		formatCanonical (IPv6)
 		Returns IPv6 Bytes as String Address
 		"""
-		return socket.inet_ntop(socket.AF_INET6, self[LDNS_ATTR_IPV6])
+		return socket.inet_ntop(socket.AF_INET6, self[LDNS_ATTR_IPV6_ADDRESS])
 		# return self['ipv6Address']
 
 	def fromCanonical(self, canonical):
@@ -642,7 +643,8 @@ class DNS_RPC_RECORD_AAAA(Structure):
 		fromCanonical (IPv6)
 		Returns IPv6 String Address without separators
 		"""
-		self[LDNS_ATTR_IPV6] = socket.inet_pton(socket.AF_INET6, canonical)
+		self[LDNS_ATTR_IPV6_ADDRESS] = socket.inet_pton(
+			socket.AF_INET6, canonical)
 		# self['ipv6Address'] = str(canonical).replace(':','')
 
 

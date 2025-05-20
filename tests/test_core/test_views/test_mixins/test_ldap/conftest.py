@@ -10,8 +10,8 @@ from core.constants.dns import (
 	LDNS_ATTR_TTL,
 	LDNS_ATTR_SERIAL,
 	LDNS_ATTR_TYPE,
-	LDNS_ATTR_IPV4,
-	LDNS_ATTR_IPV6,
+	LDNS_ATTR_IPV4_ADDRESS,
+	LDNS_ATTR_IPV6_ADDRESS,
 	LDNS_ATTR_NAME_NODE,
 	LDNS_ATTR_STRING_DATA,
 	LDNS_ATTR_MX_PRIORITY,
@@ -53,7 +53,7 @@ def f_record_data(fc_record_serial_epoch):
 def f_record_data_a(f_record_data):
 	return f_record_data | {
 		LDNS_ATTR_TYPE: RecordTypes.DNS_RECORD_TYPE_A.value,
-		LDNS_ATTR_IPV4: "127.0.0.1",
+		LDNS_ATTR_IPV4_ADDRESS: "127.0.0.1",
 	}
 
 
@@ -61,7 +61,7 @@ def f_record_data_a(f_record_data):
 def f_record_data_aaaa(f_record_data):
 	return f_record_data | {
 		LDNS_ATTR_TYPE: RecordTypes.DNS_RECORD_TYPE_AAAA.value,
-		LDNS_ATTR_IPV6: "::1",
+		LDNS_ATTR_IPV6_ADDRESS: "::1",
 	}
 
 
