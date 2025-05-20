@@ -8,6 +8,16 @@ from core.models.user import User
 from core.models.dns import LDAPRecord, DATE_FMT
 from core.ldap.connector import LDAPConnector
 from core.ldap.defaults import LDAP_DOMAIN
+from core.constants.attrs.local import LOCAL_ATTR_VALUE
+from core.constants.attrs.ldap import LDAP_ATTR_DN
+from core.constants.dns import (
+	LDNS_ATTR_ENTRY_RECORD,
+	LDNS_ATTR_ENTRY_NAME,
+	LDNS_ATTR_ENTRY_DISPLAY_NAME,  # Custom Header, attr not in LDAP
+	LDNS_ATTR_TTL,
+	LDNS_ATTR_TYPE_NAME,
+	LDNS_ATTR_SERIAL,
+)
 from core.views.mixins.ldap.domain import DomainViewMixin
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from tests.test_core.conftest import RuntimeSettingsFactory
@@ -24,6 +34,10 @@ from typing import Protocol
 from core.models.dns import RecordTypes
 from ldap3 import LEVEL as ldap3_LEVEL
 from logging import Logger
+from tests.test_core.conftest import (
+	LDAPAttributeFactoryProtocol,
+	LDAPEntryFactoryProtocol,
+)
 
 
 @pytest.fixture
@@ -63,11 +77,12 @@ def f_mock_soa_record(mocker: MockerFixture):
 
 
 @pytest.fixture
-def f_record_entry(mocker: MockerFixture):
-	m_entry = mocker.Mock()
-	m_entry.name.value = "subdomain"
-	m_entry.entry_dn = "record_entry_dn"
-	m_entry.dnsRecord.values = [b"mock_record_bytes"]
+def f_record_entry(fc_ldap_entry: LDAPEntryFactoryProtocol):
+	m_entry = fc_ldap_entry(**{
+		LDNS_ATTR_ENTRY_NAME: "subdomain",
+		LDAP_ATTR_DN: "mock_record_dn",
+		LDNS_ATTR_ENTRY_RECORD: b"mock_record_bytes",
+	})
 	return m_entry
 
 
@@ -170,7 +185,6 @@ class TestGetZoneRecords:
 		f_log_mixin: LogMixin,
 		f_record_entry,
 	):
-		m_entry = f_record_entry
 		# Mock LDAPDNS
 		m_ldap_dns_instance = mocker.Mock()
 		m_ldap_dns_instance.dns_root = "fake_root"
@@ -189,7 +203,7 @@ class TestGetZoneRecords:
 		m_DNS_RECORD_instance = mocker.Mock()
 		m_DNS_RECORD_instance.__getTTL__ = m_get_ttl
 		m_DNS_RECORD = mocker.patch(
-			"core.views.mixins.ldap.domain.dnstool.DNS_RECORD",
+			"core.views.mixins.ldap.domain.DNS_RECORD",
 			return_value=m_DNS_RECORD_instance,
 		)
 		m_record_dict = {}
@@ -199,16 +213,12 @@ class TestGetZoneRecords:
 		)
 		m_getldapattrvalue = mocker.patch(
 			"core.views.mixins.ldap.domain.getldapattrvalue",
-			side_effect=[b"mock_name", False],
+			side_effect=["mock_name", False],
 		)
 		m_dnsRecord = mocker.Mock()
-		m_record_in_entry = "mock_record"
+		m_record_in_entry = getattr(f_record_entry, LDNS_ATTR_ENTRY_RECORD).value
 		m_dnsRecord.values = ["mock_record"]
-		m_getldapattr = mocker.patch(
-			"core.views.mixins.ldap.domain.getldapattr",
-			return_value=m_dnsRecord,
-		)
-		f_ldap_connector.connection.entries = [m_entry]
+		f_ldap_connector.connection.entries = [f_record_entry]
 
 		# Execution
 		result = f_domain_mixin.get_zone_records(
@@ -224,9 +234,8 @@ class TestGetZoneRecords:
 		m_DNS_RECORD.assert_called_once_with(m_record_in_entry)
 		m_ldap_dns.assert_called_once_with(f_ldap_connector.connection)
 		m_getldapattrvalue.call_count == 2
-		m_getldapattrvalue.assert_any_call(m_entry, "name")
-		m_getldapattrvalue.assert_any_call(m_entry, "dNSTombstoned")
-		m_getldapattr.assert_called_once_with(m_entry, "dnsRecord")
+		m_getldapattrvalue.assert_any_call(f_record_entry, "name")
+		m_getldapattrvalue.assert_any_call(f_record_entry, "dNSTombstoned")
 		m_get_ttl.assert_called_once()
 		m_record_to_dict.assert_called_once_with(
 			record=m_DNS_RECORD_instance, ts=False
@@ -245,7 +254,13 @@ class TestGetZoneRecords:
 		):
 			assert k in result
 		assert set(result["headers"]) == set(
-			["name", "value", "ttl", "typeName", "serial"]
+			[
+				LDNS_ATTR_ENTRY_DISPLAY_NAME,  # Custom Header, attr not in LDAP
+				LOCAL_ATTR_VALUE,
+				LDNS_ATTR_TTL,
+				LDNS_ATTR_TYPE_NAME,
+				LDNS_ATTR_SERIAL,
+			]
 		)
 		assert result["dnsZones"] == [
 			"Root DNS Servers",
@@ -381,7 +396,7 @@ class TestRecordTemplateInsertions:
 		)
 		m_ldap_record_aaaa.create.assert_called_once_with(
 			values={
-				"address": m_address,
+				"ipv6Address": m_address,
 				"ttl": 180,
 				"serial": 1,
 			}
@@ -395,7 +410,7 @@ class TestRecordTemplateInsertions:
 		)
 		m_ldap_record_ns.create.assert_called_once_with(
 			values={
-				"address": m_address,
+				"ipv6Address": m_address,
 				"ttl": 180,
 				"serial": 1,
 			}
