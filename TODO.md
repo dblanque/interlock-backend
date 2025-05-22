@@ -3,8 +3,8 @@
 * core.models.ldap_user <d>
 * core.models.ldap_group <d>
 * core.models.ldap_tree - MONDAY <d>
-* core.ldap.ldap_settings - TUESDAY
-* core.serializers.group - THURSDAY
+* core.ldap.ldap_settings - TUESDAY <d>
+* core.serializers.group - THURSDAY <d>
 * core.views.mixins.domain - FRIDAY
 * core.views - NEXT WEEK
 
@@ -14,6 +14,12 @@
 * Add logging to all Application model operations <t>
 
 ## Issues
+* Implement LDAP Group Serializer usage.
+* Add self-registry availability with captcha requirement.
+	* USER_SELF_REGISTRY_OPTIONS
+		* CAPTCHA KEY
+		* CAPTCHA SITE
+		* ALLOWED DOMAINS (ALL IF WILDCARD)
 * Add LDAP_DEFAULT_USER_CLASSES, LDAP_DEFAULT_GROUP_CLASSES to ldap settings
 * Move Interlock RSA Key to class instances as a singleton. <d>
 * Add local user/asg bulk actions
