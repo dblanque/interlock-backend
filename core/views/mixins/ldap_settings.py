@@ -47,10 +47,10 @@ DEFAULT_PRESET_NAME = "default_preset"
 
 
 class SettingsViewMixin(viewsets.ViewSetMixin):
-	def create_default_preset(self):
+	def create_default_preset(self) -> LDAPPreset | None:
 		if db_table_exists(LDAP_PRESET_TABLE):
 			if not LDAPPreset.objects.filter(name=DEFAULT_PRESET_NAME).exists():
-				LDAPPreset.objects.create(
+				return LDAPPreset.objects.create(
 					name=DEFAULT_PRESET_NAME,
 					label="Default Preset",
 					active=True,
