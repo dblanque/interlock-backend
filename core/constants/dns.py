@@ -1,3 +1,10 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.constants.dns
+
 from core.constants.attrs import (
 	LDAP_ATTR_DN,
 	LDAP_ATTR_FULL_NAME,
