@@ -80,10 +80,7 @@ class TestGetSettings:
 			assert _settings.get(_key).get(LOCAL_ATTR_VALUE) == _default_v
 
 	@pytest.mark.django_db(transaction=True)
-	def test_with_default_superuser(
-		self,
-		f_default_superuser: User
-	):
+	def test_with_default_superuser(self, f_default_superuser: User):
 		_settings = get_setting_list()
 		assert _settings.get("DEFAULT_ADMIN")
 
@@ -98,10 +95,31 @@ class TestGetSettings:
 		assert not _settings.get("DEFAULT_ADMIN")
 
 	@pytest.mark.django_db(transaction=True)
-	def test_with_connection_password(self, f_password_override):
-		_settings = get_setting_list()
+	def test_with_connection_password(
+		self,
+		f_password_override: LDAPSetting,
+		f_default_preset: LDAPPreset,
+	):
+		_settings = get_setting_list(f_default_preset.id)
 		assert _settings.get(K_LDAP_AUTH_CONNECTION_PASSWORD)\
 			.get(LOCAL_ATTR_VALUE) == "mock_password"
+
+	@pytest.mark.django_db(transaction=True)
+	def test_with_non_decryptable_connection_password(
+		self,
+		mocker: MockerFixture,
+		f_password_override: LDAPSetting,
+		f_default_preset: LDAPPreset,
+	):
+		m_logger = mocker.patch("core.ldap.ldap_settings.logger")
+		mocker.patch(
+			"core.ldap.ldap_settings.aes_decrypt",
+			side_effect=Exception
+		)
+		_settings = get_setting_list(f_default_preset.id)
+		assert _settings.get(K_LDAP_AUTH_CONNECTION_PASSWORD)\
+			.get(LOCAL_ATTR_VALUE) == ""
+		m_logger.error.assert_called_once_with("Could not decrypt password")
 
 	@pytest.mark.parametrize(
 		"setting_key, setting_value",
