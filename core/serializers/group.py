@@ -3,6 +3,8 @@ from core.serializers.ldap import DistinguishedNameField
 from django.core.validators import validate_email
 from core.ldap.types.group import LDAPGroupTypes
 from core.constants.attrs import (
+	LOCAL_ATTR_COMMON_NAME,
+	LOCAL_ATTR_NAME,
 	LOCAL_ATTR_GROUP_TYPE,
 	LOCAL_ATTR_GROUP_SCOPE,
 )
@@ -10,20 +12,32 @@ from core.constants.attrs import (
 
 def group_type_validator(v: str):
 	try:
-		LDAPGroupTypes(v)
+		if v.upper().startswith("SCOPE_"):
+			raise serializers.ValidationError(
+				"Group Scope cannot be set in Group Type field.")
+
+		LDAPGroupTypes[v]
+	except serializers.ValidationError:
+		raise
 	except:
 		raise serializers.ValidationError("Group Type is invalid")
 
 
 def group_scope_validator(v: str):
 	try:
-		LDAPGroupTypes(v)
+		if v.upper().startswith("TYPE_"):
+			raise serializers.ValidationError(
+				"Group Type cannot be set in Group Scope field.")
+
+		LDAPGroupTypes[v]
+	except serializers.ValidationError:
+		raise
 	except:
 		raise serializers.ValidationError("Group Scope is invalid")
 
-
 class LDAPGroupSerializer(serializers.Serializer):
 	# Common Name
+	name = serializers.CharField(required=False)
 	common_name = serializers.CharField(required=False)
 	# Distinguished Name
 	distinguished_name = DistinguishedNameField(required=False)
@@ -61,6 +75,10 @@ class LDAPGroupSerializer(serializers.Serializer):
 
 	def validate(self, data: dict):
 		"""Handle extra validation"""
+		if LOCAL_ATTR_NAME in data:
+			data[LOCAL_ATTR_COMMON_NAME] = data.get(LOCAL_ATTR_NAME)
+		if LOCAL_ATTR_COMMON_NAME in data:
+			data[LOCAL_ATTR_NAME] = data.get(LOCAL_ATTR_COMMON_NAME)
 		group_types = data.get(LOCAL_ATTR_GROUP_TYPE, None)
 		group_scopes = data.get(LOCAL_ATTR_GROUP_SCOPE, None)
 		if not all(
