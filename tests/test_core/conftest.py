@@ -13,6 +13,7 @@ from core.models.interlock_settings import (
 	INTERLOCK_SETTING_ENABLE_LDAP,
 	TYPE_BOOL,
 )
+from core.models.ldap_settings import LDAPSetting
 from copy import deepcopy
 
 
@@ -33,9 +34,15 @@ def g_interlock_ldap_disabled(db):
 
 
 @pytest.fixture(autouse=True)
-def teardown_interlock_setting(db):
+def teardown_interlock_settings(db):
 	yield
 	InterlockSetting.objects.all().delete()
+
+
+@pytest.fixture(autouse=True)
+def teardown_ldap_settings(db):
+	yield
+	LDAPSetting.objects.all().delete()
 
 
 class RuntimeSettingsFactory(Protocol):
