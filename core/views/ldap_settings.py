@@ -56,7 +56,19 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
-from core.constants.attrs import LOCAL_ATTR_DN
+from core.constants.attrs import (
+	LOCAL_ATTR_ID,
+	LOCAL_ATTR_DN,
+	LOCAL_ATTR_NAME,
+	LOCAL_ATTR_TYPE,
+	LOCAL_ATTR_VALUE,
+	LOCAL_ATTR_PRESET,
+)
+from core.constants.settings import (
+	K_LDAP_FIELD_MAP,
+	K_LDAP_LOG_MAX,
+	K_LDAP_AUTH_TLS_VERSION,
+)
 from core.ldap import defaults
 from interlock_backend.encrypt import aes_encrypt
 from core.decorators.login import auth_required, admin_required
@@ -82,8 +94,8 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		for p in LDAPPreset.objects.all():
 			presets.append(
 				{
-					"name": p.name,
-					"id": p.id,
+					LOCAL_ATTR_NAME: p.name,
+					LOCAL_ATTR_ID: p.id,
 					"label": p.label,
 					"active": p.active or False,
 				}
@@ -153,7 +165,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		preset_name = self.normalize_preset_name(preset_label)
 		if LDAPPreset.objects.filter(name=preset_name).exists():
 			raise exc_set.SettingPresetExists
-		preset = {"name": preset_name, "label": preset_label}
+		preset = {LOCAL_ATTR_NAME: preset_name, "label": preset_label}
 		serializer = LDAPPresetSerializer(data=preset)
 		if not serializer.is_valid():
 			raise exc_set.SettingPresetSerializerError(
@@ -169,9 +181,9 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	def preset_delete(self, request: Request, pk=None):
 		data: dict = request.data
 		code = 0
-		if not "id" in data:
-			raise exc_base.MissingDataKey(data={"key": "id"})
-		preset_id = data["id"]
+		if not LOCAL_ATTR_ID in data:
+			raise exc_base.MissingDataKey(data={"key": LOCAL_ATTR_ID})
+		preset_id = data[LOCAL_ATTR_ID]
 		if not LDAPPreset.objects.filter(id=preset_id).exists():
 			raise exc_set.SettingPresetNotExists
 		active_preset = self.get_active_settings_preset()
@@ -186,9 +198,9 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	def preset_enable(self, request: Request, pk=None):
 		data: dict = request.data
 		code = 0
-		if not "id" in data:
-			raise exc_base.MissingDataKey(data={"key": "id"})
-		preset_id = data["id"]
+		if not LOCAL_ATTR_ID in data:
+			raise exc_base.MissingDataKey(data={"key": LOCAL_ATTR_ID})
+		preset_id = data[LOCAL_ATTR_ID]
 		if not LDAPPreset.objects.filter(id=preset_id).exists():
 			raise exc_set.SettingPresetNotExists
 		with transaction.atomic():
@@ -210,10 +222,10 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	def preset_rename(self, request: Request, pk=None):
 		data: dict = request.data
 		code = 0
-		for k in ["id", "label"]:
+		for k in [LOCAL_ATTR_ID, "label"]:
 			if not k in data:
 				raise exc_base.MissingDataKey(data={"key": k})
-		preset_id = data["id"]
+		preset_id = data[LOCAL_ATTR_ID]
 		preset_label = data["label"]
 		if not LDAPPreset.objects.filter(id=preset_id).exists():
 			raise exc_set.SettingPresetNotExists
@@ -222,7 +234,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		serializer = LDAPPresetSerializer(
 			data={
 				"label": preset_label,
-				"name": self.normalize_preset_name(preset_label),
+				LOCAL_ATTR_NAME: self.normalize_preset_name(preset_label),
 			}
 		)
 		if not serializer.is_valid():
@@ -230,7 +242,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 				data={"errors": serializer.errors}
 			)
 		preset.label = serializer.data["label"]
-		preset.name = serializer.data["name"]
+		preset.name = serializer.data[LOCAL_ATTR_NAME]
 		preset.save()
 
 		return Response(data={"code": code, "code_msg": "ok"})
@@ -245,9 +257,11 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		settings_preset = None
 		active_preset = None
 
-		if "id" in data_preset:
+		if LOCAL_ATTR_ID in data_preset:
 			try:
-				settings_preset = LDAPPreset.objects.get(id=data_preset["id"])
+				settings_preset = LDAPPreset.objects.get(
+					id=data_preset[LOCAL_ATTR_ID]
+				)
 			except:
 				raise exc_set.SettingPresetNotExists
 		else:
@@ -255,8 +269,8 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 		# active_preset = self.get_active_settings_preset()
 		# current_settings = get_setting_list(active_preset)
-		if "LDAP_LOG_MAX" in data_settings:
-			if int(data_settings["LDAP_LOG_MAX"]["value"]) > 10000:
+		if K_LDAP_LOG_MAX in data_settings:
+			if int(data_settings[K_LDAP_LOG_MAX][LOCAL_ATTR_VALUE]) > 10000:
 				raise exc_set.SettingLogMaxLimit
 
 		admin_enabled = data_settings.pop("DEFAULT_ADMIN_ENABLED")
@@ -275,11 +289,11 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 						data={"field": param_name}
 					)
 				param_type = INTERLOCK_SETTING_MAP[param_name]
-				param_value = param_value.pop("value")
+				param_value = param_value.pop(LOCAL_ATTR_VALUE)
 				kwdata = {
-					"name": param_name,
-					"type": param_type.lower(),
-					"value": param_value,
+					LOCAL_ATTR_NAME: param_name,
+					LOCAL_ATTR_TYPE: param_type.lower(),
+					LOCAL_ATTR_VALUE: param_value,
 				}
 
 				serializer = InterlockSettingSerializer(data=kwdata)
@@ -308,7 +322,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 				param_value = param_value.pop("value")
 
 				is_default = False
-				if param_name == "LDAP_AUTH_TLS_VERSION":
+				if param_name == K_LDAP_AUTH_TLS_VERSION:
 					is_default = getattr(ssl, param_value) == getattr(
 						defaults, param_name, None
 					)
@@ -329,14 +343,14 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 						pass
 				else:
 					kwdata = {
-						"name": param_name,
-						"type": param_type.lower(),
-						"preset": settings_preset,
+						LOCAL_ATTR_NAME: param_name,
+						LOCAL_ATTR_TYPE: param_type.lower(),
+						LOCAL_ATTR_PRESET: settings_preset,
 					}
 
 					if param_type == TYPE_AES_ENCRYPT.lower():
-						kwdata["value"] = aes_encrypt(param_value)
-					elif param_name == "LDAP_FIELD_MAP":
+						kwdata[LOCAL_ATTR_VALUE] = aes_encrypt(param_value)
+					elif param_name == K_LDAP_FIELD_MAP:
 						param_value: dict
 						_non_nullables = list(
 							defaults.LDAP_AUTH_USER_LOOKUP_FIELDS
@@ -353,9 +367,9 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 										f"{_k} is not a nullable field."
 									)
 								param_value[_k] = None
-						kwdata["value"] = param_value
+						kwdata[LOCAL_ATTR_VALUE] = param_value
 					else:
-						kwdata["value"] = param_value
+						kwdata[LOCAL_ATTR_VALUE] = param_value
 
 					serializer = LDAPSettingSerializer(data=kwdata)
 					if not serializer.is_valid():
