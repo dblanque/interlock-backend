@@ -61,7 +61,7 @@ class UserViewsetFilterAttributeBuilder(SearchAttrBuilder):
 			self._to_ldap(LOCAL_ATTR_UAC),  # Permission ACLs
 			self._to_ldap(LOCAL_ATTR_CREATED),
 			self._to_ldap(LOCAL_ATTR_MODIFIED),
-			self._to_ldap(LOCAL_ATTR_LAST_LOGIN),
+			self._to_ldap(LOCAL_ATTR_LAST_LOGIN_WIN32),
 			self._to_ldap(LOCAL_ATTR_BAD_PWD_COUNT),
 			self._to_ldap(LOCAL_ATTR_PWD_SET_AT),
 			self._to_ldap(LOCAL_ATTR_PRIMARY_GROUP_ID),
@@ -98,7 +98,7 @@ class UserViewsetFilterAttributeBuilder(SearchAttrBuilder):
 			LOCAL_ATTR_USERNAME,  # LDAP Uses sAMAccountName
 			LOCAL_ATTR_CREATED,
 			LOCAL_ATTR_MODIFIED,
-			LOCAL_ATTR_LAST_LOGIN,
+			LOCAL_ATTR_LAST_LOGIN_WIN32,
 			LOCAL_ATTR_BAD_PWD_COUNT,
 			LOCAL_ATTR_PWD_SET_AT,
 			LOCAL_ATTR_IS_ENABLED,
