@@ -33,7 +33,6 @@ from core.constants.attrs import (
 from core.exceptions import (
 	ldap as exc_ldap,
 	groups as exc_groups,
-	dirtree as exc_dirtree,
 )
 from core.views.mixins.logs import LogMixin
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
@@ -44,8 +43,6 @@ from ldap3 import (
 	Connection,
 )
 from core.models.application import Application, ApplicationSecurityGroup
-from ldap3.utils.dn import safe_rdn
-from ldap3.extend import ExtendedOperationsRoot, MicrosoftExtendedOperations
 from core.ldap.connector import LDAPConnector
 from core.ldap.filter import LDAPFilter
 from core.ldap.security_identifier import SID
@@ -57,8 +54,8 @@ from core.models.choices.log import (
 	LOG_CLASS_GROUP,
 	LOG_TARGET_ALL,
 )
-from ldap3 import ALL_OPERATIONAL_ATTRIBUTES, ALL_ATTRIBUTES
-from typing import Union, Protocol, overload
+from ldap3 import ALL_OPERATIONAL_ATTRIBUTES
+from typing import Protocol, overload
 from logging import Logger
 
 @pytest.fixture
