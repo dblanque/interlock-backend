@@ -627,6 +627,9 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		user_obj = LDAPUser(
 			connection=self.ldap_connection, username=user_search
 		)
+		if return_entry:
+			return user_obj.entry
+
 		user_dict = user_obj.attributes
 
 		DBLogMixin.log(
@@ -722,9 +725,6 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		]:
 			if fld in _result:
 				_result[fld] = _result[fld].strftime(LDAP_DATE_FORMAT)
-
-		if return_entry:
-			return user_obj.entry
 		return _result
 
 	def ldap_user_change_status(
