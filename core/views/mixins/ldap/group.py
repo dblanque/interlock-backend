@@ -47,7 +47,6 @@ from core.exceptions import (
 
 ### Others
 from rest_framework.request import Request
-from ldap3.utils.dn import safe_dn
 from core.views.mixins.utils import getldapattrvalue
 from typing import List, TypedDict, Literal
 from django.db import transaction
@@ -262,11 +261,6 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		distinguished_name = data.get(LOCAL_ATTR_DN, None)
 		if not distinguished_name:
 			raise exc_groups.GroupDistinguishedNameMissing
-		else:
-			try:
-				safe_dn(distinguished_name)
-			except:
-				raise exc_ldap.DistinguishedNameValidationError
 
 		# !!! CHECK IF GROUP EXISTS AND FETCH ATTRS !!! #
 		# We need to fetch the existing LDAP group object to know what
@@ -276,6 +270,9 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			distinguished_name=distinguished_name,
 			search_attrs=self.ldap_filter_attr,
 		)
+		if not group_obj.exists:
+			raise exc_groups.GroupDoesNotExist
+
 		group_types = group_obj.attributes.get(LOCAL_ATTR_GROUP_TYPE, [])
 		if LDAPGroupTypes.TYPE_SYSTEM.name in group_types:
 			if not LDAPGroupTypes.TYPE_SYSTEM.name in data.get(
@@ -286,8 +283,6 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 						LOCAL_ATTR_GROUP_TYPE: "System Group cannot have its SYSTEM flag removed."
 					}
 				)
-		if not group_obj.exists:
-			raise exc_groups.GroupDoesNotExist
 
 		group_obj.attributes = data
 		group_obj.save()
@@ -296,12 +291,15 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			user=self.request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_GROUP,
-			log_target=group_obj.attributes.get(LOCAL_ATTR_NAME),
+			log_target=group_obj.attributes.get(
+				LOCAL_ATTR_NAME,
+				group_obj.__get_common_name__()
+			),
 		)
 		return self.ldap_connection
 
 	def delete_group(self, group_data: GroupDict):
-		distinguished_name = group_data.get(LOCAL_ATTR_DN, None)
+		distinguished_name: str = group_data.get(LOCAL_ATTR_DN, None)
 		if not distinguished_name:
 			logger.error(group_data)
 			raise exc_ldap.DistinguishedNameValidationError
@@ -318,10 +316,14 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			raise exc_groups.GroupDoesNotExist
 
 		# Check if group is a builtin object
-		group_cn: str = group_obj.attributes.get(LOCAL_ATTR_NAME)
+		group_cn: str = group_obj.attributes.get(
+			LOCAL_ATTR_NAME,
+			group_obj.__get_common_name__()
+		)
 		if group_cn.lower().startswith("cn="):
 			group_cn = group_cn.split("=")[-1]
 
+		# Detect CN and DN mismatch
 		if group_cn.lower() not in distinguished_name.lower():
 			raise exc_ldap.DistinguishedNameValidationError
 
@@ -333,7 +335,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			raise exc_groups.GroupBuiltinProtect
 
 		try:
-			self.ldap_connection.delete(dn=distinguished_name)
+			group_obj.delete()
 		except:
 			raise exc_groups.GroupDelete(
 				data={"ldap_response": self.ldap_connection.result}
