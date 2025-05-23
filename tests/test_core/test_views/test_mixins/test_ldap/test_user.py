@@ -191,13 +191,13 @@ def f_ldap_user_cls(mocker: MockerFixture, f_ldap_user_instance):
 	)
 
 class TestGetUserObjectFilter:
-	def test_get_user_object_filter_xor_raises(
+	def test_xor_raises(
 		self, f_user_mixin: LDAPUserMixin
 	):
 		with pytest.raises(ValueError, match="single value"):
 			f_user_mixin.get_user_object_filter(username="a", email="b")
 
-	def test_get_user_object_filter_xor_match_raises(
+	def test_xor_match_raises(
 		self, f_user_mixin: LDAPUserMixin
 	):
 		with pytest.raises(ValueError, match="incompatible"):
@@ -232,7 +232,7 @@ class TestGetUserObjectFilter:
 			),
 		),
 	)
-	def test_get_user_object_filter_xor(
+	def test_with_xor(
 		self,
 		username: str,
 		email: str,
@@ -280,7 +280,7 @@ class TestGetUserObjectFilter:
 			),
 		),
 	)
-	def test_get_user_object_filter_no_xor(
+	def test_without_xor(
 		self,
 		username: str,
 		email: str,
@@ -300,22 +300,22 @@ class TestGetUserObjectFilter:
 
 
 class TestGetUserEntry:
-	def test_get_user_entry_raises_value_error(
+	def test_raises_value_error(
 		self, f_user_mixin: LDAPUserMixin
 	):
 		with pytest.raises(ValueError):
 			f_user_mixin.get_user_entry()
 
-	def test_get_user_entry_raises_not_found(self, f_user_mixin: LDAPUserMixin):
+	def test_raises_not_found(self, f_user_mixin: LDAPUserMixin):
 		with pytest.raises(exc_user.UserEntryNotFound):
 			f_user_mixin.get_user_entry(
 				username="testuser", raise_if_not_exists=True
 			)
 
-	def test_get_user_entry_returns_none(self, f_user_mixin: LDAPUserMixin):
+	def test_returns_none(self, f_user_mixin: LDAPUserMixin):
 		assert f_user_mixin.get_user_entry(username="testuser") is None
 
-	def test_get_user_entry_no_entries(self, f_user_mixin: LDAPUserMixin):
+	def test_no_entries(self, f_user_mixin: LDAPUserMixin):
 		f_user_mixin.ldap_connection.entries = []
 		assert f_user_mixin.get_user_entry(username="some_user") is None
 
@@ -337,7 +337,7 @@ class TestGetUserObject:
 			),
 		),
 	)
-	def test_get_user_object(
+	def test_success(
 		self,
 		mocker: MockerFixture,
 		username,
@@ -359,7 +359,7 @@ class TestGetUserObject:
 		f_user_mixin.ldap_connection.search.assert_called_once()
 		m_get_user_entry.assert_called_once_with(username=username, email=email)
 
-	def test_get_user_object_raises(self, f_user_mixin: LDAPUserMixin):
+	def test_raises(self, f_user_mixin: LDAPUserMixin):
 		with pytest.raises(ValidationError):
 			f_user_mixin.get_user_object()
 
@@ -408,7 +408,7 @@ class TestSetLdapPassword:
 			"TypeError raised for bad user_pwd_old",
 		],
 	)
-	def test_ldap_set_password_raises_type_error(
+	def test_raises_type_error(
 		self,
 		f_user_mixin: LDAPUserMixin,
 		user_dn: str,
@@ -423,7 +423,7 @@ class TestSetLdapPassword:
 				user_pwd_old=user_pwd_old,
 			)
 
-	def test_ldap_set_password_raises_value_error(
+	def test_raises_value_error(
 		self, f_user_mixin: LDAPUserMixin
 	):
 		with pytest.raises(ValueError):
@@ -431,7 +431,7 @@ class TestSetLdapPassword:
 				user_dn="mock_dn", user_pwd_new="", set_by_admin=True
 			)
 
-	def test_ldap_set_password_raises_pwds_dont_match(
+	def test_raises_pwds_dont_match(
 		self, f_user_mixin: LDAPUserMixin
 	):
 		with pytest.raises(exc_user.UserOldPasswordRequired):
@@ -441,7 +441,7 @@ class TestSetLdapPassword:
 				user_pwd_old="",
 			)
 
-	def test_ldap_set_password_adds_raises(
+	def test_adds_raises(
 		self, mocker: MockerFixture, f_user_mixin: LDAPUserMixin
 	):
 		m_logger = mocker.patch("core.views.mixins.ldap.user.logger")
@@ -465,7 +465,7 @@ class TestSetLdapPassword:
 		m_logger.exception.assert_called_once()
 		m_logger.error.assert_called_once()
 
-	def test_ldap_set_password_samba_raises(
+	def test_samba_raises(
 		self, mocker: MockerFixture, f_user_mixin: LDAPUserMixin
 	):
 		m_logger = mocker.patch("core.views.mixins.ldap.user.logger")
@@ -489,7 +489,7 @@ class TestSetLdapPassword:
 		m_logger.exception.assert_called_once()
 		m_logger.error.assert_called_once()
 
-	def test_ldap_set_password_adds_admin(self, f_user_mixin: LDAPUserMixin):
+	def test_adds_admin(self, f_user_mixin: LDAPUserMixin):
 		extended_operations: ExtendedOperationsRoot = (
 			f_user_mixin.ldap_connection.extend
 		)
@@ -508,7 +508,7 @@ class TestSetLdapPassword:
 			user=m_distinguished_name, new_password="new_pwd"
 		)
 
-	def test_ldap_set_password_samba_admin(self, f_user_mixin: LDAPUserMixin):
+	def test_samba_admin(self, f_user_mixin: LDAPUserMixin):
 		extended_operations: ExtendedOperationsRoot = (
 			f_user_mixin.ldap_connection.extend
 		)
@@ -527,7 +527,7 @@ class TestSetLdapPassword:
 			user=m_distinguished_name, new_password="new_pwd"
 		)
 
-	def test_ldap_set_password_adds_user(self, f_user_mixin: LDAPUserMixin):
+	def test_adds_user(self, f_user_mixin: LDAPUserMixin):
 		extended_operations: ExtendedOperationsRoot = (
 			f_user_mixin.ldap_connection.extend
 		)
@@ -548,7 +548,7 @@ class TestSetLdapPassword:
 			old_password="old_pwd",
 		)
 
-	def test_ldap_set_password_samba_user(self, f_user_mixin: LDAPUserMixin):
+	def test_samba_user(self, f_user_mixin: LDAPUserMixin):
 		extended_operations: ExtendedOperationsRoot = (
 			f_user_mixin.ldap_connection.extend
 		)
@@ -570,7 +570,7 @@ class TestSetLdapPassword:
 		)
 
 class TestLdapUserExists:
-	def test_ldap_user_exists_raises_validation_error(
+	def test_raises_validation_error(
 		self, f_user_mixin: LDAPUserMixin
 	):
 		with pytest.raises(ValidationError):
@@ -593,7 +593,7 @@ class TestLdapUserExists:
 			),
 		),
 	)
-	def test_ldap_user_exists(
+	def test_exists(
 		self,
 		username: str,
 		email: str,
@@ -614,7 +614,7 @@ class TestLdapUserExists:
 			is True
 		)
 
-	def test_ldap_user_exists_returns_false(
+	def test_returns_false(
 		self, f_user_mixin: LDAPUserMixin, fc_user_entry
 	):
 		f_user_mixin.ldap_connection.entries = [
@@ -660,7 +660,7 @@ class TestFetch:
 			),
 		),
 	)
-	def test_ldap_user_fetch(
+	def test_success(
 		self,
 		mocker: MockerFixture,
 		m_member_of_objects,
@@ -746,7 +746,7 @@ class TestFetch:
 		assert result[LOCAL_ATTR_IS_ENABLED] == expected_enabled
 		assert result[LOCAL_ATTR_CREATED] == m_when_created
 
-	def test_ldap_user_fetch_raises_group_fetch_error(
+	def test_raises_group_fetch_error(
 		self,
 		mocker: MockerFixture,
 		f_user_mixin: LDAPUserMixin,
@@ -876,7 +876,7 @@ class TestChangeStatus:
 		],
 	)
 	@pytest.mark.django_db
-	def test_ldap_user_change_status(
+	def test_success(
 		self,
 		enabled: bool,
 		permissions: list[str],
@@ -926,7 +926,7 @@ class TestChangeStatus:
 			assert m_django_user.is_enabled == enabled
 			m_django_user.save.assert_called_once()
 
-	def test_ldap_user_change_status_raises_anti_lockout(
+	def test_raises_anti_lockout(
 		self,
 		mocker: MockerFixture,
 		fc_user_entry,
@@ -945,7 +945,7 @@ class TestChangeStatus:
 				username="testuser", enabled=False
 			)
 
-	def test_ldap_user_change_status_raises_permission_error(
+	def test_raises_permission_error(
 		self,
 		mocker: MockerFixture,
 		fc_user_entry,
@@ -969,7 +969,7 @@ class TestChangeStatus:
 			)
 
 class TestUnlock:
-	def test_ldap_user_unlock(
+	def test_success(
 		self,
 		mocker: MockerFixture,
 		fc_user_entry,
@@ -1000,7 +1000,8 @@ class TestUnlock:
 			message=LOG_EXTRA_UNLOCK,
 		)
 
-	def test_ldap_user_delete(
+class TestDelete:
+	def test_success(
 		self,
 		mocker: MockerFixture,
 		fc_user_entry,
