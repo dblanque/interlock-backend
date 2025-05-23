@@ -8,8 +8,8 @@ from core.views.mixins.ldap.user import LDAPUserMixin
 from core.ldap.defaults import LDAP_DOMAIN
 from rest_framework.serializers import ValidationError
 from core.models.user import User
-from typing import Union
-from ldap3 import MODIFY_DELETE, MODIFY_REPLACE
+from typing import Union, Protocol, overload
+from ldap3 import MODIFY_REPLACE
 from core.views.mixins.utils import getldapattrvalue, getlocalkeyforldapattr
 from datetime import datetime
 from core.models.choices.log import (
@@ -36,7 +36,7 @@ from core.exceptions import (
 	ldap as exc_ldap,
 )
 from core.ldap.filter import LDAPFilter
-from core.models.ldap_object import LDAPObject
+from core.models.ldap_object import LDAPObject, LDAPObjectTypes
 from ldap3 import Entry as LDAPEntry
 from ldap3.extend import (
 	ExtendedOperationsRoot,
@@ -132,12 +132,26 @@ def f_default_user_filter(f_runtime_settings: RuntimeSettingsSingleton):
 
 	return maker
 
+class LDAPUserEntryFactory(Protocol):
+	@overload
+	def __call__(
+		self,
+		spec=False,
+		**kwargs
+	) -> LDAPEntry: ...
 
-class FakeUserLDAPEntry(LDAPEntry):
-	givenName: str = None
-	sn: str = None
-	initials: str = None
+	def __call__(
+		self,
+		username="testuser",
+		spec=False,
+		**kwargs
+	) -> LDAPEntry: ...
 
+	def __call__(
+		self,
+		username="testuser",
+		**kwargs
+	) -> LDAPEntry: ...
 
 @pytest.fixture
 def fc_user_entry(
@@ -146,8 +160,13 @@ def fc_user_entry(
 	f_ldap_search_base,
 	_fld,
 	f_ldap_domain,
-):
+) -> LDAPUserEntryFactory:
 	def maker(username="testuser", **kwargs):
+		with_spec = kwargs.pop("spec", False)
+		if with_spec:
+			spec_cls = LDAPEntry
+		else:
+			spec_cls = None
 		attrs = {
 			_fld(LOCAL_ATTR_USERNAME): username,
 			_fld(LOCAL_ATTR_EMAIL): f"{username}@{f_ldap_domain}",
@@ -156,7 +175,7 @@ def fc_user_entry(
 			_fld(LOCAL_ATTR_LAST_NAME): "User",
 			_fld(LOCAL_ATTR_INITIALS): "TU",
 		} | kwargs
-		return fc_ldap_entry(**attrs)
+		return fc_ldap_entry(spec=spec_cls, **attrs)
 
 	return maker
 
@@ -364,8 +383,121 @@ class TestGetUserObject:
 			f_user_mixin.get_user_object()
 
 class TestDunderGetAllLdapUsers:
-	def test_not_implemented(self):
-		raise NotImplementedError
+	@pytest.fixture
+	def expected_search_filter(
+		self,
+		f_runtime_settings: RuntimeSettingsSingleton
+	):
+		_flt = LDAPFilter.and_(
+			LDAPFilter.eq(
+				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
+				f_runtime_settings.LDAP_AUTH_OBJECT_CLASS,
+			),
+			LDAPFilter.not_(
+				LDAPFilter.eq(
+					f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
+					"computer",
+				)
+			),
+			LDAPFilter.not_(
+				LDAPFilter.eq(
+					f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
+					"contact",
+				)
+			),
+		).to_string()
+		return _flt
+
+	@pytest.fixture
+	def expected_search_attrs(self, _fld):
+		return [
+			_fld(LOCAL_ATTR_FIRST_NAME),
+			_fld(LOCAL_ATTR_LAST_NAME),
+			_fld(LOCAL_ATTR_FULL_NAME),
+			_fld(LOCAL_ATTR_USERNAME),
+			_fld(LOCAL_ATTR_EMAIL),
+			_fld(LOCAL_ATTR_DN),
+			_fld(LOCAL_ATTR_UAC),
+		]
+
+	def test_success_as_list_of_dict(
+		self,
+		_fld,
+		fc_user_entry: LDAPUserEntryFactory,
+		f_user_mixin: LDAPUserMixin,
+		f_runtime_settings: RuntimeSettingsSingleton,
+		expected_search_filter,
+		expected_search_attrs,
+	):
+		m_entries = [
+			fc_user_entry(username="test1", spec=True),
+			fc_user_entry(username="test2", spec=True, **{
+				_fld(LOCAL_ATTR_UAC): calc_permissions([
+					LDAP_UF_NORMAL_ACCOUNT,
+					LDAP_UF_DONT_EXPIRE_PASSWD,
+				])
+			}),
+			fc_user_entry(username="test3", spec=True, **{
+				_fld(LOCAL_ATTR_UAC): calc_permissions([
+					LDAP_UF_ACCOUNT_DISABLE,
+					LDAP_UF_NORMAL_ACCOUNT,
+					LDAP_UF_DONT_EXPIRE_PASSWD,
+				])
+			}),
+		]
+		f_user_mixin.ldap_connection.entries = m_entries
+
+		# Assert
+		result = f_user_mixin._get_all_ldap_users(as_entries=False)
+		f_user_mixin.ldap_connection.search.assert_called_once_with(
+			search_base=f_runtime_settings.LDAP_AUTH_SEARCH_BASE,
+			search_filter=expected_search_filter,
+			attributes=expected_search_attrs,
+		)
+		for idx, user in enumerate(result):
+			expected_keys = {
+				LOCAL_ATTR_DN,
+				LOCAL_ATTR_USERNAME,
+				LOCAL_ATTR_NAME,
+				LOCAL_ATTR_TYPE,
+				LOCAL_ATTR_EMAIL,
+				LOCAL_ATTR_FIRST_NAME,
+				LOCAL_ATTR_LAST_NAME,
+				LOCAL_ATTR_INITIALS,
+			}
+			if LOCAL_ATTR_IS_ENABLED in user:
+				expected_keys.add(LOCAL_ATTR_IS_ENABLED)
+			assert set(user.keys()) == expected_keys
+			assert user[LOCAL_ATTR_TYPE] == LDAPObjectTypes.USER.name.lower()
+			assert user[LOCAL_ATTR_USERNAME] == getldapattrvalue(
+				m_entries[idx], _fld(LOCAL_ATTR_USERNAME)
+			)
+		assert result[1][LOCAL_ATTR_IS_ENABLED]
+		assert not result[2][LOCAL_ATTR_IS_ENABLED]
+
+	def test_success_as_list_of_entries(
+		self,
+		fc_user_entry: LDAPUserEntryFactory,
+		f_user_mixin: LDAPUserMixin,
+		f_runtime_settings: RuntimeSettingsSingleton,
+		expected_search_filter,
+		expected_search_attrs,
+	):
+		m_entries = [
+			fc_user_entry(username="test1", spec=True),
+			fc_user_entry(username="test2", spec=True),
+			fc_user_entry(username="test3", spec=True),
+		]
+		f_user_mixin.ldap_connection.entries = m_entries
+
+		# Assert
+		result = f_user_mixin._get_all_ldap_users(as_entries=True)
+		f_user_mixin.ldap_connection.search.assert_called_once_with(
+			search_base=f_runtime_settings.LDAP_AUTH_SEARCH_BASE,
+			search_filter=expected_search_filter,
+			attributes=expected_search_attrs,
+		)
+		assert result == m_entries
 
 class TestList:
 	def test_not_implemented(self):
@@ -598,7 +730,7 @@ class TestLdapUserExists:
 		username: str,
 		email: str,
 		f_user_mixin: LDAPUserMixin,
-		fc_user_entry,
+		fc_user_entry: LDAPUserEntryFactory,
 	):
 		f_user_mixin.ldap_connection.entries = [fc_user_entry()]
 
@@ -668,7 +800,7 @@ class TestFetch:
 		sam_account_type,
 		expected_account_type,
 		f_user_mixin: LDAPUserMixin,
-		fc_user_entry,
+		fc_user_entry: LDAPUserEntryFactory,
 		f_log_mixin: LogMixin,
 		f_runtime_settings: RuntimeSettingsSingleton,
 		f_ldap_object,
@@ -750,7 +882,7 @@ class TestFetch:
 		self,
 		mocker: MockerFixture,
 		f_user_mixin: LDAPUserMixin,
-		fc_user_entry,
+		fc_user_entry: LDAPUserEntryFactory,
 		f_ldap_object,
 	):
 		m_user_entry: LDAPEntry = fc_user_entry(
@@ -885,7 +1017,7 @@ class TestChangeStatus:
 		mocker: MockerFixture,
 		f_user_mixin: LDAPUserMixin,
 		f_log_mixin: LogMixin,
-		fc_user_entry,
+		fc_user_entry: LDAPUserEntryFactory,
 		f_runtime_settings: RuntimeSettingsSingleton,
 		f_default_user_filter,
 	):
@@ -929,7 +1061,7 @@ class TestChangeStatus:
 	def test_raises_anti_lockout(
 		self,
 		mocker: MockerFixture,
-		fc_user_entry,
+		fc_user_entry: LDAPUserEntryFactory,
 		f_user_mixin: LDAPUserMixin,
 		f_runtime_settings: RuntimeSettingsSingleton,
 	):
@@ -948,7 +1080,7 @@ class TestChangeStatus:
 	def test_raises_permission_error(
 		self,
 		mocker: MockerFixture,
-		fc_user_entry,
+		fc_user_entry: LDAPUserEntryFactory,
 		f_user_mixin: LDAPUserMixin,
 		f_runtime_settings: RuntimeSettingsSingleton,
 	):
@@ -972,7 +1104,7 @@ class TestUnlock:
 	def test_success(
 		self,
 		mocker: MockerFixture,
-		fc_user_entry,
+		fc_user_entry: LDAPUserEntryFactory,
 		f_user_mixin: LDAPUserMixin,
 		f_log_mixin: LogMixin,
 	):
@@ -1004,12 +1136,12 @@ class TestDelete:
 	def test_success(
 		self,
 		mocker: MockerFixture,
-		fc_user_entry,
+		fc_user_entry: LDAPUserEntryFactory,
 		f_user_mixin: LDAPUserMixin,
 		f_log_mixin: LogMixin,
 	):
 		f_user_mixin.request.user.id = 1
-		m_user_entry: LDAPEntry = fc_user_entry()
+		m_user_entry = fc_user_entry()
 		mocker.patch.object(
 			f_user_mixin, "get_user_object", return_value=m_user_entry
 		)
