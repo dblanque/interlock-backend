@@ -418,7 +418,7 @@ def test_move_or_rename_object_raises_dn_validation_exception(
 	f_logger,
 ):
 	mocker.patch(
-		"core.views.mixins.ldap.organizational_unit.safe_dn",
+		"core.views.mixins.ldap.organizational_unit.parse_dn",
 		side_effect=Exception,
 	)
 	with pytest.raises(exc_ldap.DistinguishedNameValidationError):
