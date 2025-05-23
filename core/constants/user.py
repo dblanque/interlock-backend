@@ -1,4 +1,4 @@
-from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
+from .search_attr_builder import SearchAttrBuilder
 from core.constants.attrs import *
 
 LOCAL_PUBLIC_FIELDS_BASIC = (
@@ -28,70 +28,63 @@ BUILTIN_USERS = (
 )
 
 
-class UserViewsetFilterAttributeBuilder:
-	def __init__(self, settings: RuntimeSettingsSingleton):
-		if not isinstance(settings, RuntimeSettingsSingleton):
-			raise TypeError(
-				"Initialization for cls requires RuntimeSettingsSingleton instance."
-			)
-		self.RuntimeSettings = settings
-
+class UserViewsetFilterAttributeBuilder(SearchAttrBuilder):
 	def get_list_attrs(self):
 		return [
-			LDAP_ATTR_FIRST_NAME,
-			LDAP_ATTR_LAST_NAME,
-			LDAP_ATTR_FULL_NAME,
-			self.RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
-			LDAP_ATTR_EMAIL,
-			LDAP_ATTR_DN,
-			LDAP_ATTR_UAC,
+			self._to_ldap(LOCAL_ATTR_FIRST_NAME),
+			self._to_ldap(LOCAL_ATTR_LAST_NAME),
+			self._to_ldap(LOCAL_ATTR_FULL_NAME),
+			self._to_ldap(LOCAL_ATTR_USERNAME),
+			self._to_ldap(LOCAL_ATTR_EMAIL),
+			self._to_ldap(LOCAL_ATTR_DN),
+			self._to_ldap(LOCAL_ATTR_UAC),
 		]
 
 	def get_fetch_attrs(self):
 		return [
-			LDAP_ATTR_FIRST_NAME,
-			LDAP_ATTR_LAST_NAME,
-			LDAP_ATTR_FULL_NAME,
-			self.RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
-			LDAP_ATTR_EMAIL,
-			LDAP_ATTR_PHONE,
-			LDAP_ATTR_ADDRESS,
-			LDAP_ATTR_POSTAL_CODE,
-			LDAP_ATTR_CITY,  # Local / City
-			LDAP_ATTR_STATE,  # State/Province
-			LDAP_ATTR_COUNTRY,  # 2 Letter Code for Country
-			LDAP_ATTR_COUNTRY_DCC,  # INT
-			LDAP_ATTR_COUNTRY_ISO,  # Full Country Name
-			LDAP_ATTR_WEBSITE,
-			LDAP_ATTR_DN,
-			LDAP_ATTR_UPN,
-			LDAP_ATTR_UAC,  # Permission ACLs
-			LDAP_ATTR_CREATED,
-			LDAP_ATTR_MODIFIED,
-			LDAP_ATTR_LAST_LOGIN,
-			LDAP_ATTR_BAD_PWD_COUNT,
-			LDAP_ATTR_PWD_SET_AT,
-			LDAP_ATTR_PRIMARY_GROUP_ID,
-			LDAP_ATTR_OBJECT_CLASS,
-			LDAP_ATTR_OBJECT_CATEGORY,
-			LDAP_ATTR_SECURITY_ID,
-			LDAP_ATTR_ACCOUNT_TYPE,
-			LDAP_ATTR_USER_GROUPS,
+			self._to_ldap(LOCAL_ATTR_FIRST_NAME),
+			self._to_ldap(LOCAL_ATTR_LAST_NAME),
+			self._to_ldap(LOCAL_ATTR_FULL_NAME),
+			self._to_ldap(LOCAL_ATTR_USERNAME),
+			self._to_ldap(LOCAL_ATTR_EMAIL),
+			self._to_ldap(LOCAL_ATTR_PHONE),
+			self._to_ldap(LOCAL_ATTR_ADDRESS),
+			self._to_ldap(LOCAL_ATTR_POSTAL_CODE),
+			self._to_ldap(LOCAL_ATTR_CITY),  # Local / City
+			self._to_ldap(LOCAL_ATTR_STATE),  # State/Province
+			self._to_ldap(LOCAL_ATTR_COUNTRY),  # 2 Letter Code for Country
+			self._to_ldap(LOCAL_ATTR_COUNTRY_DCC),  # INT
+			self._to_ldap(LOCAL_ATTR_COUNTRY_ISO),  # Full Country Name
+			self._to_ldap(LOCAL_ATTR_WEBSITE),
+			self._to_ldap(LOCAL_ATTR_DN),
+			self._to_ldap(LOCAL_ATTR_UPN),
+			self._to_ldap(LOCAL_ATTR_UAC),  # Permission ACLs
+			self._to_ldap(LOCAL_ATTR_CREATED),
+			self._to_ldap(LOCAL_ATTR_MODIFIED),
+			self._to_ldap(LOCAL_ATTR_LAST_LOGIN),
+			self._to_ldap(LOCAL_ATTR_BAD_PWD_COUNT),
+			self._to_ldap(LOCAL_ATTR_PWD_SET_AT),
+			self._to_ldap(LOCAL_ATTR_PRIMARY_GROUP_ID),
+			self._to_ldap(LOCAL_ATTR_OBJECT_CLASS),
+			self._to_ldap(LOCAL_ATTR_OBJECT_CATEGORY),
+			self._to_ldap(LOCAL_ATTR_SECURITY_ID),
+			self._to_ldap(LOCAL_ATTR_ACCOUNT_TYPE),
+			self._to_ldap(LOCAL_ATTR_USER_GROUPS),
 		]
 
 	def get_update_attrs(self):
 		return [
-			self.RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
-			LDAP_ATTR_DN,
-			LDAP_ATTR_UPN,
-			LDAP_ATTR_UAC,
+			self._to_ldap(LOCAL_ATTR_USERNAME),
+			self._to_ldap(LOCAL_ATTR_DN),
+			self._to_ldap(LOCAL_ATTR_UPN),
+			self._to_ldap(LOCAL_ATTR_UAC),
 		]
 
 	def get_bulk_insert_attrs(self):
 		return [
-			self.RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
-			LDAP_ATTR_DN,
-			LDAP_ATTR_UPN,
+			self._to_ldap(LOCAL_ATTR_USERNAME),
+			self._to_ldap(LOCAL_ATTR_DN),
+			self._to_ldap(LOCAL_ATTR_UPN),
 		]
 
 	def get_update_self_exclude_keys(self):
@@ -101,29 +94,29 @@ class UserViewsetFilterAttributeBuilder:
 			LOCAL_ATTR_PASSWORD_CONFIRM,
 			LOCAL_ATTR_PATH,
 			LOCAL_ATTR_PERMISSIONS,  # This array is parsed and calculated later
-			LDAP_ATTR_DN,  # We don't want the front-end generated DN
+			LOCAL_ATTR_DN,  # We don't want the front-end generated DN
 			LOCAL_ATTR_USERNAME,  # LDAP Uses sAMAccountName
-			LDAP_ATTR_CREATED,
-			LDAP_ATTR_MODIFIED,
-			LDAP_ATTR_LAST_LOGIN,
-			LDAP_ATTR_BAD_PWD_COUNT,
-			LDAP_ATTR_PWD_SET_AT,
+			LOCAL_ATTR_CREATED,
+			LOCAL_ATTR_MODIFIED,
+			LOCAL_ATTR_LAST_LOGIN,
+			LOCAL_ATTR_BAD_PWD_COUNT,
+			LOCAL_ATTR_PWD_SET_AT,
 			LOCAL_ATTR_IS_ENABLED,
-			LDAP_ATTR_ACCOUNT_TYPE,
-			LDAP_ATTR_OBJECT_CATEGORY,
-			LDAP_ATTR_UAC,
-			LDAP_ATTR_OBJECT_CLASS,
-			LDAP_ATTR_PRIMARY_GROUP_ID,
+			LOCAL_ATTR_ACCOUNT_TYPE,
+			LOCAL_ATTR_OBJECT_CATEGORY,
+			LOCAL_ATTR_UAC,
+			LOCAL_ATTR_OBJECT_CLASS,
+			LOCAL_ATTR_PRIMARY_GROUP_ID,
 		]
 
 	def get_fetch_me_attrs(self):
 		_REMOVE = [
-			LDAP_ATTR_PRIMARY_GROUP_ID,
-			LDAP_ATTR_OBJECT_CLASS,
-			LDAP_ATTR_OBJECT_CATEGORY,
-			LDAP_ATTR_SECURITY_ID,
-			LDAP_ATTR_ACCOUNT_TYPE,
-			LDAP_ATTR_USER_GROUPS,
+			self._to_ldap(LOCAL_ATTR_PRIMARY_GROUP_ID),
+			self._to_ldap(LOCAL_ATTR_OBJECT_CLASS),
+			self._to_ldap(LOCAL_ATTR_OBJECT_CATEGORY),
+			self._to_ldap(LOCAL_ATTR_SECURITY_ID),
+			self._to_ldap(LOCAL_ATTR_ACCOUNT_TYPE),
+			self._to_ldap(LOCAL_ATTR_USER_GROUPS),
 		]
 		_RESULT = self.get_fetch_attrs()
 		for value in _REMOVE:
