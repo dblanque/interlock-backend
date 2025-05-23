@@ -33,7 +33,7 @@ from core.constants.attrs import (
 	LOCAL_ATTR_NAME,
 )
 from core.serializers.group import LDAPGroupSerializer
-from core.constants.group import GroupViewsetFilterAttributeBuilder
+from core.constants.group import LDAPGroupSearchAttrBuilder
 from core.decorators.login import auth_required, admin_required
 from core.decorators.intercept import ldap_backend_intercept
 from core.ldap.connector import LDAPConnector
@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 
 class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
-	filter_attr_builder = GroupViewsetFilterAttributeBuilder
+	filter_attr_builder = LDAPGroupSearchAttrBuilder
 
 	@auth_required
 	@admin_required

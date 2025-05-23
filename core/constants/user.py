@@ -28,7 +28,7 @@ BUILTIN_USERS = (
 )
 
 
-class UserViewsetFilterAttributeBuilder(SearchAttrBuilder):
+class LDAPUserSearchAttrBuilder(SearchAttrBuilder):
 	def get_list_attrs(self):
 		return [
 			self._to_ldap(LOCAL_ATTR_FIRST_NAME),

@@ -1,7 +1,7 @@
 from core.constants.attrs import *
 from .search_attr_builder import SearchAttrBuilder
 
-class GroupViewsetFilterAttributeBuilder(SearchAttrBuilder):
+class LDAPGroupSearchAttrBuilder(SearchAttrBuilder):
 	def get_list_filter(self):
 		return [
 			self._to_ldap(LOCAL_ATTR_COMMON_NAME),

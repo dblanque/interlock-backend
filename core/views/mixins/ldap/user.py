@@ -64,7 +64,7 @@ from core.serializers.user import UserSerializer
 from core.type_hints.connector import LDAPConnectionProtocol
 from core.views.mixins.utils import getldapattrvalue
 from ldap3.utils.dn import safe_dn
-from core.constants.user import UserViewsetFilterAttributeBuilder
+from core.constants.user import LDAPUserSearchAttrBuilder
 from core.constants.attrs import *
 from core.ldap.filter import LDAPFilter, LDAPFilterType
 from rest_framework.serializers import ValidationError
@@ -86,7 +86,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 	ldap_connection: LDAPConnectionProtocol = None
 	ldap_filter_object = None
 	ldap_filter_attr = None
-	filter_attr_builder = UserViewsetFilterAttributeBuilder
+	filter_attr_builder = LDAPUserSearchAttrBuilder
 	request: Request
 
 	@staticmethod
