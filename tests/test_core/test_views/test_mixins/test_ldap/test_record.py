@@ -326,9 +326,7 @@ def test_create_record(
 	m_ldap_record_instance.create = m_create
 	m_ldap_record_instance.soa_object = m_soa_object
 	m_ldap_record_instance.as_dict = record_fixture
-	m_ldap_record_instance.__fullname__ = mocker.Mock(
-		return_value="mock_fullname"
-	)
+	m_ldap_record_instance.display_name = "mock_fullname"
 
 	result = f_record_mixin.create_record(record_data=record_fixture)
 	m_ldap_record.assert_called_once_with(
