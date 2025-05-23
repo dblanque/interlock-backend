@@ -131,7 +131,10 @@ def fc_ldap_attr(mocker: MockerFixture) -> LDAPAttributeFactoryProtocol:
 			mock_attr.values = [v]
 			mock_attr.raw_values = [v]
 		else:
-			mock_attr.value = v[0] if len(v) < 2 else v
+			if v:
+				mock_attr.value = v[0] if len(v) < 2 else v
+			else:
+				mock_attr.value = v
 			mock_attr.values = v
 			mock_attr.raw_values = v
 		return mock_attr
