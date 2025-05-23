@@ -1,5 +1,8 @@
+########################### Standard Pytest Imports ############################
 import pytest
-from pytest_mock import MockType
+from pytest import FixtureRequest
+from pytest_mock import MockerFixture, MockType
+################################################################################
 from core.views.mixins.logs import LogMixin
 from core.views.mixins.ldap.user import LDAPUserMixin
 from core.ldap.defaults import LDAP_DOMAIN
@@ -7,7 +10,7 @@ from rest_framework.serializers import ValidationError
 from core.models.user import User
 from typing import Union
 from ldap3 import MODIFY_DELETE, MODIFY_REPLACE
-from core.views.mixins.utils import getldapattrvalue
+from core.views.mixins.utils import getldapattrvalue, getlocalkeyforldapattr
 from datetime import datetime
 from core.models.choices.log import (
 	LOG_ACTION_DELETE,
@@ -20,8 +23,6 @@ from core.models.choices.log import (
 )
 from core.ldap.types.account import LDAPAccountTypes
 from core.ldap.adsi import (
-	LDAP_FILTER_AND,
-	LDAP_FILTER_OR,
 	LDAP_PERMS,
 	LDAP_UF_LOCKOUT,
 	LDAP_UF_ACCOUNT_DISABLE,
@@ -42,17 +43,11 @@ from ldap3.extend import (
 	StandardExtendedOperations,
 	MicrosoftExtendedOperations,
 )
-from core.constants.attrs import (
-	LDAP_DATE_FORMAT,
-	LDAP_ATTR_FIRST_NAME,
-	LDAP_ATTR_LAST_NAME,
-	LDAP_ATTR_INITIALS,
-	LDAP_ATTR_COUNTRY,
-	LDAP_ATTR_EMAIL,
-	LDAP_ATTR_UAC,
-	LDAP_ATTR_OBJECT_CLASS,
+from core.constants.attrs import *
+from tests.test_core.conftest import (
+	RuntimeSettingsFactory,
+	LDAPEntryFactoryProtocol,
 )
-from tests.test_core.conftest import RuntimeSettingsFactory
 
 
 @pytest.fixture
@@ -78,12 +73,12 @@ def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
 
 @pytest.fixture
 def f_auth_field_username(f_runtime_settings: RuntimeSettingsSingleton):
-	return f_runtime_settings.LDAP_FIELD_MAP["username"]
+	return f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME]
 
 
 @pytest.fixture
 def f_auth_field_email(f_runtime_settings: RuntimeSettingsSingleton):
-	return f_runtime_settings.LDAP_FIELD_MAP["email"]
+	return f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_EMAIL]
 
 
 @pytest.fixture
@@ -110,9 +105,25 @@ def fc_user_permissions():
 
 
 @pytest.fixture
-def f_default_user_filter():
+def f_default_user_filter(f_runtime_settings: RuntimeSettingsSingleton):
 	def maker(username):
-		return f"(&(objectClass=person)(!(objectClass=computer))(sAMAccountName={username}))"
+		_filter = LDAPFilter.and_(
+			LDAPFilter.eq(
+				LDAP_ATTR_OBJECT_CLASS,
+				f_runtime_settings.LDAP_AUTH_OBJECT_CLASS
+			),
+			LDAPFilter.not_(
+				LDAPFilter.eq(
+					LDAP_ATTR_OBJECT_CLASS,
+					"computer"
+				)
+			),
+			LDAPFilter.eq(
+				LDAP_ATTR_USERNAME_SAMBA_ADDS,
+				username
+			)
+		).to_string()
+		return _filter
 
 	return maker
 
@@ -125,48 +136,36 @@ class FakeUserLDAPEntry(LDAPEntry):
 
 @pytest.fixture
 def fc_user_entry(
-	mocker,
+	mocker: MockerFixture,
+	fc_ldap_entry: LDAPEntryFactoryProtocol,
 	f_ldap_search_base,
 	f_auth_field_email,
 	f_auth_field_username,
 	f_ldap_domain,
 ):
 	def maker(username="testuser", **kwargs):
-		if "spec" in kwargs:
-			mock: LDAPEntry = mocker.MagicMock(spec=kwargs.pop("spec"))
-		else:
-			mock: LDAPEntry = mocker.MagicMock()
-		mock.entry_attributes = []
-		mock.entry_attributes_as_dict = {}
 		attrs = {
 			f_auth_field_username: username,
 			f_auth_field_email: f"{username}@{f_ldap_domain}",
-			"distinguishedName": f"CN={username},CN=Users,{f_ldap_search_base}",
+			LDAP_ATTR_DN: f"CN={username},CN=Users,{f_ldap_search_base}",
 			LDAP_ATTR_FIRST_NAME: "Test",
 			LDAP_ATTR_LAST_NAME: "User",
 			LDAP_ATTR_INITIALS: "TU",
 		} | kwargs
-		for k, v in attrs.items():
-			m_attr = mocker.Mock()
-			m_attr.value = v
-			m_attr.values = [v]
-			setattr(mock, k, m_attr)
-			mock.entry_attributes_as_dict[k] = [v]
-			mock.entry_attributes.append(k)
-		mock.entry_dn = attrs["distinguishedName"]
-		return mock
+		return fc_ldap_entry(**attrs)
 
 	return maker
 
 
 @pytest.fixture
-def f_ldap_object(mocker):
+def f_ldap_object(mocker: MockerFixture):
 	def maker(entry: LDAPEntry):
 		m_ldap_object: Union[MockType, LDAPObject] = mocker.MagicMock()
 		m_ldap_object.entry = entry
 		m_ldap_object.attributes = {}
 		for attr in entry.entry_attributes:
-			m_ldap_object.attributes[attr] = getldapattrvalue(entry, attr)
+			_field = getlocalkeyforldapattr(attr)
+			m_ldap_object.attributes[_field] = getldapattrvalue(entry, attr)
 		return m_ldap_object
 
 	return maker
@@ -176,6 +175,16 @@ def f_ldap_object(mocker):
 def f_group_dn(f_ldap_search_base):
 	return f"CN=testgroup,OU=Groups,{f_ldap_search_base}"
 
+@pytest.fixture
+def f_ldap_user_instance(mocker: MockerFixture):
+	return mocker.Mock(name="f_ldap_user_instance")
+
+@pytest.fixture
+def f_ldap_user_cls(mocker: MockerFixture, f_ldap_user_instance):
+	return mocker.patch(
+		"core.views.mixins.ldap.user.LDAPUser",
+		return_value=f_ldap_user_instance
+	)
 
 class TestLDAPUserMixin:
 	def test_get_user_object_filter_xor_raises(
@@ -323,7 +332,7 @@ class TestLDAPUserMixin:
 	)
 	def test_get_user_object(
 		self,
-		mocker,
+		mocker: MockerFixture,
 		username,
 		email,
 		f_user_mixin: LDAPUserMixin,
@@ -571,7 +580,7 @@ class TestLDAPUserMixin:
 		assert result == expected_dn
 
 	def test_ldap_user_insert_raises_path_exc(
-		self, mocker, f_user_mixin: LDAPUserMixin
+		self, mocker: MockerFixture, f_user_mixin: LDAPUserMixin
 	):
 		mocker.patch(
 			"core.views.mixins.ldap.user.safe_dn", side_effect=Exception
@@ -658,7 +667,7 @@ class TestLDAPUserMixin:
 		)
 
 	def test_ldap_user_update_keys_entry(
-		self, mocker, f_user_mixin: LDAPUserMixin, fc_user_entry
+		self, mocker: MockerFixture, f_user_mixin: LDAPUserMixin, fc_user_entry
 	):
 		mocker.patch("core.views.mixins.ldap.user.LDAPEntry", FakeUserLDAPEntry)
 		m_modify: MockType = f_user_mixin.ldap_connection.modify
@@ -765,7 +774,7 @@ class TestLDAPUserMixin:
 	)
 	def test_ldap_user_update_success(
 		self,
-		mocker,
+		mocker: MockerFixture,
 		f_user_mixin: LDAPUserMixin,
 		fc_user_entry: LDAPEntry,
 		user_data: dict,
@@ -817,7 +826,7 @@ class TestLDAPUserMixin:
 
 	def test_ldap_user_update_permission_error(
 		self,
-		mocker,
+		mocker: MockerFixture,
 		f_user_mixin: LDAPUserMixin,
 		fc_user_entry,
 		f_runtime_settings: RuntimeSettingsSingleton,
@@ -841,7 +850,7 @@ class TestLDAPUserMixin:
 
 	def test_ldap_user_update_country_error(
 		self,
-		mocker,
+		mocker: MockerFixture,
 		f_user_mixin: LDAPUserMixin,
 		fc_user_entry,
 		f_runtime_settings: RuntimeSettingsSingleton,
@@ -864,7 +873,7 @@ class TestLDAPUserMixin:
 
 	def test_ldap_user_update_group_conflict(
 		self,
-		mocker,
+		mocker: MockerFixture,
 		f_user_mixin: LDAPUserMixin,
 		fc_user_entry,
 		f_runtime_settings: RuntimeSettingsSingleton,
@@ -890,7 +899,7 @@ class TestLDAPUserMixin:
 
 	def test_ldap_user_update_attribute_error(
 		self,
-		mocker,
+		mocker: MockerFixture,
 		f_user_mixin: LDAPUserMixin,
 		fc_user_entry,
 		f_runtime_settings: RuntimeSettingsSingleton,
@@ -914,7 +923,7 @@ class TestLDAPUserMixin:
 
 	def test_ldap_user_update_lockout(
 		self,
-		mocker,
+		mocker: MockerFixture,
 		f_user_mixin: LDAPUserMixin,
 		fc_user_entry,
 		f_runtime_settings,
@@ -1009,7 +1018,7 @@ class TestLDAPUserMixin:
 			)
 
 	def test_ldap_set_password_adds_raises(
-		self, mocker, f_user_mixin: LDAPUserMixin
+		self, mocker: MockerFixture, f_user_mixin: LDAPUserMixin
 	):
 		m_logger = mocker.patch("core.views.mixins.ldap.user.logger")
 		extended_operations: ExtendedOperationsRoot = (
@@ -1033,7 +1042,7 @@ class TestLDAPUserMixin:
 		m_logger.error.assert_called_once()
 
 	def test_ldap_set_password_samba_raises(
-		self, mocker, f_user_mixin: LDAPUserMixin
+		self, mocker: MockerFixture, f_user_mixin: LDAPUserMixin
 	):
 		m_logger = mocker.patch("core.views.mixins.ldap.user.logger")
 		extended_operations: ExtendedOperationsRoot = (
@@ -1204,9 +1213,13 @@ class TestLDAPUserMixin:
 				# m_member_of_objects
 				[
 					{
-						"cn": "mock_group_2",
-						"distinguishedName": "mock_group_2_dn",
-					}
+						LOCAL_ATTR_NAME: "mock_group_2",
+						LOCAL_ATTR_DN: "mock_group_2_dn",
+					},
+					{
+						LOCAL_ATTR_NAME: "mock_group_3",
+						LOCAL_ATTR_DN: "mock_group_3_dn",
+					},
 				],
 				[LDAP_UF_NORMAL_ACCOUNT],  # user_account_control
 				LDAPAccountTypes.SAM_NORMAL_USER_ACCOUNT.value,  # sam_account_type
@@ -1223,7 +1236,7 @@ class TestLDAPUserMixin:
 	)
 	def test_ldap_user_fetch(
 		self,
-		mocker,
+		mocker: MockerFixture,
 		m_member_of_objects,
 		user_account_control,
 		sam_account_type,
@@ -1239,12 +1252,22 @@ class TestLDAPUserMixin:
 		f_user_mixin.request.user.id = 1
 
 		## Groups
+		_ldap_group_instances = [
+			mocker.Mock(attributes=group_attrs)
+			for group_attrs in m_member_of_objects
+		]
+
+		# Patch the class to return each mock in sequence
+		mocker.patch(
+			"core.views.mixins.ldap.user.LDAPGroup",
+			side_effect=_ldap_group_instances
+		)
 		m_primary_group = {
-			"cn": "mock_group_1",
-			"objectRid": 117,
-			"distinguishedName": "mock_group_1_dn",
+			LOCAL_ATTR_NAME: "mock_group_1",
+			LOCAL_ATTR_RELATIVE_ID: 117,
+			LOCAL_ATTR_DN: "mock_group_1_dn",
 		}
-		m_primary_group_id = m_primary_group["objectRid"]
+		m_primary_group_id = m_primary_group[LOCAL_ATTR_RELATIVE_ID]
 		m_group_mixin = mocker.patch(
 			"core.views.mixins.ldap.user.GroupViewMixin"
 		)
@@ -1256,23 +1279,20 @@ class TestLDAPUserMixin:
 		expected_enabled = not (LDAP_UF_ACCOUNT_DISABLE in user_account_control)
 		m_user_entry: LDAPEntry = fc_user_entry(
 			**{
-				"primaryGroupID": m_primary_group_id,
-				"memberOf": [
-					_g["distinguishedName"] for _g in m_member_of_objects
+				LDAP_ATTR_PRIMARY_GROUP_ID: m_primary_group_id,
+				LDAP_ATTR_USER_GROUPS: [
+					_g[LOCAL_ATTR_DN] for _g in m_member_of_objects
 				],
-				"userAccountControl": calc_permissions(user_account_control),
-				"sAMAccountType": sam_account_type,
-				"whenCreated": m_when_created,
+				LDAP_ATTR_UAC: calc_permissions(user_account_control),
+				LDAP_ATTR_ACCOUNT_TYPE: sam_account_type,
+				LDAP_ATTR_CREATED: m_when_created,
 			}
 		)
-		m_get_group_attributes: MockType = mocker.patch.object(
-			f_user_mixin,
-			"get_group_attributes",
-			side_effect=m_member_of_objects,
-		)
+		m_ldap_user = f_ldap_object(m_user_entry)
+		m_ldap_user.is_enabled = expected_enabled
 		mocker.patch(
-			"core.views.mixins.ldap.user.LDAPObject",
-			return_value=f_ldap_object(m_user_entry),
+			"core.views.mixins.ldap.user.LDAPUser",
+			return_value=m_ldap_user,
 		)
 
 		# Execution
@@ -1288,93 +1308,41 @@ class TestLDAPUserMixin:
 			log_target_class=LOG_CLASS_USER,
 			log_target=getldapattrvalue(
 				m_user_entry,
-				f_runtime_settings.LDAP_FIELD_MAP["username"],
+				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
 			),
 		)
-		m_get_group_attributes.call_count == 2
 		assert isinstance(result, dict)
-		assert result["sAMAccountType"] == expected_account_type
-		assert result["primaryGroupID"] == m_primary_group_id
+		assert result[LOCAL_ATTR_ACCOUNT_TYPE] == expected_account_type
+		assert result[LOCAL_ATTR_PRIMARY_GROUP_ID] == m_primary_group_id
 		for _g in m_group_objects:
-			assert _g in result["memberOfObjects"]
-		assert result["permission_list"] == user_account_control
-		assert result["is_enabled"] == expected_enabled
-		assert result["whenCreated"] == m_when_created
+			assert _g in result[LOCAL_ATTR_USER_GROUPS]
+		assert result[LOCAL_ATTR_PERMISSIONS] == user_account_control
+		assert result[LOCAL_ATTR_IS_ENABLED] == expected_enabled
+		assert result[LOCAL_ATTR_CREATED] == m_when_created
 
 	def test_ldap_user_fetch_raises_group_fetch_error(
 		self,
-		mocker,
+		mocker: MockerFixture,
 		f_user_mixin: LDAPUserMixin,
 		fc_user_entry,
 		f_ldap_object,
 	):
 		m_user_entry: LDAPEntry = fc_user_entry(
 			**{
-				"memberOf": [{"mock": "group"}],
+				LDAP_ATTR_USER_GROUPS: [{"mock": "group"}],
 			}
 		)
-		mocker.patch.object(
-			f_user_mixin, "get_group_attributes", side_effect=Exception
+		mocker.patch(
+			"core.views.mixins.ldap.user.LDAPGroup",
+			side_effect=Exception
 		)
 		mocker.patch(
-			"core.views.mixins.ldap.user.LDAPObject",
+			"core.views.mixins.ldap.user.LDAPUser",
 			return_value=f_ldap_object(m_user_entry),
 		)
 
 		with pytest.raises(exc_user.UserGroupsFetchError):
 			f_user_mixin.ldap_user_fetch(user_search="testuser")
-
-	@pytest.mark.parametrize(
-		"mocked_exc_effect, expected_log_count",
-		(
-			(Exception, 1),
-			([True, Exception], 1),
-			([Exception, Exception], 2),
-		),
-	)
-	def test_ldap_user_fetch_logs_permission_errors(
-		self,
-		mocked_exc_effect,
-		expected_log_count,
-		mocker,
-		f_user_mixin: LDAPUserMixin,
-		fc_user_entry,
-		f_ldap_object,
-	):
-		m_logger = mocker.patch("core.views.mixins.ldap.user.logger")
-		m_primary_group = {"cn": "mock_primary_group", "objectRid": 117}
-		m_primary_group_id = m_primary_group["objectRid"]
-		m_group_mixin = mocker.patch(
-			"core.views.mixins.ldap.user.GroupViewMixin"
-		)
-		m_group_mixin.get_group_by_rid.return_value = m_primary_group
-		m_member_of_objects = [{"distinguishedName": "mock_group_dn"}]
-		m_user_entry: LDAPEntry = fc_user_entry(
-			**{
-				"primaryGroupID": m_primary_group_id,
-				"memberOf": [
-					_g["distinguishedName"] for _g in m_member_of_objects
-				],
-				"sAMAccountType": LDAPAccountTypes.SAM_NORMAL_USER_ACCOUNT.value,
-			}
-		)
-		mocker.patch.object(
-			f_user_mixin,
-			"get_group_attributes",
-			side_effect=m_member_of_objects,
-		)
-		mocker.patch(
-			"core.views.mixins.ldap.user.ldap_adsi.list_user_perms",
-			side_effect=mocked_exc_effect,
-		)
-		mocker.patch(
-			"core.views.mixins.ldap.user.LDAPObject",
-			return_value=f_ldap_object(m_user_entry),
-		)
-
-		f_user_mixin.ldap_user_fetch(user_search="testuser")
-		m_logger.error.call_count == expected_log_count
-		m_logger.exception.call_count == expected_log_count
 
 	@pytest.mark.parametrize(
 		"enabled, permissions, expected_permissions, with_django_user",
@@ -1486,7 +1454,7 @@ class TestLDAPUserMixin:
 		permissions: list[str],
 		expected_permissions: list[str],
 		with_django_user: bool,
-		mocker,
+		mocker: MockerFixture,
 		f_user_mixin: LDAPUserMixin,
 		f_log_mixin: LogMixin,
 		fc_user_entry,
@@ -1532,7 +1500,7 @@ class TestLDAPUserMixin:
 
 	def test_ldap_user_change_status_raises_anti_lockout(
 		self,
-		mocker,
+		mocker: MockerFixture,
 		fc_user_entry,
 		f_user_mixin: LDAPUserMixin,
 		f_runtime_settings: RuntimeSettingsSingleton,
@@ -1551,7 +1519,7 @@ class TestLDAPUserMixin:
 
 	def test_ldap_user_change_status_raises_permission_error(
 		self,
-		mocker,
+		mocker: MockerFixture,
 		fc_user_entry,
 		f_user_mixin: LDAPUserMixin,
 		f_runtime_settings: RuntimeSettingsSingleton,
@@ -1574,7 +1542,7 @@ class TestLDAPUserMixin:
 
 	def test_ldap_user_unlock(
 		self,
-		mocker,
+		mocker: MockerFixture,
 		fc_user_entry,
 		f_user_mixin: LDAPUserMixin,
 		f_log_mixin: LogMixin,
@@ -1605,7 +1573,7 @@ class TestLDAPUserMixin:
 
 	def test_ldap_user_delete(
 		self,
-		mocker,
+		mocker: MockerFixture,
 		fc_user_entry,
 		f_user_mixin: LDAPUserMixin,
 		f_log_mixin: LogMixin,
