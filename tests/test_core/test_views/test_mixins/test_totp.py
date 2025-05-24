@@ -55,7 +55,7 @@ def f_logger(mocker: MockerFixture) -> MockType:
 
 @pytest.fixture(autouse=True)
 def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
-	g_runtime_settings("core.views.mixins.totp.RuntimeSettings")
+	return g_runtime_settings("core.views.mixins.totp.RuntimeSettings")
 
 
 # -------------------------------- TEST CLASSES --------------------------------#
