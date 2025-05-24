@@ -354,6 +354,9 @@ class TestUserModel:
 
 	def test_email_uniqueness(self):
 		"""Test email uniqueness with null=True scenario"""
+		# Ensure all Users are deleted.
+		User.objects.all().delete()
+
 		# Test non-null email uniqueness
 		email = "unique@example.com"
 
