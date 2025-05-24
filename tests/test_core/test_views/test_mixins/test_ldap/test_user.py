@@ -11,11 +11,14 @@ from core.models.user import User
 from typing import Union, Protocol, overload
 from ldap3 import MODIFY_REPLACE
 from core.views.mixins.utils import getldapattrvalue, getlocalkeyforldapattr
+from django.core.exceptions import ObjectDoesNotExist
 from datetime import datetime
 from core.models.choices.log import (
 	LOG_ACTION_DELETE,
 	LOG_ACTION_READ,
 	LOG_ACTION_UPDATE,
+	LOG_ACTION_CREATE,
+	LOG_TARGET_ALL,
 	LOG_CLASS_USER,
 	LOG_EXTRA_ENABLE,
 	LOG_EXTRA_DISABLE,
@@ -55,6 +58,7 @@ def f_user_mixin(mocker):
 	mixin = LDAPUserMixin()
 	mixin.ldap_connection = mocker.MagicMock()
 	mixin.request = mocker.MagicMock()
+	mixin.request.user.id = 1
 	return mixin
 
 
@@ -506,16 +510,218 @@ class TestDunderGetAllLdapUsers:
 		assert result == m_entries
 
 class TestList:
-	def test_not_implemented(self):
-		raise NotImplementedError
+	def test_success(
+		self,
+		mocker: MockerFixture,
+		f_user_mixin: LDAPUserMixin,
+		f_log_mixin: LogMixin,
+	):
+		m_result = [
+				{"username":"user1"},
+				{"username":"user2"},
+			]
+		m_get_all_ldap_users = mocker.patch.object(
+			f_user_mixin,
+			"_get_all_ldap_users",
+			mocker.Mock(return_value=m_result)
+		)
+		result = f_user_mixin.ldap_user_list()
+		m_get_all_ldap_users.assert_called_once()
+		f_log_mixin.log.assert_called_once_with(
+			user=1,
+			operation_type=LOG_ACTION_READ,
+			log_target_class=LOG_CLASS_USER,
+			log_target=LOG_TARGET_ALL,
+		)
+		assert "users" in result
+		assert "headers" in result
+		assert result["users"] == m_result
+		assert result["headers"] == (
+			LOCAL_ATTR_USERNAME,
+			LOCAL_ATTR_FIRST_NAME,
+			LOCAL_ATTR_LAST_NAME,
+			LOCAL_ATTR_EMAIL,
+			LOCAL_ATTR_IS_ENABLED,
+		)
 
 class TestInsert:
-	def test_not_implemented(self):
-		raise NotImplementedError
+	@pytest.mark.parametrize(
+		"path, exclude_keys",
+		(
+			(None , [],),
+			("OU=Test,DC=example,DC=com", [LOCAL_ATTR_ADDRESS],),
+		),
+	)
+	def test_success(
+		self,
+		path,
+		exclude_keys: list[str],
+		mocker: MockerFixture,
+		f_runtime_settings: RuntimeSettingsSingleton,
+		f_user_mixin: LDAPUserMixin,
+		f_log_mixin: LogMixin,
+	):
+		# Mock LDAPUser class
+		m_ldap_user = mocker.Mock()
+		m_ldap_user_cls = mocker.Mock(return_value=m_ldap_user)
+		mocker.patch("core.views.mixins.ldap.user.LDAPUser", m_ldap_user_cls)
+		m_data = {
+			LOCAL_ATTR_USERNAME: "testuser",
+			LOCAL_ATTR_ADDRESS: "some_address",
+			LOCAL_ATTR_PATH: path,
+		}
+		expected_data = m_data.copy()
+		expected_data.pop(LOCAL_ATTR_PATH, None)
+		for ek in exclude_keys:
+			expected_data.pop(ek, None)
+
+		f_user_mixin.ldap_user_insert(
+			data=m_data,
+			exclude_keys=exclude_keys,
+		)
+		m_ldap_user_cls.assert_called_once_with(
+			connection=f_user_mixin.ldap_connection,
+			distinguished_name="CN=testuser,CN=Users,%s" % (
+				f_runtime_settings.LDAP_AUTH_SEARCH_BASE
+			) if not path else "CN=testuser,%s" % (path),
+			attributes=expected_data,
+		)
+		m_ldap_user.save.assert_called_once()
+		f_log_mixin.log.assert_called_once_with(
+			user=1,
+			operation_type=LOG_ACTION_CREATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target="testuser",
+		)
+
+	def test_dn_raises_exception(
+		self,
+		mocker: MockerFixture,
+		f_runtime_settings: RuntimeSettingsSingleton,
+		f_user_mixin: LDAPUserMixin,
+		f_log_mixin: LogMixin,
+	):
+		# Mock LDAPUser class
+		m_ldap_user_cls = mocker.Mock()
+		mocker.patch("core.views.mixins.ldap.user.LDAPUser", m_ldap_user_cls)
+		# Mock safe_dn to return exc
+		mocker.patch(
+			"core.views.mixins.ldap.user.safe_dn",
+			side_effect=Exception
+		)
+		m_data = {
+			LOCAL_ATTR_USERNAME: "testuser",
+			LOCAL_ATTR_ADDRESS: "some_address",
+		}
+
+		with pytest.raises(exc_user.UserDNPathException):
+			f_user_mixin.ldap_user_insert(data=m_data)
+		m_ldap_user_cls.assert_not_called()
+		f_log_mixin.log.assert_not_called()
+
+	def test_raises_exception(
+		self,
+		mocker: MockerFixture,
+		f_runtime_settings: RuntimeSettingsSingleton,
+		f_user_mixin: LDAPUserMixin,
+		f_log_mixin: LogMixin,
+	):
+		# Mock LDAPUser class
+		m_ldap_user = mocker.Mock()
+		m_ldap_user_cls = mocker.Mock(
+			return_value=m_ldap_user,
+			side_effect=Exception,
+		)
+		mocker.patch("core.views.mixins.ldap.user.LDAPUser", m_ldap_user_cls)
+		m_data = {
+			LOCAL_ATTR_USERNAME: "testuser",
+			LOCAL_ATTR_ADDRESS: "some_address",
+		}
+		expected_data = m_data.copy()
+		expected_data.pop(LOCAL_ATTR_PATH, None)
+
+		with pytest.raises(exc_user.UserCreate):
+			f_user_mixin.ldap_user_insert(data=m_data, return_exception=True)
+		m_ldap_user_cls.assert_called_once_with(
+			connection=f_user_mixin.ldap_connection,
+			distinguished_name="CN=testuser,CN=Users,%s" % (
+				f_runtime_settings.LDAP_AUTH_SEARCH_BASE
+			),
+			attributes=expected_data,
+		)
+		m_ldap_user.save.assert_not_called()
+		f_log_mixin.log.assert_not_called()
 
 class TestUpdate:
-	def test_not_implemented(self):
-		raise NotImplementedError
+	def test_success(
+		self,
+		mocker: MockerFixture,
+		normal_user: User,
+		f_user_mixin: LDAPUserMixin,
+		f_log_mixin: LogMixin,
+	):
+		m_email_update = "another@example.com"
+		# Mock LDAPUser class
+		m_ldap_user = mocker.Mock()
+		m_ldap_user.attributes = {"old":"attributes"}
+		m_ldap_user_cls = mocker.Mock(return_value=m_ldap_user)
+		mocker.patch("core.views.mixins.ldap.user.LDAPUser", m_ldap_user_cls)
+		m_data = {
+			LOCAL_ATTR_USERNAME: normal_user.username,
+			LOCAL_ATTR_EMAIL: m_email_update,
+		}
+
+		f_user_mixin.ldap_user_update(data=m_data)
+		m_ldap_user_cls.assert_called_once_with(
+			connection=f_user_mixin.ldap_connection,
+			username=normal_user.username
+		)
+		m_ldap_user.attributes = m_data
+		m_ldap_user.save.assert_called_once()
+		f_log_mixin.log.assert_called_once_with(
+			user=1,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=normal_user.username,
+		)
+		normal_user.refresh_from_db()
+		assert normal_user.email == m_email_update
+
+	def test_success_no_local_user(
+		self,
+		mocker: MockerFixture,
+		f_user_mixin: LDAPUserMixin,
+		f_log_mixin: LogMixin,
+	):
+		m_username = "testuser"
+		m_email_update = "another@example.com"
+		# Mock LDAPUser class
+		m_user_instance = mocker.Mock()
+		m_user_instance.attributes = {"old":"attributes"}
+		m_ldap_user_cls = mocker.Mock(return_value=m_user_instance)
+		mocker.patch("core.views.mixins.ldap.user.LDAPUser", m_ldap_user_cls)
+		m_data = {
+			LOCAL_ATTR_USERNAME: m_username,
+			LOCAL_ATTR_EMAIL: m_email_update,
+		}
+		# Mock User class
+		m_user_cls = mocker.patch("core.views.mixins.ldap.user.User")
+		m_user_cls.objects.get.side_effect = ObjectDoesNotExist
+
+		f_user_mixin.ldap_user_update(data=m_data)
+		m_ldap_user_cls.assert_called_once_with(
+			connection=f_user_mixin.ldap_connection,
+			username=m_username
+		)
+		m_user_instance.attributes = m_data
+		m_user_instance.save.assert_called_once()
+		f_log_mixin.log.assert_called_once_with(
+			user=1,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=m_username,
+		)
+		m_user_cls.save.assert_not_called()
 
 class TestSetLdapPassword:
 	@pytest.mark.parametrize(
@@ -813,9 +1019,6 @@ class TestFetch:
 		f_ldap_object,
 		f_default_user_filter,
 	):
-		# Setup
-		f_user_mixin.request.user.id = 1
-
 		## Groups
 		_ldap_group_instances = [
 			mocker.Mock(attributes=group_attrs)
@@ -1028,7 +1231,6 @@ class TestChangeStatus:
 		f_runtime_settings: RuntimeSettingsSingleton,
 		f_default_user_filter,
 	):
-		f_user_mixin.request.user.id = 1
 		m_django_user: Union[User, MockType] = None
 		if with_django_user:
 			m_django_user = mocker.Mock()
@@ -1115,7 +1317,6 @@ class TestUnlock:
 		f_user_mixin: LDAPUserMixin,
 		f_log_mixin: LogMixin,
 	):
-		f_user_mixin.request.user.id = 1
 		extended_operations: ExtendedOperationsRoot = (
 			f_user_mixin.ldap_connection.extend
 		)
@@ -1147,7 +1348,6 @@ class TestDelete:
 		f_user_mixin: LDAPUserMixin,
 		f_log_mixin: LogMixin,
 	):
-		f_user_mixin.request.user.id = 1
 		m_user_entry = fc_user_entry()
 		mocker.patch.object(
 			f_user_mixin, "get_user_object", return_value=m_user_entry
