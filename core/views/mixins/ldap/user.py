@@ -10,6 +10,7 @@
 ### ViewSets
 from rest_framework import viewsets
 from rest_framework.request import Request
+from django.core.exceptions import ObjectDoesNotExist
 
 ### Interlock
 from core.ldap.adsi import join_ldap_filter
@@ -20,7 +21,6 @@ from core.ldap.types.account import LDAPAccountTypes
 
 ### Models
 from core.models.user import User, USER_TYPE_LDAP
-from core.models.ldap_object import LDAPObject
 from core.models.ldap_group import LDAPGroup
 from core.models.ldap_user import LDAPUser
 from core.models.choices.log import (
@@ -375,9 +375,6 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		* headers: Headers list() for the front-end data-table
 		* users: Users dict()
 		"""
-		if not getattr(self, "ldap_filter_attr", None):
-			raise ValueError("self must have ldap_filter_attr attribute.")
-
 		user_list = self._get_all_ldap_users()
 
 		DBLogMixin.log(
@@ -386,19 +383,6 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			log_target_class=LOG_CLASS_USER,
 			log_target=LOG_TARGET_ALL,
 		)
-
-		# Set headers
-		# Remove attributes to return as table headers
-		valid_attributes: list = self.search_attrs
-		remove_attributes = [
-			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_DN],
-			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_UAC],
-			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_FULL_NAME],
-		]
-		for attr in remove_attributes:
-			if attr in valid_attributes:
-				valid_attributes.remove(attr)
-		valid_attributes.append(LOCAL_ATTR_IS_ENABLED)
 
 		result = {}
 		result["users"] = user_list
@@ -424,7 +408,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			for key in exclude_keys:
 				data.pop(key, None)
 
-		username: str = data.get("username").lower()
+		username: str = data.get(LOCAL_ATTR_USERNAME).lower()
 		try:
 			user_path: str = data.pop(LOCAL_ATTR_PATH, None)
 			if user_path:
@@ -482,17 +466,14 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 
 		try:
 			django_user = User.objects.get(username=username)
-		except:
+		except ObjectDoesNotExist:
 			django_user = None
 			pass
 
 		if django_user:
-			for (
-				local_alias,
-				ldap_alias,
-			) in RuntimeSettings.LDAP_FIELD_MAP.items():
-				if ldap_alias in data:
-					setattr(django_user, local_alias, data[ldap_alias])
+			for _key in data.keys():
+				if _key in data:
+					setattr(django_user, _key, data[_key])
 			django_user.save()
 		return self.ldap_connection
 
