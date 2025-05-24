@@ -88,6 +88,7 @@ class LDAPUserSearchAttrBuilder(SearchAttrBuilder):
 		]
 
 	def get_update_self_exclude_keys(self):
+		"""Return local keys to exclude"""
 		return [
 			"can_change_pwd",
 			LOCAL_ATTR_PASSWORD,
