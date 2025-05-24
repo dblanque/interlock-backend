@@ -291,13 +291,13 @@ class TestGroupMixinCRUD:
 		f_group_mixin: GroupViewMixin, 
 		f_log_mixin: LogMixin
 	):
-		f_group_mixin.ldap_filter_attr = [
+		f_group_mixin.search_attrs = [
 			LDAP_ATTR_COMMON_NAME,
 			LDAP_ATTR_DN,
 			LDAP_ATTR_GROUP_TYPE,
 			LDAP_ATTR_GROUP_MEMBERS,
 		]
-		f_group_mixin.ldap_filter_object = LDAPFilter.eq(
+		f_group_mixin.search_filter = LDAPFilter.eq(
 			LDAP_ATTR_OBJECT_CLASS, "group"
 		)
 		m_group_1 = fc_group_entry(
@@ -362,7 +362,7 @@ class TestGroupMixinCRUD:
 			**{LDAP_ATTR_GROUP_MEMBERS: [m_member_dn]}
 		)
 		f_group_mixin.ldap_connection.entries = [m_group_entry]
-		f_group_mixin.ldap_filter_attr = [
+		f_group_mixin.search_attrs = [
 			LDAP_ATTR_COMMON_NAME,
 			LDAP_ATTR_EMAIL,
 			LDAP_ATTR_GROUP_MEMBERS,
@@ -370,7 +370,7 @@ class TestGroupMixinCRUD:
 			LDAP_ATTR_GROUP_TYPE,
 			LDAP_ATTR_SECURITY_ID,
 		]
-		f_group_mixin.ldap_filter_object = (
+		f_group_mixin.search_filter = (
 			LDAPFilter.and_(
 				LDAPFilter.eq(
 					LDAP_ATTR_OBJECT_CLASS,
@@ -393,8 +393,8 @@ class TestGroupMixinCRUD:
 		group = f_group_mixin.fetch_group()
 		f_group_mixin.ldap_connection.search.assert_called_once_with(
 			search_base=f_ldap_search_base,
-			search_filter=f_group_mixin.ldap_filter_object,
-			attributes=f_group_mixin.ldap_filter_attr,
+			search_filter=f_group_mixin.search_filter,
+			attributes=f_group_mixin.search_attrs,
 		)
 		m_ldap_object.assert_called_once_with(
 			connection=f_group_mixin.ldap_connection,
@@ -509,8 +509,8 @@ class TestGroupMixinCRUD:
 		f_runtime_settings: RuntimeSettingsSingleton,
 	):
 		f_group_mixin.ldap_connection.entries = ["some_entry_with_same_dn"]
-		f_group_mixin.ldap_filter_attr = "mock_attr_filter"
-		f_group_mixin.ldap_filter_object = "mock_obj_filter"
+		f_group_mixin.search_attrs = "mock_attr_filter"
+		f_group_mixin.search_filter = "mock_obj_filter"
 		with pytest.raises(ValueError, match="cannot be None or falsy"):
 			f_group_mixin.create_group(
 				group_data={LOCAL_ATTR_NAME: ""}
@@ -523,17 +523,17 @@ class TestGroupMixinCRUD:
 		f_runtime_settings: RuntimeSettingsSingleton,
 	):
 		f_group_mixin.ldap_connection.entries = ["some_entry_with_same_dn"]
-		f_group_mixin.ldap_filter_attr = "mock_attr_filter"
-		f_group_mixin.ldap_filter_object = "mock_obj_filter"
+		f_group_mixin.search_attrs = "mock_attr_filter"
+		f_group_mixin.search_filter = "mock_obj_filter"
 		with pytest.raises(exc_ldap.LDAPObjectExists):
 			f_group_mixin.create_group(
 				group_data={LOCAL_ATTR_NAME: "mock_cn"}
 			)
 		f_group_mixin.ldap_connection.search.assert_called_once_with(
 			search_base=f_runtime_settings.LDAP_AUTH_SEARCH_BASE,
-			search_filter=f_group_mixin.ldap_filter_object,
+			search_filter=f_group_mixin.search_filter,
 			search_scope=SUBTREE,
-			attributes=f_group_mixin.ldap_filter_attr,
+			attributes=f_group_mixin.search_attrs,
 		)
 
 	def test_update(
@@ -548,7 +548,7 @@ class TestGroupMixinCRUD:
 			LOCAL_ATTR_DN: f_distinguished_name,
 			LOCAL_ATTR_EMAIL: "test@example.com",
 		}
-		f_group_mixin.ldap_filter_attr = "search_attrs"
+		f_group_mixin.search_attrs = "search_attrs"
 
 		# Mock LDAPGroup Class
 		m_ldap_group_instance = mocker.Mock()
@@ -569,7 +569,7 @@ class TestGroupMixinCRUD:
 		MockLDAPGroup.assert_called_once_with(
 			connection=f_group_mixin.ldap_connection,
 			distinguished_name=f_distinguished_name,
-			search_attrs=f_group_mixin.ldap_filter_attr,
+			search_attrs=f_group_mixin.search_attrs,
 		)
 		assert m_ldap_group_instance.attributes == mock_data
 		m_ldap_group_instance.save.assert_called_once()
@@ -593,7 +593,7 @@ class TestGroupMixinCRUD:
 			LOCAL_ATTR_EMAIL: "test@example.com",
 			LOCAL_ATTR_GROUP_TYPE: [LDAPGroupTypes.TYPE_SECURITY.name]
 		}
-		f_group_mixin.ldap_filter_attr = "search_attrs"
+		f_group_mixin.search_attrs = "search_attrs"
 
 		# Mock LDAPGroup Class
 		m_ldap_group_instance = mocker.Mock()
@@ -620,7 +620,7 @@ class TestGroupMixinCRUD:
 		MockLDAPGroup.assert_called_once_with(
 			connection=f_group_mixin.ldap_connection,
 			distinguished_name=f_distinguished_name,
-			search_attrs=f_group_mixin.ldap_filter_attr,
+			search_attrs=f_group_mixin.search_attrs,
 		)
 		m_ldap_group_instance.save.assert_not_called()
 		m_get_common_name.assert_not_called()
@@ -721,7 +721,7 @@ class TestGroupMixinCRUD:
 		MockLDAPGroup.assert_called_once_with(
 			connection=f_group_mixin.ldap_connection,
 			distinguished_name=f_distinguished_name,
-			search_attrs=f_group_mixin.ldap_filter_attr,
+			search_attrs=f_group_mixin.search_attrs,
 		)
 		m_ldap_group_instance.delete.assert_called_once()
 		f_log_mixin.log.assert_called_once_with(

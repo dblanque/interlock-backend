@@ -52,10 +52,8 @@ from typing import List, TypedDict, Literal
 from django.db import transaction
 import logging
 ################################################################################
-
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
-
 
 class GroupDict(TypedDict):
 	cn: str
@@ -73,8 +71,10 @@ class GroupDict(TypedDict):
 
 class GroupViewMixin(viewsets.ViewSetMixin):
 	ldap_connection: Connection = None
-	ldap_filter_object = None
-	ldap_filter_attr = None
+	# LDAP Search Filter
+	search_filter = None
+	# LDAP Search Attributes
+	search_attrs = None
 	request: Request
 
 	@staticmethod
@@ -130,8 +130,8 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		data = []
 		self.ldap_connection.search(
 			search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
-			search_filter=self.ldap_filter_object,
-			attributes=self.ldap_filter_attr,
+			search_filter=self.search_filter,
+			attributes=self.search_attrs,
 		)
 		ldap_entries = self.ldap_connection.entries
 
@@ -168,8 +168,8 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		self.ldap_connection.search(
 			search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
-			search_filter=self.ldap_filter_object,
-			attributes=self.ldap_filter_attr,
+			search_filter=self.search_filter,
+			attributes=self.search_attrs,
 		)
 		group_obj = LDAPGroup(entry=self.ldap_connection.entries[0])
 
@@ -232,9 +232,9 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		# If group exists, return error
 		self.ldap_connection.search(
 			search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
-			search_filter=self.ldap_filter_object,
+			search_filter=self.search_filter,
 			search_scope=ldap3.SUBTREE,
-			attributes=self.ldap_filter_attr,
+			attributes=self.search_attrs,
 		)
 		if self.ldap_connection.entries:
 			raise exc_ldap.LDAPObjectExists(
@@ -268,7 +268,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		group_obj = LDAPGroup(
 			connection=self.ldap_connection,
 			distinguished_name=distinguished_name,
-			search_attrs=self.ldap_filter_attr,
+			search_attrs=self.search_attrs,
 		)
 		if not group_obj.exists:
 			raise exc_groups.GroupDoesNotExist
@@ -310,7 +310,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		group_obj = LDAPGroup(
 			connection=self.ldap_connection,
 			distinguished_name=distinguished_name,
-			search_attrs=self.ldap_filter_attr,
+			search_attrs=self.search_attrs,
 		)
 		if not group_obj.exists:
 			raise exc_groups.GroupDoesNotExist

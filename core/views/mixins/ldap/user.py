@@ -84,8 +84,10 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 	"""
 
 	ldap_connection: LDAPConnectionProtocol = None
-	ldap_filter_object = None
-	ldap_filter_attr = None
+	# LDAP Search Filter
+	search_filter = None
+	# LDAP Search Attributes
+	search_attrs = None
 	filter_attr_builder = LDAPUserSearchAttrBuilder
 	request: Request
 
@@ -290,25 +292,25 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		Returns list of ldap3.Entry objects if as_entries is True.
 		"""
 		user_list = []
-		if not self.ldap_filter_object:
-			self.ldap_filter_object = LDAPFilter.eq(
+		if not self.search_filter:
+			self.search_filter = LDAPFilter.eq(
 				RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
 				RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
 			)
-		if not self.ldap_filter_attr:
-			self.ldap_filter_attr = self.filter_attr_builder(
+		if not self.search_attrs:
+			self.search_attrs = self.filter_attr_builder(
 				RuntimeSettings
 			).get_list_attrs()
 
-		if isinstance(self.ldap_filter_object, str):
-			self.ldap_filter_object = LDAPFilter.from_string(
-				self.ldap_filter_object
+		if isinstance(self.search_filter, str):
+			self.search_filter = LDAPFilter.from_string(
+				self.search_filter
 			)
 
 		# Exclude Computer Accounts if settings allow it
 		if RuntimeSettings.EXCLUDE_COMPUTER_ACCOUNTS:
-			self.ldap_filter_object = LDAPFilter.and_(
-				self.ldap_filter_object,
+			self.search_filter = LDAPFilter.and_(
+				self.search_filter,
 				LDAPFilter.not_(
 					LDAPFilter.eq(
 						RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
@@ -324,19 +326,19 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 				"contact",
 			)
 		)
-		if self.ldap_filter_object.type == LDAPFilterType.AND:
-			self.ldap_filter_object.children.append(filter_contacts)
+		if self.search_filter.type == LDAPFilterType.AND:
+			self.search_filter.children.append(filter_contacts)
 		else:
-			self.ldap_filter_object = LDAPFilter.and_(
-				self.ldap_filter_object,
+			self.search_filter = LDAPFilter.and_(
+				self.search_filter,
 				filter_contacts,
 			)
 
 		# Perform search
 		self.ldap_connection.search(
 			search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
-			search_filter=self.ldap_filter_object.to_string(),
-			attributes=self.ldap_filter_attr,
+			search_filter=self.search_filter.to_string(),
+			attributes=self.search_attrs,
 		)
 		user_entry_list: list[LDAPEntry] = self.ldap_connection.entries
 		if as_entries:
@@ -387,7 +389,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 
 		# Set headers
 		# Remove attributes to return as table headers
-		valid_attributes: list = self.ldap_filter_attr
+		valid_attributes: list = self.search_attrs
 		remove_attributes = [
 			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_DN],
 			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_UAC],
@@ -616,11 +618,11 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 
 	def ldap_user_fetch(self, user_search, return_entry=False) -> dict:
 		"""Returns Serialized LDAP User attributes or Entry."""
-		self.ldap_filter_object = self.get_user_object_filter(
+		self.search_filter = self.get_user_object_filter(
 			username=user_search
 		)
-		if not self.ldap_filter_attr:
-			self.ldap_filter_attr = self.filter_attr_builder(
+		if not self.search_attrs:
+			self.search_attrs = self.filter_attr_builder(
 				RuntimeSettings
 			).get_fetch_attrs()
 
@@ -671,7 +673,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			_PRIMARY_GROUP_ID_FIELD = RuntimeSettings.LDAP_FIELD_MAP[
 				LOCAL_ATTR_PRIMARY_GROUP_ID
 			]
-			if _PRIMARY_GROUP_ID_FIELD in self.ldap_filter_attr:
+			if _PRIMARY_GROUP_ID_FIELD in self.search_attrs:
 				_primary_group_id = user_dict[LOCAL_ATTR_PRIMARY_GROUP_ID]
 				if not any(
 					_g.get(LOCAL_ATTR_RELATIVE_ID, None) == _primary_group_id
@@ -730,9 +732,9 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 	def ldap_user_change_status(
 		self, username: str, enabled: bool
 	) -> Connection:
-		self.ldap_filter_object = self.get_user_object_filter(username=username)
+		self.search_filter = self.get_user_object_filter(username=username)
 		user_entry = self.get_user_object(
-			username=username, attributes=self.ldap_filter_attr
+			username=username, attributes=self.search_attrs
 		)
 		permission_list = ldap_adsi.list_user_perms(user=user_entry)
 

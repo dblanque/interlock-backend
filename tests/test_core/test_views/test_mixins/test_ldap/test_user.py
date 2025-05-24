@@ -361,16 +361,21 @@ class TestGetUserObject:
 		mocker: MockerFixture,
 		username,
 		email,
+		_fld,
 		f_user_mixin: LDAPUserMixin,
 		f_runtime_settings: RuntimeSettingsSingleton,
 	):
 		m_entry = mocker.Mock()
 		setattr(
 			m_entry,
-			f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
+			_fld(LOCAL_ATTR_USERNAME),
 			username,
 		)
-		setattr(m_entry, f_runtime_settings.LDAP_FIELD_MAP["email"], email)
+		setattr(
+			m_entry,
+			_fld(LOCAL_ATTR_EMAIL),
+			email
+		)
 		f_user_mixin.ldap_connection.entries = [m_entry]
 
 		m_get_user_entry = mocker.patch.object(f_user_mixin, "get_user_entry")
@@ -386,22 +391,23 @@ class TestDunderGetAllLdapUsers:
 	@pytest.fixture
 	def expected_search_filter(
 		self,
+		_fld,
 		f_runtime_settings: RuntimeSettingsSingleton
 	):
 		_flt = LDAPFilter.and_(
 			LDAPFilter.eq(
-				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
+				_fld(LOCAL_ATTR_OBJECT_CLASS),
 				f_runtime_settings.LDAP_AUTH_OBJECT_CLASS,
 			),
 			LDAPFilter.not_(
 				LDAPFilter.eq(
-					f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
+					_fld(LOCAL_ATTR_OBJECT_CLASS),
 					"computer",
 				)
 			),
 			LDAPFilter.not_(
 				LDAPFilter.eq(
-					f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
+					_fld(LOCAL_ATTR_OBJECT_CLASS),
 					"contact",
 				)
 			),
@@ -795,6 +801,7 @@ class TestFetch:
 	def test_success(
 		self,
 		mocker: MockerFixture,
+		_fld,
 		m_member_of_objects,
 		user_account_control,
 		sam_account_type,
@@ -855,7 +862,7 @@ class TestFetch:
 
 		# Execution
 		result = f_user_mixin.ldap_user_fetch(user_search="testuser")
-		assert f_user_mixin.ldap_filter_object == f_default_user_filter(
+		assert f_user_mixin.search_filter == f_default_user_filter(
 			"testuser"
 		)
 
@@ -866,7 +873,7 @@ class TestFetch:
 			log_target_class=LOG_CLASS_USER,
 			log_target=getldapattrvalue(
 				m_user_entry,
-				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
+				_fld(LOCAL_ATTR_USERNAME),
 			),
 		)
 		assert isinstance(result, dict)
