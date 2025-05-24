@@ -33,7 +33,6 @@ from django.core.exceptions import ObjectDoesNotExist
 # Models
 from core.models.user import User, USER_TYPE_LOCAL, USER_TYPE_LDAP
 from core.models.application import Application, ApplicationSecurityGroup
-from django.db.models import Manager
 from oidc_provider.models import Client, UserConsent
 
 # OIDC
@@ -48,14 +47,15 @@ from django.utils import timezone
 
 # Others
 from core.constants.attrs import (
-	LDAP_ATTR_USER_GROUPS,
-	LDAP_ATTR_DN,
+	LOCAL_ATTR_UUID,
+	LOCAL_ATTR_USER_GROUPS,
+	LOCAL_ATTR_DN,
 )
 import logging
 from interlock_backend.settings import LOGIN_URL
 from oidc_provider.lib.endpoints.authorize import AuthorizeEndpoint
 from core.ldap.connector import LDAPConnector, recursive_member_search
-
+from core.config.runtime import RuntimeSettings
 ################################################################################
 logger = logging.getLogger()
 
@@ -72,18 +72,21 @@ def get_user_groups(user: User) -> list:
 			local application group uuids.
 	"""
 	if user.user_type == USER_TYPE_LOCAL:
-		return []
+		_application_security_groups = user.asg_member.all()
+		return [str(asg.uuid) for asg in _application_security_groups]
 	elif user.user_type == USER_TYPE_LDAP:
 		with LDAPConnector(force_admin=True) as ldc:
 			groups = []
 			user_mixin = LDAPUserMixin()
-			user_mixin.ldap_filter_attr = [LDAP_ATTR_USER_GROUPS]
+			user_mixin.search_attrs = [
+				RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USER_GROUPS]
+			]
 			user_mixin.ldap_connection = ldc.connection
 			ldap_user: dict = user_mixin.ldap_user_fetch(
 				user_search=user.username
 			)
-			for group in ldap_user["memberOfObjects"]:
-				groups.append(group[LDAP_ATTR_DN])
+			for group in ldap_user[LOCAL_ATTR_USER_GROUPS]:
+				groups.append(group[LOCAL_ATTR_DN])
 			return groups
 	else:
 		return []

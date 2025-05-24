@@ -9,6 +9,7 @@ from core.models.application import Application, ApplicationSecurityGroup
 from core.models.user import User, USER_TYPE_LDAP, USER_TYPE_LOCAL
 from core.views.mixins.oidc import get_user_groups
 from interlock_backend.settings import OIDC_INTERLOCK_LOGIN_COOKIE
+from core.constants.attrs.local import LOCAL_ATTR_USER_GROUPS, LOCAL_ATTR_DN
 from core.constants.oidc import (
 	QK_NEXT,
 	OIDC_PROMPT_NONE,
@@ -35,7 +36,7 @@ from core.views.mixins.oidc import (
 )
 from oidc_provider.models import Client, UserConsent
 from django.http import QueryDict
-from typing import Protocol
+from typing import Protocol, Union
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from tests.test_core.conftest import RuntimeSettingsFactory
 
@@ -103,18 +104,20 @@ def f_application():
 @pytest.fixture
 def f_application_group(f_application, f_user_local, f_user_ldap):
 	"""Fixture creating a test application group in the database"""
-	m_asg = ApplicationSecurityGroup.objects.create(
+	m_asg = ApplicationSecurityGroup(
 		application=f_application,
 		ldap_objects=["some_group_dn"],
 		enabled=True,
 	)
+	m_asg.save()
 	m_asg.users.add(f_user_local)
 	m_asg.users.add(f_user_ldap)
+	m_asg.save()
 	return m_asg
 
 
 @pytest.fixture
-def f_client(f_application) -> MockType:
+def f_client(f_application) -> Union[MockType, Client]:
 	m_client = Client.objects.create(
 		client_id=f_application.client_id,
 		redirect_uris=f_application.redirect_uris.split(","),
@@ -225,10 +228,13 @@ def f_logger(mocker: MockerFixture) -> MockType:
 
 @pytest.mark.django_db
 def test_get_user_groups_local_user(
-	f_user_local: User, f_application_group: ApplicationSecurityGroup
+	f_user_local: User,
+	f_application,
+	f_application_group: ApplicationSecurityGroup,
 ):
-	assert get_user_groups(user=f_user_local) == [f_application_group.uuid]
-
+	assert get_user_groups(user=f_user_local) == [
+		str(f_application_group.uuid)
+	]
 
 @pytest.mark.django_db
 def test_get_user_groups_ldap_user(
@@ -237,7 +243,9 @@ def test_get_user_groups_ldap_user(
 	f_application_group: ApplicationSecurityGroup,
 ):
 	m_ldap_user_attrs = {
-		"memberOfObjects": [{"distinguishedName": "some_group_dn"}]
+		LOCAL_ATTR_USER_GROUPS: [
+			{LOCAL_ATTR_DN: "some_group_dn"}
+		]
 	}
 	m_ldap_user_mixin: LDAPUserMixin = mocker.MagicMock()
 	m_ldap_user_mixin.ldap_user_fetch.return_value = m_ldap_user_attrs
@@ -518,7 +526,7 @@ class TestUserCanAccessApp:
 		f_authorize_mixin.application = f_application
 		assert f_authorize_mixin.user_can_access_app(f_user_ldap) is False
 		m_recursive_search.assert_called_once_with(
-			user_dn=f_user_ldap.dn,
+			user_dn=f_user_ldap.distinguished_name,
 			connection=f_ldap_connector.connection,
 			group_dn="some_group_dn",
 		)
@@ -555,7 +563,7 @@ class TestUserCanAccessApp:
 		)
 		assert f_authorize_mixin.user_can_access_app(f_user_ldap)
 		m_recursive_search.assert_called_once_with(
-			user_dn=f_user_ldap.dn,
+			user_dn=f_user_ldap.distinguished_name,
 			connection=f_ldap_connector.connection,
 			group_dn=f_security_group.ldap_objects[0],
 		)
@@ -580,7 +588,7 @@ class TestUserCanAccessApp:
 		)
 		assert f_authorize_mixin.user_can_access_app(f_user_ldap) is False
 		m_recursive_search.assert_called_once_with(
-			user_dn=f_user_ldap.dn,
+			user_dn=f_user_ldap.distinguished_name,
 			connection=f_ldap_connector.connection,
 			group_dn=f_security_group.ldap_objects[0],
 		)

@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+import uuid
 import base64
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import gettext_lazy as _
@@ -139,6 +140,7 @@ USE_X_FORWARDED_HOST = True  # For correct host/port in URLs
 # SECURE_SSL_REDIRECT = True   # Redirect HTTP → HTTPS
 
 # Application definition
+INTERLOCK_NAMESPACE = uuid.UUID("31a630a1-2dc0-42a5-b8a7-b9d45fbd1406")
 INSTALLED_APPS = [
 	"sslserver",
 	"django_extensions",
