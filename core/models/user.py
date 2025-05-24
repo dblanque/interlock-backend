@@ -29,6 +29,8 @@ from interlock_backend.settings import (
 from django.core.validators import validate_email
 from typing import TYPE_CHECKING
 from django.db.models.query import QuerySet
+from typing import ClassVar
+from typing_extensions import Self
 # ---------------------------------------------------------------------------- #
 
 if TYPE_CHECKING:
@@ -230,6 +232,8 @@ USER_TYPE_CHOICES = (
 
 
 class User(BaseUser):
+	objects: ClassVar[BaseUserManager[Self]]
+
 	class Meta:
 		verbose_name = _("User")
 		verbose_name_plural = _("Users")
