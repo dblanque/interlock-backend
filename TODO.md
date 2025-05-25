@@ -1,3 +1,11 @@
+Target Mid-June release
+* Do manual testing of all systems
+* Update and fix .deb package installer
+* Update Public site with new screenshots
+* Create general video summary
+* Create video summary of features as LDAP Manager
+* Create video summary of features as IdP
+
 # Tasks
 * core.models.ldap_object <d>
 * core.models.ldap_user <d>
@@ -5,8 +13,11 @@
 * core.models.ldap_tree - MONDAY <d>
 * core.ldap.ldap_settings - TUESDAY <d>
 * core.serializers.group - THURSDAY <d>
-* core.views.mixins - FRIDAY
-* core.views - NEXT WEEK
+* core.views.mixins - <d>
+* core.views - Tuesday - Friday
+
+## Issues
+* Move Interlock RSA Key to class instances as a singleton. <d>
 * Implement LDAP Group Serializer usage.
 * Add self-registry availability with captcha requirement.
 	* USER_SELF_REGISTRY_OPTIONS
@@ -14,14 +25,6 @@
 		* CAPTCHA SITE
 		* ALLOWED DOMAINS (ALL IF WILDCARD)
 * Add LDAP_DEFAULT_USER_CLASSES, LDAP_DEFAULT_GROUP_CLASSES to ldap settings
-
-# To test manually
-* Add OIDC Consent Features <t>
-* Add OIDC TOTP Features for Users <t>
-* Add logging to all Application model operations <t>
-
-## Issues
-* Move Interlock RSA Key to class instances as a singleton. <d>
 * Add local user/asg bulk actions
 * Add OIDC Prompt Features?
 	* login
