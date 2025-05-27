@@ -378,7 +378,7 @@ class TestGetUserObject:
 		setattr(
 			m_entry,
 			_fld(LOCAL_ATTR_EMAIL),
-			email
+			email,
 		)
 		f_user_mixin.ldap_connection.entries = [m_entry]
 
