@@ -64,8 +64,13 @@ class TestList:
 		"""Test successful user listing"""
 		# Mock LDAP connection and data
 		m_ldap_users = {
-			"users": [{"username": "testuser", "is_enabled": True}],
-			"headers": ["username", "is_enabled"],
+			"users": [
+				{
+					LOCAL_ATTR_USERNAME: "testuser",
+					LOCAL_ATTR_IS_ENABLED: True
+				},
+			],
+			"headers": [LOCAL_ATTR_USERNAME, LOCAL_ATTR_IS_ENABLED],
 		}
 
 		# Patch the ldap_user_list method to return our mock data
@@ -80,7 +85,7 @@ class TestList:
 		assert response.status_code == status.HTTP_200_OK
 		assert response.data["code"] == 0
 		assert len(response.data["users"]) == 1
-		assert "username" in response.data["headers"]
+		assert LOCAL_ATTR_USERNAME in response.data["headers"]
 
 	def test_list_users_ldap_error(
 		self,
@@ -137,7 +142,7 @@ class TestFetch:
 			LDAPUserViewSet, "ldap_user_fetch", return_value=m_result
 		)
 		response: Response = admin_user_client.post(
-			self.endpoint, data={"username": "testuser"}
+			self.endpoint, data={LOCAL_ATTR_USERNAME: "testuser"}
 		)
 		m_ldap_user_fetch.assert_called_once_with(user_search="testuser")
 		assert response.status_code == status.HTTP_200_OK
@@ -539,7 +544,7 @@ class TestChangeStatus:
 		m_change_status = mocker.patch.object(
 			LDAPUserViewSet, "ldap_user_change_status"
 		)
-		m_data = {"username": "someotheruser", "enabled": enabled}
+		m_data = {LOCAL_ATTR_USERNAME: "someotheruser", "enabled": enabled}
 
 		# Exec
 		response: Response = admin_user_client.post(
@@ -549,11 +554,11 @@ class TestChangeStatus:
 		)
 		assert response.status_code == status.HTTP_200_OK
 		m_change_status.assert_called_once_with(
-			username=m_data["username"],
+			username=m_data[LOCAL_ATTR_USERNAME],
 			enabled=enabled,
 		)
 		m_ldap_user_exists.assert_called_once_with(
-			username=m_data["username"],
+			username=m_data[LOCAL_ATTR_USERNAME],
 			return_exception=False,
 		)
 
@@ -573,7 +578,7 @@ class TestChangeStatus:
 		m_change_status = mocker.patch.object(
 			LDAPUserViewSet, "ldap_user_change_status"
 		)
-		m_data = {"username": "testuser", "enabled": True}
+		m_data = {LOCAL_ATTR_USERNAME: "testuser", "enabled": True}
 		m_data.pop(delete_key, None)
 
 		# Exec
@@ -594,7 +599,7 @@ class TestChangeStatus:
 		m_change_status = mocker.patch.object(
 			LDAPUserViewSet, "ldap_user_change_status"
 		)
-		m_data = {"username": admin_user.username, "enabled": True}
+		m_data = {LOCAL_ATTR_USERNAME: admin_user.username, "enabled": True}
 
 		# Exec
 		response: Response = admin_user_client.post(
@@ -633,7 +638,7 @@ class TestDelete:
 		# Exec
 		response: Response = admin_user_client.post(
 			self.endpoint,
-			data={"username": m_username},
+			data={LOCAL_ATTR_USERNAME: m_username},
 			format="json",
 		)
 
@@ -747,7 +752,7 @@ class TestChangePassword:
 		m_user_entry.entry_dn = "mock_dn"
 		m_password = "MockPassword"
 		m_data = {
-			"username": m_user.username,
+			LOCAL_ATTR_USERNAME: m_user.username,
 			LOCAL_ATTR_PASSWORD: m_password,
 			LOCAL_ATTR_PASSWORD_CONFIRM: m_password,
 		}
@@ -770,10 +775,10 @@ class TestChangePassword:
 
 		assert response.status_code == status.HTTP_200_OK
 		m_ldap_user_exists.assert_called_once_with(
-			username=m_data["username"],
+			username=m_data[LOCAL_ATTR_USERNAME],
 			return_exception=False,
 		)
-		m_get_user_object.assert_called_once_with(username=m_data["username"])
+		m_get_user_object.assert_called_once_with(username=m_data[LOCAL_ATTR_USERNAME])
 		m_ldap_set_password.assert_called_once_with(
 			user_dn=m_user_entry.entry_dn,
 			user_pwd_new=m_data[LOCAL_ATTR_PASSWORD],
@@ -783,7 +788,7 @@ class TestChangePassword:
 			user=admin_user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_USER,
-			log_target=m_data["username"],
+			log_target=m_data[LOCAL_ATTR_USERNAME],
 			message=LOG_EXTRA_USER_CHANGE_PASSWORD,
 		)
 		# User should have unusable password as it is LDAP Type
@@ -817,7 +822,7 @@ class TestUnlock:
 		# Exec
 		response: Response = admin_user_client.post(
 			self.endpoint,
-			data={"username": "someuser"},
+			data={LOCAL_ATTR_USERNAME: "someuser"},
 			format="json",
 		)
 
@@ -847,7 +852,7 @@ class TestUnlock:
 		# Exec
 		response: Response = admin_user_client.post(
 			self.endpoint,
-			data={"username": "someuser"},
+			data={LOCAL_ATTR_USERNAME: "someuser"},
 			format="json",
 		)
 
@@ -877,7 +882,7 @@ class TestUnlock:
 		# Exec
 		response: Response = admin_user_client.post(
 			self.endpoint,
-			data={"username": "someuser"},
+			data={LOCAL_ATTR_USERNAME: "someuser"},
 			format="json",
 		)
 
@@ -890,9 +895,174 @@ class TestUnlock:
 		m_ldap_user_unlock.assert_called_once_with(username="someuser")
 
 
+@pytest.fixture
+def f_bulk_insert_request(f_runtime_settings: RuntimeSettingsSingleton):
+	result = {
+		"headers":[
+			LOCAL_ATTR_USERNAME,
+			LOCAL_ATTR_EMAIL,
+			LOCAL_ATTR_FIRST_NAME,
+			LOCAL_ATTR_LAST_NAME,
+		],
+		"users":[
+			# Should Succeed
+			{
+				LOCAL_ATTR_USERNAME: "testuser1",
+				LOCAL_ATTR_EMAIL: f"testuser1@{f_runtime_settings.LDAP_DOMAIN}",
+				LOCAL_ATTR_FIRST_NAME: "Test",
+				LOCAL_ATTR_LAST_NAME: "User 1",
+			},
+			# Should Skip
+			{
+				LOCAL_ATTR_USERNAME: "testuser2",
+				LOCAL_ATTR_EMAIL: f"testuser2@{f_runtime_settings.LDAP_DOMAIN}",
+				LOCAL_ATTR_FIRST_NAME: "Test",
+				LOCAL_ATTR_LAST_NAME: "User 2",
+				"exists": True,
+			},
+			# Should Fail
+			{
+				LOCAL_ATTR_USERNAME: "testuser3",
+				LOCAL_ATTR_EMAIL: f"testuser3@{f_runtime_settings.LDAP_DOMAIN}",
+				LOCAL_ATTR_FIRST_NAME: "Test",
+				LOCAL_ATTR_LAST_NAME: "User 3",
+				"fails_insert": True,
+			},
+			# Should import but fail password
+			{
+				LOCAL_ATTR_USERNAME: "testuser4",
+				LOCAL_ATTR_EMAIL: f"testuser4@{f_runtime_settings.LDAP_DOMAIN}",
+				LOCAL_ATTR_FIRST_NAME: "Test",
+				LOCAL_ATTR_LAST_NAME: "User 4",
+				"fails_password": True,
+			},
+		],
+		LOCAL_ATTR_PATH: f"OU=Test,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
+		"mapping":{
+			h: h for h in (
+				LOCAL_ATTR_USERNAME,
+				LOCAL_ATTR_EMAIL,
+				LOCAL_ATTR_FIRST_NAME,
+				LOCAL_ATTR_LAST_NAME,
+			)
+		},
+		"placeholder_password":"mock_password",
+	}
+	return result
+
 class TestBulkInsert:
 	endpoint = "/api/ldap/users/bulk_insert/"
 
+	@pytest.mark.parametrize(
+		"missing_key",
+		(
+			"headers",
+			"users",
+		),
+	)
+	def test_raises_missing_data_key(
+		self,
+		admin_user_client: APIClient,
+		missing_key: str
+	):
+		bad_data = {
+			"headers": "some_value",
+			"users": "some_value",
+		}
+		bad_data.pop(missing_key)
+		expected_code = status.HTTP_400_BAD_REQUEST
+		expected_exc = "data_key_missing"
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=bad_data,
+			format="json",
+		)
+		response_data: dict = response.data
+		assert response.status_code == expected_code
+		assert response_data.get("code") == expected_exc
+		assert response_data.get("key") == missing_key
+
+	def test_success(
+		self,
+		admin_user_client: APIClient,
+		f_bulk_insert_request: dict,
+		mocker: MockerFixture,
+	):
+		_pop_keys = (
+			"exists",
+			"fails_insert",
+			"fails_password",
+		)
+		m_users: list[dict] = f_bulk_insert_request.get("users")
+		exists_results = [ u.get("exists", False) for u in m_users ]
+		mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_exists",
+			side_effect=tuple(exists_results),
+		)
+		insert_results = []
+		for u in m_users:
+			if u.get("exists", False): continue
+			if not u.get("fails_insert", False):
+				insert_results.append(
+					"CN=%s,%s" % (
+						u.get(LOCAL_ATTR_USERNAME),
+						f_bulk_insert_request.get(LOCAL_ATTR_PATH),
+					)
+				)
+			else:
+				insert_results.append(None)
+		mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_insert",
+			side_effect=tuple(insert_results)
+		)
+		password_results = []
+		for u in m_users:
+			if u.get("exists", False): continue
+			if u.get("fails_insert", False): continue
+			if not u.get("fails_password", False):
+				password_results.append(None)
+			else:
+				password_results.append(Exception)
+		mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_set_password",
+			side_effect=tuple(password_results)
+		)
+		for _k in _pop_keys:
+			for u in m_users:
+				u.pop(_k, None)
+
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=f_bulk_insert_request,
+			format="json",
+		)
+		response_data: dict = response.data
+		assert response.status_code == status.HTTP_200_OK
+		imported_users = response_data.get("imported_users")
+		skipped_users = response_data.get("skipped_users")
+		failed_users = response_data.get("failed_users")
+		assert len(imported_users) == 2
+		assert "testuser1" in imported_users
+		assert "testuser4" in imported_users
+		assert len(skipped_users) == 1
+		assert "testuser2" in skipped_users
+		assert len(failed_users) == 2
+		assert failed_users[0][LOCAL_ATTR_USERNAME] == "testuser3"
+		assert failed_users[0]["stage"] == "insert"
+		assert failed_users[1][LOCAL_ATTR_USERNAME] == "testuser4"
+		assert failed_users[1]["stage"] == "password"
+
+	def test_success_no_password():
+		raise NotImplementedError
+
+	def test_fails_on_serializer():
+		raise NotImplementedError
+
+	def test_with_mapping():
+		raise NotImplementedError
 
 class TestBulkUpdate:
 	endpoint = "/api/ldap/users/bulk_update/"
