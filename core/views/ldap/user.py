@@ -329,7 +329,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				self.ldap_user_delete(username=username)
 
 			try:
-				django_user = User.objects.get(
+				django_user: User = User.objects.get(
 					username=username, user_type=USER_TYPE_LDAP
 				)
 				django_user.delete_permanently()
@@ -385,7 +385,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		django_user = None
 		try:
-			django_user = User.objects.get(username=username)
+			django_user: User = User.objects.get(username=username)
 		except ObjectDoesNotExist:
 			pass
 		if django_user:
@@ -457,34 +457,40 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		code = 0
 		code_msg = "ok"
 		data = request.data
-		DATA_HEADERS = (
+		DATA_KEYS = (
 			"headers",
 			"users",
 			LOCAL_ATTR_PATH,
 			"mapping",
+			"placeholder_password",
 		)
 		imported_users = []
 		skipped_users = []
 		failed_users = []
 
-		for k in DATA_HEADERS:
+		for k in ("headers", "users",):
 			if k not in data or not data.get(k, None):
 				e = exc_base.MissingDataKey()
 				e.set_detail({"key": k})
 				raise e
 
 		HEADERS: list = data["headers"]
+		USER_LIST: list[dict] = data["users"]
 		HEADER_COUNT = len(HEADERS)
-		HEADER_MAPPING: dict = data["mapping"]
-		INSERTION_PATH: str = data[LOCAL_ATTR_PATH]
+		HEADER_MAPPING: dict = data.get("mapping", {})
+		INSERTION_PATH: str = data.get(
+			LOCAL_ATTR_PATH,
+			f"CN=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}",
+		)
 		MAPPED_PWD_KEY = HEADER_MAPPING.get(LOCAL_ATTR_PASSWORD, None)
-		MAPPED_USER_KEY = HEADER_MAPPING.get(LOCAL_ATTR_USERNAME)
-		MAPPED_EMAIL_KEY = HEADER_MAPPING.get(LOCAL_ATTR_EMAIL)
-		user_list: list[dict] = data["users"]
-		user_placeholder_password = None
+		MAPPED_USER_KEY = HEADER_MAPPING.get(
+			LOCAL_ATTR_USERNAME, LOCAL_ATTR_USERNAME)
+		MAPPED_EMAIL_KEY = HEADER_MAPPING.get(
+			LOCAL_ATTR_EMAIL, LOCAL_ATTR_EMAIL)
+		placeholder_password = data.get("placeholder_password", None)
 
 		# If all local aliases match with remote aliases, do not map
-		if all(a == b for a, b in HEADER_MAPPING.items()):
+		if all(a == b for a, b in HEADER_MAPPING.items()) or not HEADER_MAPPING:
 			HEADER_MAPPING = None
 
 		######################## Set LDAP Attributes ###########################
@@ -493,7 +499,6 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		).get_bulk_insert_attrs()
 
 		required_fields = [LOCAL_ATTR_USERNAME]
-		user_placeholder_password = data.get("placeholder_password", None)
 
 		# Key exclusion
 		EXCLUDE_KEYS = (
@@ -504,7 +509,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		########################################################################
 
 		_permissions = [ldap_adsi.LDAP_UF_NORMAL_ACCOUNT]
-		if not MAPPED_PWD_KEY and not user_placeholder_password:
+		if not MAPPED_PWD_KEY and not placeholder_password:
 			_permissions.append(ldap_adsi.LDAP_UF_ACCOUNT_DISABLE)
 
 		# Validate Front-end mapping with CSV Headers
@@ -514,7 +519,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 					raise exc_user.UserBulkInsertMappingError(data={"key": k})
 
 		# Validate row lengths before opening connection
-		for row in user_list:
+		for row in USER_LIST:
 			if len(row) != HEADER_COUNT:
 				raise exc_user.UserBulkInsertLengthError(
 					data={"user": row[MAPPED_USER_KEY]}
@@ -523,7 +528,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			for row in user_list:
+			for row in USER_LIST:
 				row: dict
 				user_search = row[MAPPED_USER_KEY]
 
@@ -576,14 +581,14 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 					failed_users.append(
 						{
 							LOCAL_ATTR_USERNAME: row[MAPPED_USER_KEY],
-							"stage": "permission",
+							"stage": "insert",
 						}
 					)
 					continue
 
 				# Set password
 				set_pwd = False
-				if user_placeholder_password:
+				if placeholder_password:
 					set_pwd = True
 				elif MAPPED_PWD_KEY in data["headers"] and row[MAPPED_PWD_KEY]:
 					set_pwd = True
@@ -592,7 +597,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 					try:
 						self.ldap_set_password(
 							user_dn=user_dn,
-							user_pwd_new=user_placeholder_password,
+							user_pwd_new=placeholder_password,
 							set_by_admin=True,
 						)
 					except:
