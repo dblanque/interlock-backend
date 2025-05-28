@@ -641,7 +641,9 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		values = data.get("values", {})
 		permissions = data.get(LOCAL_ATTR_PERMISSIONS, [])
 
-		EXCLUDE_KEYS = [RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_EMAIL]]
+		EXCLUDE_KEYS = [
+			LOCAL_ATTR_EMAIL
+		]
 		for k in EXCLUDE_KEYS:
 			values.pop(k, None)
 
@@ -650,6 +652,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		# Open LDAP Connection
 		failed_users = []
+		updated_users = []
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 			for user_to_update in data["users"]:
@@ -668,6 +671,8 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				user_data = user_data | values
 				serializer = self.serializer_cls(data=user_data)
 				if not serializer.is_valid():
+					if not isinstance(user_to_update, str):
+						user_to_update = "unknown"
 					failed_users.append(
 						{
 							LOCAL_ATTR_USERNAME: user_to_update,
@@ -680,6 +685,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 				try:
 					self.ldap_user_update(data=validated_data)
+					updated_users.append(user_to_update)
 				except:
 					failed_users.append(
 						{
@@ -688,7 +694,12 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 						}
 					)
 
-		return Response(data={"code": code, "code_msg": code_msg, "data": data})
+		return Response(data={
+			"code": code,
+			"code_msg": code_msg,
+			"updated_users": updated_users,
+			"failed_users": failed_users,
+		})
 
 	@action(detail=False, methods=["post"])
 	@auth_required
