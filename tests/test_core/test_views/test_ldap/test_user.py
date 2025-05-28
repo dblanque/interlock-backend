@@ -896,7 +896,7 @@ class TestUnlock:
 
 
 @pytest.fixture
-def f_bulk_insert_request(f_runtime_settings: RuntimeSettingsSingleton):
+def f_bulk_insert_data(f_runtime_settings: RuntimeSettingsSingleton):
 	result = {
 		"headers":[
 			LOCAL_ATTR_USERNAME,
@@ -986,7 +986,7 @@ class TestBulkInsert:
 	def test_success(
 		self,
 		admin_user_client: APIClient,
-		f_bulk_insert_request: dict,
+		f_bulk_insert_data: dict,
 		mocker: MockerFixture,
 		f_runtime_settings: RuntimeSettingsSingleton,
 	):
@@ -999,7 +999,7 @@ class TestBulkInsert:
 			"fails_insert",
 			"fails_password",
 		)
-		m_users: list[dict] = f_bulk_insert_request.get("users")
+		m_users: list[dict] = f_bulk_insert_data.get("users")
 		m_users[1]["exists"] = True
 		m_users[2]["fails_insert"] = True
 		m_users[3]["fails_password"] = True
@@ -1025,7 +1025,7 @@ class TestBulkInsert:
 				insert_results.append(
 					"CN=%s,%s" % (
 						u.get(LOCAL_ATTR_USERNAME),
-						f_bulk_insert_request.get(LOCAL_ATTR_PATH),
+						f_bulk_insert_data.get(LOCAL_ATTR_PATH),
 					)
 				)
 			else:
@@ -1054,7 +1054,7 @@ class TestBulkInsert:
 
 		response: Response = admin_user_client.post(
 			self.endpoint,
-			data=f_bulk_insert_request,
+			data=f_bulk_insert_data,
 			format="json",
 		)
 		response_data: dict = response.data
@@ -1082,7 +1082,7 @@ class TestBulkInsert:
 		)
 		m_set_password.assert_any_call(
 			user_dn=insert_results[0],
-			user_pwd_new=f_bulk_insert_request["placeholder_password"],
+			user_pwd_new=f_bulk_insert_data["placeholder_password"],
 			set_by_admin=True,
 		)
 		assert "testuser4" in imported_users
@@ -1115,17 +1115,17 @@ class TestBulkInsert:
 	def test_success_no_password(
 		self,
 		admin_user_client: APIClient,
-		f_bulk_insert_request: dict,
+		f_bulk_insert_data: dict,
 		mocker: MockerFixture,
 		f_runtime_settings: RuntimeSettingsSingleton,
 	):
-		f_bulk_insert_request.pop("placeholder_password", None)
+		f_bulk_insert_data.pop("placeholder_password", None)
 		m_expected_exclude_keys = (
 			LOCAL_ATTR_DN,  # We don't want any front-end generated DN
 			LOCAL_ATTR_DN_SHORT,  # We don't want any front-end generated DN
 		)
-		m_users: list[dict] = f_bulk_insert_request.get("users")
-		f_bulk_insert_request["users"] = [m_users[0]]
+		m_users: list[dict] = f_bulk_insert_data.get("users")
+		f_bulk_insert_data["users"] = [m_users[0]]
 		m_exists = mocker.patch.object(
 			LDAPUserViewSet,
 			"ldap_user_exists",
@@ -1136,7 +1136,7 @@ class TestBulkInsert:
 			"ldap_user_insert",
 			return_value="CN=%s,%s" % (
 				m_users[0].get(LOCAL_ATTR_USERNAME),
-				f_bulk_insert_request.get(LOCAL_ATTR_PATH),
+				f_bulk_insert_data.get(LOCAL_ATTR_PATH),
 			)
 		)
 		m_set_password = mocker.patch.object(
@@ -1147,7 +1147,7 @@ class TestBulkInsert:
 
 		response: Response = admin_user_client.post(
 			self.endpoint,
-			data=f_bulk_insert_request,
+			data=f_bulk_insert_data,
 			format="json",
 		)
 		response_data: dict = response.data
@@ -1176,24 +1176,24 @@ class TestBulkInsert:
 	def test_with_mapping(
 		self,
 		admin_user_client: APIClient,
-		f_bulk_insert_request: dict,
+		f_bulk_insert_data: dict,
 		mocker: MockerFixture,
 		f_runtime_settings: RuntimeSettingsSingleton,
 	):
-		f_bulk_insert_request["mapping"] = {
+		f_bulk_insert_data["mapping"] = {
 			LOCAL_ATTR_USERNAME: "mock_user_fld",
 			LOCAL_ATTR_EMAIL: "mock_email_fld",
 			LOCAL_ATTR_FIRST_NAME: "mock_fname_fld",
 			LOCAL_ATTR_LAST_NAME: "mock_lname_fld",
 		}
-		f_bulk_insert_request.pop("placeholder_password", None)
+		f_bulk_insert_data.pop("placeholder_password", None)
 		m_expected_exclude_keys = (
 			LOCAL_ATTR_DN,  # We don't want any front-end generated DN
 			LOCAL_ATTR_DN_SHORT,  # We don't want any front-end generated DN
 		)
-		m_users: list[dict] = f_bulk_insert_request.get("users")
+		m_users: list[dict] = f_bulk_insert_data.get("users")
 		m_expected_user_dict = m_users[0].copy()
-		f_bulk_insert_request["users"] = [
+		f_bulk_insert_data["users"] = [
 			{
 				"mock_user_fld": m_expected_user_dict[LOCAL_ATTR_USERNAME],
 				"mock_email_fld": m_expected_user_dict[LOCAL_ATTR_EMAIL],
@@ -1211,7 +1211,7 @@ class TestBulkInsert:
 			"ldap_user_insert",
 			return_value="CN=%s,%s" % (
 				m_expected_user_dict[LOCAL_ATTR_USERNAME],
-				f_bulk_insert_request.get(LOCAL_ATTR_PATH),
+				f_bulk_insert_data.get(LOCAL_ATTR_PATH),
 			)
 		)
 		m_set_password = mocker.patch.object(
@@ -1222,7 +1222,7 @@ class TestBulkInsert:
 
 		response: Response = admin_user_client.post(
 			self.endpoint,
-			data=f_bulk_insert_request,
+			data=f_bulk_insert_data,
 			format="json",
 		)
 		response_data: dict = response.data
@@ -1251,8 +1251,146 @@ class TestBulkInsert:
 	def test_with_per_user_password(self):
 		raise NotImplementedError
 
+@pytest.fixture
+def f_bulk_update_data():
+	return {
+		"users":["testuser1", "testuser2"],
+		LOCAL_ATTR_PERMISSIONS: [LDAP_UF_NORMAL_ACCOUNT],
+		"values":{
+			LOCAL_ATTR_COUNTRY: "Argentina",
+		}
+	}
+
 class TestBulkUpdate:
 	endpoint = "/api/ldap/users/bulk_update/"
+
+	def test_success(
+		self,
+		admin_user_client: APIClient,
+		f_bulk_update_data: dict,
+		mocker: MockerFixture,
+	):
+		expected_user_count = len(f_bulk_update_data["users"])
+		m_exists = mocker.patch.object(
+			LDAPUserViewSet, "ldap_user_exists", return_value=True)
+		m_update = mocker.patch.object(
+			LDAPUserViewSet, "ldap_user_update", return_value=True)
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=f_bulk_update_data,
+			format="json",
+		)
+		response_data: dict = response.data
+
+		assert response.status_code == status.HTTP_200_OK
+		assert len(response_data.get("updated_users")) == expected_user_count
+		assert m_exists.call_count == expected_user_count
+		assert m_update.call_count == expected_user_count
+		for u in f_bulk_update_data["users"]:
+			m_exists.assert_any_call(
+				username=u,
+				return_exception=False,
+			)
+			m_update.assert_any_call(data={
+				LOCAL_ATTR_USERNAME: u,
+				LOCAL_ATTR_PERMISSIONS: f_bulk_update_data[LOCAL_ATTR_PERMISSIONS],
+				LOCAL_ATTR_COUNTRY: "Argentina",
+			})
+
+	def test_not_exists_raises(
+		self,
+		admin_user_client: APIClient,
+		f_bulk_update_data: dict,
+		mocker: MockerFixture,
+	):
+		m_exists = mocker.patch.object(
+			LDAPUserViewSet, "ldap_user_exists", return_value=False)
+		m_update = mocker.patch.object(
+			LDAPUserViewSet, "ldap_user_update", return_value=None)
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=f_bulk_update_data,
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_404_NOT_FOUND
+		m_exists.assert_called_once()
+		m_update.assert_not_called()
+
+	def test_serializer_failure(
+		self,
+		admin_user_client: APIClient,
+		f_bulk_update_data: dict,
+		mocker: MockerFixture,
+	):
+		user_count = len(f_bulk_update_data["users"])
+		f_bulk_update_data["values"] = {
+			LOCAL_ATTR_COUNTRY: "Some Inexistent Country"
+		}
+		m_exists = mocker.patch.object(
+			LDAPUserViewSet, "ldap_user_exists", return_value=True)
+		m_update = mocker.patch.object(
+			LDAPUserViewSet, "ldap_user_update", return_value=None)
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=f_bulk_update_data,
+			format="json",
+		)
+		response_data: dict = response.data
+
+		assert response.status_code == status.HTTP_200_OK
+		m_exists.call_count == user_count
+		failed_users = response_data["failed_users"]
+		assert len(failed_users) == user_count
+		m_update.assert_not_called()
+		for error_detail in failed_users:
+			assert error_detail["stage"] == "serializer_validation"
+
+	def test_update_failure(
+		self,
+		admin_user_client: APIClient,
+		f_bulk_update_data: dict,
+		mocker: MockerFixture,
+	):
+		user_count = len(f_bulk_update_data["users"])
+		m_exists = mocker.patch.object(
+			LDAPUserViewSet, "ldap_user_exists", return_value=True)
+		m_update = mocker.patch.object(
+			LDAPUserViewSet, "ldap_user_update", side_effect=Exception)
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=f_bulk_update_data,
+			format="json",
+		)
+		response_data: dict = response.data
+
+		assert response.status_code == status.HTTP_200_OK
+		m_exists.call_count == user_count
+		failed_users = response_data["failed_users"]
+		assert len(failed_users) == user_count
+		m_update.call_count == user_count
+		for error_detail in failed_users:
+			assert error_detail["stage"] == "update"
+
+	def test_bad_request_raises(
+		self,
+		admin_user_client: APIClient,
+		f_bulk_update_data: dict,
+		mocker: MockerFixture,
+	):
+		f_bulk_update_data.pop("values")
+		f_bulk_update_data.pop(LOCAL_ATTR_PERMISSIONS)
+		m_exists = mocker.patch.object(LDAPUserViewSet, "ldap_user_exists")
+		m_update = mocker.patch.object(LDAPUserViewSet, "ldap_user_update")
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=f_bulk_update_data,
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		m_exists.assert_not_called()
+		m_update.assert_not_called()
 
 
 class TestBulkChangeStatus:
