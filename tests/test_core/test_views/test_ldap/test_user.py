@@ -1255,8 +1255,78 @@ class TestBulkInsert:
 		)
 		m_set_password.assert_not_called()
 	
-	def test_with_per_user_password(self):
-		raise NotImplementedError
+	def test_with_per_user_password(
+		self,
+		admin_user_client: APIClient,
+		f_bulk_insert_data: dict,
+		mocker: MockerFixture,
+		f_runtime_settings: RuntimeSettingsSingleton,
+	):
+		f_bulk_insert_data.pop("placeholder_password", None)
+		f_bulk_insert_data["headers"] = f_bulk_insert_data["headers"] + [LOCAL_ATTR_PASSWORD]
+		m_expected_exclude_keys = (
+			LOCAL_ATTR_PASSWORD,
+			LOCAL_ATTR_DN,  # We don't want any front-end generated DN
+			LOCAL_ATTR_DN_SHORT,  # We don't want any front-end generated DN
+		)
+		m_users: list[dict] = [f_bulk_insert_data.get("users")[0]]
+		m_user_password = "mock_user_password"
+		m_users[0][LOCAL_ATTR_PASSWORD] = m_user_password
+		f_bulk_insert_data["users"] = m_users
+
+		m_exists = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_exists",
+			return_value=False
+		)
+		m_user_dn = "CN=%s,%s" % (
+			m_users[0][LOCAL_ATTR_USERNAME],
+			f_bulk_insert_data.get(LOCAL_ATTR_PATH),
+		)
+		m_insert = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_insert",
+			return_value=m_user_dn
+		)
+		m_set_password = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_set_password",
+			return_value=None
+		)
+
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=f_bulk_insert_data,
+			format="json",
+		)
+		response_data: dict = response.data
+
+		# Assertions
+		assert response.status_code == status.HTTP_200_OK
+		imported_users = response_data.get("imported_users")
+
+		assert len(imported_users) == 1
+		assert "testuser1" in imported_users
+		m_exists.assert_any_call(
+			username=m_users[0][LOCAL_ATTR_USERNAME],
+			email=m_users[0][LOCAL_ATTR_EMAIL],
+			return_exception=False,
+		)
+		expected_user_data = m_users[0] | {
+			LOCAL_ATTR_PATH: f"OU=Test,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
+			LOCAL_ATTR_PERMISSIONS: [LDAP_UF_NORMAL_ACCOUNT]
+		}
+		del expected_user_data[LOCAL_ATTR_PASSWORD]
+		m_insert.assert_any_call(
+			data=expected_user_data,
+			exclude_keys=m_expected_exclude_keys,
+			return_exception=False,
+		)
+		m_set_password.assert_called_once_with(
+			user_dn=m_user_dn,
+			user_pwd_new=m_user_password,
+			set_by_admin=True,
+		)
 
 @pytest.fixture
 def f_bulk_update_data():
@@ -1413,14 +1483,23 @@ class TestBulkChangeStatus:
 	endpoint = "/api/ldap/users/bulk_change_status/"
 
 	@pytest.mark.parametrize(
-		"disable, expected",
+		"flatten_users, disable, expected",
 		(
-			(True, False,),
-			(False, True,),
+			(False, True, False,),
+			(False, False, True,),
+			(True, True, False,),
+			(True, False, True,),
 		),
+		ids=[
+			"User dict list, disable is True, expects enable False",
+			"User dict list, disable is False, expects enable True",
+			"Username list, disable is True, expects enable False",
+			"Username list, disable is False, expects enable True",
+		]
 	)
 	def test_success(
 		self,
+		flatten_users: bool,
 		disable: bool,
 		expected: bool,
 		admin_user_client: APIClient,
@@ -1428,6 +1507,10 @@ class TestBulkChangeStatus:
 		f_bulk_change_status_data: dict,
 		mocker: MockerFixture,
 	):
+		if flatten_users:
+			f_bulk_change_status_data["users"] = [
+				u.get(LOCAL_ATTR_USERNAME) for u in f_bulk_change_status_data["users"]
+			]
 		f_bulk_change_status_data["disable"] = disable
 		user_count = len(f_bulk_change_status_data["users"])
 		m_change_status = mocker.patch.object(
@@ -1450,7 +1533,7 @@ class TestBulkChangeStatus:
 		f_logger.error.assert_called_once()
 		for u in f_bulk_change_status_data["users"]:
 			m_change_status.assert_any_call(
-				username=u[LOCAL_ATTR_USERNAME],
+				username=u[LOCAL_ATTR_USERNAME] if not flatten_users else u,
 				enabled=expected,
 			)
 
@@ -1475,7 +1558,7 @@ class TestBulkChangeStatus:
 		"users",
 		(
 			[],
-			["a_list_of_str_should_fail"],
+			[False],
 			{"users":[]},
 		),
 	)
@@ -1497,13 +1580,101 @@ class TestBulkChangeStatus:
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		m_change_status.assert_not_called()
 
+@pytest.fixture
+def f_bulk_delete_data():
+	return [
+		{LOCAL_ATTR_USERNAME:"testuser1"},
+		{LOCAL_ATTR_USERNAME:"testuser2"},
+	]
+
 class TestBulkDelete:
 	endpoint = "/api/ldap/users/bulk_delete/"
 
+	@pytest.mark.parametrize(
+		"flatten_users",
+		(
+			True,
+			False,
+		),
+	)
+	def test_success(
+		self,
+		flatten_users: bool,
+		f_bulk_delete_data: list[dict, str],
+		admin_user_client: APIClient,
+		mocker: MockerFixture
+	):
+		flattened_users = [
+			u.get(LOCAL_ATTR_USERNAME) for u in f_bulk_delete_data
+		]
+		m_delete = mocker.patch.object(LDAPUserViewSet, "ldap_user_delete")
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=f_bulk_delete_data if not flatten_users else flattened_users,
+			format="json",
+		)
+		assert response.status_code == status.HTTP_200_OK
+		assert response.data.get("data") == flattened_users
+		m_delete.call_count == len(flattened_users)
+		for u in f_bulk_delete_data:
+			m_delete.assert_any_call(
+				username=u.get(LOCAL_ATTR_USERNAME)
+			)
 
 class TestBulkUnlock:
 	endpoint = "/api/ldap/users/bulk_unlock/"
 
+	@pytest.mark.parametrize(
+		"flatten_users",
+		(
+			True,
+			False,
+		),
+	)
+	def test_success(
+		self,
+		flatten_users: bool,
+		f_bulk_delete_data: list[dict, str],
+		f_ldap_connector: LDAPConnectorMock,
+		admin_user_client: APIClient,
+		mocker: MockerFixture
+	):
+		m_ldap_result = {"description": "success"}
+		f_ldap_connector.connection.result = m_ldap_result
+		flattened_users = [
+			u.get(LOCAL_ATTR_USERNAME) for u in f_bulk_delete_data
+		]
+		m_unlock = mocker.patch.object(LDAPUserViewSet, "ldap_user_unlock")
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=f_bulk_delete_data if not flatten_users else flattened_users,
+			format="json",
+		)
+		assert response.status_code == status.HTTP_200_OK
+		assert response.data.get("data") == flattened_users
+		m_unlock.call_count == len(flattened_users)
+		for u in f_bulk_delete_data:
+			m_unlock.assert_any_call(
+				username=u.get(LOCAL_ATTR_USERNAME)
+			)
+
+	def test_unhandled_error(
+		self,
+		f_bulk_delete_data: list[dict, str],
+		f_ldap_connector: LDAPConnectorMock,
+		admin_user_client: APIClient,
+		mocker: MockerFixture
+	):
+		m_ldap_result = {"description": "error"}
+		f_ldap_connector.connection.result = m_ldap_result
+		m_unlock = mocker.patch.object(LDAPUserViewSet, "ldap_user_unlock")
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=f_bulk_delete_data,
+			format="json",
+		)
+		assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+		m_unlock.call_count == len(f_bulk_delete_data)
 
 class TestSelfChangePassword:
 	endpoint = "/api/ldap/users/self_change_password/"
