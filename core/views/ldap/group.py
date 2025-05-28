@@ -61,10 +61,10 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
-			self.ldap_filter_object = LDAPFilter.eq(
+			self.search_filter = LDAPFilter.eq(
 				LDAP_ATTR_OBJECT_CLASS, "group"
 			).to_string()
-			self.ldap_filter_attr = self.filter_attr_builder(
+			self.search_attrs = self.filter_attr_builder(
 				RuntimeSettings
 			).get_list_filter()
 
@@ -96,10 +96,10 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		if not group_search:
 			raise exc_groups.GroupDistinguishedNameMissing
 
-		self.ldap_filter_attr = self.filter_attr_builder(
+		self.search_attrs = self.filter_attr_builder(
 			RuntimeSettings
 		).get_fetch_filter()
-		self.ldap_filter_object = LDAPFilter.and_(
+		self.search_filter = LDAPFilter.and_(
 			LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "group"),
 			LDAPFilter.eq(LDAP_ATTR_DN, group_search),
 		).to_string()
@@ -143,7 +143,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 			)
 
 		# Filter to check Group doesn't exist check with CN, and user field
-		self.ldap_filter_object = LDAPFilter.or_(
+		self.search_filter = LDAPFilter.or_(
 			LDAPFilter.eq(LDAP_ATTR_COMMON_NAME, group_cn),
 			LDAPFilter.eq(
 				RuntimeSettings.LDAP_FIELD_MAP["username"],
@@ -152,7 +152,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		).to_string()
 
 		# Send LDAP Query for user being created to see if it exists
-		self.ldap_filter_attr = self.filter_attr_builder(
+		self.search_attrs = self.filter_attr_builder(
 			RuntimeSettings
 		).get_insert_filter()
 
@@ -175,7 +175,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		group_data = data.get("group", None)
 		if not group_data or not isinstance(group_data, dict):
 			raise exc_base.BadRequest(data={"detail": "group dict is required"})
-		self.ldap_filter_attr = list(group_data.keys())
+		self.search_attrs = list(group_data.keys())
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
@@ -197,7 +197,7 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		if not group_data or not isinstance(group_data, dict):
 			raise exc_base.BadRequest(data={"detail": "group dict is required"})
 
-		self.ldap_filter_attr = [LDAP_ATTR_COMMON_NAME, LDAP_ATTR_GROUP_TYPE]
+		self.search_attrs = [LDAP_ATTR_COMMON_NAME, LDAP_ATTR_GROUP_TYPE]
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:

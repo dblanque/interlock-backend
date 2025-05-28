@@ -241,15 +241,15 @@ class TestGetGroupByRid:
 	):
 		# Mock result LDAPObject
 		m_group_entry = fc_group_entry()
-		m_ldap_object = mocker.Mock()
+		m_ldap_group = mocker.Mock()
 		m_sid = SID(getattr(m_group_entry, LDAP_ATTR_SECURITY_ID))
-		m_ldap_object.attributes = {
-			LDAP_ATTR_DN: m_group_entry.entry_dn,
-			LDAP_ATTR_SECURITY_ID: m_sid,
+		m_ldap_group.attributes = {
+			LOCAL_ATTR_DN: m_group_entry.entry_dn,
+			LOCAL_ATTR_SECURITY_ID: m_sid,
 		}
 		mocker.patch(
-			"core.views.mixins.ldap.group.LDAPObject",
-			return_value=m_ldap_object,
+			"core.views.mixins.ldap.group.LDAPGroup",
+			return_value=m_ldap_group,
 		)
 		m_group_without_sid = mocker.MagicMock()
 		m_group_without_sid.objectSid = None
@@ -265,22 +265,12 @@ class TestGetGroupByRid:
 				"group"
 			).to_string(),
 			search_scope=SUBTREE,
-			attributes=[LDAP_ATTR_SECURITY_ID, LDAP_ATTR_DN],
+			attributes={LDAP_ATTR_SECURITY_ID, LDAP_ATTR_DN},
 		)
+		m_connection.search.call_count == 1
 		if should_return_group_entry:
-			m_connection.search.call_count == 2
-			m_connection.search.assert_any_call(
-				search_base=f_runtime_settings.LDAP_AUTH_SEARCH_BASE,
-				search_filter=LDAPFilter.eq(
-					LDAP_ATTR_DN,
-					m_group_entry.entry_dn
-				).to_string(),
-				search_scope=SUBTREE,
-				attributes=ALL_OPERATIONAL_ATTRIBUTES,
-			)
 			assert isinstance(result, dict)
 		else:
-			m_connection.search.call_count == 1
 			assert result is None
 
 
@@ -664,7 +654,7 @@ class TestGroupMixinCRUD:
 		m_group_entry.attributes = {LDAP_ATTR_COMMON_NAME: "CN=Bad"}
 		# Mock old Group LDAP Entry
 		mocker.patch(
-			"core.views.mixins.ldap.group.LDAPObject",
+			"core.views.mixins.ldap.group.LDAPGroup",
 			return_value=m_group_entry,
 		)
 		with pytest.raises(exc_ldap.DistinguishedNameValidationError):

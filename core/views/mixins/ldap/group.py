@@ -82,7 +82,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		rid: int = None, attributes: List[str] = None
 	) -> dict | None:
 		if not attributes:
-			attributes = [LDAP_ATTR_SECURITY_ID, LDAP_ATTR_DN]
+			attributes = set([LDAP_ATTR_DN, LDAP_ATTR_SECURITY_ID])
 		if isinstance(rid, list):
 			rid = rid[0]
 		if rid is None or rid is False:
