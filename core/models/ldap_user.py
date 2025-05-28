@@ -18,6 +18,7 @@ from core.ldap.adsi import (
 	list_user_perms,
 	LDAP_UF_ACCOUNT_DISABLE,
 	LDAP_UF_NORMAL_ACCOUNT,
+	LDAP_UF_PASSWD_CANT_CHANGE,
 )
 
 ### Others
@@ -82,6 +83,7 @@ class LDAPUser(LDAPObject):
 
 	# Only defined explicitly for overload definition
 	def __init__(self, **kwargs):  # pragma: no cover
+		self.default_attrs = self.search_attrs
 		super().__init__(**kwargs)
 
 	def __validate_init__(self, **kwargs):
@@ -203,4 +205,21 @@ class LDAPUser(LDAPObject):
 		return not list_user_perms(
 			user=self.entry,
 			perm_search=LDAP_UF_ACCOUNT_DISABLE,
+		)
+
+	@property
+	def can_change_password(self):
+		if not self.entry:
+			raise ValueError(
+				"An LDAP Entry is required to check if the User is enabled on the server."
+			)
+		_UAC_FIELD = RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_UAC]
+		if not _UAC_FIELD in self.entry.entry_attributes:
+			raise ValueError(
+				"%s attribute is required in entry search" % (_UAC_FIELD)
+			)
+
+		return not list_user_perms(
+			user=self.entry,
+			perm_search=LDAP_UF_PASSWD_CANT_CHANGE,
 		)

@@ -16,6 +16,7 @@ from core.ldap.adsi import (
 	LDAP_UF_ACCOUNT_DISABLE,
 	LDAP_UF_NORMAL_ACCOUNT,
 	LDAP_UF_DONT_EXPIRE_PASSWD,
+	LDAP_UF_PASSWD_CANT_CHANGE,
 )
 
 
@@ -419,3 +420,81 @@ class TestPropertyIsEnabled:
 		m_ldap_user = f_ldap_user_no_init(entry=m_entry)
 
 		assert m_ldap_user.is_enabled == expected
+
+class TestPropertyCanChangePassword:
+	def test_raises_no_entry(
+		self,
+		mocker: MockerFixture,
+		f_ldap_user_no_init: InitlessLDAPUserFactory,
+	):
+		mocker.patch.object(LDAPUser, "__init__", return_value=None)
+		m_ldap_user = f_ldap_user_no_init()
+		with pytest.raises(ValueError, match="Entry is required to check"):
+			m_ldap_user.can_change_password
+
+	def test_raises_entry_has_no_uac(
+		self,
+		mocker: MockerFixture,
+		f_ldap_user_no_init: InitlessLDAPUserFactory,
+	):
+		mocker.patch.object(LDAPUser, "__init__", return_value=None)
+		m_entry = mocker.Mock()
+		m_entry.entry_attributes = {}
+		m_ldap_user = f_ldap_user_no_init()
+		with pytest.raises(ValueError, match="Entry is required to check"):
+			m_ldap_user.can_change_password
+
+	def test_success_mocked(
+		self,
+		mocker: MockerFixture,
+		f_ldap_user_no_init: InitlessLDAPUserFactory,
+	):
+		mocker.patch.object(LDAPUser, "__init__", return_value=None)
+		m_list_user_perms = mocker.patch(
+			"core.models.ldap_user.list_user_perms", return_value=True
+		)
+		m_entry = mocker.Mock()
+		m_entry.entry_attributes = [LDAP_ATTR_UAC]
+		m_ldap_user = f_ldap_user_no_init(entry=m_entry)
+
+		assert not m_ldap_user.can_change_password
+		m_list_user_perms.assert_called_once_with(
+			user=m_ldap_user.entry,
+			perm_search=LDAP_UF_PASSWD_CANT_CHANGE,
+		)
+
+	@pytest.mark.parametrize(
+		"permissions, expected",
+		(
+			(
+				calc_permissions([LDAP_UF_NORMAL_ACCOUNT]),
+				True,
+			),
+			(
+				calc_permissions(
+					[LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_PASSWD_CANT_CHANGE]
+				),
+				False,
+			),
+		),
+	)
+	def test_success(
+		self,
+		permissions: list,
+		expected: bool,
+		mocker: MockerFixture,
+		f_ldap_user_no_init: InitlessLDAPUserFactory,
+	):
+		mocker.patch.object(LDAPUser, "__init__", return_value=None)
+		m_entry = mocker.Mock()
+		m_entry.entry_attributes = [LDAP_ATTR_UAC]
+		m_attr_username = mocker.Mock()
+		m_attr_username.value = "testuser"
+		m_attr = mocker.Mock()
+		setattr(m_entry, LDAP_ATTR_USERNAME_SAMBA_ADDS, m_attr)
+		m_attr.value = permissions
+		m_attr.values = [permissions]
+		setattr(m_entry, LDAP_ATTR_UAC, m_attr)
+		m_ldap_user = f_ldap_user_no_init(entry=m_entry)
+
+		assert m_ldap_user.can_change_password == expected

@@ -675,6 +675,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			# Check if user is disabled
 			try:
 				user_dict[LOCAL_ATTR_IS_ENABLED] = user_obj.is_enabled
+				user_dict[LOCAL_ATTR_CAN_CHANGE_PWD] = user_obj.can_change_password
 			except Exception as e:
 				logger.exception(e)
 
