@@ -122,6 +122,7 @@ class LDAPObject:
 	entry: LDAPEntry = None
 	excluded_ldap_attributes: list[str] = None
 	search_attrs: list[str] | str = ALL_OPERATIONAL_ATTRIBUTES
+	default_attrs = None
 	search_filter: str = None
 	search_base: str = None
 	parsed_specials: list[str] = None
@@ -249,7 +250,12 @@ class LDAPObject:
 			setattr(self, kw, kwargs[kw])
 
 		self.__set_search_attrs__(
-			kwargs.pop("search_attrs", ALL_OPERATIONAL_ATTRIBUTES)
+			kwargs.pop(
+				"search_attrs",
+				ALL_OPERATIONAL_ATTRIBUTES \
+					if not self.default_attrs \
+					else self.default_attrs
+			)
 		)
 
 	def __get_connection__(self):

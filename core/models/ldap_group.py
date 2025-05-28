@@ -67,6 +67,7 @@ class LDAPGroup(LDAPObject):
 
 	# Only defined explicitly for overload definition
 	def __init__(self, **kwargs):  # pragma: no cover
+		self.default_attrs = self.search_attrs
 		super().__init__(**kwargs)
 
 	def __validate_init__(self, **kwargs):
