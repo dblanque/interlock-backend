@@ -918,7 +918,6 @@ def f_bulk_insert_request(f_runtime_settings: RuntimeSettingsSingleton):
 				LOCAL_ATTR_EMAIL: f"testuser2@{f_runtime_settings.LDAP_DOMAIN}",
 				LOCAL_ATTR_FIRST_NAME: "Test",
 				LOCAL_ATTR_LAST_NAME: "User 2",
-				"exists": True,
 			},
 			# Should Fail
 			{
@@ -926,7 +925,6 @@ def f_bulk_insert_request(f_runtime_settings: RuntimeSettingsSingleton):
 				LOCAL_ATTR_EMAIL: f"testuser3@{f_runtime_settings.LDAP_DOMAIN}",
 				LOCAL_ATTR_FIRST_NAME: "Test",
 				LOCAL_ATTR_LAST_NAME: "User 3",
-				"fails_insert": True,
 			},
 			# Should import but fail password
 			{
@@ -934,7 +932,6 @@ def f_bulk_insert_request(f_runtime_settings: RuntimeSettingsSingleton):
 				LOCAL_ATTR_EMAIL: f"testuser4@{f_runtime_settings.LDAP_DOMAIN}",
 				LOCAL_ATTR_FIRST_NAME: "Test",
 				LOCAL_ATTR_LAST_NAME: "User 4",
-				"fails_password": True,
 			},
 		],
 		LOCAL_ATTR_PATH: f"OU=Test,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
@@ -959,6 +956,10 @@ class TestBulkInsert:
 			"headers",
 			"users",
 		),
+		ids=[
+			"Raises on missing headers key",
+			"Raises on missing users key"
+		]
 	)
 	def test_raises_missing_data_key(
 		self,
@@ -987,15 +988,32 @@ class TestBulkInsert:
 		admin_user_client: APIClient,
 		f_bulk_insert_request: dict,
 		mocker: MockerFixture,
+		f_runtime_settings: RuntimeSettingsSingleton,
 	):
+		m_expected_exclude_keys = (
+			LOCAL_ATTR_DN,  # We don't want any front-end generated DN
+			LOCAL_ATTR_DN_SHORT,  # We don't want any front-end generated DN
+		)
 		_pop_keys = (
 			"exists",
 			"fails_insert",
 			"fails_password",
 		)
 		m_users: list[dict] = f_bulk_insert_request.get("users")
+		m_users[1]["exists"] = True
+		m_users[2]["fails_insert"] = True
+		m_users[3]["fails_password"] = True
+		m_users.append(
+			# Should fail serialization
+			{
+				LOCAL_ATTR_USERNAME: False,
+				LOCAL_ATTR_EMAIL: b"some_bytes",
+				LOCAL_ATTR_FIRST_NAME: "Test",
+				LOCAL_ATTR_LAST_NAME: "User 4",
+			},
+		)
 		exists_results = [ u.get("exists", False) for u in m_users ]
-		mocker.patch.object(
+		m_exists = mocker.patch.object(
 			LDAPUserViewSet,
 			"ldap_user_exists",
 			side_effect=tuple(exists_results),
@@ -1012,7 +1030,7 @@ class TestBulkInsert:
 				)
 			else:
 				insert_results.append(None)
-		mocker.patch.object(
+		m_insert = mocker.patch.object(
 			LDAPUserViewSet,
 			"ldap_user_insert",
 			side_effect=tuple(insert_results)
@@ -1025,7 +1043,7 @@ class TestBulkInsert:
 				password_results.append(None)
 			else:
 				password_results.append(Exception)
-		mocker.patch.object(
+		m_set_password = mocker.patch.object(
 			LDAPUserViewSet,
 			"ldap_set_password",
 			side_effect=tuple(password_results)
@@ -1040,28 +1058,197 @@ class TestBulkInsert:
 			format="json",
 		)
 		response_data: dict = response.data
+
+		# Assertions
 		assert response.status_code == status.HTTP_200_OK
 		imported_users = response_data.get("imported_users")
 		skipped_users = response_data.get("skipped_users")
 		failed_users = response_data.get("failed_users")
+
 		assert len(imported_users) == 2
 		assert "testuser1" in imported_users
+		m_exists.assert_any_call(
+			username=m_users[0][LOCAL_ATTR_USERNAME],
+			email=m_users[0][LOCAL_ATTR_EMAIL],
+			return_exception=False,
+		)
+		m_insert.assert_any_call(
+			data=m_users[0] | {
+				LOCAL_ATTR_PATH: f"OU=Test,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
+				LOCAL_ATTR_PERMISSIONS: [LDAP_UF_NORMAL_ACCOUNT]
+			},
+			exclude_keys=m_expected_exclude_keys,
+			return_exception=False,
+		)
+		m_set_password.assert_any_call(
+			user_dn=insert_results[0],
+			user_pwd_new=f_bulk_insert_request["placeholder_password"],
+			set_by_admin=True,
+		)
 		assert "testuser4" in imported_users
+		m_exists.assert_any_call(
+			username=m_users[3][LOCAL_ATTR_USERNAME],
+			email=m_users[3][LOCAL_ATTR_EMAIL],
+			return_exception=False,
+		)
+		m_insert.assert_any_call(
+			data=m_users[3] | {
+				LOCAL_ATTR_PATH: f"OU=Test,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
+				LOCAL_ATTR_PERMISSIONS: [LDAP_UF_NORMAL_ACCOUNT]
+			},
+			exclude_keys=m_expected_exclude_keys,
+			return_exception=False,
+		)
+		m_set_password.call_count == 1
+
 		assert len(skipped_users) == 1
 		assert "testuser2" in skipped_users
-		assert len(failed_users) == 2
+
+		assert len(failed_users) == 3
 		assert failed_users[0][LOCAL_ATTR_USERNAME] == "testuser3"
 		assert failed_users[0]["stage"] == "insert"
 		assert failed_users[1][LOCAL_ATTR_USERNAME] == "testuser4"
 		assert failed_users[1]["stage"] == "password"
+		assert failed_users[2][LOCAL_ATTR_USERNAME] == "unknown"
+		assert failed_users[2]["stage"] == "serializer_validation"
 
-	def test_success_no_password():
-		raise NotImplementedError
+	def test_success_no_password(
+		self,
+		admin_user_client: APIClient,
+		f_bulk_insert_request: dict,
+		mocker: MockerFixture,
+		f_runtime_settings: RuntimeSettingsSingleton,
+	):
+		f_bulk_insert_request.pop("placeholder_password", None)
+		m_expected_exclude_keys = (
+			LOCAL_ATTR_DN,  # We don't want any front-end generated DN
+			LOCAL_ATTR_DN_SHORT,  # We don't want any front-end generated DN
+		)
+		m_users: list[dict] = f_bulk_insert_request.get("users")
+		f_bulk_insert_request["users"] = [m_users[0]]
+		m_exists = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_exists",
+			return_value=False
+		)
+		m_insert = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_insert",
+			return_value="CN=%s,%s" % (
+				m_users[0].get(LOCAL_ATTR_USERNAME),
+				f_bulk_insert_request.get(LOCAL_ATTR_PATH),
+			)
+		)
+		m_set_password = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_set_password",
+			return_value=None
+		)
 
-	def test_fails_on_serializer():
-		raise NotImplementedError
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=f_bulk_insert_request,
+			format="json",
+		)
+		response_data: dict = response.data
 
-	def test_with_mapping():
+		# Assertions
+		assert response.status_code == status.HTTP_200_OK
+		imported_users = response_data.get("imported_users")
+
+		assert len(imported_users) == 1
+		assert "testuser1" in imported_users
+		m_exists.assert_any_call(
+			username=m_users[0][LOCAL_ATTR_USERNAME],
+			email=m_users[0][LOCAL_ATTR_EMAIL],
+			return_exception=False,
+		)
+		m_insert.assert_any_call(
+			data=m_users[0] | {
+				LOCAL_ATTR_PATH: f"OU=Test,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
+				LOCAL_ATTR_PERMISSIONS: [LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_ACCOUNT_DISABLE]
+			},
+			exclude_keys=m_expected_exclude_keys,
+			return_exception=False,
+		)
+		m_set_password.assert_not_called()
+
+	def test_with_mapping(
+		self,
+		admin_user_client: APIClient,
+		f_bulk_insert_request: dict,
+		mocker: MockerFixture,
+		f_runtime_settings: RuntimeSettingsSingleton,
+	):
+		f_bulk_insert_request["mapping"] = {
+			LOCAL_ATTR_USERNAME: "mock_user_fld",
+			LOCAL_ATTR_EMAIL: "mock_email_fld",
+			LOCAL_ATTR_FIRST_NAME: "mock_fname_fld",
+			LOCAL_ATTR_LAST_NAME: "mock_lname_fld",
+		}
+		f_bulk_insert_request.pop("placeholder_password", None)
+		m_expected_exclude_keys = (
+			LOCAL_ATTR_DN,  # We don't want any front-end generated DN
+			LOCAL_ATTR_DN_SHORT,  # We don't want any front-end generated DN
+		)
+		m_users: list[dict] = f_bulk_insert_request.get("users")
+		m_expected_user_dict = m_users[0].copy()
+		f_bulk_insert_request["users"] = [
+			{
+				"mock_user_fld": m_expected_user_dict[LOCAL_ATTR_USERNAME],
+				"mock_email_fld": m_expected_user_dict[LOCAL_ATTR_EMAIL],
+				"mock_fname_fld": m_expected_user_dict[LOCAL_ATTR_FIRST_NAME],
+				"mock_lname_fld": m_expected_user_dict[LOCAL_ATTR_LAST_NAME],
+			}
+		]
+		m_exists = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_exists",
+			return_value=False
+		)
+		m_insert = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_insert",
+			return_value="CN=%s,%s" % (
+				m_expected_user_dict[LOCAL_ATTR_USERNAME],
+				f_bulk_insert_request.get(LOCAL_ATTR_PATH),
+			)
+		)
+		m_set_password = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_set_password",
+			return_value=None
+		)
+
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=f_bulk_insert_request,
+			format="json",
+		)
+		response_data: dict = response.data
+
+		# Assertions
+		assert response.status_code == status.HTTP_200_OK
+		imported_users = response_data.get("imported_users")
+
+		assert len(imported_users) == 1
+		assert "testuser1" in imported_users
+		m_exists.assert_any_call(
+			username=m_expected_user_dict[LOCAL_ATTR_USERNAME],
+			email=m_expected_user_dict[LOCAL_ATTR_EMAIL],
+			return_exception=False,
+		)
+		m_insert.assert_any_call(
+			data=m_expected_user_dict | {
+				LOCAL_ATTR_PATH: f"OU=Test,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
+				LOCAL_ATTR_PERMISSIONS: [LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_ACCOUNT_DISABLE]
+			},
+			exclude_keys=m_expected_exclude_keys,
+			return_exception=False,
+		)
+		m_set_password.assert_not_called()
+	
+	def test_with_per_user_password(self):
 		raise NotImplementedError
 
 class TestBulkUpdate:
