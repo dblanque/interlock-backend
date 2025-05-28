@@ -482,11 +482,14 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			LOCAL_ATTR_PATH,
 			f"CN=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}",
 		)
-		MAPPED_PWD_KEY = HEADER_MAPPING.get(LOCAL_ATTR_PASSWORD, None)
 		MAPPED_USER_KEY = HEADER_MAPPING.get(
 			LOCAL_ATTR_USERNAME, LOCAL_ATTR_USERNAME)
 		MAPPED_EMAIL_KEY = HEADER_MAPPING.get(
 			LOCAL_ATTR_EMAIL, LOCAL_ATTR_EMAIL)
+		# Map Password Key
+		MAPPED_PWD_KEY = HEADER_MAPPING.get(LOCAL_ATTR_PASSWORD, None)
+		if any(LOCAL_ATTR_PASSWORD in user for user in USER_LIST):
+			MAPPED_PWD_KEY = LOCAL_ATTR_PASSWORD
 		placeholder_password = data.get("placeholder_password", None)
 
 		# If all local aliases match with remote aliases, do not map
@@ -532,7 +535,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			self.ldap_connection = ldc.connection
 			for row in USER_LIST:
 				row: dict
-				user_search = row[MAPPED_USER_KEY]
+				user_search = row.get(MAPPED_USER_KEY)
 
 				# Check user existence
 				if self.ldap_user_exists(
@@ -551,13 +554,22 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 				mapped_row[LOCAL_ATTR_PATH] = INSERTION_PATH
 				mapped_row[LOCAL_ATTR_PERMISSIONS] = _permissions
+					
+				# Set password
+				set_pwd = None
+				if placeholder_password and not set_pwd:
+					set_pwd = placeholder_password
+				elif MAPPED_PWD_KEY in mapped_row:
+					set_pwd = mapped_row[MAPPED_PWD_KEY]
+					mapped_row[LOCAL_ATTR_PASSWORD_CONFIRM] = set_pwd
+
 				# Serializer validation
 				serializer = self.serializer_cls(data=mapped_row)
 				if not serializer.is_valid():
 					failed_users.append(
 						{
-							LOCAL_ATTR_USERNAME: row[MAPPED_USER_KEY] \
-								if isinstance(row[MAPPED_USER_KEY], str) \
+							LOCAL_ATTR_USERNAME: user_search \
+								if isinstance(user_search, str) \
 								else "unknown",
 							"stage": "serializer_validation",
 							"detail": serializer.errors,
@@ -565,6 +577,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 					)
 					continue
 				_validated_row = serializer.validated_data
+				_validated_row.pop(LOCAL_ATTR_PASSWORD, None)
 
 				# Insert user
 				user_dn = self.ldap_user_insert(
@@ -575,40 +588,33 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				if not user_dn:
 					failed_users.append(
 						{
-							LOCAL_ATTR_USERNAME: row[MAPPED_USER_KEY],
+							LOCAL_ATTR_USERNAME: user_search,
 							"stage": "insert",
 						}
 					)
 					continue
 
-				# Set password
-				set_pwd = False
-				if placeholder_password:
-					set_pwd = True
-				elif MAPPED_PWD_KEY in data["headers"] and row[MAPPED_PWD_KEY]:
-					set_pwd = True
-
 				if set_pwd:
 					try:
 						self.ldap_set_password(
 							user_dn=user_dn,
-							user_pwd_new=placeholder_password,
+							user_pwd_new=set_pwd,
 							set_by_admin=True,
 						)
 					except:
 						failed_users.append(
 							{
-								LOCAL_ATTR_USERNAME: row[MAPPED_USER_KEY],
+								LOCAL_ATTR_USERNAME: user_search,
 								"stage": LOCAL_ATTR_PASSWORD,
 							}
 						)
 
-				imported_users.append(row[MAPPED_USER_KEY])
+				imported_users.append(user_search)
 				DBLogMixin.log(
 					user=request.user.id,
 					operation_type=LOG_ACTION_CREATE,
 					log_target_class=LOG_CLASS_USER,
-					log_target=row[MAPPED_USER_KEY],
+					log_target=user_search,
 				)
 
 		return Response(
@@ -711,13 +717,13 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		code_msg = "ok"
 		request_data = request.data
 		disable_users = request_data.get("disable", None)
-		data: list[dict] = request_data["users"]
+		data: list[dict] | list[str] = request_data["users"]
 
 		if disable_users is None:
 			raise BadRequest
 		if not isinstance(data, list) or not data:
 			raise BadRequest
-		if not all(isinstance(x, dict) for x in data):
+		if not all(isinstance(x, (dict, str)) for x in data):
 			raise BadRequest
 
 		######################## Set LDAP Attributes ###########################
@@ -735,7 +741,10 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			self.ldap_connection = ldc.connection
 			success = []
 			for user_data in data:
-				username = user_data[LOCAL_ATTR_USERNAME]
+				if isinstance(user_data, str):
+					username = user_data
+				else:
+					username = user_data.get(LOCAL_ATTR_USERNAME, None)
 				try:
 					self.ldap_user_change_status(
 						username=username,
@@ -766,21 +775,18 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
-			success = []
-			for ldap_user in data:
-				username = ldap_user.get(LOCAL_ATTR_USERNAME, None)
+			deleted_users = []
+			for user_data in data:
+				if isinstance(user_data, str):
+					username = user_data
+				else:
+					username = user_data.get(LOCAL_ATTR_USERNAME, None)
 				if username:
 					self.ldap_user_delete(username=username)
-					success.append(username)
-
-			result = self.ldap_connection.result
-			if result["description"] == "success":
-				response_result = success
-			else:
-				raise exc_user.CouldNotUnlockUser
+					deleted_users.append(username)
 
 		return Response(
-			data={"code": code, "code_msg": code_msg, "data": response_result}
+			data={"code": code, "code_msg": code_msg, "data": deleted_users}
 		)
 
 	@action(detail=False, methods=["post"])
@@ -801,7 +807,10 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			self.ldap_connection = ldc.connection
 			success = []
 			for user_object in data:
-				username = user_object.get(LOCAL_ATTR_USERNAME, None)
+				if isinstance(user_object, str):
+					username = user_object
+				else:
+					username = user_object.get(LOCAL_ATTR_USERNAME, None)
 				if username:
 					self.ldap_user_unlock(username=username)
 					success.append(username)
