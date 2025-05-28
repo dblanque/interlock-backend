@@ -501,11 +501,13 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		required_fields = [LOCAL_ATTR_USERNAME]
 
 		# Key exclusion
-		EXCLUDE_KEYS = (
-			MAPPED_PWD_KEY,
+		exclude_keys = [
 			LOCAL_ATTR_DN,  # We don't want any front-end generated DN
 			LOCAL_ATTR_DN_SHORT,  # We don't want any front-end generated DN
-		)
+		]
+		if MAPPED_PWD_KEY:
+			exclude_keys.insert(0, MAPPED_PWD_KEY)
+		exclude_keys = tuple(exclude_keys)
 		########################################################################
 
 		_permissions = [ldap_adsi.LDAP_UF_NORMAL_ACCOUNT]
@@ -544,26 +546,19 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				# Perform mapping if any header differs with local alias
 				mapped_row = {} if HEADER_MAPPING else row
 				if HEADER_MAPPING:
-					if not len(HEADER_MAPPING) == len(row):
-						raise ValidationError(
-							{
-								"message": "Key map length mismatch with user data",
-								"headers": HEADER_MAPPING.values(),
-								"row": row.values(),
-							}
-						)
-
 					for key, mapped_key in HEADER_MAPPING.items():
 						mapped_row[key] = row[mapped_key]
 
-				row[LOCAL_ATTR_PATH] = INSERTION_PATH
-				row[LOCAL_ATTR_PERMISSIONS] = _permissions
+				mapped_row[LOCAL_ATTR_PATH] = INSERTION_PATH
+				mapped_row[LOCAL_ATTR_PERMISSIONS] = _permissions
 				# Serializer validation
 				serializer = self.serializer_cls(data=mapped_row)
 				if not serializer.is_valid():
 					failed_users.append(
 						{
-							LOCAL_ATTR_USERNAME: row[MAPPED_USER_KEY],
+							LOCAL_ATTR_USERNAME: row[MAPPED_USER_KEY] \
+								if isinstance(row[MAPPED_USER_KEY], str) \
+								else "unknown",
 							"stage": "serializer_validation",
 							"detail": serializer.errors,
 						}
@@ -574,7 +569,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				# Insert user
 				user_dn = self.ldap_user_insert(
 					data=_validated_row,
-					exclude_keys=EXCLUDE_KEYS,
+					exclude_keys=exclude_keys,
 					return_exception=False,
 				)
 				if not user_dn:
@@ -639,7 +634,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		# Validate data keys
 		if any(
-			v not in data for v in ["users", LOCAL_ATTR_PERMISSIONS, "values"]
+			v not in data for v in ("users", LOCAL_ATTR_PERMISSIONS, "values",)
 		):
 			raise exc_base.BadRequest
 
