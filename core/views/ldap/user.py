@@ -975,7 +975,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 	@action(detail=False, methods=["get"])
 	@auth_required
-	def self_info(self, request):
+	def self_info(self, request: Request):
 		user: User = request.user
 		data = {}
 		code = 0
@@ -992,7 +992,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 	@action(detail=False, methods=["get"])
 	@auth_required
 	@ldap_backend_intercept
-	def self_fetch(self, request):
+	def self_fetch(self, request: Request):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -1003,57 +1003,18 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				user_data[field] = getattr(user, field)
 		elif user.user_type == USER_TYPE_LDAP:
 			# Open LDAP Connection
-			with LDAPConnector(user, force_admin=True) as ldc:
+			with LDAPConnector(user) as ldc:
 				self.ldap_connection = ldc.connection
-				self.ldap_filter_attr = self.filter_attr_builder(
+				user_data = self.ldap_user_fetch(user_search=user_search)
+				_keys = self.filter_attr_builder(
 					RuntimeSettings
 				).get_fetch_me_attrs()
-
-				self.ldap_filter_object = LDAPFilter.eq(
-					RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
-					RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
-				)
-
-				# Add filter for username
-				self.ldap_filter_object = LDAPFilter.and_(
-					self.ldap_filter_object,
-					LDAPFilter.eq(
-						RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
-						user_search,
-					),
-				).to_string()
-
-				self.ldap_connection.search(
-					RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
-					self.ldap_filter_object,
-					attributes=self.ldap_filter_attr,
-				)
-				user_entry = self.ldap_connection.entries
-
-				self.ldap_filter_attr.remove("userAccountControl")
-
-				# For each attribute in user object attributes
-				user_data = {}
-				for attr_key in self.ldap_filter_attr:
-					if attr_key in self.ldap_filter_attr:
-						str_key = str(attr_key)
-						str_value = str(getattr(user_entry[0], attr_key))
-						if str_value == "[]":
-							user_data[str_key] = ""
-						else:
-							user_data[str_key] = str_value
-					if (
-						attr_key
-						== RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME]
-					):
-						user_data[LOCAL_ATTR_USERNAME] = str_value
-
-					# Check if user can change password based on perms
-					user_data["can_change_pwd"] = not ldap_adsi.list_user_perms(
-						user=user_entry[0],
-						perm_search=ldap_adsi.LDAP_UF_PASSWD_CANT_CHANGE,
-					)
+				user_data = {key: user_data.get(key, "") for key in _keys}
 
 		return Response(
-			data={"code": code, "code_msg": code_msg, "data": user_data}
+			data={
+				"code": code,
+				"code_msg": code_msg,
+				"data": user_data
+			}
 		)

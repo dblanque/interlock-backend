@@ -1,5 +1,6 @@
 from .search_attr_builder import SearchAttrBuilder
 from core.constants.attrs import *
+from core.views.mixins.utils import getlocalkeyforldapattr
 
 LOCAL_PUBLIC_FIELDS_BASIC = (
 	LOCAL_ATTR_ID,
@@ -122,4 +123,4 @@ class LDAPUserSearchAttrBuilder(SearchAttrBuilder):
 		_RESULT = self.get_fetch_attrs()
 		for value in _REMOVE:
 			_RESULT.remove(value)
-		return _RESULT
+		return [getlocalkeyforldapattr(v) for v in _RESULT]
