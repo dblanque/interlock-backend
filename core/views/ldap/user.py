@@ -715,7 +715,9 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		if disable_users is None:
 			raise BadRequest
-		if not isinstance(data, list):
+		if not isinstance(data, list) or not data:
+			raise BadRequest
+		if not all(isinstance(x, dict) for x in data):
 			raise BadRequest
 
 		######################## Set LDAP Attributes ###########################
@@ -733,16 +735,19 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			self.ldap_connection = ldc.connection
 			success = []
 			for user_data in data:
-				if disable_users:
+				username = user_data[LOCAL_ATTR_USERNAME]
+				try:
 					self.ldap_user_change_status(
-						username=user_data[LOCAL_ATTR_USERNAME], enabled=False
+						username=username,
+						enabled=(not disable_users)
 					)
-					success.append(user_data[LOCAL_ATTR_USERNAME])
-				elif not disable_users:
-					self.ldap_user_change_status(
-						username=user_data[LOCAL_ATTR_USERNAME], enabled=True
-					)
-					success.append(user_data[LOCAL_ATTR_USERNAME])
+					success.append(username)
+				except:
+					if isinstance(username, str):
+						logger.error(
+							"Could not change status for user %s" % (username)
+						)
+					pass
 
 		return Response(
 			data={"code": code, "code_msg": code_msg, "data": success}
