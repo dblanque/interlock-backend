@@ -10,6 +10,7 @@ from rest_framework.test import APIClient
 from core.exceptions.ldap import CouldNotOpenConnection
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from tests.test_core.conftest import RuntimeSettingsFactory
+from logging import Logger
 from core.ldap.adsi import (
 	LDAP_UF_DONT_EXPIRE_PASSWD,
 	LDAP_UF_ACCOUNT_DISABLE,
@@ -36,6 +37,12 @@ def f_log_mixin(mocker: MockerFixture):
 	mocker.patch("core.views.ldap.user.DBLogMixin", m_log_mixin)
 	return m_log_mixin
 
+@pytest.fixture(autouse=True)
+def f_logger(mocker: MockerFixture):
+	return mocker.patch(
+		"core.views.ldap.user.logger",
+		mocker.Mock(name="m_logger")
+	)
 
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector) -> LDAPConnectorMock:
@@ -1392,10 +1399,103 @@ class TestBulkUpdate:
 		m_exists.assert_not_called()
 		m_update.assert_not_called()
 
+@pytest.fixture
+def f_bulk_change_status_data():
+	return {
+		"users":[
+			{LOCAL_ATTR_USERNAME:"testuser1"},
+			{LOCAL_ATTR_USERNAME:"testuser2"},
+		],
+		"disable": False
+	}
 
 class TestBulkChangeStatus:
 	endpoint = "/api/ldap/users/bulk_change_status/"
 
+	@pytest.mark.parametrize(
+		"disable, expected",
+		(
+			(True, False,),
+			(False, True,),
+		),
+	)
+	def test_success(
+		self,
+		disable: bool,
+		expected: bool,
+		admin_user_client: APIClient,
+		f_logger: Logger,
+		f_bulk_change_status_data: dict,
+		mocker: MockerFixture,
+	):
+		f_bulk_change_status_data["disable"] = disable
+		user_count = len(f_bulk_change_status_data["users"])
+		m_change_status = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_change_status",
+			side_effect=(
+				None,
+				Exception,
+			)
+		)
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=f_bulk_change_status_data,
+			format="json",
+		)
+		response_data: dict = response.data
+
+		assert len(response_data["data"]) == 1
+		m_change_status.call_count == user_count
+		f_logger.error.assert_called_once()
+		for u in f_bulk_change_status_data["users"]:
+			m_change_status.assert_any_call(
+				username=u[LOCAL_ATTR_USERNAME],
+				enabled=expected,
+			)
+
+	def test_raises_bad_request_no_disable_key(
+		self,
+		admin_user_client: APIClient,
+		f_bulk_change_status_data: dict,
+		mocker: MockerFixture,
+	):
+		del f_bulk_change_status_data["disable"]
+		m_change_status = mocker.patch.object(
+			LDAPUserViewSet, "ldap_user_change_status")
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=f_bulk_change_status_data,
+			format="json",
+		)
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		m_change_status.assert_not_called()
+
+	@pytest.mark.parametrize(
+		"users",
+		(
+			[],
+			["a_list_of_str_should_fail"],
+			{"users":[]},
+		),
+	)
+	def test_raises_bad_request_users_not_list(
+		self,
+		users,
+		admin_user_client: APIClient,
+		f_bulk_change_status_data: dict,
+		mocker: MockerFixture,
+	):
+		f_bulk_change_status_data["users"] = users
+		m_change_status = mocker.patch.object(
+			LDAPUserViewSet, "ldap_user_change_status")
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=f_bulk_change_status_data,
+			format="json",
+		)
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		m_change_status.assert_not_called()
 
 class TestBulkDelete:
 	endpoint = "/api/ldap/users/bulk_delete/"
