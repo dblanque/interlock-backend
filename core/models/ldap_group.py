@@ -38,18 +38,7 @@ logger = getLogger()
 
 class LDAPGroup(LDAPObject):
 	type = LDAPObjectTypes.GROUP
-	search_attrs = (
-		LDAP_ATTR_DN,
-		LDAP_ATTR_COMMON_NAME,
-		LDAP_ATTR_GROUP_MEMBERS,
-		LDAP_ATTR_GROUP_TYPE,
-		LDAP_ATTR_SECURITY_ID,
-		LDAP_ATTR_EMAIL,
-		LDAP_ATTR_OBJECT_CLASS,
-		LDAP_ATTR_OBJECT_CATEGORY,
-		LDAP_ATTR_CREATED,
-		LDAP_ATTR_MODIFIED,
-	)
+	search_attrs = None
 
 	@overload
 	def __init__(
@@ -66,7 +55,22 @@ class LDAPGroup(LDAPObject):
 	) -> None: ...
 
 	# Only defined explicitly for overload definition
-	def __init__(self, **kwargs):  # pragma: no cover
+	def __init__(self, **kwargs):
+		self.search_attrs = {
+			RuntimeSettings.LDAP_FIELD_MAP.get(attr) for attr in
+			(
+				LDAP_ATTR_DN,
+				LDAP_ATTR_COMMON_NAME,
+				LDAP_ATTR_GROUP_MEMBERS,
+				LDAP_ATTR_GROUP_TYPE,
+				LDAP_ATTR_SECURITY_ID,
+				LDAP_ATTR_EMAIL,
+				LDAP_ATTR_OBJECT_CLASS,
+				LDAP_ATTR_OBJECT_CATEGORY,
+				LDAP_ATTR_CREATED,
+				LDAP_ATTR_MODIFIED,
+			) if RuntimeSettings.LDAP_FIELD_MAP.get(attr, None)
+		}
 		self.default_attrs = self.search_attrs
 		super().__init__(**kwargs)
 

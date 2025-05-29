@@ -35,37 +35,7 @@ logger = getLogger()
 
 class LDAPUser(LDAPObject):
 	type = LDAPObjectTypes.USER
-	search_attrs = (
-		LDAP_ATTR_DN,
-		LDAP_ATTR_USERNAME_SAMBA_ADDS,
-		LDAP_ATTR_EMAIL,
-		LDAP_ATTR_FIRST_NAME,
-		LDAP_ATTR_LAST_NAME,
-		LDAP_ATTR_FULL_NAME,
-		LDAP_ATTR_PHONE,
-		LDAP_ATTR_ADDRESS,
-		LDAP_ATTR_POSTAL_CODE,
-		LDAP_ATTR_CITY,
-		LDAP_ATTR_STATE,
-		LDAP_ATTR_COUNTRY,
-		LDAP_ATTR_COUNTRY_DCC,
-		LDAP_ATTR_COUNTRY_ISO,
-		LDAP_ATTR_WEBSITE,
-		LDAP_ATTR_UPN,
-		LDAP_ATTR_UAC,
-		LDAP_ATTR_CREATED,
-		LDAP_ATTR_MODIFIED,
-		LDAP_ATTR_LAST_LOGIN,
-		LDAP_ATTR_BAD_PWD_COUNT,
-		LDAP_ATTR_PWD_SET_AT,
-		LDAP_ATTR_PRIMARY_GROUP_ID,
-		LDAP_ATTR_OBJECT_CLASS,
-		LDAP_ATTR_OBJECT_CATEGORY,
-		LDAP_ATTR_SECURITY_ID,
-		LDAP_ATTR_ACCOUNT_TYPE,
-		LDAP_ATTR_USER_GROUPS,
-		LDAP_ATTR_INITIALS,
-	)
+	search_attrs = None
 
 	@overload
 	def __init__(
@@ -82,7 +52,41 @@ class LDAPUser(LDAPObject):
 	) -> None: ...
 
 	# Only defined explicitly for overload definition
-	def __init__(self, **kwargs):  # pragma: no cover
+	def __init__(self, **kwargs):
+		self.search_attrs = {
+			RuntimeSettings.LDAP_FIELD_MAP.get(attr) for attr in
+			(
+				LDAP_ATTR_DN,
+				LDAP_ATTR_USERNAME_SAMBA_ADDS,
+				LDAP_ATTR_EMAIL,
+				LDAP_ATTR_FIRST_NAME,
+				LDAP_ATTR_LAST_NAME,
+				LDAP_ATTR_FULL_NAME,
+				LDAP_ATTR_PHONE,
+				LDAP_ATTR_ADDRESS,
+				LDAP_ATTR_POSTAL_CODE,
+				LDAP_ATTR_CITY,
+				LDAP_ATTR_STATE,
+				LDAP_ATTR_COUNTRY,
+				LDAP_ATTR_COUNTRY_DCC,
+				LDAP_ATTR_COUNTRY_ISO,
+				LDAP_ATTR_WEBSITE,
+				LDAP_ATTR_UPN,
+				LDAP_ATTR_UAC,
+				LDAP_ATTR_CREATED,
+				LDAP_ATTR_MODIFIED,
+				LDAP_ATTR_LAST_LOGIN,
+				LDAP_ATTR_BAD_PWD_COUNT,
+				LDAP_ATTR_PWD_SET_AT,
+				LDAP_ATTR_PRIMARY_GROUP_ID,
+				LDAP_ATTR_OBJECT_CLASS,
+				LDAP_ATTR_OBJECT_CATEGORY,
+				LDAP_ATTR_SECURITY_ID,
+				LDAP_ATTR_ACCOUNT_TYPE,
+				LDAP_ATTR_USER_GROUPS,
+				LDAP_ATTR_INITIALS,
+			) if RuntimeSettings.LDAP_FIELD_MAP.get(attr, None)
+		}
 		self.default_attrs = self.search_attrs
 		super().__init__(**kwargs)
 
