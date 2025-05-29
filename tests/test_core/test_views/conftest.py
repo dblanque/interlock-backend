@@ -7,9 +7,15 @@ import pytest
 from typing import Protocol
 from rest_framework import status
 from pytest import FixtureRequest
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
+from interlock_backend.test_settings import SIMPLE_JWT
+from core.models.user import User
 
-User = get_user_model()
-
+_ACCESS_NAME = SIMPLE_JWT["AUTH_COOKIE_NAME"]
+_REFRESH_NAME = SIMPLE_JWT["REFRESH_COOKIE_NAME"]
+_JWT_SAMESITE=SIMPLE_JWT["AUTH_COOKIE_SAME_SITE"]
+_JWT_SECURE=SIMPLE_JWT["AUTH_COOKIE_SECURE"]
 
 @pytest.fixture(
 	params=[
@@ -122,7 +128,7 @@ class DisabledApiClient(Protocol):
 
 @pytest.fixture
 def disabled_user_client(
-	disabled_user, api_client: APIClient
+	disabled_user: User, api_client: APIClient
 ) -> DisabledApiClient:
 	"""Authenticated API client for normal user"""
 	api_client.post(
@@ -132,6 +138,15 @@ def disabled_user_client(
 			"password": disabled_user.raw_password,
 		},
 	)
+	# May use this later
+	# refresh = RefreshToken.for_user(disabled_user)
+
+	# api_client.cookies[_ACCESS_NAME] = str(refresh.access_token)
+	# api_client.cookies[_REFRESH_NAME] = str(refresh)
+	# for cookie in (_ACCESS_NAME, _REFRESH_NAME):
+	# 	api_client.cookies[cookie]["httponly"] = True
+	# 	api_client.cookies[cookie]["samesite"] = _JWT_SAMESITE
+	# 	api_client.cookies[cookie]["secure"] = _JWT_SECURE
 	return api_client
 
 
@@ -140,7 +155,7 @@ class NormalApiClient(Protocol):
 
 
 @pytest.fixture
-def normal_user_client(normal_user, api_client: APIClient) -> NormalApiClient:
+def normal_user_client(normal_user: User, api_client: APIClient) -> NormalApiClient:
 	"""Authenticated API client for normal user"""
 	api_client.post(
 		"/api/token/",
@@ -149,6 +164,15 @@ def normal_user_client(normal_user, api_client: APIClient) -> NormalApiClient:
 			"password": normal_user.raw_password,
 		},
 	)
+	# May use this later
+	# refresh = RefreshToken.for_user(normal_user)
+
+	# api_client.cookies[_ACCESS_NAME] = str(refresh.access_token)
+	# api_client.cookies[_REFRESH_NAME] = str(refresh)
+	# for cookie in (_ACCESS_NAME, _REFRESH_NAME):
+	# 	api_client.cookies[cookie]["httponly"] = True
+	# 	api_client.cookies[cookie]["samesite"] = _JWT_SAMESITE
+	# 	api_client.cookies[cookie]["secure"] = _JWT_SECURE
 	return api_client
 
 
@@ -157,7 +181,7 @@ class AdminApiClient(Protocol):
 
 
 @pytest.fixture
-def admin_user_client(admin_user, api_client: APIClient) -> AdminApiClient:
+def admin_user_client(admin_user: User, api_client: APIClient) -> AdminApiClient:
 	"""Authenticated API client for admin user"""
 	api_client.post(
 		"/api/token/",
@@ -166,6 +190,15 @@ def admin_user_client(admin_user, api_client: APIClient) -> AdminApiClient:
 			"password": admin_user.raw_password,
 		},
 	)
+	# May use this later
+	# refresh = RefreshToken.for_user(admin_user)
+
+	# api_client.cookies[_ACCESS_NAME] = str(refresh.access_token)
+	# api_client.cookies[_REFRESH_NAME] = str(refresh)
+	# for cookie in (_ACCESS_NAME, _REFRESH_NAME):
+	# 	api_client.cookies[cookie]["httponly"] = True
+	# 	api_client.cookies[cookie]["samesite"] = _JWT_SAMESITE
+	# 	api_client.cookies[cookie]["secure"] = _JWT_SECURE
 	return api_client
 
 
