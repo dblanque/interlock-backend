@@ -134,3 +134,9 @@ class UserNotSynced(CoreException):
 	status_code = status.HTTP_404_NOT_FOUND
 	default_detail = "No synced user with that name, make sure the user has logged into Interlock at least once."
 	default_code = "user_not_synced"
+
+
+class UserNotLDAPType(CoreException):
+	status_code = status.HTTP_406_NOT_ACCEPTABLE
+	default_detail = "User is not of LDAP Type and cannot change its own LDAP Password."
+	default_code = "user_not_ldap_type"
