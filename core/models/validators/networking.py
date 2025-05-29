@@ -1,4 +1,4 @@
-from core.utils.ipv6 import ipv6_to_integer
+from core.utils.network import ipv6_to_integer
 import socket
 from rest_framework.serializers import ValidationError
 

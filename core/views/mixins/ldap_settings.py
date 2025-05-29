@@ -26,7 +26,7 @@ from core.models.ldap_settings import LDAPPreset, LDAP_PRESET_TABLE
 from core.exceptions import ldap as exc_ldap
 
 #### Mixins
-from core.utils.main import net_port_test
+from core.utils.network import net_port_test
 
 ### Others
 from core.ldap.connector import (

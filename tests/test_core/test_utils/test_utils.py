@@ -1,17 +1,14 @@
 ########################### Standard Pytest Imports ############################
 import pytest
 from pytest_mock import MockerFixture
+################################################################################
 from ldap3 import Entry as LDAPEntry, Attribute as LDAPAttribute
 from core.utils.main import (
 	getlocalkeyforldapattr,
 	getldapattrvalue,
-	net_port_test,
-	recursive_dict_find,
 	uppercase_ldif_identifiers,
-	is_non_str_iterable,
 )
 from core.ldap.defaults import LDAP_LDIF_IDENTIFIERS
-import socket
 from core.constants.attrs import *
 
 
@@ -191,12 +188,6 @@ class TestGetLocalAliasForLDAPKey:
 			== "mock_default"
 		)
 
-
-@pytest.fixture
-def f_socket(mocker: MockerFixture):
-	yield mocker.patch("socket.socket")
-
-
 @pytest.fixture
 def f_ldap_entry(mocker: MockerFixture) -> LDAPEntry:
 	m_entry = mocker.MagicMock(spec=LDAPEntry)
@@ -215,7 +206,7 @@ def f_ldap_entry(mocker: MockerFixture) -> LDAPEntry:
 	return m_entry
 
 
-class TestGetLdapAttr:
+class TestGetLdapAttrValue:
 	@staticmethod
 	def test_get_existing_single_value_attribute(f_ldap_entry):
 		assert getldapattrvalue(f_ldap_entry, "single_attr") == "mock_value"
@@ -242,47 +233,6 @@ class TestGetLdapAttr:
 			getldapattrvalue(f_ldap_entry, "non_existing")
 
 
-class TestNetPortTest:
-	@staticmethod
-	def test_successful_connection(f_socket):
-		mock_instance = f_socket.return_value
-		mock_instance.connect.return_value = None
-
-		result = net_port_test("127.0.0.1", 389)
-		assert result is True
-		mock_instance.connect.assert_called_once_with(("127.0.0.1", 389))
-		mock_instance.settimeout.assert_any_call(5)
-		mock_instance.settimeout.assert_any_call(None)
-		mock_instance.shutdown.assert_called_once_with(2)
-
-	@staticmethod
-	def test_failed_connection(f_socket):
-		mock_instance = f_socket.return_value
-		mock_instance.connect.side_effect = socket.error
-
-		result = net_port_test("127.0.0.1", 389)
-		assert result is False
-
-
-class TestRecursiveDictFind:
-	@staticmethod
-	def test_find_top_level_key():
-		test_dict = {"a": 1, "b": 2, "c": 3}
-		assert recursive_dict_find(test_dict, "b") == 2
-
-	@staticmethod
-	def test_find_nested_key():
-		test_dict = {"a": 1, "b": {"c": 2, "d": {"e": 3}}}
-		assert recursive_dict_find(test_dict, "e") == 3
-
-	def test_key_not_found(self):
-		test_dict = {"a": 1, "b": 2}
-		assert recursive_dict_find(test_dict, "c") is None
-
-	def test_empty_dict(self):
-		assert recursive_dict_find({}, "a") is None
-
-
 class TestUppercaseLdifIdentifiers:
 	@staticmethod
 	def test_uppercase_identifiers():
@@ -300,22 +250,3 @@ class TestUppercaseLdifIdentifiers:
 	def test_non_string_input(self):
 		with pytest.raises(TypeError, match="Value must be str."):
 			uppercase_ldif_identifiers(123)
-
-
-class TestIsNonStrIterable:
-	@staticmethod
-	@pytest.mark.parametrize(
-		"value,expected",
-		[
-			([1, 2, 3], True),
-			({"a": 1}, True),
-			((1, 2), True),
-			({1, 2}, True),
-			("string", False),
-			(123, False),
-			(True, False),
-			(None, False),
-		],
-	)
-	def test_various_types(value, expected):
-		assert is_non_str_iterable(value) == expected

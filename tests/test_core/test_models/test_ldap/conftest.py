@@ -4,7 +4,7 @@ from pytest_mock import MockerFixture
 
 ################################################################################
 from datetime import datetime
-from core.utils.main import is_non_str_iterable
+from core.utils.iterables import is_non_str_iterable
 from core.constants.attrs import *
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from tests.test_core.conftest import RuntimeSettingsFactory

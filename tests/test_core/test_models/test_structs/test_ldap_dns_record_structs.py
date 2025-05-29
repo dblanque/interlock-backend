@@ -17,22 +17,8 @@ from core.models.structs.ldap_dns_record import (
 from impacket.structure import Structure
 import socket
 import struct
-from calendar import timegm
-from datetime import datetime, timezone
-from core.utils.filetime import EPOCH_AS_FILETIME, HUNDREDS_OF_NS
-
-def from_datetime(dt: datetime) -> int:
-	"""
-	Converts a datetime to a Windows filetime. If the object is
-	time zone-naive, it is forced to UTC before conversion.
-	"""
-
-	if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
-		dt = dt.replace(tzinfo=timezone.utc)
-
-	filetime = EPOCH_AS_FILETIME + (timegm(dt.timetuple()) * HUNDREDS_OF_NS)
-	return filetime + (dt.microsecond * 10)
-
+from datetime import datetime
+from core.utils.filetime import from_datetime
 
 # Fixtures ---------------------------------------------------------------- #
 

@@ -8,13 +8,9 @@
 
 # ---------------------------------- IMPORTS -----------------------------------#
 from core.ldap.defaults import LDAP_LDIF_IDENTIFIERS
-import socket
 from typing import Iterable, Any, overload
 from ldap3 import Entry as LDAPEntry, Attribute as LDAPAttribute
 from core.config.runtime import RuntimeSettings
-
-def flatten_list(lst: list):
-	return [item for sublist in lst for item in sublist]
 
 @overload
 def getlocalkeyforldapattr(v: str, default: str = None): ...
@@ -93,46 +89,9 @@ def getldapattr(
 	else:
 		return getattr(entry, attr)
 
-
-def net_port_test(ip, port, timeout=5):
-	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	s.settimeout(timeout)
-	try:
-		s.connect((ip, int(port)))
-		s.settimeout(None)
-		s.shutdown(2)
-		return True
-	except:
-		return False
-
-
-def recursive_dict_find(obj, key):
-	if key in obj:
-		return obj[key]
-	for k, v in obj.items():
-		if isinstance(v, dict):
-			item = recursive_dict_find(v, key)
-			if item is not None:
-				return item
-
-
 def uppercase_ldif_identifiers(v: str):
 	if not isinstance(v, str):
 		raise TypeError("Value must be str.")
 	for ldif_ident in LDAP_LDIF_IDENTIFIERS:
 		v = v.replace(f"{ldif_ident}=", f"{ldif_ident.upper()}=")
 	return v
-
-
-def is_non_str_iterable(v):
-	"""Checks if value is within types (tuple, list, set, dict)
-
-	Args:
-		v (tuple or list or set or dict): Some value to check.
-
-	Returns:
-		bool
-	"""
-	if isinstance(v, str):
-		return False
-	return isinstance(v, (tuple, list, set, dict))
