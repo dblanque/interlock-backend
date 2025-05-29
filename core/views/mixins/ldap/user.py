@@ -97,8 +97,6 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		security_id: str = None,
 		ignore_admin: bool = False,
 	) -> bool:
-		if username == "Guest":
-			print()
 		if username or security_id:
 			for well_known_username, well_known_rid in BUILTIN_USERS:
 				is_admin = (
