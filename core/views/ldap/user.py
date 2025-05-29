@@ -908,10 +908,13 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 	@auth_required
 	@ldap_backend_intercept
 	def self_update(self, request: Request, pk=None):
-		user: User = request.user
+		user = request.user
+		user: User # For type-hints
 		code = 0
 		code_msg = "ok"
 		data = request.data
+		if user.user_type != USER_TYPE_LDAP:
+			raise exc_user.UserNotLDAPType
 
 		ALERT_KEYS = (
 			LOCAL_ATTR_USERNAME,
@@ -927,7 +930,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				)
 				raise exc_base.BadRequest
 
-		# Get basic attributes for this user from AD to compare query and get dn
+		# Set attrs and filter
 		self.search_attrs = self.filter_attr_builder(
 			RuntimeSettings
 		).get_update_attrs()
@@ -954,37 +957,32 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		logger.debug(self.ldap_connection.result)
 
-		DBLogMixin.log(
-			user=request.user.id,
-			operation_type=LOG_ACTION_UPDATE,
-			log_target_class=LOG_CLASS_USER,
-			log_target=ldap_user_search,
-			message=LOG_EXTRA_USER_END_USER_UPDATE,
-		)
-
-		django_user = None
+		django_user: User = None
 		try:
 			django_user = User.objects.get(username=ldap_user_search)
-		except:
+		except ObjectDoesNotExist:
 			pass
 
 		if django_user:
 			for key in RuntimeSettings.LDAP_FIELD_MAP:
 				mapped_key = RuntimeSettings.LDAP_FIELD_MAP[key]
-				if mapped_key in data:
+				if mapped_key in data and hasattr(django_user, mapped_key):
 					setattr(django_user, key, data[mapped_key])
-				if "mail" not in data:
-					django_user.email = None
 			django_user.save()
 
-		for k in EXCLUDE_KEYS:
-			if k in data:
-				del data[k]
+		DBLogMixin.log(
+			user=user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=ldap_user_search,
+			message=LOG_EXTRA_USER_END_USER_UPDATE,
+		)
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
 
 	@action(detail=False, methods=["get"])
 	@auth_required
 	def self_info(self, request: Request):
+		"""Method used by all user types (Local, LDAP, etc.)"""
 		user: User = request.user
 		data = {}
 		code = 0
