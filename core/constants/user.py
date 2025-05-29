@@ -1,5 +1,5 @@
 from .search_attr_builder import SearchAttrBuilder
-from core.constants.attrs import *
+from core.constants.attrs.local import *
 from core.views.mixins.utils import getlocalkeyforldapattr
 
 LOCAL_PUBLIC_FIELDS_BASIC = (
@@ -111,7 +111,8 @@ class LDAPUserSearchAttrBuilder(SearchAttrBuilder):
 			LOCAL_ATTR_PRIMARY_GROUP_ID,
 		]
 
-	def get_fetch_me_attrs(self):
+	def get_fetch_me_attrs(self) -> list[str]:
+		"""Returns local keys"""
 		_REMOVE = [
 			self._to_ldap(LOCAL_ATTR_PRIMARY_GROUP_ID),
 			self._to_ldap(LOCAL_ATTR_OBJECT_CLASS),
