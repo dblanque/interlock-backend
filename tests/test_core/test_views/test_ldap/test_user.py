@@ -1679,6 +1679,15 @@ class TestBulkUnlock:
 class TestSelfChangePassword:
 	endpoint = "/api/ldap/users/self_change_password/"
 
+	def test_raises_not_ldap_user(self, normal_user_client: APIClient):
+		response: Response = normal_user_client.post(
+			self.endpoint,
+			data={},
+			format="json",
+		)
+		assert response.status_code == status.HTTP_406_NOT_ACCEPTABLE
+		assert response.data.get("code") == "user_not_ldap_type"
+
 	@pytest.mark.parametrize(
 		"bad_data",
 		(
@@ -1923,6 +1932,87 @@ class TestSelfChangePassword:
 class TestSelfUpdate:
 	endpoint = "/api/ldap/users/self_update/"
 
+	def test_raises_not_ldap_user(self, normal_user_client: APIClient):
+		response: Response = normal_user_client.post(
+			self.endpoint,
+			data={},
+			format="json",
+		)
+		assert response.status_code == status.HTTP_406_NOT_ACCEPTABLE
+		assert response.data.get("code") == "user_not_ldap_type"
+
+	@pytest.mark.parametrize(
+		"bad_data",
+		(
+			{
+				LOCAL_ATTR_USERNAME: "some_other_username",
+				LOCAL_ATTR_COUNTRY: "Some Country"
+			},
+			{
+				LOCAL_ATTR_DN: "some_dn",
+				LOCAL_ATTR_COUNTRY: "Some Country"
+			},
+		),
+	)
+	def test_raises_bad_request(
+		self,
+		bad_data,
+		f_logger: Logger,
+		normal_user: User,
+		normal_user_client: APIClient,
+	):
+		# Mock local django user data
+		normal_user.user_type = USER_TYPE_LDAP
+		normal_user.save()
+
+		response: Response = normal_user_client.post(
+			self.endpoint,
+			data=bad_data,
+			format="json",
+		)
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		f_logger.warning.assert_called_once()
+
+	def test_success(
+		self,
+		f_logger: Logger,
+		normal_user: User,
+		normal_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		m_email = "testchange@example.org"
+		m_data = {
+			LOCAL_ATTR_EMAIL: m_email,
+			LOCAL_ATTR_COUNTRY: "Argentina",
+			LOCAL_ATTR_ADDRESS: "Some Address",
+			LOCAL_ATTR_IS_ENABLED: True,
+			LOCAL_ATTR_UAC: 1234,
+			LOCAL_ATTR_PERMISSIONS: [LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_ACCOUNT_DISABLE]
+		}
+		m_ldap_user_update = mocker.patch.object(
+			LDAPUserViewSet, "ldap_user_update")
+
+		# Mock local django user data
+		normal_user.user_type = USER_TYPE_LDAP
+		normal_user.save()
+
+		response: Response = normal_user_client.post(
+			self.endpoint,
+			data=m_data,
+			format="json",
+		)
+
+		# Assertions
+		assert response.status_code == status.HTTP_200_OK
+		expected_data = m_data.copy()
+		for key in (LOCAL_ATTR_IS_ENABLED, LOCAL_ATTR_UAC, LOCAL_ATTR_PERMISSIONS):
+			expected_data.pop(key, None)
+		m_ldap_user_update.assert_called_once_with(
+			username=normal_user.username,
+			user_data=expected_data,
+		)
+		normal_user.refresh_from_db()
+		normal_user.email == m_email
 
 class TestSelfInfo:
 	endpoint = "/api/ldap/users/self_info/"
