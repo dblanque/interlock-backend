@@ -208,7 +208,8 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			LOCAL_ATTR_PWD_SET_AT,
 		)
 		for k in EXCLUDE_KEYS:
-			data.pop(k, None)
+			if k in data:
+				del data[k]
 
 		# Validate user data
 		serializer = self.serializer_cls(data=data)
@@ -651,7 +652,8 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			LOCAL_ATTR_EMAIL
 		]
 		for k in EXCLUDE_KEYS:
-			values.pop(k, None)
+			if k in values:
+				del values[k]
 
 		if not values and not permissions:
 			raise exc_base.BadRequest

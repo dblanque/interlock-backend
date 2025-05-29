@@ -1056,7 +1056,8 @@ class TestBulkInsert:
 		)
 		for _k in _pop_keys:
 			for u in m_users:
-				u.pop(_k, None)
+				if _k in u:
+					del u[_k]
 
 		response: Response = admin_user_client.post(
 			self.endpoint,

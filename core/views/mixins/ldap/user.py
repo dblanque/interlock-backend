@@ -406,7 +406,8 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 		"""
 		if exclude_keys:
 			for key in exclude_keys:
-				data.pop(key, None)
+				if key in data:
+					del data[key]
 
 		username: str = data.get(LOCAL_ATTR_USERNAME).lower()
 		try:
