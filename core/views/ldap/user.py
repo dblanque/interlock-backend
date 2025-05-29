@@ -1016,8 +1016,13 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				_keys = self.filter_attr_builder(
 					RuntimeSettings
 				).get_fetch_me_attrs()
-				user_data = {key: user_data.get(key, "") for key in _keys}
+				user_data = {
+					key: user_data.get(key, "")
+					for key in _keys
+				}
 
+		if LOCAL_ATTR_ID in user_data:
+			del user_data[LOCAL_ATTR_ID]
 		return Response(
 			data={
 				"code": code,
