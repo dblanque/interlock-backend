@@ -14,3 +14,7 @@ DATABASES = {
 		},
 	}
 }
+SIMPLE_JWT = SIMPLE_JWT | {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),  # Longer for tests
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+}
