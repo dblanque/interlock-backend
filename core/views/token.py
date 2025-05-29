@@ -21,8 +21,14 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.exceptions import TokenError
+from django.utils.timezone import now as tz_aware_now
 
 ### Core
+from core.constants.attrs.local import (
+	LOCAL_ATTR_USERNAME,
+	LOCAL_ATTR_LAST_LOGIN,
+)
+from core.models.user import User
 from core.serializers.token import TokenObtainPairSerializer
 from core.views.mixins.auth import RemoveTokenResponse, DATE_FMT_COOKIE
 
@@ -58,6 +64,11 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 		tokens = {}
 		for k in ["access", "refresh"]:
 			tokens[k] = validated_data.pop(k)
+		user: User = User.objects.get(
+			username=request.data.get(LOCAL_ATTR_USERNAME)
+		)
+		user.last_login = tz_aware_now()
+		user.save(update_fields=[LOCAL_ATTR_LAST_LOGIN])
 
 		# Send expiry date to backend on data as well.
 		decoded_access = jwt.decode(
