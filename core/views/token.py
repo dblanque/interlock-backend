@@ -77,9 +77,7 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 		validated_data["access_expire"] = access_expire_epoch_seconds * 1000
 		validated_data["refresh_expire"] = refresh_expire_epoch_seconds * 1000
 
-		response = Response(
-			serializer.validated_data, status=status.HTTP_200_OK
-		)
+		response = Response(validated_data, status=status.HTTP_200_OK)
 		response.set_cookie(
 			key=JWT_SETTINGS["AUTH_COOKIE_NAME"],
 			value=tokens["access"],
