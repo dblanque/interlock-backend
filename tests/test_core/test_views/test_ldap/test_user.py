@@ -1,7 +1,6 @@
 ########################### Standard Pytest Imports ############################
 import pytest
-from pytest_mock import MockerFixture, MockType
-
+from pytest_mock import MockerFixture
 ################################################################################
 from rest_framework.response import Response
 from rest_framework import status
@@ -16,7 +15,7 @@ from core.ldap.adsi import (
 	LDAP_UF_ACCOUNT_DISABLE,
 	LDAP_UF_NORMAL_ACCOUNT,
 )
-from core.models.user import User, USER_TYPE_LDAP
+from core.models.user import User, USER_TYPE_LDAP, USER_PASSWORD_FIELDS
 from core.exceptions import (
 	ldap as exc_ldap,
 	users as exc_users,
@@ -29,7 +28,7 @@ from core.models.choices.log import (
 	LOG_EXTRA_USER_CHANGE_PASSWORD,
 )
 from tests.test_core.type_hints import LDAPConnectorMock
-
+from interlock_backend.encrypt import aes_encrypt, aes_decrypt
 
 @pytest.fixture(autouse=True)
 def f_log_mixin(mocker: MockerFixture):
@@ -1663,7 +1662,7 @@ class TestBulkUnlock:
 		f_bulk_delete_data: list[dict, str],
 		f_ldap_connector: LDAPConnectorMock,
 		admin_user_client: APIClient,
-		mocker: MockerFixture
+		mocker: MockerFixture,
 	):
 		m_ldap_result = {"description": "error"}
 		f_ldap_connector.connection.result = m_ldap_result
@@ -1679,6 +1678,246 @@ class TestBulkUnlock:
 class TestSelfChangePassword:
 	endpoint = "/api/ldap/users/self_change_password/"
 
+	@pytest.mark.parametrize(
+		"bad_data",
+		(
+			{
+				LOCAL_ATTR_USERNAME: "some_other_username",
+				LOCAL_ATTR_PASSWORD: "mock_password",
+				LOCAL_ATTR_PASSWORD_CONFIRM: "mock_password",
+			},
+			{
+				LOCAL_ATTR_DN: "some_dn",
+				LOCAL_ATTR_PASSWORD: "mock_password",
+				LOCAL_ATTR_PASSWORD_CONFIRM: "mock_password",
+			},
+		),
+	)
+	def test_raises_bad_request(
+		self,
+		bad_data,
+		f_logger: Logger,
+		normal_user: User,
+		normal_user_client: APIClient,
+	):
+		# Mock local django user data
+		normal_user.user_type = USER_TYPE_LDAP
+		normal_user.save()
+
+		response: Response = normal_user_client.post(
+			self.endpoint,
+			data=bad_data,
+			format="json",
+		)
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		f_logger.warning.assert_called_once()
+
+	@pytest.mark.parametrize(
+		"bad_data, expected_exc",
+		(
+			({
+				LOCAL_ATTR_PASSWORD: False,
+				LOCAL_ATTR_PASSWORD_CONFIRM: "mock_password",
+			}, "Not a valid string"),
+			({
+				LOCAL_ATTR_PASSWORD: "mock_password",
+				LOCAL_ATTR_PASSWORD_CONFIRM: None,
+			}, "may not be null"),
+			({
+				LOCAL_ATTR_PASSWORD: "some_mock_password",
+				LOCAL_ATTR_PASSWORD_CONFIRM: "mock_password_does_not_match",
+			}, "Passwords do not match"),
+		),
+	)
+	def test_raises_serializer_invalid(
+		self,
+		bad_data: dict,
+		expected_exc: str,
+		normal_user: User,
+		normal_user_client: APIClient,
+	):
+		# Mock local django user data
+		normal_user.user_type = USER_TYPE_LDAP
+		normal_user.save()
+
+		response: Response = normal_user_client.post(
+			self.endpoint,
+			data=bad_data,
+			format="json",
+		)
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert any(expected_exc in str(x) for x in response.data.values())
+
+	def test_raises_user_not_exists(
+		self,
+		f_log_mixin: LogMixin,
+		f_ldap_connector: LDAPConnectorMock,
+		f_runtime_settings: RuntimeSettingsSingleton,
+		normal_user: User,
+		normal_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		# Mock local django user data
+		normal_user.user_type = USER_TYPE_LDAP
+		normal_user.save()
+
+		# Mock LDAPUser Instance and Class
+		m_ldap_user = mocker.Mock(name="m_ldap_user")
+		m_ldap_user.distinguished_name = normal_user.distinguished_name
+		m_ldap_user.exists = False
+		m_ldap_user.can_change_password = True
+		m_ldap_user_cls = mocker.patch(
+			"core.views.ldap.user.LDAPUser",
+			return_value=m_ldap_user
+		)
+		# Mock set password method
+		m_set_password = mocker.patch.object(
+			LDAPUserViewSet, "ldap_set_password")
+
+		# Execution
+		response: Response = normal_user_client.post(
+			self.endpoint,
+			data={
+				LOCAL_ATTR_PASSWORD: "mock_password",
+				LOCAL_ATTR_PASSWORD_CONFIRM: "mock_password",
+			},
+			format="json",
+		)
+
+		# Assertions
+		assert response.status_code == status.HTTP_404_NOT_FOUND
+		m_ldap_user_cls.assert_called_once_with(
+			connection=f_ldap_connector.connection,
+			username=normal_user.username,
+			search_attrs=[
+				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
+				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_DN],
+				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_UAC],
+			]
+		)
+		m_set_password.assert_not_called()
+		f_log_mixin.log.assert_not_called()
+
+	def test_raises_user_cannot_change_pwd(
+		self,
+		f_log_mixin: LogMixin,
+		f_ldap_connector: LDAPConnectorMock,
+		f_runtime_settings: RuntimeSettingsSingleton,
+		normal_user: User,
+		normal_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		# Mock local django user data
+		normal_user.user_type = USER_TYPE_LDAP
+		normal_user.save()
+
+		# Mock LDAPUser Instance and Class
+		m_ldap_user = mocker.Mock(name="m_ldap_user")
+		m_ldap_user.distinguished_name = normal_user.distinguished_name
+		m_ldap_user.exists = True
+		m_ldap_user.can_change_password = False
+		m_ldap_user_cls = mocker.patch(
+			"core.views.ldap.user.LDAPUser",
+			return_value=m_ldap_user
+		)
+		# Mock set password method
+		m_set_password = mocker.patch.object(
+			LDAPUserViewSet, "ldap_set_password")
+
+		# Execution
+		response: Response = normal_user_client.post(
+			self.endpoint,
+			data={
+				LOCAL_ATTR_PASSWORD: "mock_password",
+				LOCAL_ATTR_PASSWORD_CONFIRM: "mock_password",
+			},
+			format="json",
+		)
+
+		# Assertions
+		assert response.status_code == status.HTTP_403_FORBIDDEN
+		m_ldap_user_cls.assert_called_once_with(
+			connection=f_ldap_connector.connection,
+			username=normal_user.username,
+			search_attrs=[
+				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
+				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_DN],
+				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_UAC],
+			]
+		)
+		m_set_password.assert_not_called()
+		f_log_mixin.log.assert_not_called()
+
+	def test_success(
+		self,
+		f_log_mixin: LogMixin,
+		f_ldap_connector: LDAPConnectorMock,
+		f_runtime_settings: RuntimeSettingsSingleton,
+		normal_user: User,
+		normal_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		# Mock local django user data
+		normal_user.user_type = USER_TYPE_LDAP
+		normal_user.distinguished_name = "CN=%s,CN=Users,%s" % (
+			normal_user.username,
+			f_runtime_settings.LDAP_AUTH_SEARCH_BASE,
+		)
+		# Mock saved LDAP user password in DB
+		encrypted_data = aes_encrypt("mock_password_old")
+		for index, field in enumerate(USER_PASSWORD_FIELDS):
+			setattr(normal_user, field, encrypted_data[index])
+		normal_user.save()
+		normal_user.refresh_from_db()
+
+		# Mock LDAPUser Instance and Class
+		m_ldap_user = mocker.Mock(name="m_ldap_user")
+		m_ldap_user.distinguished_name = normal_user.distinguished_name
+		m_ldap_user.exists = True
+		m_ldap_user.can_change_password = True
+		m_ldap_user_cls = mocker.patch(
+			"core.views.ldap.user.LDAPUser",
+			return_value=m_ldap_user
+		)
+		# Mock set password method
+		m_set_password = mocker.patch.object(
+			LDAPUserViewSet, "ldap_set_password")
+
+		# Execution
+		response: Response = normal_user_client.post(
+			self.endpoint,
+			data={
+				LOCAL_ATTR_PASSWORD: "mock_password",
+				LOCAL_ATTR_PASSWORD_CONFIRM: "mock_password",
+			},
+			format="json",
+		)
+
+		# Assertions
+		assert response.status_code == status.HTTP_200_OK
+		m_ldap_user_cls.assert_called_once_with(
+			connection=f_ldap_connector.connection,
+			username=normal_user.username,
+			search_attrs=[
+				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
+				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_DN],
+				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_UAC],
+			]
+		)
+		m_set_password.assert_called_once_with(
+			user_dn=normal_user.distinguished_name,
+			user_pwd_new="mock_password",
+			user_pwd_old="mock_password_old",
+		)
+		normal_user.refresh_from_db()
+		assert aes_decrypt(*normal_user.encrypted_password) == "mock_password"
+		f_log_mixin.log.assert_called_once_with(
+			user=normal_user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=normal_user.username,
+			message=LOG_EXTRA_USER_CHANGE_PASSWORD,
+		)
 
 class TestSelfUpdate:
 	endpoint = "/api/ldap/users/self_update/"
