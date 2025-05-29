@@ -76,11 +76,11 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		code = 0
 		code_msg = "ok"
 
-		self.ldap_filter_object = LDAPFilter.eq(
+		self.search_filter = LDAPFilter.eq(
 			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
 			RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
 		)
-		self.ldap_filter_attr = self.filter_attr_builder(
+		self.search_attrs = self.filter_attr_builder(
 			RuntimeSettings
 		).get_list_attrs()
 
@@ -198,7 +198,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		data: dict = request.data
 
 		######################## Set LDAP Attributes ###########################
-		self.ldap_filter_attr = self.filter_attr_builder(
+		self.search_attrs = self.filter_attr_builder(
 			RuntimeSettings
 		).get_update_attrs()
 		########################################################################
@@ -267,11 +267,11 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		enabled = data.pop("enabled")
 
 		######################## Set LDAP Attributes ###########################
-		self.ldap_filter_object = LDAPFilter.eq(
+		self.search_filter = LDAPFilter.eq(
 			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
 			RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
 		).to_string()
-		self.ldap_filter_attr = self.filter_attr_builder(
+		self.search_attrs = self.filter_attr_builder(
 			RuntimeSettings
 		).get_update_attrs()
 		########################################################################
@@ -497,7 +497,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			HEADER_MAPPING = None
 
 		######################## Set LDAP Attributes ###########################
-		self.ldap_filter_attr = self.filter_attr_builder(
+		self.search_attrs = self.filter_attr_builder(
 			RuntimeSettings
 		).get_bulk_insert_attrs()
 
@@ -727,11 +727,11 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			raise BadRequest
 
 		######################## Set LDAP Attributes ###########################
-		self.ldap_filter_object = LDAPFilter.eq(
+		self.search_filter = LDAPFilter.eq(
 			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
 			RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
 		).to_string()
-		self.ldap_filter_attr = self.filter_attr_builder(
+		self.search_attrs = self.filter_attr_builder(
 			RuntimeSettings
 		).get_update_attrs()
 		########################################################################
@@ -846,7 +846,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		for k in ALERT_KEYS:
 			if k in data:
 				logger.warning(
-					"User %s requested password with malformed data.",
+					"User %s requested self password update with malformed data.",
 					user.username,
 				)
 				raise exc_base.BadRequest
@@ -911,16 +911,22 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		code_msg = "ok"
 		data = request.data
 
-		BAD_KEYS = [
+		ALERT_KEYS = (
 			LOCAL_ATTR_USERNAME,
+			LOCAL_ATTR_DN,
 			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
-		]
-		for k in BAD_KEYS:
+			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_DN],
+		)
+		for k in ALERT_KEYS:
 			if k in data:
+				logger.warning(
+					"User %s requested self-update with malformed data.",
+					user.username,
+				)
 				raise exc_base.BadRequest
 
 		# Get basic attributes for this user from AD to compare query and get dn
-		self.ldap_filter_attr = self.filter_attr_builder(
+		self.search_attrs = self.filter_attr_builder(
 			RuntimeSettings
 		).get_update_attrs()
 		EXCLUDE_KEYS = self.filter_attr_builder(
@@ -930,6 +936,10 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		for key in EXCLUDE_KEYS:
 			if key in data:
 				del data[key]
+
+		serializer = self.serializer_cls(data=data)
+		serializer.is_valid(raise_exception=True)
+		data = serializer.validated_data
 
 		# Open LDAP Connection
 		# User doesn't have rights to change any data in LDAP Server
