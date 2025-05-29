@@ -1,5 +1,6 @@
 ########################### Standard Pytest Imports ############################
 import pytest
+from pytest import FixtureRequest
 from pytest_mock import MockerFixture
 ################################################################################
 from rest_framework.response import Response
@@ -2016,6 +2017,42 @@ class TestSelfUpdate:
 
 class TestSelfInfo:
 	endpoint = "/api/ldap/users/self_info/"
+
+	@pytest.mark.parametrize(
+		"user_prefix, expects_admin",
+		(
+			("normal", False),
+			("admin", True),
+		),
+	)
+	def test_success(
+		self,
+		user_prefix: str,
+		expects_admin: bool,
+		request: FixtureRequest,
+	):
+		_user: User = request.getfixturevalue(user_prefix + "_user")
+		_api_client: APIClient = request.getfixturevalue(
+			user_prefix + "_user_client"
+		)
+		_user.first_name = "Test"
+		_user.last_name = "User"
+		_user.email = "email@example.com"
+		_user.save()
+		_user.refresh_from_db()
+
+		response: Response = _api_client.get(self.endpoint)
+		data: dict = response.data.get("user")
+		assert response.status_code == status.HTTP_200_OK
+		_ATTRS_TO_CHECK = (
+			LOCAL_ATTR_USERNAME,
+			LOCAL_ATTR_FIRST_NAME,
+			LOCAL_ATTR_LAST_NAME,
+			LOCAL_ATTR_EMAIL,
+		)
+		for attr in _ATTRS_TO_CHECK:
+			assert data.get(attr) == getattr(_user, attr)
+		assert data.get("admin_allowed", False) == expects_admin
 
 
 class TestSelfFetch:
