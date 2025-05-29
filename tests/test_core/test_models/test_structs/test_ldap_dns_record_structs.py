@@ -19,12 +19,7 @@ import socket
 import struct
 from calendar import timegm
 from datetime import datetime, timezone
-
-# Source for Windows datetime
-# https://github.com/jleclanche/winfiletime/blob/master/winfiletime/filetime.py
-EPOCH_AS_FILETIME = 116444736000000000  # January 1, 1970 as filetime
-HUNDREDS_OF_NS = 10000000
-
+from core.utils.filetime import EPOCH_AS_FILETIME, HUNDREDS_OF_NS
 
 def from_datetime(dt: datetime) -> int:
 	"""
