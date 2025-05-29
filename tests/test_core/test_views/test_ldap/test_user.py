@@ -10,18 +10,27 @@ from rest_framework.test import APIClient
 from core.exceptions.ldap import CouldNotOpenConnection
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from tests.test_core.conftest import RuntimeSettingsFactory
+from datetime import datetime
+from django.utils.timezone import now as tz_aware_now
 from logging import Logger
 from core.ldap.adsi import (
 	LDAP_UF_DONT_EXPIRE_PASSWD,
 	LDAP_UF_ACCOUNT_DISABLE,
 	LDAP_UF_NORMAL_ACCOUNT,
 )
-from core.models.user import User, USER_TYPE_LDAP, USER_PASSWORD_FIELDS
+from core.models.user import (
+	User,
+	USER_TYPE_LDAP,
+	USER_TYPE_LOCAL,
+	USER_PASSWORD_FIELDS,
+)
 from core.exceptions import (
 	ldap as exc_ldap,
 	users as exc_users,
 )
 from core.constants.attrs.local import *
+from core.constants.attrs.ldap import LDAP_DATE_FORMAT
+from core.constants.user import LOCAL_PUBLIC_FIELDS
 from core.views.mixins.logs import LogMixin
 from core.models.choices.log import (
 	LOG_ACTION_UPDATE,
@@ -2057,3 +2066,88 @@ class TestSelfInfo:
 
 class TestSelfFetch:
 	endpoint = "/api/ldap/users/self_fetch/"
+
+	def test_success_ldap(
+		self,
+		f_runtime_settings: RuntimeSettingsSingleton,
+		normal_user: User,
+		normal_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		# Mock local django user data
+		normal_user.user_type = USER_TYPE_LDAP
+		normal_user.distinguished_name = "CN=%s,CN=Users,%s" % (
+			normal_user.username,
+			f_runtime_settings.LDAP_AUTH_SEARCH_BASE,
+		)
+		normal_user.save()
+		normal_user.refresh_from_db()
+		mock_attrs = {
+			LOCAL_ATTR_FIRST_NAME: normal_user.first_name,
+			LOCAL_ATTR_LAST_NAME: normal_user.last_name,
+			LOCAL_ATTR_FULL_NAME: "%s %s" % (
+				normal_user.first_name,
+				normal_user.last_name
+			),
+			LOCAL_ATTR_USERNAME: normal_user.username,
+			LOCAL_ATTR_EMAIL: normal_user.email,
+			LOCAL_ATTR_PHONE: "+5491112345678",
+			LOCAL_ATTR_ADDRESS: "Some Address",
+			LOCAL_ATTR_POSTAL_CODE: "PTLCOD",
+			LOCAL_ATTR_CITY: "Mock City",
+			LOCAL_ATTR_STATE: "Mock State",
+			LOCAL_ATTR_COUNTRY: "Mock Country",
+			LOCAL_ATTR_COUNTRY_DCC: "MC",
+			LOCAL_ATTR_COUNTRY_ISO: 117,
+			LOCAL_ATTR_WEBSITE: "test.example.com",
+			LOCAL_ATTR_DN: normal_user.distinguished_name,
+			LOCAL_ATTR_UPN: "%s@%s" % (
+				normal_user.username,
+				f_runtime_settings.LDAP_DOMAIN,
+			),
+			LOCAL_ATTR_CREATED: tz_aware_now(),
+			LOCAL_ATTR_MODIFIED: tz_aware_now(),
+			LOCAL_ATTR_LAST_LOGIN_WIN32: tz_aware_now(),
+			LOCAL_ATTR_BAD_PWD_COUNT: 0,
+		}
+
+		m_ldap_user_fetch = mocker.patch.object(
+			LDAPUserViewSet,
+			"ldap_user_fetch",
+			return_value=mock_attrs
+		)
+
+		response: Response = normal_user_client.get(self.endpoint)
+
+		assert response.status_code == status.HTTP_200_OK
+		m_ldap_user_fetch.assert_called_once_with(
+			user_search=normal_user.username
+		)
+		data = response.data.get("data")
+		for attr in LOCAL_PUBLIC_FIELDS:
+			if attr in data:
+				assert data[attr] == mock_attrs[attr]
+
+	def test_success_local(
+		self,
+		normal_user: User,
+		normal_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		m_ldap_user_fetch = mocker.patch.object(LDAPUserViewSet, "ldap_user_fetch")
+
+		response: Response = normal_user_client.get(self.endpoint)
+
+		assert response.status_code == status.HTTP_200_OK
+		m_ldap_user_fetch.assert_not_called()
+		data = response.data.get("data")
+		assert data[LOCAL_ATTR_USERNAME] == normal_user.username
+		assert data[LOCAL_ATTR_USERTYPE] == USER_TYPE_LOCAL
+		assert data[LOCAL_ATTR_FIRST_NAME] == normal_user.first_name
+		assert data[LOCAL_ATTR_LAST_NAME] == normal_user.last_name
+		assert data[LOCAL_ATTR_EMAIL] == normal_user.email
+		assert data[LOCAL_ATTR_IS_ENABLED]
+		assert not data[LOCAL_ATTR_DN]
+		assert isinstance(data[LOCAL_ATTR_LAST_LOGIN], datetime)
+		assert isinstance(data[LOCAL_ATTR_CREATED], datetime)
+		assert isinstance(data[LOCAL_ATTR_MODIFIED], datetime)
