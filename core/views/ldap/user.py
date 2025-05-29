@@ -20,6 +20,7 @@ from core.models.user import (
 	USER_TYPE_LDAP,
 	USER_TYPE_LOCAL,
 )
+from core.models.ldap_user import LDAPUser
 from core.views.mixins.logs import LogMixin
 from core.models.choices.log import (
 	LOG_ACTION_UPDATE,
@@ -40,7 +41,6 @@ from core.views.base import BaseViewSet
 
 ### REST Framework
 from rest_framework import status
-from rest_framework.serializers import ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -50,7 +50,6 @@ from core.decorators.login import auth_required, admin_required
 from core.ldap import adsi as ldap_adsi
 from core.constants.attrs import *
 from core.ldap.connector import LDAPConnector
-import ldap3
 
 ### Others
 from core.ldap.filter import LDAPFilter
@@ -363,6 +362,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			raise exc_user.UserPasswordsDontMatch
 
 		# Open LDAP Connection
+		# TODO implement LDAPUser usage.
 		with LDAPConnector(user) as ldc:
 			self.ldap_connection = ldc.connection
 
@@ -829,10 +829,13 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 	@auth_required
 	@ldap_backend_intercept
 	def self_change_password(self, request: Request, pk=None):
-		user: User = request.user
+		user = request.user
+		user: User # For type-hints
 		code = 0
 		code_msg = "ok"
 		data = request.data
+		if user.user_type != USER_TYPE_LDAP:
+			raise exc_user.UserNotLDAPType
 
 		ALERT_KEYS = (
 			LOCAL_ATTR_USERNAME,
@@ -848,44 +851,38 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				)
 				raise exc_base.BadRequest
 
+		serializer = self.serializer_cls(data=data)
+		serializer.is_valid(raise_exception=True)
+		data = serializer.validated_data
+
 		# Open LDAP Connection
 		# User doesn't have rights to change any data in LDAP Server
-		# so admin must be forced, auth_required decorator with
-		# require_admin flag is very important
+		# so admin must be forced, auth_required decorator is very important.
 		with LDAPConnector(force_admin=True) as ldc:
 			self.ldap_connection = ldc.connection
-			ldap_user_search = user.username
-			ldap_user_entry = self.get_user_object(
-				ldap_user_search,
-				attributes=[
+			ldap_user = LDAPUser(
+				connection=self.ldap_connection,
+				username=user.username,
+				search_attrs=[
 					RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
 					RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_DN],
 					RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_UAC],
-				],
+				]
 			)
-			distinguished_name = str(ldap_user_entry.entry_dn)
-
-			if ldap_adsi.list_user_perms(
-				user=ldap_user_entry,
-				perm_search=ldap_adsi.LDAP_UF_PASSWD_CANT_CHANGE,
-			):
+			if not ldap_user.exists:
+				raise exc_user.UserDoesNotExist
+			if not ldap_user.can_change_password:
 				raise PermissionDenied
 
-			if not distinguished_name:
-				raise exc_user.UserDoesNotExist
-
-			if data[LOCAL_ATTR_PASSWORD] != data[LOCAL_ATTR_PASSWORD_CONFIRM]:
-				raise exc_user.UserPasswordsDontMatch
-
 			self.ldap_set_password(
-				user_dn=distinguished_name,
+				user_dn=ldap_user.distinguished_name,
 				user_pwd_new=data[LOCAL_ATTR_PASSWORD],
 				user_pwd_old=aes_decrypt(*user.encrypted_password),
 			)
 
-		django_user = None
+		django_user: User = None
 		try:
-			django_user = User.objects.get(username=ldap_user_search)
+			django_user = User.objects.get(username=user.username)
 		except Exception as e:
 			logger.error(e)
 		if django_user:
@@ -899,7 +896,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			user=request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_USER,
-			log_target=ldap_user_search,
+			log_target=user.username,
 			message=LOG_EXTRA_USER_CHANGE_PASSWORD,
 		)
 
