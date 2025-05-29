@@ -6,7 +6,7 @@ from pytest_mock import MockerFixture
 from core.models.ldap_object import LDAPObject, LDAPObjectTypes
 from core.constants.attrs import *
 from core.ldap.filter import LDAPFilter
-from core.views.mixins.utils import getldapattrvalue
+from core.utils.main import getldapattrvalue
 from core.type_hints.connector import LDAPConnectionProtocol
 from ldap3 import (
 	Entry as LDAPEntry,

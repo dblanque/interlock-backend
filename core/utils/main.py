@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.views.mixins.utils
+# Module: core.utils.main
 # Contains extra utilities and functions
 
 # ---------------------------------- IMPORTS -----------------------------------#
@@ -13,10 +13,11 @@ from typing import Iterable, Any, overload
 from ldap3 import Entry as LDAPEntry, Attribute as LDAPAttribute
 from core.config.runtime import RuntimeSettings
 
+def flatten_list(lst: list):
+	return [item for sublist in lst for item in sublist]
 
 @overload
 def getlocalkeyforldapattr(v: str, default: str = None): ...
-
 
 def getlocalkeyforldapattr(v: str, *args, **kwargs):
 	"""Returns local alias for LDAP Attribute Key"""
@@ -35,12 +36,10 @@ def getldapattrvalue(
 	entry: LDAPEntry, attr: str, /
 ) -> str | Iterable | Any: ...
 
-
 @overload
 def getldapattrvalue(
 	entry: LDAPEntry, attr: str, /, default=None
 ) -> str | Iterable | Any: ...
-
 
 def getldapattrvalue(
 	entry: LDAPEntry, attr: str, /, *args, **kwargs
@@ -69,12 +68,10 @@ def getldapattrvalue(
 @overload
 def getldapattr(entry: LDAPEntry, attr: str, /) -> LDAPAttribute: ...
 
-
 @overload
 def getldapattr(
 	entry: LDAPEntry, attr: str, /, default=None
 ) -> LDAPAttribute: ...
-
 
 def getldapattr(
 	entry: LDAPEntry, attr: str, /, *args, **kwargs

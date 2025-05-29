@@ -14,7 +14,7 @@ from core.models.types.ldap_dns_record import RecordTypes
 from ldap3 import LEVEL as ldap3_LEVEL
 
 ### Models
-from core.views.mixins.utils import getldapattrvalue
+from core.utils.main import getldapattrvalue
 from core.models.dns import LDAPDNS, LDAPRecord, DATE_FMT
 from core.models.user import User
 from core.constants.attrs import LDAP_ATTR_OBJECT_CLASS

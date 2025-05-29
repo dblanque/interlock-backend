@@ -2,7 +2,7 @@
 import pytest
 from pytest_mock import MockerFixture
 from ldap3 import Entry as LDAPEntry, Attribute as LDAPAttribute
-from core.views.mixins.utils import (
+from core.utils.main import (
 	getlocalkeyforldapattr,
 	getldapattrvalue,
 	net_port_test,

@@ -15,7 +15,7 @@ from core.config.runtime import RuntimeSettings
 from core.constants.attrs import LOCAL_ATTR_UAC, LOCAL_ATTR_USERNAME
 from typing import Union, Literal, TypedDict, Required
 from ldap3 import Entry as LDAPEntry
-from core.views.mixins.utils import getldapattrvalue
+from core.utils.main import getldapattrvalue
 from core.ldap.filter import encapsulate
 import logging
 

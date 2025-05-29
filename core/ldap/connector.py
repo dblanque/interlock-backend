@@ -62,7 +62,7 @@ from interlock_backend.encrypt import aes_encrypt, aes_decrypt
 
 # Libs
 from inspect import getfullargspec
-from core.views.mixins.utils import getldapattr
+from core.utils.main import getldapattr
 import ssl
 import logging
 import sys

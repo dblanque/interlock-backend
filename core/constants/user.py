@@ -1,6 +1,6 @@
 from .search_attr_builder import SearchAttrBuilder
 from core.constants.attrs.local import *
-from core.views.mixins.utils import getlocalkeyforldapattr
+from core.utils.main import getlocalkeyforldapattr
 
 LOCAL_PUBLIC_FIELDS_BASIC = (
 	LOCAL_ATTR_ID,

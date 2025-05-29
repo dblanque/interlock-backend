@@ -15,7 +15,7 @@ from core.constants.attrs import *
 
 ### Others
 from core.config.runtime import RuntimeSettings
-from core.views.mixins.utils import getldapattrvalue
+from core.utils.main import getldapattrvalue
 from core.type_hints.connector import LDAPConnectionProtocol
 from typing import overload
 from ldap3 import LEVEL, Entry as LDAPEntry

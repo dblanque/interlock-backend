@@ -12,7 +12,7 @@ from core.constants.attrs import *
 from core.config.runtime import RuntimeSettings
 from core.ldap.adsi import LDAP_BUILTIN_OBJECTS
 from core.ldap.security_identifier import SID
-from core.views.mixins.utils import getlocalkeyforldapattr
+from core.utils.main import getlocalkeyforldapattr
 
 ### Others
 from core.type_hints.connector import LDAPConnectionProtocol
@@ -30,7 +30,7 @@ from ldap3.utils.dn import safe_rdn
 from typing import overload
 from enum import Enum
 from logging import getLogger
-from core.views.mixins.utils import getldapattrvalue
+from core.utils.main import getldapattrvalue
 
 ################################################################################
 logger = getLogger()

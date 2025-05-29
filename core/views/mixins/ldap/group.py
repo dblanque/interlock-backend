@@ -47,7 +47,7 @@ from core.exceptions import (
 
 ### Others
 from rest_framework.request import Request
-from core.views.mixins.utils import getldapattrvalue
+from core.utils.main import getldapattrvalue
 from typing import List, TypedDict, Literal
 from django.db import transaction
 import logging

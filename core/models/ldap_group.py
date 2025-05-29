@@ -23,7 +23,7 @@ from ldap3.utils.dn import safe_rdn
 from core.views.mixins.ldap.organizational_unit import OrganizationalUnitMixin
 from typing import overload
 from logging import getLogger
-from core.views.mixins.utils import getldapattrvalue
+from core.utils.main import getldapattrvalue
 from core.models.ldap_object import (
 	LDAPObject,
 	LDAPObjectTypes,

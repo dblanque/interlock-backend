@@ -4,7 +4,7 @@ from pytest_mock import MockerFixture
 
 ################################################################################
 from datetime import datetime
-from core.views.mixins.utils import is_non_str_iterable
+from core.utils.main import is_non_str_iterable
 from core.constants.attrs import *
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from tests.test_core.conftest import RuntimeSettingsFactory
@@ -20,7 +20,7 @@ def f_runtime_settings(
 	mocker.patch("core.models.ldap_object.RuntimeSettings", mock)
 	mocker.patch("core.models.ldap_user.RuntimeSettings", mock)
 	mocker.patch("core.models.ldap_group.RuntimeSettings", mock)
-	mocker.patch("core.views.mixins.utils.RuntimeSettings", mock)
+	mocker.patch("core.utils.main.RuntimeSettings", mock)
 	return mock
 
 

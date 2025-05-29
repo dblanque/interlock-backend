@@ -10,7 +10,7 @@ from rest_framework.serializers import ValidationError
 from core.models.user import User
 from typing import Union, Protocol, overload
 from ldap3 import MODIFY_REPLACE
-from core.views.mixins.utils import getldapattrvalue, getlocalkeyforldapattr
+from core.utils.main import getldapattrvalue, getlocalkeyforldapattr
 from django.core.exceptions import ObjectDoesNotExist
 from datetime import datetime
 from core.models.choices.log import (
