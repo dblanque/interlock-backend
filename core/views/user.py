@@ -115,7 +115,7 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
-	def insert(self, request, pk=None):
+	def insert(self, request: Request, pk=None):
 		code = 0
 		code_msg = "ok"
 		data: dict = request.data
@@ -159,7 +159,7 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 	@action(detail=True, methods=["get"])
 	@auth_required
 	@admin_required
-	def fetch(self, request, pk):
+	def fetch(self, request: Request, pk):
 		code = 0
 		code_msg = "ok"
 		pk = int(pk)
@@ -177,7 +177,7 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 
 	@auth_required
 	@admin_required
-	def update(self, request, pk):
+	def update(self, request: Request, pk):
 		code = 0
 		code_msg = "ok"
 		data: dict = request.data
@@ -200,7 +200,7 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 			raise BadRequest(data={"errors": serializer.errors})
 
 		try:
-			user_instance = User.objects.get(id=pk)
+			user_instance: User = User.objects.get(id=pk)
 		except ObjectDoesNotExist:
 			raise exc_user.UserDoesNotExist
 
@@ -224,7 +224,7 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 	@action(detail=True, methods=["delete", "post"])
 	@auth_required
 	@admin_required
-	def delete(self, request, pk):
+	def delete(self, request: Request, pk):
 		req_user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -255,7 +255,7 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 	@action(detail=True, methods=["post"])
 	@auth_required
 	@admin_required
-	def change_status(self, request, pk):
+	def change_status(self, request: Request, pk):
 		code = 0
 		code_msg = "ok"
 		data: dict = request.data
@@ -291,7 +291,7 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 	@action(detail=True, methods=["post"])
 	@auth_required
 	@admin_required
-	def change_password(self, request, pk):
+	def change_password(self, request: Request, pk):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -335,7 +335,7 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 
 	@action(detail=False, methods=["post", "put"])
 	@auth_required
-	def self_change_password(self, request):
+	def self_change_password(self, request: Request):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -372,7 +372,7 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 
 	@action(detail=False, methods=["post", "put"])
 	@auth_required
-	def self_update(self, request, pk=None):
+	def self_update(self, request: Request, pk=None):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
