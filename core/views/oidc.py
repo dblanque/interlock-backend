@@ -142,19 +142,19 @@ class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
 		if isinstance(prompt, str) and prompt.lower() == "none":
 			prompt = None
 		elif not prompt in OIDC_ALLOWED_PROMPTS:
-			login_redirect_bad_request("oidc_prompt_unsupported")
+			return login_redirect_bad_request("oidc_prompt_unsupported")
 
 		# VALIDATION
 		try:
 			self.authorize.validate_params()
 		except:
-			login_redirect_bad_request()
+			return login_redirect_bad_request()
 
 		OIDC_COOKIE = request.COOKIES.get(
 			OIDC_INTERLOCK_LOGIN_COOKIE, OIDC_COOKIE_VUE_REDIRECT
 		).lower()
 		if OIDC_COOKIE not in OIDC_COOKIE_CHOICES:
-			login_redirect_bad_request()
+			return login_redirect_bad_request()
 
 		# FETCH DATA
 		self.get_relevant_objects(request=request)
