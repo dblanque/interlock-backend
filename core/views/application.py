@@ -19,6 +19,7 @@ from core.views.mixins.application import ApplicationViewMixin
 
 ### REST Framework
 from rest_framework.response import Response
+from rest_framework.request import Request
 from rest_framework.decorators import action
 
 ### Others
@@ -34,7 +35,7 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 
 	@auth_required
 	@admin_required
-	def list(self, request):
+	def list(self, request: Request):
 		code = 0
 		code_msg = "ok"
 		data = self.list_applications()
@@ -50,8 +51,7 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
-	def insert(self, request):
-		user: User = request.user
+	def insert(self, request: Request):
 		data: dict = request.data
 		code = 0
 		code_msg = "ok"
@@ -64,7 +64,7 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 	@action(detail=True, methods=["delete"], url_path="delete")
 	@auth_required
 	@admin_required
-	def delete(self, request, pk):
+	def delete(self, request: Request, pk):
 		code = 0
 		code_msg = "ok"
 		application_id = int(pk)
@@ -80,7 +80,7 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 	@action(detail=True, methods=["get"])
 	@auth_required
 	@admin_required
-	def fetch(self, request, pk):
+	def fetch(self, request: Request, pk):
 		code = 0
 		code_msg = "ok"
 		application_id = int(pk)
@@ -96,7 +96,7 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 
 	@auth_required
 	@admin_required
-	def update(self, request, pk):
+	def update(self, request: Request, pk):
 		data: dict = request.data
 		code = 0
 		code_msg = "ok"
