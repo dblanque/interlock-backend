@@ -4,9 +4,9 @@ from rest_framework import status
 
 
 def test_disabled_user_unauthorized(
-	g_all_endpoints, disabled_user_client: APIClient
+	g_all_endpoints: tuple[str, str], disabled_user_client: APIClient
 ):
 	url, method = g_all_endpoints
-	method = getattr(disabled_user_client, method)
+	method = getattr(disabled_user_client, method.lower())
 	response: Response = method(url)
 	assert response.status_code == status.HTTP_401_UNAUTHORIZED

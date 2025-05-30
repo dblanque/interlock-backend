@@ -10,9 +10,9 @@ def f_interlock_ldap_disabled(g_interlock_ldap_disabled):
 
 
 def test_ldap_backend_disabled(
-	g_ldap_domain_endpoints, admin_user_client: APIClient
+	g_ldap_domain_endpoints: tuple[str, str], admin_user_client: APIClient
 ):
 	url, method = g_ldap_domain_endpoints
-	method = getattr(admin_user_client, method)
+	method = getattr(admin_user_client, method.lower())
 	response: Response = method(url)
 	assert response.status_code == status.HTTP_418_IM_A_TEAPOT
