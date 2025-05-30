@@ -14,7 +14,16 @@ Target Mid-June release
 * core.ldap.ldap_settings - TUESDAY <d>
 * core.serializers.group - THURSDAY <d>
 * core.views.mixins - <d>
-* core.views - Tuesday - Friday
+* core.views
+	* application <d>
+	* application group <d>
+	* auth
+	* home
+	* settings
+	* logs
+	* oidc
+	* totp
+	* user
 
 ## Issues
 ### High Priority
