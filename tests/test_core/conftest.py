@@ -51,7 +51,7 @@ class RuntimeSettingsFactory(Protocol):
 
 @pytest.fixture
 def g_runtime_settings(mocker: MockerFixture) -> RuntimeSettingsFactory:
-	def maker(patch_path: str = None):
+	def maker(patch_path: str = "core.config.runtime.RuntimeSettings"):
 		mock: MockType = mocker.MagicMock(spec=RuntimeSettingsSingleton)
 		attributes = getmembers(
 			RuntimeSettingsSingleton, lambda a: not (isroutine(a))
