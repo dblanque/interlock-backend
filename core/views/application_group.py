@@ -41,9 +41,11 @@ class ApplicationGroupViewSet(BaseViewSet, ApplicationSecurityGroupViewMixin):
 		code_msg = "ok"
 		data = {"applications": [], "users": []}
 		for app in self.app_queryset.values("id", "name"):
+			# Return any application that does not have an associated app group
 			if not self.queryset.filter(application=app["id"]).exists():
 				data["applications"].append(app)
-		if len(data["applications"]) > 0:
+
+		if data["applications"]:
 			for user in self.user_queryset.filter(
 				user_type=USER_TYPE_LOCAL
 			).values(*("id", "username", "first_name", "last_name")):
