@@ -1,16 +1,20 @@
-# conftest.py
+# tests.test_core.test_views.conftest
+########################### Standard Pytest Imports ############################
 import pytest
-from django.contrib.auth import get_user_model
+from pytest import FixtureRequest
+################################################################################
 from rest_framework.test import APIClient
 from core.ldap.defaults import LDAP_DOMAIN
-import pytest
+# Models
+from core.models.user import User, USER_TYPE_LDAP, USER_TYPE_LOCAL
+from core.models.application import Application, ApplicationSecurityGroup
+from oidc_provider.models import Client
+# Other
 from typing import Protocol
 from rest_framework import status
 from pytest import FixtureRequest
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.tokens import RefreshToken
 from interlock_backend.test_settings import SIMPLE_JWT
-from core.models.user import User
+from typing import Protocol
 
 _ACCESS_NAME = SIMPLE_JWT["AUTH_COOKIE_NAME"]
 _REFRESH_NAME = SIMPLE_JWT["REFRESH_COOKIE_NAME"]
@@ -77,9 +81,19 @@ def api_client():
 	"""Unauthenticated API client"""
 	return APIClient()
 
+class UserFactory(Protocol):
+	def __call__(
+		self,
+		username="testuser",
+		email=f"test@{LDAP_DOMAIN}",
+		password="somepassword",
+		is_staff=False,
+		is_superuser=False,
+		**kwargs,
+	) -> User: ...
 
 @pytest.fixture
-def user_factory(db):
+def user_factory(db) -> UserFactory:
 	"""Factory to create test users with db access"""
 
 	def create_user(
@@ -200,6 +214,71 @@ def admin_user_client(admin_user: User, api_client: APIClient) -> AdminApiClient
 	# 	api_client.cookies[cookie]["samesite"] = _JWT_SAMESITE
 	# 	api_client.cookies[cookie]["secure"] = _JWT_SECURE
 	return api_client
+
+MOCK_PASSWORD = "mock_password"
+@pytest.fixture
+def f_user_local(user_factory: UserFactory):
+	"""Test creating a user with all fields"""
+	return user_factory(
+		username="testuserlocal",
+		password=MOCK_PASSWORD,
+		email=f"testuserlocal@example.org",
+		user_type=USER_TYPE_LOCAL,
+		is_enabled=True,
+	)
+
+
+@pytest.fixture
+def f_user_ldap(user_factory: UserFactory):
+	"""Test creating a user with all fields"""
+	return user_factory(
+		username="testuserldap",
+		password=MOCK_PASSWORD,
+		email="testuserldap@example.org",
+		distinguished_name="cn=john,ou=users,dc=example,dc=com",
+		user_type=USER_TYPE_LDAP,
+		is_enabled=True,
+	)
+
+
+@pytest.fixture
+def f_application():
+	"""Fixture creating a test application in the database"""
+	m_application = Application.objects.create(
+		name="Test Application",
+		enabled=True,
+		client_id="test-client-id",
+		client_secret="test-client-secret",
+		redirect_uris="https://example.com/callback",
+		scopes="openid profile",
+	)
+	return m_application
+
+
+@pytest.fixture
+def f_application_group(f_application, f_user_local, f_user_ldap):
+	"""Fixture creating a test application group in the database"""
+	m_asg = ApplicationSecurityGroup(
+		application=f_application,
+		ldap_objects=["some_group_dn"],
+		enabled=True,
+	)
+	m_asg.save()
+	m_asg.users.add(f_user_local)
+	m_asg.users.add(f_user_ldap)
+	m_asg.save()
+	return m_asg
+
+
+@pytest.fixture
+def f_client(f_application) -> Client:
+	m_client = Client.objects.create(
+		client_id=f_application.client_id,
+		redirect_uris=f_application.redirect_uris.split(","),
+		require_consent=True,
+		reuse_consent=True,
+	)
+	return m_client
 
 
 @pytest.fixture

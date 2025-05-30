@@ -39,6 +39,7 @@ from django.http import QueryDict
 from typing import Protocol, Union
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from tests.test_core.conftest import RuntimeSettingsFactory
+from tests.test_core.test_views.conftest import UserFactory
 
 ################################################################################
 ################################# FIXTURES #####################################
@@ -54,79 +55,6 @@ def f_request(mocker: MockerFixture):
 	return m_request
 
 
-@pytest.fixture
-def f_default_password():
-	return "mockpassword"
-
-
-@pytest.fixture
-def f_user_local(
-	f_default_password, f_runtime_settings: RuntimeSettingsSingleton
-):
-	"""Test creating a user with all fields"""
-	m_user = User.objects.create(
-		username="testuserlocal",
-		password=f_default_password,
-		email=f"testuserlocal@{f_runtime_settings.LDAP_DOMAIN}",
-		user_type=USER_TYPE_LOCAL,
-		is_enabled=True,
-	)
-	return m_user
-
-
-@pytest.fixture
-def f_user_ldap(f_default_password):
-	"""Test creating a user with all fields"""
-	m_user = User.objects.create(
-		username="testuserldap",
-		password=f_default_password,
-		_distinguished_name="cn=john,ou=users,dc=example,dc=com",
-		user_type=USER_TYPE_LDAP,
-		is_enabled=True,
-	)
-	return m_user
-
-
-@pytest.fixture
-def f_application():
-	"""Fixture creating a test application in the database"""
-	m_application = Application.objects.create(
-		name="Test Application",
-		enabled=True,
-		client_id="test-client-id",
-		client_secret="test-client-secret",
-		redirect_uris="https://example.com/callback",
-		scopes="openid profile",
-	)
-	return m_application
-
-
-@pytest.fixture
-def f_application_group(f_application, f_user_local, f_user_ldap):
-	"""Fixture creating a test application group in the database"""
-	m_asg = ApplicationSecurityGroup(
-		application=f_application,
-		ldap_objects=["some_group_dn"],
-		enabled=True,
-	)
-	m_asg.save()
-	m_asg.users.add(f_user_local)
-	m_asg.users.add(f_user_ldap)
-	m_asg.save()
-	return m_asg
-
-
-@pytest.fixture
-def f_client(f_application) -> Union[MockType, Client]:
-	m_client = Client.objects.create(
-		client_id=f_application.client_id,
-		redirect_uris=f_application.redirect_uris.split(","),
-		require_consent=True,
-		reuse_consent=True,
-	)
-	return m_client
-
-
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector) -> MockType:
 	"""Fixture to mock LDAPConnector and its context manager."""
@@ -136,7 +64,6 @@ def f_ldap_connector(g_ldap_connector) -> MockType:
 @pytest.fixture(autouse=True)
 def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
 	return g_runtime_settings()
-
 
 class OidcUriFactory(Protocol):
 	def __call__(
@@ -149,9 +76,8 @@ class OidcUriFactory(Protocol):
 		redirect_uri=None,
 	) -> str: ...
 
-
 @pytest.fixture
-def f_oidc_uri(f_runtime_settings) -> OidcUriFactory:
+def f_oidc_uri(f_runtime_settings: RuntimeSettingsSingleton) -> OidcUriFactory:
 	def maker(**kwargs):
 		base_url = f"https://interlock.{f_runtime_settings.LDAP_DOMAIN}/openid/authorize/?"
 		params = []
