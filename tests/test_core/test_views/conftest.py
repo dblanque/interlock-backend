@@ -12,6 +12,7 @@ from oidc_provider.models import Client
 # Other
 from typing import Protocol
 from rest_framework import status
+from http import HTTPMethod
 from pytest import FixtureRequest
 from interlock_backend.test_settings import SIMPLE_JWT
 from typing import Protocol
@@ -24,16 +25,61 @@ _JWT_SECURE=SIMPLE_JWT["AUTH_COOKIE_SECURE"]
 @pytest.fixture(
 	params=[
 		# LDAP Domain
-		("/api/ldap/domain/details/", "get"),
-		("/api/ldap/domain/zones/", "post"),
-		("/api/ldap/domain/insert/", "post"),
-		("/api/ldap/domain/delete/", "post"),
+		("/api/ldap/domain/details/", HTTPMethod.GET),
+		("/api/ldap/domain/zones/", HTTPMethod.POST),
+		("/api/ldap/domain/insert/", HTTPMethod.POST),
+		("/api/ldap/domain/delete/", HTTPMethod.POST),
 		# LDAP Record
-		("/api/ldap/record/insert/", "post"),
-		("/api/ldap/record/update/", "put"),
-		("/api/ldap/record/delete/", "post"),
+		("/api/ldap/record/insert/", HTTPMethod.POST),
+		("/api/ldap/record/update/", HTTPMethod.PUT),
+		("/api/ldap/record/delete/", HTTPMethod.POST),
+		# LDAP Groups
+		("/api/ldap/groups/", HTTPMethod.GET),
+		("/api/ldap/groups/fetch/", HTTPMethod.POST),
+		("/api/ldap/groups/insert/", HTTPMethod.POST),
+		("/api/ldap/groups/update/", HTTPMethod.PUT),
+		("/api/ldap/groups/delete/", HTTPMethod.POST),
+		# LDAP Users
+		("/api/ldap/users/", HTTPMethod.GET),
+		("/api/ldap/users/fetch/", HTTPMethod.POST),
+		("/api/ldap/users/insert/", HTTPMethod.POST),
+		("/api/ldap/users/update/", HTTPMethod.PUT),
+		("/api/ldap/users/change_status/", HTTPMethod.POST),
+		("/api/ldap/users/delete/", HTTPMethod.POST),
+		("/api/ldap/users/change_password/", HTTPMethod.POST),
+		("/api/ldap/users/unlock/", HTTPMethod.POST),
+		("/api/ldap/users/bulk_insert/", HTTPMethod.POST),
+		("/api/ldap/users/bulk_update/", HTTPMethod.POST),
+		("/api/ldap/users/bulk_change_status/", HTTPMethod.POST),
+		("/api/ldap/users/bulk_delete/", HTTPMethod.POST),
+		("/api/ldap/users/bulk_unlock/", HTTPMethod.POST),
+		("/api/ldap/users/self_change_password/", HTTPMethod.POST),
+		("/api/ldap/users/self_update/", HTTPMethod.POST),
+		("/api/ldap/users/self_info/", HTTPMethod.GET),
+		("/api/ldap/users/self_fetch/", HTTPMethod.GET),
+		# LDAP Directory Tree and OUs
+		("/api/ldap/ou/", HTTPMethod.GET),
+		("/api/ldap/ou/dirtree/", HTTPMethod.POST),
+		("/api/ldap/ou/move/", HTTPMethod.POST),
+		("/api/ldap/ou/rename/", HTTPMethod.POST),
+		("/api/ldap/ou/insert/", HTTPMethod.POST),
+		("/api/ldap/ou/delete/", HTTPMethod.POST),
+		# Application Groups
+		("/api/application/group/create_info/", HTTPMethod.GET),
+		("/api/application/group/insert/", HTTPMethod.POST),
+		("/api/application/group/", HTTPMethod.GET),
+		("/api/application/group/{pk}/", HTTPMethod.GET),
+		("/api/application/group/{pk}/", HTTPMethod.PUT),
+		("/api/application/group/{pk}/change_status/", HTTPMethod.PATCH),
+		("/api/application/group/{pk}/delete/", HTTPMethod.DELETE),
+		# Application
+		("/api/application/", HTTPMethod.GET),
+		("/api/application/insert/", HTTPMethod.POST),
+		("/api/application/{pk}/delete/", HTTPMethod.DELETE),
+		("/api/application/{pk}/fetch/", HTTPMethod.GET),
+		("/api/application/{pk}/", HTTPMethod.PUT),
 	],
-	ids=lambda x: f"{x[1].upper()}: {x[0]}",
+	ids=lambda x: f"{x[1]}: {x[0]}",
 )
 def g_all_endpoints(request: FixtureRequest):
 	"""Returns tuple of (endpoint, method)"""
@@ -41,7 +87,46 @@ def g_all_endpoints(request: FixtureRequest):
 
 
 # Filtered fixture - only LDAP domain endpoints
-excluded_from_ldap = ("/api/ldap/domain/details/",)
+ldap_endpoints = (
+	# LDAP Domain
+	"/api/ldap/domain/zones/",
+	"/api/ldap/domain/insert/",
+	"/api/ldap/domain/delete/",
+	# LDAP Record
+	"/api/ldap/record/insert/",
+	"/api/ldap/record/update/",
+	"/api/ldap/record/delete/",
+	# LDAP Groups
+	"/api/ldap/groups/",
+	"/api/ldap/groups/fetch/",
+	"/api/ldap/groups/insert/",
+	"/api/ldap/groups/update/",
+	"/api/ldap/groups/delete/",
+	# LDAP Users
+	"/api/ldap/users/",
+	"/api/ldap/users/fetch/",
+	"/api/ldap/users/insert/",
+	"/api/ldap/users/update/",
+	"/api/ldap/users/change_status/",
+	"/api/ldap/users/delete/",
+	"/api/ldap/users/change_password/",
+	"/api/ldap/users/unlock/",
+	"/api/ldap/users/bulk_insert/",
+	"/api/ldap/users/bulk_update/",
+	"/api/ldap/users/bulk_change_status/",
+	"/api/ldap/users/bulk_delete/",
+	"/api/ldap/users/bulk_unlock/",
+	"/api/ldap/users/self_change_password/",
+	"/api/ldap/users/self_update/",
+	"/api/ldap/users/self_fetch/",
+	# LDAP Directory Tree and OUs
+	"/api/ldap/ou/",
+	"/api/ldap/ou/dirtree/",
+	"/api/ldap/ou/move/",
+	"/api/ldap/ou/rename/",
+	"/api/ldap/ou/insert/",
+	"/api/ldap/ou/delete/",
+)
 
 
 @pytest.fixture(
@@ -50,7 +135,7 @@ excluded_from_ldap = ("/api/ldap/domain/details/",)
 		p
 		for p in g_all_endpoints._pytestfixturefunction.params
 		# Filter condition
-		if p[0] not in excluded_from_ldap
+		if p[0] in ldap_endpoints
 	],
 	ids=lambda x: f"{x[1].upper()}: {x[0]} (LDAP Required)",
 )
@@ -59,7 +144,9 @@ def g_ldap_domain_endpoints(request: FixtureRequest):
 
 
 # Filtered fixture - only LDAP domain endpoints
-excluded_from_auth = ("/api/ldap/domain/details/",)
+excluded_from_auth_required = (
+	"/api/ldap/domain/details/",
+)
 
 
 @pytest.fixture(
@@ -68,11 +155,32 @@ excluded_from_auth = ("/api/ldap/domain/details/",)
 		p
 		for p in g_all_endpoints._pytestfixturefunction.params
 		# Filter condition
-		if p[0] not in excluded_from_auth
+		if p[0] not in excluded_from_auth_required
 	],
 	ids=lambda x: f"{x[1].upper()}: {x[0]} (Auth. Required)",
 )
 def g_authenticated_endpoints(request: FixtureRequest):
+	return request.param
+
+excluded_from_admin_only = (
+	"/api/ldap/domain/details/",
+	"/api/ldap/users/self_change_password/",
+	"/api/ldap/users/self_update/",
+	"/api/ldap/users/self_fetch/",
+	"/api/ldap/users/self_info/",
+)
+
+@pytest.fixture(
+	params=[
+		# Access underlying params
+		p
+		for p in g_all_endpoints._pytestfixturefunction.params
+		# Filter condition
+		if p[0] not in excluded_from_admin_only
+	],
+	ids=lambda x: f"{x[1].upper()}: {x[0]} (Admin Required)",
+)
+def g_admin_endpoints(request: FixtureRequest):
 	return request.param
 
 
@@ -256,7 +364,7 @@ def f_application():
 
 
 @pytest.fixture
-def f_application_group(f_application, f_user_local, f_user_ldap):
+def f_application_group(f_application: Application, f_user_local, f_user_ldap):
 	"""Fixture creating a test application group in the database"""
 	m_asg = ApplicationSecurityGroup(
 		application=f_application,
@@ -271,7 +379,7 @@ def f_application_group(f_application, f_user_local, f_user_ldap):
 
 
 @pytest.fixture
-def f_client(f_application) -> Client:
+def f_client(f_application: Application) -> Client:
 	m_client = Client.objects.create(
 		client_id=f_application.client_id,
 		redirect_uris=f_application.redirect_uris.split(","),
