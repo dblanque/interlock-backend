@@ -1,9 +1,7 @@
 ########################### Standard Pytest Imports ############################
 import pytest
 from pytest_mock import MockerFixture, MockType
-
 ################################################################################
-from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from tests.test_core.conftest import RuntimeSettingsFactory
 from core.views.ldap.group import LDAPGroupsViewSet
 from rest_framework.test import APIClient
