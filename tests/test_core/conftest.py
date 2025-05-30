@@ -14,23 +14,42 @@ from core.models.interlock_settings import (
 	TYPE_BOOL,
 )
 from core.models.ldap_settings import LDAPSetting
+from django.core.exceptions import ObjectDoesNotExist
 from copy import deepcopy
 
 
 @pytest.fixture
 def g_interlock_ldap_enabled(db):
 	# Fake LDAP Enabled
-	InterlockSetting.objects.create(
-		name=INTERLOCK_SETTING_ENABLE_LDAP, type=TYPE_BOOL, value=True
-	)
+	s = None
+	try:
+		s = InterlockSetting.objects.get(name=INTERLOCK_SETTING_ENABLE_LDAP)
+		if not s.value:
+			s.value = True
+			s.save()
+	except ObjectDoesNotExist:
+		pass
+	if not s:
+		InterlockSetting.objects.create(
+			name=INTERLOCK_SETTING_ENABLE_LDAP, type=TYPE_BOOL, value=True
+		)
 
 
 @pytest.fixture
 def g_interlock_ldap_disabled(db):
 	# Fake LDAP Disabled
-	InterlockSetting.objects.create(
-		name=INTERLOCK_SETTING_ENABLE_LDAP, type=TYPE_BOOL, value=False
-	)
+	s = None
+	try:
+		s = InterlockSetting.objects.get(name=INTERLOCK_SETTING_ENABLE_LDAP)
+		if s.value:
+			s.value = False
+			s.save()
+	except ObjectDoesNotExist:
+		pass
+	if not s:
+		InterlockSetting.objects.create(
+			name=INTERLOCK_SETTING_ENABLE_LDAP, type=TYPE_BOOL, value=False
+		)
 
 
 @pytest.fixture(autouse=True)
