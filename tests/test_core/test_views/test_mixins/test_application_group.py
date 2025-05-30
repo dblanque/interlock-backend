@@ -47,7 +47,7 @@ def test_user(db):
 
 
 @pytest.fixture
-def test_application_group(db, test_application, test_user):
+def test_application_group(db, test_application: Application, test_user):
 	"""Fixture creating a test application group in the database"""
 	group = ApplicationSecurityGroup.objects.create(
 		application=test_application,
@@ -59,7 +59,7 @@ def test_application_group(db, test_application, test_user):
 
 
 @pytest.fixture
-def application_group_data(test_application, test_user):
+def application_group_data(test_application: Application, test_user):
 	"""Fixture providing sample application group data"""
 	return {
 		"application": test_application.id,
@@ -79,7 +79,7 @@ class TestApplicationSecurityGroupViewMixin:
 	def test_insert_application_group_success(
 		self,
 		mixin: ApplicationSecurityGroupViewMixin,
-		test_application,
+		test_application: Application,
 		test_user,
 		application_group_data,
 	):
@@ -101,7 +101,7 @@ class TestApplicationSecurityGroupViewMixin:
 	def test_insert_application_group_exists(
 		self,
 		mixin: ApplicationSecurityGroupViewMixin,
-		test_application_group,
+		test_application_group: ApplicationSecurityGroup,
 		application_group_data,
 	):
 		# Verify group exists initially
@@ -117,7 +117,7 @@ class TestApplicationSecurityGroupViewMixin:
 	def test_insert_application_group_invalid_data(
 		self,
 		mixin: ApplicationSecurityGroupViewMixin,
-		test_application,
+		test_application: Application,
 		application_group_data,
 	):
 		# Corrupt the data
@@ -154,7 +154,7 @@ class TestApplicationSecurityGroupViewMixin:
 	def test_retrieve_application_success(
 		self,
 		mixin: ApplicationSecurityGroupViewMixin,
-		test_application_group,
+		test_application_group: ApplicationSecurityGroup,
 		test_user,
 	):
 		# Test the method
@@ -179,12 +179,20 @@ class TestApplicationSecurityGroupViewMixin:
 		with pytest.raises(ApplicationGroupDoesNotExist):
 			mixin.retrieve_application(999)  # Non-existent ID
 
+	@pytest.mark.parametrize(
+		"use_users",
+		(
+			True,
+			False,
+		),
+	)
 	def test_update_application_group_success(
 		self,
+		use_users: bool,
 		mixin: ApplicationSecurityGroupViewMixin,
-		test_application_group,
-		test_user,
-		test_application,
+		test_application_group: ApplicationSecurityGroup,
+		test_user: User,
+		test_application: Application,
 	):
 		# Create a second user for testing
 		new_user = User.objects.create(
@@ -196,11 +204,12 @@ class TestApplicationSecurityGroupViewMixin:
 
 		# Prepare update data
 		update_data = {
-			"users": [new_user.id],
 			"ldap_objects": ["CN=NewGroup,OU=Groups,DC=test,DC=com"],
 			"enabled": False,
 			"application": test_application.id,
 		}
+		if use_users:
+			update_data["users"] = [new_user.id]
 
 		# Test the method
 		with transaction.atomic():
@@ -212,7 +221,10 @@ class TestApplicationSecurityGroupViewMixin:
 		test_application_group.refresh_from_db()
 
 		# Verify the updates
-		assert list(test_application_group.users.all()) == [new_user]
+		if use_users:
+			assert list(test_application_group.users.all()) == [new_user]
+		else:
+			assert list(test_application_group.users.all()) == [test_user]
 		assert (
 			test_application_group.ldap_objects == update_data["ldap_objects"]
 		)
@@ -227,10 +239,25 @@ class TestApplicationSecurityGroupViewMixin:
 				999, application_group_data
 			)  # Non-existent ID
 
+	def test_update_application_group_app_id_does_not_match(
+		self,
+		mixin: ApplicationSecurityGroupViewMixin,
+		application_group_data,
+		test_application_group: ApplicationSecurityGroup,
+	):
+		application_group_data["application"] += 1
+		# Test and verify the exception
+		with pytest.raises(BadRequest) as e:
+			mixin.update_application_group(
+				test_application_group.id,
+				application_group_data,
+			)
+		assert "does not match" in e.value.detail.get("detail")
+
 	def test_update_application_group_invalid_data(
 		self,
 		mixin: ApplicationSecurityGroupViewMixin,
-		test_application_group,
+		test_application_group: ApplicationSecurityGroup,
 		application_group_data,
 	):
 		# Corrupt the data
