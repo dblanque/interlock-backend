@@ -24,6 +24,7 @@ class BaseManager(Manager.from_queryset(QuerySet)):
 
 
 class BaseModel(models.Model):
+	id: models.BigAutoField
 	created_at = models.DateTimeField(_("created at"), auto_now_add=True)
 	modified_at = models.DateTimeField(_("modified at"), auto_now=True)
 	deleted_at = models.DateTimeField(_("deleted at"), null=True, blank=True)
