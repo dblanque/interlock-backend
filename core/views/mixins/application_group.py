@@ -104,10 +104,20 @@ class ApplicationSecurityGroupViewMixin(viewsets.ViewSetMixin):
 			raise ApplicationGroupDoesNotExist
 
 		asg = self.queryset.get(id=pk)
-		users = self.user_queryset.filter(pk__in=data["users"]).values_list(
-			"id", flat=True
-		)
-		data["users"] = users
+		if not asg.application.id == data["application"]:
+			raise BadRequest(data={
+				"detail":"Application ID does not match "+\
+				"with this Application Group"
+			})
+
+		if "users" in data:
+			users = self.user_queryset \
+				.filter(pk__in=data["users"]) \
+				.values_list("id", flat=True)
+			data["users"] = users
+		else:
+			data["users"] = asg.users.values_list("id", flat=True)
+
 		serializer = self.serializer_class(asg, data=data)
 		if not serializer.is_valid():
 			raise BadRequest(data={"errors": serializer.errors})
