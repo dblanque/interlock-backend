@@ -16,7 +16,6 @@ from core.models.choices.log import LOG_ACTION_LOGOUT, LOG_CLASS_USER
 from .base import BaseViewSet
 
 ### REST Framework
-from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -32,15 +31,40 @@ from interlock_backend.settings import (
 )
 
 ### Others
-from datetime import datetime
+from core.exceptions.base import BadRequest, InternalServerError
 from typing import Union
-import logging, jwt
+import logging
 from core.views.mixins.auth import DATE_FMT_COOKIE
+from core.decorators.login import auth_required
 ################################################################################
 
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
+def set_expired_jwt_cookies(response: Response):
+	# Expire Access/Refresh Cookie
+	response.set_cookie(
+		key=JWT_SETTINGS["AUTH_COOKIE_NAME"],
+		value="expired",
+		httponly=True,
+		samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
+		domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
+	)
+	response.set_cookie(
+		key=JWT_SETTINGS["REFRESH_COOKIE_NAME"],
+		value="expired",
+		httponly=True,
+		samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
+		domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
+	)
+	response.set_cookie(
+		key=BAD_LOGIN_COOKIE_NAME,
+		value=0,
+		httponly=True,
+		samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
+		domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
+	)
+	return response
 
 class AuthViewSet(BaseViewSet):
 	def refresh(self, request: Request):
@@ -48,44 +72,35 @@ class AuthViewSet(BaseViewSet):
 		access, refresh = cookieauth.refresh(request)
 
 		# Send expiry date to backend on data as well.
-		decoded_refresh = jwt.decode(
-			refresh,
-			key=JWT_SETTINGS["SIGNING_KEY"],
-			algorithms=JWT_SETTINGS["ALGORITHM"],
-			leeway=JWT_SETTINGS["LEEWAY"],
-		)
-		access_expire_epoch_seconds = access["exp"]
-		refresh_expire_epoch_seconds = decoded_refresh["exp"]
+		access_expire_time = access.current_time + access.lifetime
+		refresh_expire_time = refresh.current_time + refresh.lifetime
 
 		response = Response(
 			status=200,
 			data={
-				"access_expire": access_expire_epoch_seconds * 1000,
-				"refresh_expire": refresh_expire_epoch_seconds * 1000,
+				"access_expire": int(access_expire_time.timestamp() * 1000),
+				"refresh_expire": int(refresh_expire_time.timestamp() * 1000),
 			},
 		)
 		response.set_cookie(
 			key=JWT_SETTINGS["AUTH_COOKIE_NAME"],
-			value=access,
-			expires=datetime.fromtimestamp(
-				access_expire_epoch_seconds
-			).strftime(DATE_FMT_COOKIE),
+			value=access.__str__(),
+			expires=access_expire_time.strftime(DATE_FMT_COOKIE),
 			secure=JWT_SETTINGS["AUTH_COOKIE_SECURE"],
 			httponly=JWT_SETTINGS["AUTH_COOKIE_HTTP_ONLY"],
 			samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
 		)
 		response.set_cookie(
 			key=JWT_SETTINGS["REFRESH_COOKIE_NAME"],
-			value=refresh,
-			expires=datetime.fromtimestamp(
-				refresh_expire_epoch_seconds
-			).strftime(DATE_FMT_COOKIE),
+			value=refresh.__str__(),
+			expires=refresh_expire_time.strftime(DATE_FMT_COOKIE),
 			secure=JWT_SETTINGS["AUTH_COOKIE_SECURE"],
 			httponly=JWT_SETTINGS["AUTH_COOKIE_HTTP_ONLY"],
 			samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
 		)
 		return response
 
+	@auth_required
 	def logout(self, request: Union[HttpRequest, Request]):
 		code = 0
 		code_msg = "ok"
@@ -113,32 +128,12 @@ class AuthViewSet(BaseViewSet):
 					"code_msg": code_msg,
 				}
 			)
-
-			# Expire Access/Refresh Cookie
-			response.set_cookie(
-				key=JWT_SETTINGS["AUTH_COOKIE_NAME"],
-				value="expired",
-				httponly=True,
-				samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
-				domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
-			)
-			response.set_cookie(
-				key=JWT_SETTINGS["REFRESH_COOKIE_NAME"],
-				value="expired",
-				httponly=True,
-				samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
-				domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
-			)
-			response.set_cookie(
-				key=BAD_LOGIN_COOKIE_NAME,
-				value=0,
-				httponly=True,
-				samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
-				domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
-			)
+			response = set_expired_jwt_cookies(response=response)
 			return response
 		except TokenError as e:
-			return Response(
-				{"detail": str(e)},
-				status=status.HTTP_400_BAD_REQUEST
-			)
+			raise BadRequest(data={
+				"detail": str(e),
+			})
+		except Exception as e:
+			logger.exception(e)
+			raise InternalServerError

@@ -1,5 +1,6 @@
 from rest_framework import serializers as serializers
 from rest_framework_simplejwt import serializers as jwt_serializers
+from rest_framework_simplejwt.tokens import RefreshToken
 from core.models.choices.log import LOG_CLASS_USER, LOG_ACTION_LOGIN
 from core.models.user import User
 from core.exceptions import otp as exc_otp
@@ -25,12 +26,14 @@ class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
 		self.fields["recovery_code"] = serializers.CharField(required=False)
 
 	def validate(self, attrs):
+		# self.user is set in TokenObtainSerializer.validate()
 		self.user: User
-		data = []
-		data = super().validate(attrs)
-		""" self.user is set in super().validate() which also calls super().validate() """
+		data = jwt_serializers.TokenObtainSerializer.validate(self, attrs)
+		self.refresh: RefreshToken = self.get_token(self.user)
+		data["refresh"] = str(self.refresh)
+		data["access"] = str(self.refresh.access_token)
 
-		if not user_auth_fail_conditions(self.user) is True:
+		if user_auth_fail_conditions(self.user) is not True:
 			raise AuthenticationFailed
 
 		# TOTP

@@ -156,6 +156,7 @@ INSTALLED_APPS = [
 	"django_otp.plugins.otp_hotp",
 	"django_otp.plugins.otp_static",
 	"rest_framework",
+	"rest_framework_simplejwt.token_blacklist",
 	"corsheaders",
 	"core",
 	"oidc_provider",
@@ -366,7 +367,7 @@ SIMPLE_JWT = {
 	"AUTH_COOKIE_DOMAIN": None,
 	"AUTH_COOKIE_NAME": "access_token",
 	"REFRESH_COOKIE_NAME": "refresh_token",
-	"AUTH_COOKIE_SECURE": False if DEBUG == True else True,
+	"AUTH_COOKIE_SECURE": False if DEBUG else True,
 	"AUTH_COOKIE_HTTP_ONLY": True,
 	# https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#samesitesamesite-value
 	# 'AUTH_COOKIE_SAME_SITE': 'lax',

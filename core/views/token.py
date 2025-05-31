@@ -21,6 +21,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils.timezone import now as tz_aware_now
 
 ### Core
@@ -34,7 +35,7 @@ from core.views.mixins.auth import RemoveTokenResponse, DATE_FMT_COOKIE
 
 ### Others
 from datetime import datetime
-import logging, jwt
+import logging
 ################################################################################
 
 logger = logging.getLogger(__name__)
@@ -49,9 +50,12 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 	serializer_class = TokenObtainPairSerializer
 	token_exc = [TokenError, AuthenticationFailed]
 
+	def get_serializer(self, *args, **kwargs) -> TokenObtainPairSerializer:
+		return super().get_serializer(*args, **kwargs)
+
 	def post(self, request: Request, *args, **kwargs):
 		try:
-			serializer: TokenObtainPairSerializer = self.get_serializer(
+			serializer = self.get_serializer(
 				data=request.data
 			)
 			serializer.is_valid(raise_exception=True)
@@ -71,22 +75,10 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 		user.save(update_fields=[LOCAL_ATTR_LAST_LOGIN])
 
 		# Send expiry date to backend on data as well.
-		decoded_access = jwt.decode(
-			tokens["access"],
-			key=JWT_SETTINGS["SIGNING_KEY"],
-			algorithms=JWT_SETTINGS["ALGORITHM"],
-			leeway=JWT_SETTINGS["LEEWAY"],
-		)
-		decoded_refresh = jwt.decode(
-			tokens["refresh"],
-			key=JWT_SETTINGS["SIGNING_KEY"],
-			algorithms=JWT_SETTINGS["ALGORITHM"],
-			leeway=JWT_SETTINGS["LEEWAY"],
-		)
-		access_expire_epoch_seconds = decoded_access["exp"]
-		refresh_expire_epoch_seconds = decoded_refresh["exp"]
-		validated_data["access_expire"] = access_expire_epoch_seconds * 1000
-		validated_data["refresh_expire"] = refresh_expire_epoch_seconds * 1000
+		refresh = serializer.refresh
+		access = refresh.access_token
+		access_expire_time = access.current_time + access.lifetime
+		refresh_expire_time = refresh.current_time + refresh.lifetime
 
 		response = Response(validated_data, status=status.HTTP_200_OK)
 		response.set_cookie(
@@ -95,9 +87,7 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 			httponly=True,
 			samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
 			secure=JWT_SETTINGS["AUTH_COOKIE_SECURE"],
-			expires=datetime.fromtimestamp(
-				access_expire_epoch_seconds
-			).strftime(DATE_FMT_COOKIE),
+			expires=access_expire_time.strftime(DATE_FMT_COOKIE),
 			domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
 		)
 		response.set_cookie(
@@ -106,9 +96,7 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 			httponly=True,
 			samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
 			secure=JWT_SETTINGS["AUTH_COOKIE_SECURE"],
-			expires=datetime.fromtimestamp(
-				refresh_expire_epoch_seconds
-			).strftime(DATE_FMT_COOKIE),
+			expires=refresh_expire_time.strftime(DATE_FMT_COOKIE),
 			domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
 		)
 		response.set_cookie(

@@ -115,7 +115,7 @@ class CookieJWTAuthentication(JWTAuthentication):
 			raise generic_e
 		return self.get_user(validated_token), validated_token
 
-	def refresh(self, request) -> tuple[AccessToken, str]:
+	def refresh(self, request) -> tuple[AccessToken, RefreshToken]:
 		"""Validates user tokens and returns new access and refresh based on
 		validation outcome.
 
@@ -142,4 +142,4 @@ class CookieJWTAuthentication(JWTAuthentication):
 		refreshed_tokens.set_exp()
 		refreshed_tokens.set_iat()
 
-		return refreshed_tokens.access_token, str(refreshed_tokens)
+		return refreshed_tokens.access_token, refreshed_tokens
