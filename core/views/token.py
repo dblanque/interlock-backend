@@ -21,7 +21,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.exceptions import TokenError
-from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils.timezone import now as tz_aware_now
 
 ### Core
@@ -34,7 +33,6 @@ from core.serializers.token import TokenObtainPairSerializer
 from core.views.mixins.auth import RemoveTokenResponse, DATE_FMT_COOKIE
 
 ### Others
-from datetime import datetime
 import logging
 ################################################################################
 
