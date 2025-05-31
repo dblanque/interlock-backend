@@ -15,8 +15,8 @@ Target Mid-June release
 * core.serializers.group - THURSDAY <d>
 * core.views.mixins - <d>
 * core.views
-	* application <d>
-	* application group <d>
+	* application <t> - gotta do mocking
+	* application group <t> - gotta do mocking
 	* auth
 	* home
 	* settings
