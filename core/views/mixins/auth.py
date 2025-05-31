@@ -30,6 +30,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
 ### Others
+from django.http.request import HttpRequest
 import logging
 ################################################################################
 
@@ -41,7 +42,7 @@ BAD_LOGIN_LIMIT = 5
 
 
 def RemoveTokenResponse(
-	request, remove_refresh=False, bad_login_count=False
+	request: HttpRequest, remove_refresh=False, bad_login_count=False
 ) -> Response:
 	response = Response(status=status.HTTP_401_UNAUTHORIZED)
 	response.set_cookie(
@@ -85,7 +86,7 @@ def RemoveTokenResponse(
 
 
 class CookieJWTAuthentication(JWTAuthentication):
-	def authenticate(self, request) -> tuple[User, AccessToken]:
+	def authenticate(self, request: HttpRequest) -> tuple[User, AccessToken]:
 		"""Authenticates request user.
 
 		Args:
@@ -115,7 +116,7 @@ class CookieJWTAuthentication(JWTAuthentication):
 			raise generic_e
 		return self.get_user(validated_token), validated_token
 
-	def refresh(self, request) -> tuple[AccessToken, RefreshToken]:
+	def refresh(self, request: HttpRequest) -> tuple[AccessToken, RefreshToken]:
 		"""Validates user tokens and returns new access and refresh based on
 		validation outcome.
 
