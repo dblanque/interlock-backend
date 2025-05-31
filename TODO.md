@@ -17,7 +17,7 @@ Target Mid-June release
 * core.views
 	* application <t> - gotta do mocking
 	* application group <t> - gotta do mocking
-	* auth
+	* auth <d>
 	* home
 	* settings
 	* logs
