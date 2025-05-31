@@ -10,6 +10,7 @@ from core.models.user import User, USER_TYPE_LDAP, USER_TYPE_LOCAL
 from core.models.application import Application, ApplicationSecurityGroup
 from oidc_provider.models import Client
 # Other
+from rest_framework_simplejwt.tokens import RefreshToken
 from typing import Protocol
 from rest_framework import status
 from http import HTTPMethod
@@ -244,84 +245,60 @@ def admin_user(user_factory):
 	return user_factory(is_staff=True, is_superuser=True)
 
 
-class DisabledApiClient(Protocol):
-	def __call__(self) -> APIClient: ...
+class APIClientFactory(Protocol):
+	def __call__(
+		self,
+		user: User,
+		use_endpoint: bool = True,
+		refresh_token: RefreshToken = None,
+	) -> APIClient: ...
 
+@pytest.fixture
+def f_api_client(api_client: APIClient):
+	def maker(user: User, **kwargs):
+		refresh = kwargs.pop("refresh_token", None)
+		if not refresh and kwargs.pop("use_endpoint", True):
+			api_client.post(
+				"/api/token/",
+				data={
+					"username": user.username,
+					"password": user.raw_password,
+				},
+			)
+		else:
+			if not refresh:
+				refresh = RefreshToken.for_user(user)
+
+			api_client.cookies[_ACCESS_NAME] = str(refresh.access_token)
+			api_client.cookies[_REFRESH_NAME] = str(refresh)
+			for cookie in (_ACCESS_NAME, _REFRESH_NAME):
+				api_client.cookies[cookie]["httponly"] = True
+				api_client.cookies[cookie]["samesite"] = _JWT_SAMESITE
+				api_client.cookies[cookie]["secure"] = _JWT_SECURE
+		return api_client
+	return maker
 
 @pytest.fixture
 def disabled_user_client(
-	disabled_user: User, api_client: APIClient
-) -> DisabledApiClient:
-	"""Authenticated API client for normal user"""
-	api_client.post(
-		"/api/token/",
-		data={
-			"username": disabled_user.username,
-			"password": disabled_user.raw_password,
-		},
-	)
-	# May use this later
-	# refresh = RefreshToken.for_user(disabled_user)
-
-	# api_client.cookies[_ACCESS_NAME] = str(refresh.access_token)
-	# api_client.cookies[_REFRESH_NAME] = str(refresh)
-	# for cookie in (_ACCESS_NAME, _REFRESH_NAME):
-	# 	api_client.cookies[cookie]["httponly"] = True
-	# 	api_client.cookies[cookie]["samesite"] = _JWT_SAMESITE
-	# 	api_client.cookies[cookie]["secure"] = _JWT_SECURE
-	return api_client
-
-
-class NormalApiClient(Protocol):
-	def __call__(self) -> APIClient: ...
-
+	disabled_user: User,
+	f_api_client: APIClientFactory
+) -> APIClient:
+	"""Authenticated API client for disabled user"""
+	return f_api_client(user=disabled_user)
 
 @pytest.fixture
-def normal_user_client(normal_user: User, api_client: APIClient) -> NormalApiClient:
-	"""Authenticated API client for normal user"""
-	api_client.post(
-		"/api/token/",
-		data={
-			"username": normal_user.username,
-			"password": normal_user.raw_password,
-		},
-	)
-	# May use this later
-	# refresh = RefreshToken.for_user(normal_user)
-
-	# api_client.cookies[_ACCESS_NAME] = str(refresh.access_token)
-	# api_client.cookies[_REFRESH_NAME] = str(refresh)
-	# for cookie in (_ACCESS_NAME, _REFRESH_NAME):
-	# 	api_client.cookies[cookie]["httponly"] = True
-	# 	api_client.cookies[cookie]["samesite"] = _JWT_SAMESITE
-	# 	api_client.cookies[cookie]["secure"] = _JWT_SECURE
-	return api_client
-
-
-class AdminApiClient(Protocol):
-	def __call__(self) -> APIClient: ...
-
+def normal_user_client(
+	normal_user: User,
+	f_api_client: APIClientFactory
+) -> APIClient:
+	return f_api_client(user=normal_user)
 
 @pytest.fixture
-def admin_user_client(admin_user: User, api_client: APIClient) -> AdminApiClient:
-	"""Authenticated API client for admin user"""
-	api_client.post(
-		"/api/token/",
-		data={
-			"username": admin_user.username,
-			"password": admin_user.raw_password,
-		},
-	)
-	# May use this later
-	# refresh = RefreshToken.for_user(admin_user)
-
-	# api_client.cookies[_ACCESS_NAME] = str(refresh.access_token)
-	# api_client.cookies[_REFRESH_NAME] = str(refresh)
-	# for cookie in (_ACCESS_NAME, _REFRESH_NAME):
-	# 	api_client.cookies[cookie]["httponly"] = True
-	# 	api_client.cookies[cookie]["samesite"] = _JWT_SAMESITE
-	# 	api_client.cookies[cookie]["secure"] = _JWT_SECURE
-	return api_client
+def admin_user_client(
+	admin_user: User,
+	f_api_client: APIClientFactory
+) -> APIClient:
+	return f_api_client(user=admin_user)
 
 MOCK_PASSWORD = "mock_password"
 @pytest.fixture
