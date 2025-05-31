@@ -231,7 +231,9 @@ class TestApplicationSecurityGroupViewMixin:
 		assert test_application_group.enabled is False
 
 	def test_update_application_group_not_found(
-		self, mixin: ApplicationSecurityGroupViewMixin, application_group_data
+		self,
+		mixin: ApplicationSecurityGroupViewMixin,
+		application_group_data: dict,
 	):
 		# Test and verify the exception
 		with pytest.raises(ApplicationGroupDoesNotExist):
@@ -242,7 +244,7 @@ class TestApplicationSecurityGroupViewMixin:
 	def test_update_application_group_app_id_does_not_match(
 		self,
 		mixin: ApplicationSecurityGroupViewMixin,
-		application_group_data,
+		application_group_data: dict,
 		test_application_group: ApplicationSecurityGroup,
 	):
 		application_group_data["application"] += 1
@@ -258,7 +260,7 @@ class TestApplicationSecurityGroupViewMixin:
 		self,
 		mixin: ApplicationSecurityGroupViewMixin,
 		test_application_group: ApplicationSecurityGroup,
-		application_group_data,
+		application_group_data: dict,
 	):
 		# Corrupt the data
 		invalid_data = application_group_data.copy()
@@ -276,22 +278,39 @@ class TestApplicationSecurityGroupViewMixin:
 		test_application_group.refresh_from_db()
 		assert list(test_application_group.users.all()) == original_users
 
+	@pytest.mark.parametrize(
+		"is_enabled, target_state, expected", 
+		(
+			(True, False, False),
+			(False, True, True),
+			(True, True, True),
+			(False, False, False),
+		),
+	)
 	def test_change_application_group_status_success(
-		self, mixin: ApplicationSecurityGroupViewMixin, test_application_group
+		self,
+		is_enabled: bool,
+		target_state: bool,
+		expected: bool,
+		mixin: ApplicationSecurityGroupViewMixin,
+		test_application_group: ApplicationSecurityGroup,
 	):
 		# Verify initial state
-		assert test_application_group.enabled is True
+		test_application_group.enabled = is_enabled
+		test_application_group.save()
+		test_application_group.refresh_from_db()
+		assert test_application_group.enabled == is_enabled
 
 		# Test the method
 		mixin.change_application_group_status(
-			test_application_group.id, {"enabled": False}
+			test_application_group.id, {"enabled": target_state}
 		)
 
 		# Refresh from database
 		test_application_group.refresh_from_db()
 
 		# Verify the change
-		assert test_application_group.enabled is False
+		assert test_application_group.enabled == expected
 
 	def test_change_application_group_status_not_found(self, mixin):
 		# Test and verify the exception
