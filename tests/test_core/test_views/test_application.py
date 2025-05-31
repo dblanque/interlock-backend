@@ -1,8 +1,11 @@
+from pytest_mock import MockerFixture
 from rest_framework.test import APIClient
 from rest_framework.response import Response
 from rest_framework import status
 from core.models.application import Application, ApplicationSecurityGroup
 from oidc_provider.models import Client
+from core.views.application import ApplicationViewSet
+from core.serializers.application import ApplicationSerializer
 
 class TestList:
 	endpoint = "/api/application/"
@@ -10,22 +13,32 @@ class TestList:
 	def test_success(
 		self,
 		admin_user_client: APIClient,
+		mocker: MockerFixture,
 		f_application: Application,
 		f_application_group: ApplicationSecurityGroup,
 		f_client: Client,
 	):
-		expected_headers = [
+		m_headers = [
 			"name",
 			"redirect_uris",
 			"enabled",
 		]
+		m_list_apps = mocker.patch.object(
+			ApplicationViewSet,
+			"list_applications",
+			return_value={
+				"headers": m_headers,
+				"applications":[ApplicationSerializer(f_application).data],
+			},
+		)
 
 		response: Response = admin_user_client.get(self.endpoint)
 
+		m_list_apps.assert_called_once()
 		assert response.status_code == status.HTTP_200_OK
 		data: dict = response.data
 		assert len(data.get("applications")) == 1
-		assert set(data.get("headers")) == set(expected_headers)
+		assert set(data.get("headers")) == set(m_headers)
 
 class TestInsert:
 	endpoint = "/api/application/insert/"
