@@ -26,7 +26,6 @@ from rest_framework_simplejwt.exceptions import TokenError
 from django.http.request import HttpRequest
 
 ### Interlock
-from core.config.runtime import RuntimeSettings
 from interlock_backend.settings import (
 	SIMPLE_JWT as JWT_SETTINGS,
 	BAD_LOGIN_COOKIE_NAME,
