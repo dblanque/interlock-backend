@@ -36,7 +36,7 @@ class HomeViewSet(BaseViewSet):
 		local_user_count = User.objects.filter(
 			user_type=USER_TYPE_LOCAL
 		).count()
-		ldap_user_count = User.objects.filter(user_type=USER_TYPE_LDAP).count()
+		ldap_user_count = 0
 		oidc_well_known_info = ProviderInfoView()._build_response_dict(
 			request=request
 		)
@@ -51,19 +51,27 @@ class HomeViewSet(BaseViewSet):
 		except ObjectDoesNotExist:
 			pass
 
+		if ldap_enabled:
+			ldap_user_count = User.objects.filter(
+				user_type=USER_TYPE_LDAP
+			).count()
+
 		# Check LDAP Backend status
 		ldap_ok = False
 		ldap_server = None
 		if ldap_enabled:
 			try:
 				with LDAPConnector(user=user) as ldc:
-					CONNECTION_OPEN = True if ldc.connection.bound else False
+					is_bound = ldc.connection.bound
+					CONNECTION_OPEN = True if is_bound is True else False
 					ldap_server_pool: ServerPool = ldc.connection.server_pool
 					ldap_server: Server = ldap_server_pool.get_current_server(
 						ldc.connection
 					)
 					ldap_server = ldap_server.host
-				CONNECTION_CLOSED = True if not ldc.connection.bound else False
+
+				is_bound = ldc.connection.bound
+				CONNECTION_CLOSED = True if is_bound is not True else False
 				if CONNECTION_OPEN and CONNECTION_CLOSED:
 					ldap_ok = True
 			except:
