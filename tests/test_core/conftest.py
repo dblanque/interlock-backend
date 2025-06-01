@@ -1,5 +1,6 @@
 import pytest
 from pytest_mock import MockType, MockerFixture
+from unittest.mock import PropertyMock
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from inspect import getmembers, isroutine
 from core.ldap import defaults as ldap_defaults
@@ -30,9 +31,10 @@ def g_interlock_ldap_enabled(db):
 	except ObjectDoesNotExist:
 		pass
 	if not s:
-		InterlockSetting.objects.create(
+		s = InterlockSetting.objects.create(
 			name=INTERLOCK_SETTING_ENABLE_LDAP, type=TYPE_BOOL, value=True
 		)
+	return s
 
 
 @pytest.fixture
@@ -47,9 +49,10 @@ def g_interlock_ldap_disabled(db):
 	except ObjectDoesNotExist:
 		pass
 	if not s:
-		InterlockSetting.objects.create(
+		s = InterlockSetting.objects.create(
 			name=INTERLOCK_SETTING_ENABLE_LDAP, type=TYPE_BOOL, value=False
 		)
+	return s
 
 
 @pytest.fixture(autouse=True)
@@ -94,6 +97,9 @@ class ConnectorFactory(Protocol):
 		use_spec=False,
 		mock_enter: MockType = None,
 		mock_exit: MockType = None,
+		kwargs_connection: dict = None,
+		attrs_connection: dict = None,
+		**kwargs,
 	) -> LDAPConnectorMock: ...
 
 
@@ -108,6 +114,9 @@ def g_ldap_connector(mocker: MockerFixture) -> ConnectorFactory:
 		use_spec=False,
 		mock_enter: MockType = None,
 		mock_exit: MockType = None,
+		kwargs_connection: dict = None,
+		attrs_connection: dict = None,
+		**kwargs,
 	):
 		"""Fixture to mock LDAPConnector and its context manager."""
 		if use_spec:
@@ -115,10 +124,27 @@ def g_ldap_connector(mocker: MockerFixture) -> ConnectorFactory:
 		else:
 			m_connector = mocker.Mock(name="m_connector")
 
-		m_connector.connection = mocker.Mock(name="m_connection")
-		default_m_enter = mocker.Mock(return_value=m_connector)
+		# Mock Connection
+		if not kwargs_connection:
+			kwargs_connection = {}
+		if not attrs_connection:
+			attrs_connection = {}
+		m_connection = mocker.Mock(
+			name="m_connection",
+			**kwargs_connection
+		)
+
+		# Handle special property mocks
+		for k, v in attrs_connection.items():
+			if isinstance(v, PropertyMock):
+				setattr(type(m_connection), k, v)
+			else:
+				setattr(m_connection, k, v)
+
+		m_connector.connection = m_connection
 
 		# Mock Context Manager
+		default_m_enter = mocker.Mock(return_value=m_connector)
 		m_cxt_manager = mocker.Mock()
 		m_cxt_manager.__enter__ = mock_enter if mock_enter else default_m_enter
 		m_cxt_manager.__exit__ = fake_exit if not mock_exit else mock_exit
