@@ -18,7 +18,7 @@ Target Mid-June release
 	* application <t> - gotta do mocking
 	* application group <t> - gotta do mocking
 	* auth <d>
-	* home
+	* home <d>
 	* settings
 	* logs
 	* oidc
