@@ -26,7 +26,7 @@ import ssl
 @pytest.fixture
 def f_default_superuser():
 	create_default_superuser()
-	_user = User.objects.get(username=DEFAULT_SUPERUSER_USERNAME)
+	_user: User = User.objects.get(username=DEFAULT_SUPERUSER_USERNAME)
 	yield _user
 	_user.delete_permanently()
 
@@ -38,7 +38,7 @@ def f_create_default_preset(django_db_blocker):
 
 @pytest.fixture
 def f_default_preset():
-	return LDAPPreset.objects.all().first()
+	return LDAPPreset.objects.get(active=True)
 
 class SettingFactoryProtocol(Protocol):
 	def __call__(self, setting_key: str, setting_value) -> LDAPSetting: ...
