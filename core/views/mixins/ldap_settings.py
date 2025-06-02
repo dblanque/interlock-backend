@@ -34,7 +34,7 @@ from core.ldap.connector import (
 	LDAPConnector,
 	LDAPConnectionOptions,
 )
-from interlock_backend.settings import BASE_DIR, DEFAULT_SUPERUSER_USERNAME
+from interlock_backend.settings import DEFAULT_SUPERUSER_USERNAME
 from core.config.runtime import RuntimeSettings
 from django.core.exceptions import ObjectDoesNotExist
 import logging
@@ -93,7 +93,10 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 		return None
 
 	def normalize_preset_name(self, name: str) -> str:
-		return name.replace(" ", "_").lower()
+		replace_chars = (" ", "-",)
+		for c in replace_chars:
+			name = name.replace(c, "_")
+		return name.lower()
 
 	def get_active_settings_preset(self):
 		try:
