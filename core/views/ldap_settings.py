@@ -63,6 +63,7 @@ from core.constants.attrs import (
 	LOCAL_ATTR_TYPE,
 	LOCAL_ATTR_VALUE,
 	LOCAL_ATTR_PRESET,
+	LOCAL_ATTR_LABEL,
 )
 from core.constants.settings import (
 	K_LDAP_FIELD_MAP,
@@ -127,7 +128,6 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		# Gets Front-End Parsed LDAP Settings
 		ldap_settings = {}
 		ldap_settings = get_setting_list(preset_id)
-		ldap_settings["DEFAULT_ADMIN_ENABLED"] = self.get_admin_status()
 
 		DBLogMixin.log(
 			user=request.user.id,
@@ -159,19 +159,25 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	@admin_required
 	def preset_create(self, request: Request, pk=None):
 		code = 0
-		if not "label" in request.data:
-			raise exc_base.MissingDataKey(data={"detail": "label"})
-		preset_label = str(request.data["label"])
+		if not LOCAL_ATTR_LABEL in request.data:
+			raise exc_base.MissingDataKey(data={"detail": LOCAL_ATTR_LABEL})
+		preset_label = request.data[LOCAL_ATTR_LABEL]
+		if not isinstance(preset_label, str):
+			raise exc_base.BadRequest(
+				data={"detail":"Preset Label must be of type str."}
+			)
 		preset_name = self.normalize_preset_name(preset_label)
 		if LDAPPreset.objects.filter(name=preset_name).exists():
 			raise exc_set.SettingPresetExists
-		preset = {LOCAL_ATTR_NAME: preset_name, "label": preset_label}
+		preset = {LOCAL_ATTR_NAME: preset_name, LOCAL_ATTR_LABEL: preset_label}
 		serializer = LDAPPresetSerializer(data=preset)
 		if not serializer.is_valid():
 			raise exc_set.SettingPresetSerializerError(
 				data={"errors": serializer.errors}
 			)
-		LDAPPreset.objects.create(**preset)
+
+		preset_instance = LDAPPreset(**preset)
+		preset_instance.save()
 
 		return Response(data={"code": code, "code_msg": "ok"})
 
@@ -222,18 +228,18 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 	def preset_rename(self, request: Request, pk=None):
 		data: dict = request.data
 		code = 0
-		for k in [LOCAL_ATTR_ID, "label"]:
+		for k in [LOCAL_ATTR_ID, LOCAL_ATTR_LABEL]:
 			if not k in data:
 				raise exc_base.MissingDataKey(data={"key": k})
 		preset_id = data[LOCAL_ATTR_ID]
-		preset_label = data["label"]
+		preset_label = data[LOCAL_ATTR_LABEL]
 		if not LDAPPreset.objects.filter(id=preset_id).exists():
 			raise exc_set.SettingPresetNotExists
 		preset = LDAPPreset.objects.get(id=preset_id)
 
 		serializer = LDAPPresetSerializer(
 			data={
-				"label": preset_label,
+				LOCAL_ATTR_LABEL: preset_label,
 				LOCAL_ATTR_NAME: self.normalize_preset_name(preset_label),
 			}
 		)
@@ -241,7 +247,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			raise exc_set.SettingPresetSerializerError(
 				data={"errors": serializer.errors}
 			)
-		preset.label = serializer.data["label"]
+		preset.label = serializer.data[LOCAL_ATTR_LABEL]
 		preset.name = serializer.data[LOCAL_ATTR_NAME]
 		preset.save()
 
