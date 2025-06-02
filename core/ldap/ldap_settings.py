@@ -13,13 +13,13 @@ from enum import Enum
 
 # Interlock Imports
 from django.core.exceptions import ObjectDoesNotExist
-from interlock_backend.settings import DEFAULT_SUPERUSER_USERNAME
 from core.ldap import defaults
 from core.constants.attrs.local import LOCAL_ATTR_VALUE, LOCAL_ATTR_TYPE
 from core.constants.settings import (
 	K_LDAP_AUTH_TLS_VERSION,
 	K_LDAP_AUTH_CONNECTION_PASSWORD,
 )
+from core.views.mixins.ldap_settings import SettingsViewMixin
 from interlock_backend.encrypt import aes_decrypt
 
 # Full imports
@@ -28,16 +28,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
+# Todo - move this to mixin
 def get_setting_list(preset_id: int = 1) -> dict[dict]:
 	"""Returns a Dictionary with the current setting values in the system"""
 	data = {}
-	userQuerySet = User.objects.filter(username=DEFAULT_SUPERUSER_USERNAME)
-	if userQuerySet.count() > 0:
-		defaultAdmin = userQuerySet.get(username=DEFAULT_SUPERUSER_USERNAME)
-		data["DEFAULT_ADMIN"] = not defaultAdmin.deleted
-	else:
-		data["DEFAULT_ADMIN"] = False
+	data["DEFAULT_ADMIN_ENABLED"] = SettingsViewMixin().get_admin_status()
 
 	# Loop for each constant in the ldap_constants.py file
 	for setting_key, setting_type in LDAP_SETTING_MAP.items():
