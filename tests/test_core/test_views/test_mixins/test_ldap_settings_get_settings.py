@@ -10,13 +10,13 @@ from core.constants.attrs.local import (
 	LOCAL_ATTR_PRESET,
 )
 from core.constants.settings import *
-from core.ldap.ldap_settings import get_setting_list
 from core.models.ldap_settings import LDAP_SETTING_MAP
 from core.ldap import defaults
 from interlock_backend.settings import DEFAULT_SUPERUSER_USERNAME
 from enum import Enum
 from core.setup.user import create_default_superuser
 from core.models.user import User
+from core.views.mixins.ldap_settings import SettingsViewMixin
 from core.models.ldap_settings import LDAPSetting, LDAPPreset
 from core.views.mixins.ldap_settings import SettingsViewMixin
 from interlock_backend.encrypt import aes_encrypt
@@ -68,11 +68,11 @@ def f_password_override(fc_setting_override: SettingFactoryProtocol):
 class TestGetSettings:
 	@pytest.mark.django_db
 	def test_all_defaults(self):
-		_settings = get_setting_list()
-		_expected_keys = list(LDAP_SETTING_MAP.keys()) + ["DEFAULT_ADMIN"]
+		_settings = SettingsViewMixin().get_ldap_settings()
+		_expected_keys = list(LDAP_SETTING_MAP.keys()) + ["DEFAULT_ADMIN_ENABLED"]
 		assert isinstance(_settings, dict)
 		assert set(_settings.keys()) == set(_expected_keys)
-		assert not _settings.get("DEFAULT_ADMIN")
+		assert not _settings.get("DEFAULT_ADMIN_ENABLED")
 		for _key in LDAP_SETTING_MAP.keys():
 			_default_v = getattr(defaults, _key)
 			if isinstance(_default_v, Enum):
@@ -81,8 +81,8 @@ class TestGetSettings:
 
 	@pytest.mark.django_db(transaction=True)
 	def test_with_default_superuser(self, f_default_superuser: User):
-		_settings = get_setting_list()
-		assert _settings.get("DEFAULT_ADMIN")
+		_settings = SettingsViewMixin().get_ldap_settings()
+		assert _settings.get("DEFAULT_ADMIN_ENABLED")
 
 	@pytest.mark.django_db(transaction=True)
 	def test_with_logic_delete_default_superuser(
@@ -91,8 +91,8 @@ class TestGetSettings:
 	):
 		f_default_superuser.delete()
 		f_default_superuser.refresh_from_db()
-		_settings = get_setting_list()
-		assert not _settings.get("DEFAULT_ADMIN")
+		_settings = SettingsViewMixin().get_ldap_settings()
+		assert not _settings.get("DEFAULT_ADMIN_ENABLED")
 
 	@pytest.mark.django_db(transaction=True)
 	def test_with_connection_password(
@@ -100,7 +100,7 @@ class TestGetSettings:
 		f_password_override: LDAPSetting,
 		f_default_preset: LDAPPreset,
 	):
-		_settings = get_setting_list(f_default_preset.id)
+		_settings = SettingsViewMixin().get_ldap_settings(f_default_preset.id)
 		assert _settings.get(K_LDAP_AUTH_CONNECTION_PASSWORD)\
 			.get(LOCAL_ATTR_VALUE) == "mock_password"
 
@@ -111,12 +111,12 @@ class TestGetSettings:
 		f_password_override: LDAPSetting,
 		f_default_preset: LDAPPreset,
 	):
-		m_logger = mocker.patch("core.ldap.ldap_settings.logger")
+		m_logger = mocker.patch("core.views.mixins.ldap_settings.logger")
 		mocker.patch(
-			"core.ldap.ldap_settings.aes_decrypt",
+			"core.views.mixins.ldap_settings.aes_decrypt",
 			side_effect=Exception
 		)
-		_settings = get_setting_list(f_default_preset.id)
+		_settings = SettingsViewMixin().get_ldap_settings(f_default_preset.id)
 		assert _settings.get(K_LDAP_AUTH_CONNECTION_PASSWORD)\
 			.get(LOCAL_ATTR_VALUE) == ""
 		m_logger.error.assert_called_once_with("Could not decrypt password")
@@ -160,6 +160,6 @@ class TestGetSettings:
 		f_default_preset: LDAPPreset,
 	):
 		_override = fc_setting_override(setting_key, setting_value)
-		_settings = get_setting_list(preset_id=f_default_preset.id)
+		_settings = SettingsViewMixin().get_ldap_settings(preset_id=f_default_preset.id)
 		_v = _settings.get(setting_key).get(LOCAL_ATTR_VALUE)
 		assert _v == _override.value
