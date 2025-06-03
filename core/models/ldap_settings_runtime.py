@@ -144,19 +144,22 @@ def get_settings(uuid, quiet=False) -> dict:
 	for setting_key, setting_type in LDAP_SETTING_MAP.items():
 		setting_instance = None
 		if db_table_exists(LDAP_SETTING_TABLE):
-			# Setting
-			setting_instance = LDAPSetting.objects.filter(
-				name=setting_key, preset_id=active_preset
-			)
-			if setting_instance.exists():
-				setting_instance = setting_instance[0]
+			# Get Setting Override if it exists
+			try:
+				setting_instance = LDAPSetting.objects.get(
+					name=setting_key, preset_id=active_preset
+				)
+			except ObjectDoesNotExist:
+				pass
 		# Default
 		value_default = getattr(defaults, setting_key)
 
-		# Value
-		if setting_type == TYPE_AES_ENCRYPT and setting_instance:
-			setting_value = aes_decrypt(*setting_instance.value)
+		if not setting_instance:
+			r[setting_key] = value_default
 		else:
-			setting_value = getattr(setting_instance, "value", value_default)
-		r[setting_key] = setting_value
+			if setting_type == TYPE_AES_ENCRYPT and setting_instance:
+				setting_value = aes_decrypt(*setting_instance.value)
+			else:
+				setting_value = setting_instance.value
+			r[setting_key] = setting_value
 	return r

@@ -4,19 +4,20 @@ from django.db import models
 from core.models.types.settings import (
 	BASE_SETTING_FIELDS,
 	MAP_FIELD_VALUE_MODEL,
+	MAP_FIELD_TYPE_MODEL,
 	make_field_db_name,
 	DEFAULT_FIELD_ARGS,
 )
-from typing import Iterable
+from typing import Sequence, Type, TypeVar, overload
 from copy import deepcopy
 from rest_framework.serializers import ValidationError
 
-
+T = TypeVar('T', bound="BaseSetting")  # Replace 'YourBaseClass' with the actual base class
 def add_fields_from_dict(
-	fields_dict,
-	validators_dict=None,
-	args_pass=None,
-	kwargs_pass=None,
+	fields_dict: dict,
+	validators_dict: dict = None,
+	args_pass: dict = None,
+	kwargs_pass: dict = None,
 ):
 	if not validators_dict or not isinstance(kwargs_pass, dict):
 		validators_dict = {}
@@ -25,7 +26,7 @@ def add_fields_from_dict(
 	if not args_pass or not isinstance(args_pass, dict):
 		args_pass = {}
 
-	def decorator(cls):
+	def decorator(cls: Type[T]) -> Type[T]:
 		field_args = []
 		for setting_key, setting_fields in fields_dict.items():
 			field_kwargs = deepcopy(DEFAULT_FIELD_ARGS)
@@ -105,6 +106,25 @@ class BaseSetting(BaseModel):
 				f"{choice_type} cannot be null when type is {self.type}."
 			)
 
+		expected_type = MAP_FIELD_TYPE_MODEL[choice_field]
+		if not isinstance(_v, expected_type):
+			raise ValidationError(
+				"%s must be of type %s" % (choice_field, expected_type)
+			)
+		
+	@overload
+	def save(
+		self,
+		force_insert = ...,
+		force_update = ...,
+		using = ...,
+		update_fields = ...
+	): ...
+
+	def save(self, **kwargs):
+		self.clean()
+		return super().save(**kwargs)
+
 	def clean(self):
 		if not self.type or len(self.type) <= 0:
 			raise ValidationError("Type is required.")
@@ -115,7 +135,7 @@ class BaseSetting(BaseModel):
 						choice_type=choice_type,
 						choice_field=choice_fields,
 					)
-				elif isinstance(choice_fields, Iterable):
+				elif isinstance(choice_fields, Sequence):
 					for cf in choice_fields:
 						self._validate_value(
 							choice_type=choice_type,
@@ -145,15 +165,14 @@ class BaseSetting(BaseModel):
 					"Value must be a tuple with the same length as the value fields."
 				)
 			for index, field in enumerate(value_fields):
-				if isinstance(v, Iterable):
+				if isinstance(v, Sequence) and not isinstance(v, bytes):
 					setattr(self, make_field_db_name(field), v[index])
 				else:
 					setattr(self, make_field_db_name(field), None)
 		else:
 			raise TypeError("value_fields must be str or tuple.")
 
-	@value.setter
-	def value(self, v):
+	def _value_setter(self, value):
 		if not self.type or len(self.type) <= 0:
 			raise ValidationError(
 				"Type is required for BaseSetting based models."
@@ -163,7 +182,11 @@ class BaseSetting(BaseModel):
 			self._set_value(None, value_fields=field)
 
 		# Set corresponding value field
-		self._set_value(v, value_fields=self.setting_fields[self.type])
+		self._set_value(value, value_fields=self.setting_fields[self.type])
+
+	@value.setter
+	def value(self, value):
+		self._value_setter(value)
 
 	@property
 	def value_field(self):
@@ -171,6 +194,12 @@ class BaseSetting(BaseModel):
 
 	def __str__(self):
 		return f"{getattr(self, self.type, None)} - {self.value}"
+
+	def __setattr__(self, name, value):
+		if name == "value":
+			self._value_setter(value)
+		else:
+			super().__setattr__(name, value)
 
 	class Meta:
 		abstract = True

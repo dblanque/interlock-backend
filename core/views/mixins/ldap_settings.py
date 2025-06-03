@@ -17,28 +17,44 @@ from rest_framework import viewsets
 #### Models
 from core.models.interlock_settings import (
 	InterlockSetting,
+	INTERLOCK_SETTING_PUBLIC,
+	INTERLOCK_SETTING_MAP,
 	INTERLOCK_SETTING_ENABLE_LDAP,
 )
 from core.models.user import User
-from core.models.ldap_settings import LDAPPreset, LDAP_PRESET_TABLE
+from core.models.ldap_settings import (
+	LDAPPreset,
+	LDAPSetting,
+	LDAP_PRESET_TABLE,
+	LDAP_SETTING_MAP,
+)
+#### Constants
+from core.ldap import defaults
+from core.constants.attrs.local import LOCAL_ATTR_VALUE, LOCAL_ATTR_TYPE
+from core.constants.settings import (
+	K_LDAP_AUTH_TLS_VERSION,
+	K_LDAP_AUTH_CONNECTION_PASSWORD,
+)
 
 #### Exceptions
 from core.exceptions import ldap as exc_ldap
+from django.core.exceptions import ObjectDoesNotExist
 
 #### Mixins
 from core.utils.network import net_port_test
 
 ### Others
+from core.config.runtime import RuntimeSettings
 from core.ldap.connector import (
 	test_ldap_connection,
 	LDAPConnector,
 	LDAPConnectionOptions,
 )
-from interlock_backend.settings import DEFAULT_SUPERUSER_USERNAME
-from core.config.runtime import RuntimeSettings
-from django.core.exceptions import ObjectDoesNotExist
-import logging
 from core.utils.db import db_table_exists
+from enum import Enum
+from interlock_backend.settings import DEFAULT_SUPERUSER_USERNAME
+from interlock_backend.encrypt import aes_decrypt
+import logging
 ################################################################################
 
 logger = logging.getLogger(__name__)
@@ -110,33 +126,98 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 		self.resync_users()
 
 	def get_admin_status(self):
-		userQuerySet = User.objects.filter(username=DEFAULT_SUPERUSER_USERNAME)
-		if userQuerySet.count() > 0:
-			status = userQuerySet.get(
+		try:
+			admin_user: User = User.objects.get(
 				username=DEFAULT_SUPERUSER_USERNAME
-			).deleted
-			return not status
-		else:
+			)
+			return not admin_user.deleted
+		except ObjectDoesNotExist:
 			return False
 
 	@transaction.atomic
-	def set_admin_status(self, status: bool, password=None):
-		if not isinstance(status, bool):
-			raise TypeError("status must be of type bool.")
-		userQuerySet = User.objects.get_full_queryset().filter(
-			username=DEFAULT_SUPERUSER_USERNAME
-		)
-		if status and userQuerySet.count() == 0:
-			defaultAdmin: User = User.objects.create_default_superuser()
+	def set_admin_status(self, status: bool = None, password: str = None):
+		default_admin = None
+		full_query_set = User.objects.get_full_queryset()
+		user_modified = False
 
-		if userQuerySet.count() > 0:
-			defaultAdmin = userQuerySet.get(username=DEFAULT_SUPERUSER_USERNAME)
-			defaultAdmin.deleted = not status
-			defaultAdmin.save()
+		try:
+			default_admin: User = full_query_set.get(
+				username=DEFAULT_SUPERUSER_USERNAME
+			)
+		except ObjectDoesNotExist:
+			default_admin: User = User.objects.create_default_superuser()
 
-		if password and password != "":
-			defaultAdmin.set_password(password)
-			defaultAdmin.save()
+		if status is not None:
+			if not isinstance(status, bool):
+				raise TypeError("status must be of type bool.")
+			default_admin.deleted = not status
+			user_modified = True
+
+		if password:
+			default_admin.set_password(password)
+			user_modified = True
+		
+		if user_modified:
+			default_admin.save()
+
+	def get_ldap_settings(self, preset_id: int = 1) -> dict[dict]:
+		"""Returns a Dictionary with the current setting values in the system"""
+		data = {}
+		data["DEFAULT_ADMIN_ENABLED"] = self.get_admin_status()
+
+		# Loop for each constant in the ldap_constants.py file
+		for setting_key, setting_type in LDAP_SETTING_MAP.items():
+			setting_instance = None
+			data[setting_key] = {}
+			data[setting_key][LOCAL_ATTR_TYPE] = setting_type.lower()
+			try:
+				setting_instance = LDAPSetting.objects.get(
+					preset_id=preset_id, name=setting_key
+				)
+
+				if setting_key == K_LDAP_AUTH_CONNECTION_PASSWORD:
+					try:
+						data[setting_key][LOCAL_ATTR_VALUE] = aes_decrypt(
+							*setting_instance.value
+						)
+					except:
+						data[setting_key][LOCAL_ATTR_VALUE] = ""
+						logger.error("Could not decrypt password")
+						pass
+				else:
+					data[setting_key][LOCAL_ATTR_VALUE] = setting_instance.value
+					if setting_key == K_LDAP_AUTH_TLS_VERSION and isinstance(
+						setting_instance.value, Enum
+					):
+						data[setting_key][LOCAL_ATTR_VALUE] = setting_instance.value.name
+			except ObjectDoesNotExist:
+				data[setting_key][LOCAL_ATTR_VALUE] = getattr(defaults, setting_key)
+				if setting_key == K_LDAP_AUTH_TLS_VERSION and isinstance(
+					data[setting_key][LOCAL_ATTR_VALUE], Enum
+				):
+					data[setting_key][LOCAL_ATTR_VALUE] = data[setting_key][LOCAL_ATTR_VALUE].name
+		return data
+
+	def get_local_settings(
+			self,
+			preset_id = 1,
+			public_fields_only=True
+		) -> dict[dict]:
+		fields_to_retrieve = None
+		if public_fields_only:
+			fields_to_retrieve = INTERLOCK_SETTING_PUBLIC
+		else:
+			fields_to_retrieve = INTERLOCK_SETTING_MAP.keys()
+
+		interlock_settings = {}
+		if public_fields_only:
+			for setting_key in fields_to_retrieve:
+				setting_instance = InterlockSetting.objects.get(name=setting_key)
+				interlock_settings[setting_key] = {
+					"value": setting_instance.value,
+					"type": setting_instance.type,
+				}
+		return interlock_settings
 
 	def test_ldap_settings(self, data):
 		ldapAuthConnectionUser = data["LDAP_AUTH_CONNECTION_USER_DN"]["value"]

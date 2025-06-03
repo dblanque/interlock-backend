@@ -31,6 +31,19 @@ MAP_FIELD_VALUE_MODEL = {
 for key in TYPE_AES_ENCRYPT_FIELDS:
 	MAP_FIELD_VALUE_MODEL[key] = models.BinaryField
 
+MAP_FIELD_TYPE_MODEL = {
+	TYPE_FLOAT: float,
+	TYPE_STRING: str,
+	TYPE_BYTES: bytes,
+	TYPE_BOOL: bool,
+	TYPE_JSON: dict,
+	TYPE_INTEGER: int,
+	TYPE_LDAP_TLS_VERSION: str,
+	TYPE_LDAP_URI: list,
+}
+for key in TYPE_AES_ENCRYPT_FIELDS:
+	MAP_FIELD_TYPE_MODEL[key] = bytes
+
 
 def make_field_db_name(v: str) -> str | tuple:
 	if isinstance(v, str):
