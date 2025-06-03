@@ -15,6 +15,11 @@ Target Mid-June release
 * core.ldap.ldap_settings - TUESDAY <d>
 * core.serializers.group - THURSDAY <d>
 * core.views.mixins - <d>
+	* SettingsViewMixin
+		* set_value_fields
+		* parse_local_setting_data
+		* parse_ldap_setting_value
+		* parse_ldap_setting_data
 * core.views
 	* application <t> - gotta do mocking
 	* application group <t> - gotta do mocking
