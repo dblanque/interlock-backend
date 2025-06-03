@@ -3,19 +3,19 @@ import pytest
 from pytest_mock import MockerFixture
 ################################################################################
 from django.urls import reverse
+
+### Models
 from core.models.ldap_settings import LDAPPreset, LDAPSetting
 from core.models.user import User
-from typing import Protocol
-from rest_framework.test import APIClient
-from rest_framework.response import Response
-from rest_framework import status
 from core.models.choices.log import (
 	LOG_ACTION_READ,
 	LOG_ACTION_UPDATE,
 	LOG_CLASS_SET,
 	LOG_TARGET_ALL,
 )
-from core.views.ldap_settings import SettingsViewSet, SettingsViewMixin
+from core.models.types.settings import TYPE_LDAP_URI
+
+### Constants
 from core.constants.attrs.local import (
 	LOCAL_ATTR_ID,
 	LOCAL_ATTR_NAME,
@@ -26,11 +26,21 @@ from core.constants.attrs.local import (
 	LOCAL_ATTR_VALUE,
 )
 from core.constants.settings import *
+from interlock_backend.settings import DEFAULT_SUPERUSER_USERNAME
+
+### Rest Framework
+from rest_framework.test import APIClient
+from rest_framework.response import Response
+from rest_framework import status
+
+### Views / Mixins
+from core.views.ldap_settings import SettingsViewSet, SettingsViewMixin
 from core.views.mixins.ldap.user import LDAPUserBaseMixin
-from core.models.types.settings import TYPE_LDAP_URI
+
+### Other
 from tests.test_core.test_views.conftest import UserFactory
 from tests.test_core.conftest import ConnectorFactory
-from interlock_backend.settings import DEFAULT_SUPERUSER_USERNAME
+from typing import Protocol
 
 
 class LdapPresetFactory(Protocol):
