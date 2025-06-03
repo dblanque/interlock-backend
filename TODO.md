@@ -45,21 +45,16 @@ Target Mid-June release
 * Add LDAP User Syncing <d>
 * Add LDAP User Purging <d>
 * Add LDAP User Pruning <d>
-* Add self-registry availability with captcha requirement.
-	* USER_SELF_REGISTRY_OPTIONS
-		* CAPTCHA KEY
-		* CAPTCHA SITE
-		* ALLOWED DOMAINS (ALL IF WILDCARD)
-* Add local User/ASG bulk actions
+* Add Local User/ASG bulk actions
 * Add Local User Import/Export
 * Add LDAP User Export
 
 ### Low Priority
 * Add OIDC Prompt Features?
-	* login
-	* consent
-	* select_account
-	* create
+	* login <d>
+	* consent <d>
+	* select_account <n>
+	* create <n>
 * Add logging to all Application Security Group model operations
 * Add logging to all TOTP operations
 * Add rsa encryption key re-generation in settings (must de-crypt and re-encrypt data)
