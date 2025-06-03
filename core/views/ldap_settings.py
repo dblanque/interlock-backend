@@ -51,6 +51,7 @@ from core.constants.attrs import (
 	LOCAL_ATTR_VALUE,
 	LOCAL_ATTR_LABEL,
 	LOCAL_ATTR_ACTIVE,
+	LOCAL_ATTR_TYPE,
 )
 from core.constants.settings import K_LDAP_LOG_MAX
 from core.decorators.login import auth_required, admin_required
@@ -296,13 +297,24 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		code = 0
 
 		for param_name, param_data in data.items():
-			param_type = LDAP_SETTING_MAP[param_name].lower()
-			if param_type.upper() in LDAP_SETTINGS_CHOICES_MAP:
+			if param_name not in LDAP_SETTING_MAP:
+				raise exc_base.BadRequest(data={
+					"detail": f"Invalid field name ({param_name}).",
+				})
+			param_type = param_data[LOCAL_ATTR_TYPE]
+			expected_param_type = LDAP_SETTING_MAP[param_name].lower()
+			if expected_param_type != param_type:
+				raise exc_set.SettingTypeDoesNotMatch(data={
+					"detail": f"Invalid field type for {param_name} ({expected_param_type})."
+				})
+			if param_type in LDAP_SETTINGS_CHOICES_MAP:
 				if (
-					param_data["value"]
-					not in LDAP_SETTINGS_CHOICES_MAP[param_type.upper()]
+					param_data[LOCAL_ATTR_VALUE]
+					not in LDAP_SETTINGS_CHOICES_MAP[param_type]
 				):
-					raise exc_set.SettingTypeDoesNotMatch({"field": param_type})
+					raise exc_set.SettingChoiceIsInvalid({
+						"detail": f"{param_type} field value is invalid."
+					})
 
 		data = self.test_ldap_settings(data)
 		if not data:
