@@ -8,6 +8,11 @@ class SettingTypeDoesNotMatch(CoreException):
 	default_detail = "The Setting Type does not match with the back-end data"
 	default_code = "setting_type_malformed"
 
+class SettingChoiceIsInvalid(CoreException):
+	status_code = status.HTTP_400_BAD_REQUEST
+	default_detail = "The Setting Value is not within valid selectable choices"
+	default_code = "setting_choice_invalid"
+
 
 class SettingNotInList(CoreException):
 	status_code = status.HTTP_400_BAD_REQUEST
