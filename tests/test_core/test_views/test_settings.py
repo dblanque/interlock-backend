@@ -3,27 +3,31 @@ import pytest
 from pytest_mock import MockerFixture
 ################################################################################
 from django.urls import reverse
-from core.models.ldap_settings import LDAPPreset
+from core.models.ldap_settings import LDAPPreset, LDAPSetting
 from core.models.user import User
 from typing import Protocol
 from rest_framework.test import APIClient
 from rest_framework.response import Response
 from rest_framework import status
-from core.views.mixins.ldap_settings import SettingsViewMixin
 from core.models.choices.log import (
 	LOG_ACTION_READ,
 	LOG_ACTION_UPDATE,
 	LOG_CLASS_SET,
 	LOG_TARGET_ALL,
 )
-
+from core.views.ldap_settings import SettingsViewSet, SettingsViewMixin
 from core.constants.attrs.local import (
 	LOCAL_ATTR_ID,
 	LOCAL_ATTR_NAME,
 	LOCAL_ATTR_LABEL,
 	LOCAL_ATTR_ACTIVE,
+	LOCAL_ATTR_TYPE,
+	LOCAL_ATTR_PRESET,
+	LOCAL_ATTR_VALUE,
 )
 from core.constants.settings import *
+from core.views.mixins.ldap.user import LDAPUserBaseMixin
+from core.models.types.settings import TYPE_LDAP_URI
 from tests.test_core.test_views.conftest import UserFactory
 from tests.test_core.conftest import ConnectorFactory
 from interlock_backend.settings import DEFAULT_SUPERUSER_USERNAME
@@ -39,9 +43,8 @@ class LdapPresetFactory(Protocol):
 
 
 @pytest.fixture(autouse=True)
-def f_settings_mixin_patch(mocker: MockerFixture):
-	mocker.patch.object(SettingsViewMixin, "resync_settings")
-
+def f_resync_patch(mocker: MockerFixture):
+	mocker.patch.object(SettingsViewSet, "resync_settings")
 
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector: ConnectorFactory):
@@ -303,6 +306,55 @@ class TestPresetRename:
 class TestSave:
 	endpoint = reverse("settings-save")
 
+	def test_success(
+		self,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+		fc_ldap_preset: LdapPresetFactory,
+	):
+		m_ldap_preset = fc_ldap_preset()
+		m_set_admin_status = mocker.patch.object(
+			SettingsViewSet,
+			"set_admin_status",
+		)
+		m_save_local_settings = mocker.patch.object(
+			SettingsViewSet,
+			"save_local_settings",
+		)
+		m_save_ldap_settings = mocker.patch.object(
+			SettingsViewSet,
+			"save_ldap_settings",
+		)
+		m_resync_settings = mocker.patch.object(
+			SettingsViewSet,
+			"resync_settings",
+		)
+		m_admin_enabled = True
+		m_admin_password = "mock_password"
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={
+				"preset": {"id": m_ldap_preset.id},
+				"settings": {
+					"DEFAULT_ADMIN_ENABLED": m_admin_enabled,
+					"DEFAULT_ADMIN_PWD": m_admin_password,
+					"local":"mock_local_dict",
+					"ldap":"mock_ldap_dict"
+				},
+			},
+			format="json",
+		)
+		assert response.status_code == status.HTTP_200_OK
+		m_set_admin_status.assert_called_once_with(
+			status=m_admin_enabled,
+			password=m_admin_password,
+		)
+		m_save_local_settings.assert_called_once_with("mock_local_dict")
+		m_save_ldap_settings.assert_called_once_with(
+			"mock_ldap_dict", m_ldap_preset,
+		)
+		m_resync_settings.assert_called_once()
+		
 	def test_raises_no_preset(self, admin_user_client: APIClient):
 		response: Response = admin_user_client.post(
 			self.endpoint,
@@ -375,3 +427,241 @@ class TestSave:
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_SET,
 		)
+
+class TestReset:
+	endpoint = reverse("settings-reset")
+
+	def test_success(
+		self,
+		mocker: MockerFixture,
+		admin_user_client: APIClient,
+		fc_ldap_preset: LdapPresetFactory,
+	):
+		m_ldap_preset = fc_ldap_preset(active=True)
+		m_setting = LDAPSetting(**{
+			LOCAL_ATTR_NAME: K_LDAP_AUTH_URL,
+			LOCAL_ATTR_TYPE: TYPE_LDAP_URI,
+			LOCAL_ATTR_PRESET: m_ldap_preset,
+			LOCAL_ATTR_VALUE: ["ldap://127.1.1.1:389"]
+		})
+		m_setting.save()
+		assert LDAPPreset.objects.filter(active=True).count() == 1
+		assert LDAPSetting.objects.filter(preset=m_ldap_preset.id).exists()
+
+		m_resync_settings = mocker.patch.object(
+			SettingsViewSet,
+			"resync_settings"
+		)
+		response: Response = admin_user_client.get(self.endpoint)
+		assert response.status_code == status.HTTP_200_OK
+
+		m_resync_settings.assert_called_once()
+		assert not LDAPSetting.objects.filter(preset=m_ldap_preset.id).exists()
+
+class TestLdapTestEndpoint:
+	endpoint = reverse("settings-test")
+
+	def test_raises_setting_key_raises_bad_request(
+		self,
+		mocker: MockerFixture,
+		admin_user_client: APIClient,
+		fc_ldap_preset: LdapPresetFactory,
+	):
+		m_ldap_preset = fc_ldap_preset(active=True)
+		m_test_fn = mocker.patch.object(
+			SettingsViewSet,
+			"test_ldap_settings",
+			return_value="mock_result",
+		)
+		m_data = SettingsViewMixin()\
+			.get_ldap_settings(preset_id=m_ldap_preset.id)
+		for _k in ("DEFAULT_ADMIN_ENABLED", "DEFAULT_ADMIN_PWD"):
+			if _k in m_data:
+				del m_data[_k]
+		m_data["some_bad_key"] = True
+
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=m_data,
+			format="json"
+		)
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert "Invalid field" in response.data.get("detail")
+		m_test_fn.assert_not_called()
+
+	def test_raises_setting_type_mismatch(
+		self,
+		mocker: MockerFixture,
+		admin_user_client: APIClient,
+		fc_ldap_preset: LdapPresetFactory,
+	):
+		m_ldap_preset = fc_ldap_preset(active=True)
+		m_test_fn = mocker.patch.object(
+			SettingsViewSet,
+			"test_ldap_settings",
+			return_value="mock_result",
+		)
+		m_data = SettingsViewMixin()\
+			.get_ldap_settings(preset_id=m_ldap_preset.id)
+		for _k in ("DEFAULT_ADMIN_ENABLED", "DEFAULT_ADMIN_PWD"):
+			if _k in m_data:
+				del m_data[_k]
+		m_data[K_LDAP_AUTH_USE_SSL][LOCAL_ATTR_TYPE] = TYPE_LDAP_URI
+
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=m_data,
+			format="json"
+		)
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert "Invalid field type for" in response.data.get("detail")
+		m_test_fn.assert_not_called()
+
+	def test_raises_setting_value_invalid_choice(
+		self,
+		mocker: MockerFixture,
+		admin_user_client: APIClient,
+		fc_ldap_preset: LdapPresetFactory,
+	):
+		m_ldap_preset = fc_ldap_preset(active=True)
+		m_test_fn = mocker.patch.object(
+			SettingsViewSet,
+			"test_ldap_settings",
+			return_value="mock_result",
+		)
+		m_data = SettingsViewMixin()\
+			.get_ldap_settings(preset_id=m_ldap_preset.id)
+		for _k in ("DEFAULT_ADMIN_ENABLED", "DEFAULT_ADMIN_PWD"):
+			if _k in m_data:
+				del m_data[_k]
+		m_data[K_LDAP_AUTH_TLS_VERSION][LOCAL_ATTR_VALUE] = "some_bad_value"
+
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=m_data,
+			format="json"
+		)
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert "field value is invalid" in response.data.get("detail")
+		m_test_fn.assert_not_called()
+
+	def test_raises_test_failed(
+		self,
+		mocker: MockerFixture,
+		admin_user_client: APIClient,
+		fc_ldap_preset: LdapPresetFactory,
+	):
+		m_ldap_preset = fc_ldap_preset(active=True)
+		m_test_fn = mocker.patch.object(
+			SettingsViewSet,
+			"test_ldap_settings",
+			return_value=None,
+		)
+		m_data = SettingsViewMixin()\
+			.get_ldap_settings(preset_id=m_ldap_preset.id)
+		for _k in ("DEFAULT_ADMIN_ENABLED", "DEFAULT_ADMIN_PWD"):
+			if _k in m_data:
+				del m_data[_k]
+
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=m_data,
+			format="json"
+		)
+		assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+		assert response.data.get("code") == "ldap_bind_test_failed"
+		m_test_fn.assert_called_once_with(m_data)
+
+	def test_success(
+		self,
+		mocker: MockerFixture,
+		admin_user_client: APIClient,
+		fc_ldap_preset: LdapPresetFactory,
+	):
+		m_ldap_preset = fc_ldap_preset(active=True)
+		m_test_fn = mocker.patch.object(
+			SettingsViewSet,
+			"test_ldap_settings",
+			return_value="mock_result",
+		)
+		m_data = SettingsViewMixin()\
+			.get_ldap_settings(preset_id=m_ldap_preset.id)
+		for _k in ("DEFAULT_ADMIN_ENABLED", "DEFAULT_ADMIN_PWD"):
+			if _k in m_data:
+				del m_data[_k]
+
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=m_data,
+			format="json"
+		)
+		assert response.status_code == status.HTTP_200_OK
+		assert response.data.get("data") == "mock_result"
+		m_test_fn.assert_called_once_with(m_data)
+
+class TestSyncUsers:
+	endpoint = reverse("settings-sync-users")
+
+	def test_success(
+		self,
+		mocker: MockerFixture,
+		admin_user_client: APIClient,
+		admin_user: User,
+	):
+		m_synced_users = ["mock_synced_users"]
+		m_updated_users = ["mock_updated_users"]
+		m_ldap_users_sync = mocker.patch.object(
+			LDAPUserBaseMixin,
+			"ldap_users_sync",
+			return_value=(
+				m_synced_users,
+				m_updated_users,
+			)
+		)
+		response: Response = admin_user_client.get(self.endpoint)
+		assert response.status_code == status.HTTP_200_OK
+		m_ldap_users_sync.assert_called_once_with(responsible_user=admin_user)
+		assert response.data.get("synced_users") == m_synced_users
+		assert response.data.get("updated_users") == m_updated_users
+
+class TestPruneUsers:
+	endpoint = reverse("settings-prune-users")
+
+	def test_success(
+		self,
+		mocker: MockerFixture,
+		admin_user_client: APIClient,
+		admin_user: User,
+	):
+		m_pruned_count = 3
+		m_prune_fn = mocker.patch.object(
+			LDAPUserBaseMixin,
+			"ldap_users_prune",
+			return_value=m_pruned_count
+		)
+		response: Response = admin_user_client.get(self.endpoint)
+		assert response.status_code == status.HTTP_200_OK
+		m_prune_fn.assert_called_once_with(responsible_user=admin_user)
+		assert response.data.get("count") == m_pruned_count
+
+class TestPurgeUsers:
+	endpoint = reverse("settings-purge-users")
+	
+	def test_success(
+		self,
+		mocker: MockerFixture,
+		admin_user_client: APIClient,
+		admin_user: User,
+	):
+		m_logger = mocker.patch("core.views.ldap_settings.logger")
+		m_purged_count = 3
+		m_purge_fn = mocker.patch.object(
+			LDAPUserBaseMixin,
+			"ldap_users_purge",
+			return_value=m_purged_count
+		)
+		response: Response = admin_user_client.get(self.endpoint)
+		assert response.status_code == status.HTTP_200_OK
+		m_logger.warning.assert_called_once()
+		m_purge_fn.assert_called_once_with(responsible_user=admin_user)
+		assert response.data.get("count") == m_purged_count
