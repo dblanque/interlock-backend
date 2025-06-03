@@ -54,8 +54,8 @@ class LDAPUser(LDAPObject):
 	# Only defined explicitly for overload definition
 	def __init__(self, **kwargs):
 		self.search_attrs = {
-			RuntimeSettings.LDAP_FIELD_MAP.get(attr) for attr in
-			(
+			RuntimeSettings.LDAP_FIELD_MAP.get(attr)
+			for attr in (
 				LDAP_ATTR_DN,
 				LDAP_ATTR_USERNAME_SAMBA_ADDS,
 				LDAP_ATTR_EMAIL,
@@ -85,7 +85,8 @@ class LDAPUser(LDAPObject):
 				LDAP_ATTR_ACCOUNT_TYPE,
 				LDAP_ATTR_USER_GROUPS,
 				LDAP_ATTR_INITIALS,
-			) if RuntimeSettings.LDAP_FIELD_MAP.get(attr, None)
+			)
+			if RuntimeSettings.LDAP_FIELD_MAP.get(attr, None)
 		}
 		self.default_attrs = self.search_attrs
 		super().__init__(**kwargs)

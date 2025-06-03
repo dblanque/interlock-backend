@@ -57,8 +57,8 @@ class LDAPGroup(LDAPObject):
 	# Only defined explicitly for overload definition
 	def __init__(self, **kwargs):
 		self.search_attrs = {
-			RuntimeSettings.LDAP_FIELD_MAP.get(attr) for attr in
-			(
+			RuntimeSettings.LDAP_FIELD_MAP.get(attr)
+			for attr in (
 				LDAP_ATTR_DN,
 				LDAP_ATTR_COMMON_NAME,
 				LDAP_ATTR_GROUP_MEMBERS,
@@ -69,7 +69,8 @@ class LDAPGroup(LDAPObject):
 				LDAP_ATTR_OBJECT_CATEGORY,
 				LDAP_ATTR_CREATED,
 				LDAP_ATTR_MODIFIED,
-			) if RuntimeSettings.LDAP_FIELD_MAP.get(attr, None)
+			)
+			if RuntimeSettings.LDAP_FIELD_MAP.get(attr, None)
 		}
 		self.default_attrs = self.search_attrs
 		super().__init__(**kwargs)

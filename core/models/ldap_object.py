@@ -252,9 +252,9 @@ class LDAPObject:
 		self.__set_search_attrs__(
 			kwargs.pop(
 				"search_attrs",
-				ALL_OPERATIONAL_ATTRIBUTES \
-					if not self.default_attrs \
-					else self.default_attrs
+				ALL_OPERATIONAL_ATTRIBUTES
+				if not self.default_attrs
+				else self.default_attrs,
 			)
 		)
 

@@ -1,4 +1,3 @@
-
 import pytest
 from core.models.structs.ldap_dns_record import RecordTypes
 from core.ldap.defaults import LDAP_DOMAIN
@@ -28,6 +27,7 @@ from core.constants.dns import (
 	LDNS_ATTR_SRV_PORT,
 	LDNS_ATTR_SRV_TARGET,
 )
+
 
 @pytest.fixture
 def fc_record_serial_epoch():

@@ -1,6 +1,7 @@
 ########################### Standard Pytest Imports ############################
 import pytest
 from pytest_mock import MockerFixture, MockType
+
 ################################################################################
 from tests.test_core.conftest import RuntimeSettingsFactory
 from core.views.ldap.group import LDAPGroupsViewSet
@@ -96,7 +97,9 @@ class TestInsert:
 	def test_success(self, mocker: MockerFixture, admin_user_client: APIClient):
 		mocker.patch.object(LDAPGroupsViewSet, "create_group")
 		response: Response = admin_user_client.post(
-			self.endpoint, data={"group": {LOCAL_ATTR_NAME: "mock_cn"}}, format="json"
+			self.endpoint,
+			data={"group": {LOCAL_ATTR_NAME: "mock_cn"}},
+			format="json",
 		)
 		assert response.status_code == status.HTTP_200_OK
 

@@ -7,6 +7,7 @@ from oidc_provider.models import Client
 from core.views.application import ApplicationViewSet
 from core.serializers.application import ApplicationSerializer
 
+
 class TestList:
 	endpoint = "/api/application/"
 
@@ -28,7 +29,7 @@ class TestList:
 			"list_applications",
 			return_value={
 				"headers": m_headers,
-				"applications":[ApplicationSerializer(f_application).data],
+				"applications": [ApplicationSerializer(f_application).data],
 			},
 		)
 
@@ -39,6 +40,7 @@ class TestList:
 		data: dict = response.data
 		assert len(data.get("applications")) == 1
 		assert set(data.get("headers")) == set(m_headers)
+
 
 class TestInsert:
 	endpoint = "/api/application/insert/"
@@ -56,15 +58,15 @@ class TestInsert:
 				"require_consent": False,
 				"reuse_consent": False,
 				"response_types": {
-					'code': True,
-					'id_token': False,
-					'id_token token': False,
-					'code token': False,
-					'code id_token': False,
-					'code id_token token': False,
+					"code": True,
+					"id_token": False,
+					"id_token token": False,
+					"code token": False,
+					"code id_token": False,
+					"code id_token token": False,
 				},
 			},
-			format="json"
+			format="json",
 		)
 		created_app = Application.objects.get(name="Test Application Create")
 		created_client = Client.objects.get(client_id=created_app.client_id)
@@ -73,6 +75,7 @@ class TestInsert:
 		assert created_app.client_id != "test-client-id"
 		assert created_app.client_secret != "test-client-secret"
 		assert created_client.client_secret == created_app.client_secret
+
 
 class TestDelete:
 	endpoint = "/api/application/{pk}/delete/"
@@ -93,6 +96,7 @@ class TestDelete:
 		assert Application.objects.count() == 0
 		assert ApplicationSecurityGroup.objects.count() == 0
 		assert Client.objects.count() == 0
+
 
 class TestFetch:
 	endpoint = "/api/application/{pk}/fetch/"
@@ -124,13 +128,14 @@ class TestFetch:
 		assert data["scopes"] == f_application.scopes.split()
 		assert data["client_id"] == f_client.client_id
 		assert set(response_types) == {
-			'code',
-			'id_token',
-			'id_token token',
-			'code token',
-			'code id_token',
-			'code id_token token',
+			"code",
+			"id_token",
+			"id_token token",
+			"code token",
+			"code id_token",
+			"code id_token token",
 		}
+
 
 class TestUpdate:
 	endpoint = "/api/application/{pk}/"
@@ -144,10 +149,8 @@ class TestUpdate:
 	):
 		admin_user_client.put(
 			self.endpoint.format(pk=f_application.id),
-			data={
-				"name":"New Name"
-			},
-			format="json"
+			data={"name": "New Name"},
+			format="json",
 		)
 		f_application.refresh_from_db()
 		assert f_application.name == "New Name"

@@ -301,9 +301,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			).get_list_attrs()
 
 		if isinstance(self.search_filter, str):
-			self.search_filter = LDAPFilter.from_string(
-				self.search_filter
-			)
+			self.search_filter = LDAPFilter.from_string(self.search_filter)
 
 		# Exclude Computer Accounts if settings allow it
 		if RuntimeSettings.EXCLUDE_COMPUTER_ACCOUNTS:
@@ -598,9 +596,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 
 	def ldap_user_fetch(self, user_search, return_entry=False) -> dict:
 		"""Returns Serialized LDAP User attributes or Entry."""
-		self.search_filter = self.get_user_object_filter(
-			username=user_search
-		)
+		self.search_filter = self.get_user_object_filter(username=user_search)
 		if not self.search_attrs:
 			self.search_attrs = self.filter_attr_builder(
 				RuntimeSettings
@@ -674,7 +670,9 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			# Check if user is disabled
 			try:
 				user_dict[LOCAL_ATTR_IS_ENABLED] = user_obj.is_enabled
-				user_dict[LOCAL_ATTR_CAN_CHANGE_PWD] = user_obj.can_change_password
+				user_dict[LOCAL_ATTR_CAN_CHANGE_PWD] = (
+					user_obj.can_change_password
+				)
 			except Exception as e:
 				logger.exception(e)
 

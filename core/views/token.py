@@ -53,9 +53,7 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 
 	def post(self, request: Request, *args, **kwargs):
 		try:
-			serializer = self.get_serializer(
-				data=request.data
-			)
+			serializer = self.get_serializer(data=request.data)
 			serializer.is_valid(raise_exception=True)
 		except Exception as e:
 			if any(type(e) == te for te in self.token_exc):

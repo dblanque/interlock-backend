@@ -58,6 +58,7 @@ from ldap3 import ALL_OPERATIONAL_ATTRIBUTES
 from typing import Protocol, overload
 from logging import Logger
 
+
 @pytest.fixture
 def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
 	return g_runtime_settings("core.views.mixins.ldap.group.RuntimeSettings")
@@ -107,9 +108,7 @@ def f_ldap_connection(mocker: MockerFixture):
 
 
 @pytest.fixture(autouse=True)
-def f_ldap_connector(
-	mocker: MockerFixture, f_ldap_connection: MockType
-):
+def f_ldap_connector(mocker: MockerFixture, f_ldap_connection: MockType):
 	m_connector = mocker.MagicMock(spec=LDAPConnector)
 	m_connector.connection = f_ldap_connection
 	m_connector.return_value.__enter__.return_value = m_connector
@@ -199,6 +198,7 @@ def fc_group_entry(
 
 	return maker
 
+
 class TestGetGroupByRid:
 	@staticmethod
 	def test_get_group_by_rid_raises_on_none(f_group_mixin: GroupViewMixin):
@@ -261,8 +261,7 @@ class TestGetGroupByRid:
 		m_connection.search.assert_any_call(
 			search_base=f_runtime_settings.LDAP_AUTH_SEARCH_BASE,
 			search_filter=LDAPFilter.eq(
-				LDAP_ATTR_OBJECT_CLASS,
-				"group"
+				LDAP_ATTR_OBJECT_CLASS, "group"
 			).to_string(),
 			search_scope=SUBTREE,
 			attributes={LDAP_ATTR_SECURITY_ID, LDAP_ATTR_DN},
@@ -278,8 +277,8 @@ class TestGroupMixinCRUD:
 	@staticmethod
 	def test_list(
 		fc_group_entry: LDAPGroupEntryFactoryProtocol,
-		f_group_mixin: GroupViewMixin, 
-		f_log_mixin: LogMixin
+		f_group_mixin: GroupViewMixin,
+		f_log_mixin: LogMixin,
 	):
 		f_group_mixin.search_attrs = [
 			LDAP_ATTR_COMMON_NAME,
@@ -299,7 +298,7 @@ class TestGroupMixinCRUD:
 			spec=True,
 			**{
 				LDAP_ATTR_GROUP_TYPE: LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.value,
-				LDAP_ATTR_GROUP_MEMBERS: ["mock_dn"]
+				LDAP_ATTR_GROUP_MEMBERS: ["mock_dn"],
 			},
 		)
 		f_group_mixin.ldap_connection.entries = [m_group_1, m_group_2]
@@ -349,7 +348,7 @@ class TestGroupMixinCRUD:
 		m_group_entry = fc_group_entry(
 			name=m_common_name,
 			spec=True,
-			**{LDAP_ATTR_GROUP_MEMBERS: [m_member_dn]}
+			**{LDAP_ATTR_GROUP_MEMBERS: [m_member_dn]},
 		)
 		f_group_mixin.ldap_connection.entries = [m_group_entry]
 		f_group_mixin.search_attrs = [
@@ -360,18 +359,10 @@ class TestGroupMixinCRUD:
 			LDAP_ATTR_GROUP_TYPE,
 			LDAP_ATTR_SECURITY_ID,
 		]
-		f_group_mixin.search_filter = (
-			LDAPFilter.and_(
-				LDAPFilter.eq(
-					LDAP_ATTR_OBJECT_CLASS,
-					"group"
-				),
-				LDAPFilter.eq(
-					LDAP_ATTR_DN,
-					m_group_entry
-				)
-			).to_string()
-		)
+		f_group_mixin.search_filter = LDAPFilter.and_(
+			LDAPFilter.eq(LDAP_ATTR_OBJECT_CLASS, "group"),
+			LDAPFilter.eq(LDAP_ATTR_DN, m_group_entry),
+		).to_string()
 
 		# Mock LDAP Object Member
 		m_ldap_user_object = mocker.Mock()
@@ -426,9 +417,7 @@ class TestGroupMixinCRUD:
 			{
 				LOCAL_ATTR_NAME: "Test Group",
 				LOCAL_ATTR_PATH: None,
-				LOCAL_ATTR_GROUP_TYPE: [
-					LDAPGroupTypes.TYPE_SECURITY.name
-				],
+				LOCAL_ATTR_GROUP_TYPE: [LDAPGroupTypes.TYPE_SECURITY.name],
 				LOCAL_ATTR_GROUP_SCOPE: [
 					LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.name
 				],
@@ -439,9 +428,7 @@ class TestGroupMixinCRUD:
 			},
 			{
 				LOCAL_ATTR_NAME: "Test Group",
-				LOCAL_ATTR_GROUP_TYPE: [
-					LDAPGroupTypes.TYPE_SECURITY.name
-				],
+				LOCAL_ATTR_GROUP_TYPE: [LDAPGroupTypes.TYPE_SECURITY.name],
 				LOCAL_ATTR_GROUP_SCOPE: [
 					LDAPGroupTypes.SCOPE_DOMAIN_LOCAL.name
 				],
@@ -461,7 +448,7 @@ class TestGroupMixinCRUD:
 		m_ldap_group_instance = mocker.Mock()
 		MockLDAPGroup = mocker.patch(
 			"core.views.mixins.ldap.group.LDAPGroup",
-			return_value=m_ldap_group_instance
+			return_value=m_ldap_group_instance,
 		)
 
 		f_group_mixin.ldap_connection.entries = []
@@ -473,7 +460,7 @@ class TestGroupMixinCRUD:
 		else:
 			expected_dn = "CN=%s,CN=Users,%s" % (
 				group_data[LOCAL_ATTR_NAME],
-				f_runtime_settings.LDAP_AUTH_SEARCH_BASE
+				f_runtime_settings.LDAP_AUTH_SEARCH_BASE,
 			)
 
 		assert (
@@ -502,9 +489,7 @@ class TestGroupMixinCRUD:
 		f_group_mixin.search_attrs = "mock_attr_filter"
 		f_group_mixin.search_filter = "mock_obj_filter"
 		with pytest.raises(ValueError, match="cannot be None or falsy"):
-			f_group_mixin.create_group(
-				group_data={LOCAL_ATTR_NAME: ""}
-			)
+			f_group_mixin.create_group(group_data={LOCAL_ATTR_NAME: ""})
 		f_group_mixin.ldap_connection.search.assert_not_called()
 
 	def test_create_raises_on_exists(
@@ -516,9 +501,7 @@ class TestGroupMixinCRUD:
 		f_group_mixin.search_attrs = "mock_attr_filter"
 		f_group_mixin.search_filter = "mock_obj_filter"
 		with pytest.raises(exc_ldap.LDAPObjectExists):
-			f_group_mixin.create_group(
-				group_data={LOCAL_ATTR_NAME: "mock_cn"}
-			)
+			f_group_mixin.create_group(group_data={LOCAL_ATTR_NAME: "mock_cn"})
 		f_group_mixin.ldap_connection.search.assert_called_once_with(
 			search_base=f_runtime_settings.LDAP_AUTH_SEARCH_BASE,
 			search_filter=f_group_mixin.search_filter,
@@ -545,11 +528,12 @@ class TestGroupMixinCRUD:
 		m_ldap_group_instance.exists = True
 		m_ldap_group_instance.attributes = mock_data
 		m_get_common_name = mocker.Mock(
-			name="m_get_common_name", return_value="test")
+			name="m_get_common_name", return_value="test"
+		)
 		m_ldap_group_instance.__get_common_name__ = m_get_common_name
 		MockLDAPGroup = mocker.patch(
 			"core.views.mixins.ldap.group.LDAPGroup",
-			return_value=m_ldap_group_instance
+			return_value=m_ldap_group_instance,
 		)
 
 		assert (
@@ -581,7 +565,7 @@ class TestGroupMixinCRUD:
 		mock_data = {
 			LOCAL_ATTR_DN: f_distinguished_name,
 			LOCAL_ATTR_EMAIL: "test@example.com",
-			LOCAL_ATTR_GROUP_TYPE: [LDAPGroupTypes.TYPE_SECURITY.name]
+			LOCAL_ATTR_GROUP_TYPE: [LDAPGroupTypes.TYPE_SECURITY.name],
 		}
 		f_group_mixin.search_attrs = "search_attrs"
 
@@ -595,11 +579,12 @@ class TestGroupMixinCRUD:
 		]
 		m_ldap_group_instance.attributes = old_data
 		m_get_common_name = mocker.Mock(
-			name="m_get_common_name", return_value="test")
+			name="m_get_common_name", return_value="test"
+		)
 		m_ldap_group_instance.__get_common_name__ = m_get_common_name
 		MockLDAPGroup = mocker.patch(
 			"core.views.mixins.ldap.group.LDAPGroup",
-			return_value=m_ldap_group_instance
+			return_value=m_ldap_group_instance,
 		)
 
 		with pytest.raises(ValidationError) as exc:
@@ -632,7 +617,7 @@ class TestGroupMixinCRUD:
 		m_ldap_group_instance.exists = False
 		mocker.patch(
 			"core.views.mixins.ldap.group.LDAPGroup",
-			return_value=m_ldap_group_instance
+			return_value=m_ldap_group_instance,
 		)
 		with pytest.raises(exc_groups.GroupDoesNotExist):
 			f_group_mixin.update_group(
@@ -673,7 +658,7 @@ class TestGroupMixinCRUD:
 		m_ldap_group_instance.exists = False
 		mocker.patch(
 			"core.views.mixins.ldap.group.LDAPGroup",
-			return_value=m_ldap_group_instance
+			return_value=m_ldap_group_instance,
 		)
 
 		with pytest.raises(exc_groups.GroupDoesNotExist):
@@ -697,11 +682,12 @@ class TestGroupMixinCRUD:
 			LOCAL_ATTR_GROUP_TYPE: [LDAPGroupTypes.TYPE_SECURITY.name]
 		}
 		m_get_common_name = mocker.Mock(
-			name="m_get_common_name", return_value="test")
+			name="m_get_common_name", return_value="test"
+		)
 		m_ldap_group_instance.__get_common_name__ = m_get_common_name
 		MockLDAPGroup = mocker.patch(
 			"core.views.mixins.ldap.group.LDAPGroup",
-			return_value=m_ldap_group_instance
+			return_value=m_ldap_group_instance,
 		)
 
 		f_group_mixin.delete_group(
@@ -743,11 +729,12 @@ class TestGroupMixinCRUD:
 			]
 		}
 		m_get_common_name = mocker.Mock(
-			name="m_get_common_name", return_value="test")
+			name="m_get_common_name", return_value="test"
+		)
 		m_ldap_group_instance.__get_common_name__ = m_get_common_name
 		mocker.patch(
 			"core.views.mixins.ldap.group.LDAPGroup",
-			return_value=m_ldap_group_instance
+			return_value=m_ldap_group_instance,
 		)
 
 		with pytest.raises(exc_groups.GroupBuiltinProtect):
@@ -760,5 +747,5 @@ class TestGroupMixinCRUD:
 		f_application_group.refresh_from_db()
 		assert f_application_group.ldap_objects == [
 			f_distinguished_name,
-			"another_group_dn"
+			"another_group_dn",
 		]

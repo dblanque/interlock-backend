@@ -41,6 +41,7 @@ from core.decorators.login import auth_required
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
+
 def set_expired_jwt_cookies(response: Response):
 	# Expire Access/Refresh Cookie
 	response.set_cookie(
@@ -65,6 +66,7 @@ def set_expired_jwt_cookies(response: Response):
 		domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
 	)
 	return response
+
 
 class AuthViewSet(BaseViewSet):
 	def refresh(self, request: Request):
@@ -131,9 +133,11 @@ class AuthViewSet(BaseViewSet):
 			response = set_expired_jwt_cookies(response=response)
 			return response
 		except TokenError as e:
-			raise BadRequest(data={
-				"detail": str(e),
-			})
+			raise BadRequest(
+				data={
+					"detail": str(e),
+				}
+			)
 		except Exception as e:
 			logger.exception(e)
 			raise InternalServerError

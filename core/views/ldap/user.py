@@ -270,7 +270,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		######################## Set LDAP Attributes ###########################
 		self.search_filter = LDAPFilter.eq(
 			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
-			RuntimeSettings.LDAP_AUTH_OBJECT_CLASS
+			RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
 		).to_string()
 		self.search_attrs = self.filter_attr_builder(
 			RuntimeSettings
@@ -469,7 +469,10 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		skipped_users = []
 		failed_users = []
 
-		for k in ("headers", "users",):
+		for k in (
+			"headers",
+			"users",
+		):
 			if k not in data or not data.get(k, None):
 				e = exc_base.MissingDataKey()
 				e.set_detail({"key": k})
@@ -484,9 +487,11 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			f"CN=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}",
 		)
 		MAPPED_USER_KEY = HEADER_MAPPING.get(
-			LOCAL_ATTR_USERNAME, LOCAL_ATTR_USERNAME)
+			LOCAL_ATTR_USERNAME, LOCAL_ATTR_USERNAME
+		)
 		MAPPED_EMAIL_KEY = HEADER_MAPPING.get(
-			LOCAL_ATTR_EMAIL, LOCAL_ATTR_EMAIL)
+			LOCAL_ATTR_EMAIL, LOCAL_ATTR_EMAIL
+		)
 		# Map Password Key
 		MAPPED_PWD_KEY = HEADER_MAPPING.get(LOCAL_ATTR_PASSWORD, None)
 		if any(LOCAL_ATTR_PASSWORD in user for user in USER_LIST):
@@ -555,7 +560,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 				mapped_row[LOCAL_ATTR_PATH] = INSERTION_PATH
 				mapped_row[LOCAL_ATTR_PERMISSIONS] = _permissions
-					
+
 				# Set password
 				set_pwd = None
 				if placeholder_password and not set_pwd:
@@ -569,9 +574,9 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				if not serializer.is_valid():
 					failed_users.append(
 						{
-							LOCAL_ATTR_USERNAME: user_search \
-								if isinstance(user_search, str) \
-								else "unknown",
+							LOCAL_ATTR_USERNAME: user_search
+							if isinstance(user_search, str)
+							else "unknown",
 							"stage": "serializer_validation",
 							"detail": serializer.errors,
 						}
@@ -641,16 +646,19 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		# Validate data keys
 		if any(
-			v not in data for v in ("users", LOCAL_ATTR_PERMISSIONS, "values",)
+			v not in data
+			for v in (
+				"users",
+				LOCAL_ATTR_PERMISSIONS,
+				"values",
+			)
 		):
 			raise exc_base.BadRequest
 
 		values = data.get("values", {})
 		permissions = data.get(LOCAL_ATTR_PERMISSIONS, [])
 
-		EXCLUDE_KEYS = [
-			LOCAL_ATTR_EMAIL
-		]
+		EXCLUDE_KEYS = [LOCAL_ATTR_EMAIL]
 		for k in EXCLUDE_KEYS:
 			if k in values:
 				del values[k]
@@ -702,12 +710,14 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 						}
 					)
 
-		return Response(data={
-			"code": code,
-			"code_msg": code_msg,
-			"updated_users": updated_users,
-			"failed_users": failed_users,
-		})
+		return Response(
+			data={
+				"code": code,
+				"code_msg": code_msg,
+				"updated_users": updated_users,
+				"failed_users": failed_users,
+			}
+		)
 
 	@action(detail=False, methods=["post"])
 	@auth_required
@@ -749,8 +759,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 					username = user_data.get(LOCAL_ATTR_USERNAME, None)
 				try:
 					self.ldap_user_change_status(
-						username=username,
-						enabled=(not disable_users)
+						username=username, enabled=(not disable_users)
 					)
 					success.append(username)
 				except:
@@ -832,7 +841,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 	@ldap_backend_intercept
 	def self_change_password(self, request: Request, pk=None):
 		user = request.user
-		user: User # For type-hints
+		user: User  # For type-hints
 		code = 0
 		code_msg = "ok"
 		data = request.data
@@ -869,7 +878,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 					RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
 					RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_DN],
 					RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_UAC],
-				]
+				],
 			)
 			if not ldap_user.exists:
 				raise exc_user.UserDoesNotExist
@@ -909,7 +918,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 	@ldap_backend_intercept
 	def self_update(self, request: Request, pk=None):
 		user = request.user
-		user: User # For type-hints
+		user: User  # For type-hints
 		code = 0
 		code_msg = "ok"
 		data = request.data
@@ -1016,17 +1025,10 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				_keys = self.filter_attr_builder(
 					RuntimeSettings
 				).get_fetch_me_attrs()
-				user_data = {
-					key: user_data.get(key, "")
-					for key in _keys
-				}
+				user_data = {key: user_data.get(key, "") for key in _keys}
 
 		if LOCAL_ATTR_ID in user_data:
 			del user_data[LOCAL_ATTR_ID]
 		return Response(
-			data={
-				"code": code,
-				"code_msg": code_msg,
-				"data": user_data
-			}
+			data={"code": code, "code_msg": code_msg, "data": user_data}
 		)

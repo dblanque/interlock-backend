@@ -151,7 +151,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		preset_label = request.data[LOCAL_ATTR_LABEL]
 		if not isinstance(preset_label, str):
 			raise exc_base.BadRequest(
-				data={"detail":"Preset Label must be of type str."}
+				data={"detail": "Preset Label must be of type str."}
 			)
 		preset_name = self.normalize_preset_name(preset_label)
 		if LDAPPreset.objects.filter(name=preset_name).exists():
@@ -285,11 +285,13 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 				param_type = INTERLOCK_SETTING_MAP[param_name]
 				param_value = param_value.pop(LOCAL_ATTR_VALUE)
 
-				serializer = InterlockSettingSerializer(data={
-					LOCAL_ATTR_NAME: param_name,
-					LOCAL_ATTR_TYPE: param_type.lower(),
-					LOCAL_ATTR_VALUE: param_value,
-				})
+				serializer = InterlockSettingSerializer(
+					data={
+						LOCAL_ATTR_NAME: param_name,
+						LOCAL_ATTR_TYPE: param_type.lower(),
+						LOCAL_ATTR_VALUE: param_value,
+					}
+				)
 				if not serializer.is_valid():
 					raise exc_set.SettingSerializerError(
 						data={"key": param_name, "errors": serializer.errors}
@@ -338,12 +340,14 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 						pass
 				# If value is an override
 				else:
-					serializer = LDAPSettingSerializer(data={
-						LOCAL_ATTR_NAME: param_name,
-						LOCAL_ATTR_TYPE: param_type.lower(),
-						LOCAL_ATTR_PRESET: settings_preset,
-						LOCAL_ATTR_VALUE: param_value,
-					})
+					serializer = LDAPSettingSerializer(
+						data={
+							LOCAL_ATTR_NAME: param_name,
+							LOCAL_ATTR_TYPE: param_type.lower(),
+							LOCAL_ATTR_PRESET: settings_preset,
+							LOCAL_ATTR_VALUE: param_value,
+						}
+					)
 					if not serializer.is_valid():
 						raise exc_set.SettingSerializerError(
 							data={
@@ -359,7 +363,9 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 							preset=settings_preset,
 						)
 						for attr in validated_data:
-							setattr(setting_instance, attr, validated_data[attr])
+							setattr(
+								setting_instance, attr, validated_data[attr]
+							)
 					except ObjectDoesNotExist:
 						setting_instance = LDAPSetting(
 							**validated_data,

@@ -279,7 +279,7 @@ class TestApplicationSecurityGroupViewMixin:
 		assert list(test_application_group.users.all()) == original_users
 
 	@pytest.mark.parametrize(
-		"is_enabled, target_state, expected", 
+		"is_enabled, target_state, expected",
 		(
 			(True, False, False),
 			(False, True, True),

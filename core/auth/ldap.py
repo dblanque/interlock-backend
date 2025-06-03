@@ -23,6 +23,7 @@ class LDAPBackend(ModelBackend):
 	User models authenticated with LDAP are created on
 	the fly, and syncronised with the LDAP credentials.
 	"""
+
 	supports_inactive_user = False
 
 	def authenticate(self, *args, **kwargs):

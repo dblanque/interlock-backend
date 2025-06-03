@@ -51,9 +51,11 @@ from core.utils.main import getldapattrvalue
 from typing import List, TypedDict, Literal
 from django.db import transaction
 import logging
+
 ################################################################################
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
+
 
 class GroupDict(TypedDict):
 	cn: str
@@ -292,8 +294,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_GROUP,
 			log_target=group_obj.attributes.get(
-				LOCAL_ATTR_NAME,
-				group_obj.__get_common_name__()
+				LOCAL_ATTR_NAME, group_obj.__get_common_name__()
 			),
 		)
 		return self.ldap_connection
@@ -317,8 +318,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		# Check if group is a builtin object
 		group_cn: str = group_obj.attributes.get(
-			LOCAL_ATTR_NAME,
-			group_obj.__get_common_name__()
+			LOCAL_ATTR_NAME, group_obj.__get_common_name__()
 		)
 		if group_cn.lower().startswith("cn="):
 			group_cn = group_cn.split("=")[-1]

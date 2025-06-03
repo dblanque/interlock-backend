@@ -1,6 +1,7 @@
 ########################### Standard Pytest Imports ############################
 import pytest
 from pytest_mock import MockerFixture
+
 ################################################################################
 from ldap3 import Entry as LDAPEntry, Attribute as LDAPAttribute
 from core.utils.main import (
@@ -187,6 +188,7 @@ class TestGetLocalAliasForLDAPKey:
 			getlocalkeyforldapattr("some_bad_key", default="mock_default")
 			== "mock_default"
 		)
+
 
 @pytest.fixture
 def f_ldap_entry(mocker: MockerFixture) -> LDAPEntry:

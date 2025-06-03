@@ -303,9 +303,7 @@ class TestLDAPDNS:
 
 	def test_list_dns_zones(self, mocker, f_runtime_settings, f_dns_zones):
 		m_connection = mocker.MagicMock()
-		mocker.patch(
-			"core.models.dns.get_dns_zones", return_value=f_dns_zones
-		)
+		mocker.patch("core.models.dns.get_dns_zones", return_value=f_dns_zones)
 		mocker.patch.object(LDAPDNS, "list_forest_zones", return_value=None)
 		ldap_dns = LDAPDNS(m_connection)
 		assert ldap_dns.dns_zones == f_dns_zones
@@ -1681,9 +1679,7 @@ class TestLDAPRecord:
 		else:
 			del f_record_data_type_a["ttl"]
 
-		mocker.patch(
-			"core.models.dns.DNS_RECORD", return_value="DNS_RECORD"
-		)
+		mocker.patch("core.models.dns.DNS_RECORD", return_value="DNS_RECORD")
 		m_record_to_dict: MockType = mocker.patch(
 			"core.models.dns.record_to_dict"
 		)
@@ -1730,9 +1726,7 @@ class TestLDAPRecord:
 		f_record_data_type_a: dict,
 	):
 		f_connection.add.side_effect = Exception
-		mocker.patch(
-			"core.models.dns.DNS_RECORD", return_value="DNS_RECORD"
-		)
+		mocker.patch("core.models.dns.DNS_RECORD", return_value="DNS_RECORD")
 		mocker.patch("core.models.dns.record_to_dict")
 		f_record_instance_type_a.raw_entry = None
 		m_serial = get_mock_serial()
@@ -1754,9 +1748,7 @@ class TestLDAPRecord:
 		f_record_instance_type_a: LDAPRecord,
 		f_record_data_type_a: dict,
 	):
-		mocker.patch(
-			"core.models.dns.DNS_RECORD", return_value="DNS_RECORD"
-		)
+		mocker.patch("core.models.dns.DNS_RECORD", return_value="DNS_RECORD")
 		mocker.patch.object(LDAPRecord, "record_in_entry", return_value=True)
 		f_record_instance_type_a.raw_entry = {"attributes": {}}
 		m_serial = get_mock_serial()
@@ -1778,9 +1770,7 @@ class TestLDAPRecord:
 		f_record_instance_type_a: LDAPRecord,
 		f_record_data_type_a: dict,
 	):
-		mocker.patch(
-			"core.models.dns.DNS_RECORD", return_value="DNS_RECORD"
-		)
+		mocker.patch("core.models.dns.DNS_RECORD", return_value="DNS_RECORD")
 		mocker.patch("core.models.dns.record_to_dict")
 		mocker.patch.object(LDAPRecord, "record_in_entry", return_value=False)
 		mocker.patch.object(
@@ -1810,9 +1800,7 @@ class TestLDAPRecord:
 		f_record_instance_type_soa: LDAPRecord,
 		f_record_data_type_soa: dict,
 	):
-		mocker.patch(
-			"core.models.dns.DNS_RECORD", return_value="DNS_RECORD"
-		)
+		mocker.patch("core.models.dns.DNS_RECORD", return_value="DNS_RECORD")
 		mocker.patch("core.models.dns.record_to_dict")
 		mocker.patch.object(LDAPRecord, "record_in_entry", return_value=False)
 		mocker.patch.object(
@@ -1844,9 +1832,7 @@ class TestLDAPRecord:
 		f_record_instance_type_a: LDAPRecord,
 		f_record_data_type_a: dict,
 	):
-		mocker.patch(
-			"core.models.dns.DNS_RECORD", return_value="DNS_RECORD"
-		)
+		mocker.patch("core.models.dns.DNS_RECORD", return_value="DNS_RECORD")
 		m_record_to_dict: MockType = mocker.patch(
 			"core.models.dns.record_to_dict"
 		)

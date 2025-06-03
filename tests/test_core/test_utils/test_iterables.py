@@ -1,17 +1,20 @@
 ########################### Standard Pytest Imports ############################
 import pytest
 from pytest_mock import MockerFixture
+
 ################################################################################
 from core.utils.iterables import (
 	flatten_list,
 	is_non_str_iterable,
-	recursive_dict_find
+	recursive_dict_find,
 )
+
 
 class TestFlattenList:
 	@staticmethod
 	def test_flatten():
-		assert flatten_list([["a","b"],["c","d"]]) == ["a","b","c","d"]
+		assert flatten_list([["a", "b"], ["c", "d"]]) == ["a", "b", "c", "d"]
+
 
 class TestRecursiveDictFind:
 	@staticmethod
@@ -30,6 +33,7 @@ class TestRecursiveDictFind:
 
 	def test_empty_dict(self):
 		assert recursive_dict_find({}, "a") is None
+
 
 class TestIsNonStrIterable:
 	@staticmethod

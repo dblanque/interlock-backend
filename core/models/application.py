@@ -7,6 +7,7 @@ import secrets
 from uuid import uuid5
 from interlock_backend.settings import INTERLOCK_NAMESPACE, SECRET_KEY
 
+
 def generate_client_id() -> str:
 	"""Generates a 24 character client id, retries up to 10 times and gives up.
 	The odds of generating an existing id 10 times in a row are very low.
@@ -39,6 +40,7 @@ class Application(BaseModel):
 	redirect_uris = models.TextField(help_text="Comma-separated redirect URIs")
 	scopes = models.TextField(default="openid profile email groups")
 
+
 class ApplicationSecurityGroup(BaseModel):
 	application = models.OneToOneField(Application, on_delete=models.CASCADE)
 	enabled = models.BooleanField(default=True)
@@ -51,11 +53,12 @@ class ApplicationSecurityGroup(BaseModel):
 	def generate_uuid(self):
 		return uuid5(
 			INTERLOCK_NAMESPACE,
-			"asg_%s_%s_%s" % (
+			"asg_%s_%s_%s"
+			% (
 				str(self.id),
 				str(self.application.id),
 				SECRET_KEY,
-			)
+			),
 		)
 
 	def save(self, *args, **kwargs):

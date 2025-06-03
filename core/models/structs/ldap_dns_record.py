@@ -487,7 +487,8 @@ class DNS_RPC_RECORD_A(Structure):
 		Returns IPv4 String Address as Bytes
 		"""
 		self[LDNS_ATTR_IPV4_ADDRESS] = socket.inet_pton(
-			socket.AF_INET, canonical)
+			socket.AF_INET, canonical
+		)
 
 
 class DNS_RPC_RECORD_NODE_NAME(Structure):
@@ -644,7 +645,8 @@ class DNS_RPC_RECORD_AAAA(Structure):
 		Returns IPv6 String Address without separators
 		"""
 		self[LDNS_ATTR_IPV6_ADDRESS] = socket.inet_pton(
-			socket.AF_INET6, canonical)
+			socket.AF_INET6, canonical
+		)
 		# self['ipv6Address'] = str(canonical).replace(':','')
 
 

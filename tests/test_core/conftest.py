@@ -129,10 +129,7 @@ def g_ldap_connector(mocker: MockerFixture) -> ConnectorFactory:
 			kwargs_connection = {}
 		if not attrs_connection:
 			attrs_connection = {}
-		m_connection = mocker.Mock(
-			name="m_connection",
-			**kwargs_connection
-		)
+		m_connection = mocker.Mock(name="m_connection", **kwargs_connection)
 
 		# Handle special property mocks
 		for k, v in attrs_connection.items():

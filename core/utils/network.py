@@ -1,6 +1,7 @@
 import socket
 from struct import unpack
 
+
 def net_port_test(ip, port, timeout=5):
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	s.settimeout(timeout)
@@ -11,6 +12,7 @@ def net_port_test(ip, port, timeout=5):
 		return True
 	except:
 		return False
+
 
 # src: https://stackoverflow.com/questions/10558441/inet-aton-similar-function-for-ipv6
 def ipv6_to_integer(ipv6_addr):

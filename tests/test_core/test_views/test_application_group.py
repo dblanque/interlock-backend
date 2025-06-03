@@ -2,6 +2,7 @@
 import pytest
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
+
 ################################################################################
 from rest_framework.test import APIClient
 from rest_framework.response import Response
@@ -14,6 +15,7 @@ from core.constants.attrs import (
 	LOCAL_ATTR_NAME,
 	LOCAL_ATTR_USERNAME,
 )
+
 
 class TestCreateInfo:
 	endpoint = "/api/application/group/create_info/"
@@ -54,6 +56,7 @@ class TestCreateInfo:
 		for username in ("testuser", "testuserlocal"):
 			assert username in usernames
 
+
 class TestInsert:
 	endpoint = "/api/application/group/insert/"
 
@@ -68,7 +71,7 @@ class TestInsert:
 			self.endpoint,
 			data={
 				"application": f_application.id,
-				"users":[],
+				"users": [],
 				"ldap_objects": ["some_group_dn"],
 				"enabled": True,
 			},
@@ -88,16 +91,20 @@ class TestInsert:
 			self.endpoint,
 			data={
 				"application": f_application.id,
-				"users":[],
+				"users": [],
 				"ldap_objects": ["some_group_dn"],
 				"enabled": True,
 			},
 			format="json",
 		)
 		assert response.status_code == status.HTTP_200_OK
-		assert ApplicationSecurityGroup.objects.filter(
-			application=f_application.id
-		).count() == 1
+		assert (
+			ApplicationSecurityGroup.objects.filter(
+				application=f_application.id
+			).count()
+			== 1
+		)
+
 
 class TestList:
 	endpoint = "/api/application/group/"
@@ -117,7 +124,11 @@ class TestList:
 			"application",
 			"enabled",
 		}
-		assert data["application_groups"][0][LOCAL_ATTR_ID] == f_application_group.id
+		assert (
+			data["application_groups"][0][LOCAL_ATTR_ID]
+			== f_application_group.id
+		)
+
 
 class TestRetrieve:
 	endpoint = "/api/application/group/{pk}/"
@@ -130,11 +141,13 @@ class TestRetrieve:
 		f_client: Client,
 	):
 		response: Response = admin_user_client.get(
-			self.endpoint.format(pk=f_application_group.id))
+			self.endpoint.format(pk=f_application_group.id)
+		)
 		data = response.data.get("data")
 		assert data[LOCAL_ATTR_ID] == f_application_group.id
 		assert data["enabled"]
 		assert data["application"][LOCAL_ATTR_ID] == f_application.id
+
 
 class TestUpdate:
 	endpoint = "/api/application/group/{pk}/"
@@ -173,7 +186,7 @@ class TestUpdate:
 		response: Response = admin_user_client.put(
 			self.endpoint.format(pk=f_application_group.id),
 			data={
-				"application": f_application.id+1,
+				"application": f_application.id + 1,
 				"enabled": False,
 			},
 			format="json",
@@ -182,23 +195,40 @@ class TestUpdate:
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert "does not match" in response.data.get("detail")
 
+
 class TestChangeStatus:
 	endpoint = "/api/application/group/{pk}/change_status/"
 
 	@pytest.mark.parametrize(
 		"was_enabled, data_enabled, expects_enabled",
 		(
-			(False, True, True,),
-			(True, False, False,),
-			(True, True, True,),
-			(False, False, False,),
+			(
+				False,
+				True,
+				True,
+			),
+			(
+				True,
+				False,
+				False,
+			),
+			(
+				True,
+				True,
+				True,
+			),
+			(
+				False,
+				False,
+				False,
+			),
 		),
 		ids=[
 			"Enable disabled ASG",
 			"Disable enabled ASG",
 			"Enable enabled ASG",
 			"Disable disabled ASG",
-		]
+		],
 	)
 	def test_success(
 		self,
@@ -216,14 +246,13 @@ class TestChangeStatus:
 
 		response: Response = admin_user_client.patch(
 			self.endpoint.format(pk=f_application_group.id),
-			data={
-				"enabled": data_enabled
-			},
+			data={"enabled": data_enabled},
 			format="json",
 		)
 		assert response.status_code == status.HTTP_200_OK
 		f_application_group.refresh_from_db()
 		assert f_application_group.enabled == expects_enabled
+
 
 class TestDelete:
 	endpoint = "/api/application/group/{pk}/delete/"

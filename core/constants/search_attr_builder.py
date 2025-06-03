@@ -1,5 +1,6 @@
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 
+
 class SearchAttrBuilder:
 	def _to_ldap(self, k: str) -> str:
 		"""Returns corresponding LDAP mapped field for Local Attribute Key"""

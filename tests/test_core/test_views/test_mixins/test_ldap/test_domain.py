@@ -78,11 +78,13 @@ def f_mock_soa_record(mocker: MockerFixture):
 
 @pytest.fixture
 def f_record_entry(fc_ldap_entry: LDAPEntryFactoryProtocol):
-	m_entry = fc_ldap_entry(**{
-		LDNS_ATTR_ENTRY_NAME: "subdomain",
-		LDAP_ATTR_DN: "mock_record_dn",
-		LDNS_ATTR_ENTRY_RECORD: b"mock_record_bytes",
-	})
+	m_entry = fc_ldap_entry(
+		**{
+			LDNS_ATTR_ENTRY_NAME: "subdomain",
+			LDAP_ATTR_DN: "mock_record_dn",
+			LDNS_ATTR_ENTRY_RECORD: b"mock_record_bytes",
+		}
+	)
 	return m_entry
 
 
@@ -216,7 +218,9 @@ class TestGetZoneRecords:
 			side_effect=["mock_name", False],
 		)
 		m_dnsRecord = mocker.Mock()
-		m_record_in_entry = getattr(f_record_entry, LDNS_ATTR_ENTRY_RECORD).value
+		m_record_in_entry = getattr(
+			f_record_entry, LDNS_ATTR_ENTRY_RECORD
+		).value
 		m_dnsRecord.values = ["mock_record"]
 		f_ldap_connector.connection.entries = [f_record_entry]
 

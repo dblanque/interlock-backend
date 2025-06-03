@@ -1,7 +1,9 @@
 # core.utils.iterables
 
+
 def flatten_list(lst: list[list]) -> list:
 	return [i for sub in lst for i in sub]
+
 
 def recursive_dict_find(obj, key):
 	if key in obj:
@@ -11,6 +13,7 @@ def recursive_dict_find(obj, key):
 			item = recursive_dict_find(v, key)
 			if item is not None:
 				return item
+
 
 def is_non_str_iterable(v):
 	"""Checks if value is within types (tuple, list, set, dict)

@@ -28,6 +28,7 @@ from core.models.ldap_settings import (
 	LDAP_PRESET_TABLE,
 	LDAP_SETTING_MAP,
 )
+
 #### Constants
 from core.ldap import defaults
 from core.constants.attrs.local import LOCAL_ATTR_VALUE, LOCAL_ATTR_TYPE
@@ -109,7 +110,10 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 		return None
 
 	def normalize_preset_name(self, name: str) -> str:
-		replace_chars = (" ", "-",)
+		replace_chars = (
+			" ",
+			"-",
+		)
 		for c in replace_chars:
 			name = name.replace(c, "_")
 		return name.lower()
@@ -156,7 +160,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 		if password:
 			default_admin.set_password(password)
 			user_modified = True
-		
+
 		if user_modified:
 			default_admin.save()
 
@@ -189,20 +193,24 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 					if setting_key == K_LDAP_AUTH_TLS_VERSION and isinstance(
 						setting_instance.value, Enum
 					):
-						data[setting_key][LOCAL_ATTR_VALUE] = setting_instance.value.name
+						data[setting_key][LOCAL_ATTR_VALUE] = (
+							setting_instance.value.name
+						)
 			except ObjectDoesNotExist:
-				data[setting_key][LOCAL_ATTR_VALUE] = getattr(defaults, setting_key)
+				data[setting_key][LOCAL_ATTR_VALUE] = getattr(
+					defaults, setting_key
+				)
 				if setting_key == K_LDAP_AUTH_TLS_VERSION and isinstance(
 					data[setting_key][LOCAL_ATTR_VALUE], Enum
 				):
-					data[setting_key][LOCAL_ATTR_VALUE] = data[setting_key][LOCAL_ATTR_VALUE].name
+					data[setting_key][LOCAL_ATTR_VALUE] = data[setting_key][
+						LOCAL_ATTR_VALUE
+					].name
 		return data
 
 	def get_local_settings(
-			self,
-			preset_id = 1,
-			public_fields_only=True
-		) -> dict[dict]:
+		self, preset_id=1, public_fields_only=True
+	) -> dict[dict]:
 		fields_to_retrieve = None
 		if public_fields_only:
 			fields_to_retrieve = INTERLOCK_SETTING_PUBLIC
@@ -212,7 +220,9 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 		interlock_settings = {}
 		if public_fields_only:
 			for setting_key in fields_to_retrieve:
-				setting_instance = InterlockSetting.objects.get(name=setting_key)
+				setting_instance = InterlockSetting.objects.get(
+					name=setting_key
+				)
 				interlock_settings[setting_key] = {
 					"value": setting_instance.value,
 					"type": setting_instance.type,

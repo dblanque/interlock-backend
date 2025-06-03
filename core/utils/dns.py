@@ -1,6 +1,7 @@
 import dns.resolver
 import ipaddress
 
+
 def get_dns_resolver(dnsAddresses):
 	# Set Query for IP Address
 	if dnsAddresses is None:

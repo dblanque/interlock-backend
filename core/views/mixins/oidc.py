@@ -56,6 +56,7 @@ from interlock_backend.settings import LOGIN_URL
 from oidc_provider.lib.endpoints.authorize import AuthorizeEndpoint
 from core.ldap.connector import LDAPConnector, recursive_member_search
 from core.config.runtime import RuntimeSettings
+
 ################################################################################
 logger = logging.getLogger()
 

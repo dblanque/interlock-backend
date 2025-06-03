@@ -14,7 +14,8 @@ from core.ldap.adsi import (
 @pytest.mark.django_db
 def test_validate_password_confirm():
 	serializer = UserSerializer(
-		data={LOCAL_ATTR_PASSWORD: "a", LOCAL_ATTR_PASSWORD_CONFIRM: "a"}, partial=True
+		data={LOCAL_ATTR_PASSWORD: "a", LOCAL_ATTR_PASSWORD_CONFIRM: "a"},
+		partial=True,
 	)
 	assert serializer.is_valid()
 
@@ -22,7 +23,8 @@ def test_validate_password_confirm():
 @pytest.mark.django_db
 def test_validate_password_confirm_raises_password_mismatch():
 	serializer = UserSerializer(
-		data={LOCAL_ATTR_PASSWORD: "a", LOCAL_ATTR_PASSWORD_CONFIRM: "b"}, partial=True
+		data={LOCAL_ATTR_PASSWORD: "a", LOCAL_ATTR_PASSWORD_CONFIRM: "b"},
+		partial=True,
 	)
 	with pytest.raises(ValidationError) as e:
 		serializer.is_valid(raise_exception=True)
@@ -90,10 +92,7 @@ def test_ldap_user_serializer_valid(test_data: dict):
 			LOCAL_ATTR_EMAIL,
 			"test@example",
 		),
-		(
-			LOCAL_ATTR_PERMISSIONS,
-			["bad_perm_value"]
-		),
+		(LOCAL_ATTR_PERMISSIONS, ["bad_perm_value"]),
 		(
 			LOCAL_ATTR_COUNTRY,
 			"Some Country That Does Not Exist",

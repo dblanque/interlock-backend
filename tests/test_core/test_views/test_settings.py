@@ -1,6 +1,7 @@
 ########################### Standard Pytest Imports ############################
 import pytest
 from pytest_mock import MockerFixture
+
 ################################################################################
 from django.urls import reverse
 from core.models.ldap_settings import LDAPPreset, LDAPSetting, LDAP_SETTING_MAP
@@ -37,6 +38,7 @@ from tests.test_core.conftest import ConnectorFactory
 from interlock_backend.settings import DEFAULT_SUPERUSER_USERNAME
 from interlock_backend.encrypt import aes_decrypt, aes_encrypt
 
+
 class LdapPresetFactory(Protocol):
 	def __call__(
 		self,
@@ -45,9 +47,11 @@ class LdapPresetFactory(Protocol):
 		active=False,
 	) -> LDAPPreset: ...
 
+
 @pytest.fixture(autouse=True)
 def f_settings_mixin_patch(mocker: MockerFixture):
 	mocker.patch.object(SettingsViewMixin, "resync_settings")
+
 
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector: ConnectorFactory):
@@ -55,29 +59,37 @@ def f_ldap_connector(g_ldap_connector: ConnectorFactory):
 		patch_path="core.views.mixins.ldap_settings.LDAPConnector"
 	)
 
+
 @pytest.fixture
 def fc_ldap_preset() -> LdapPresetFactory:
 	"""Fixture creating LDAP preset in the database"""
+
 	def maker(**kwargs):
 		return LDAPPreset.objects.create(
 			name=kwargs.pop(LOCAL_ATTR_NAME, "test_preset"),
 			label=kwargs.pop(LOCAL_ATTR_LABEL, "Test Preset"),
 			active=kwargs.pop(LOCAL_ATTR_ACTIVE, False),
 		)
+
 	return maker
+
 
 @pytest.fixture
 def f_default_ilck_settings():
 	from core.setup.interlock_setting import create_default_interlock_settings
+
 	create_default_interlock_settings()
+
 
 @pytest.fixture
 def f_default_superadmin(user_factory: UserFactory):
 	return user_factory(username=DEFAULT_SUPERUSER_USERNAME, email=None)
 
+
 @pytest.fixture
 def f_log_mixin(mocker: MockerFixture):
 	return mocker.patch("core.views.ldap_settings.DBLogMixin")
+
 
 class TestList:
 	endpoint = reverse("settings-list")
@@ -91,10 +103,12 @@ class TestList:
 		f_log_mixin,
 	):
 		f_preset_01 = fc_ldap_preset(
-			name="test_preset_01", label="Test Preset 01", active=True)
+			name="test_preset_01", label="Test Preset 01", active=True
+		)
 		f_preset_02 = fc_ldap_preset(
-			name="test_preset_02", label="Test Preset 02")
-		
+			name="test_preset_02", label="Test Preset 02"
+		)
+
 		response: Response = admin_user_client.get(self.endpoint)
 		response_data: dict = response.data
 
@@ -109,6 +123,7 @@ class TestList:
 		assert response_data["presets"][1]["id"] == f_preset_02.id
 		assert response_data["active_preset"] == f_preset_01.id
 
+
 class TestFetch:
 	endpoint = reverse("settings-fetch", args=(1,))
 
@@ -121,7 +136,7 @@ class TestFetch:
 		ids=[
 			"With local superadmin",
 			"Without local superadmin",
-		]
+		],
 	)
 	def test_success(
 		self,
@@ -135,14 +150,16 @@ class TestFetch:
 		f_log_mixin,
 	):
 		if f_default_superadmin.deleted != (not superadmin_enabled):
-			f_default_superadmin.deleted = (not f_default_superadmin.deleted)
+			f_default_superadmin.deleted = not f_default_superadmin.deleted
 			f_default_superadmin.save()
 			f_default_superadmin.refresh_from_db()
 
 		f_preset_01 = fc_ldap_preset(
-			name="test_preset_01", label="Test Preset 01", active=True)
+			name="test_preset_01", label="Test Preset 01", active=True
+		)
 		f_preset_02 = fc_ldap_preset(
-			name="test_preset_02", label="Test Preset 02")
+			name="test_preset_02", label="Test Preset 02"
+		)
 
 		response: Response = admin_user_client.get(self.endpoint)
 		response_data: dict = response.data
@@ -157,9 +174,13 @@ class TestFetch:
 		assert "settings" in response_data
 		assert "local" in response_data["settings"]
 		assert "ldap" in response_data["settings"]
-		assert response_data["settings"]["ldap"]["DEFAULT_ADMIN_ENABLED"] == superadmin_enabled
+		assert (
+			response_data["settings"]["ldap"]["DEFAULT_ADMIN_ENABLED"]
+			== superadmin_enabled
+		)
 		assert isinstance(response_data["settings"]["local"], dict)
 		assert isinstance(response_data["settings"]["ldap"], dict)
+
 
 class TestPresetCreate:
 	endpoint = reverse("settings-preset-create")
@@ -180,9 +201,7 @@ class TestPresetCreate:
 	):
 		response: Response = admin_user_client.post(
 			self.endpoint,
-			data={
-				LOCAL_ATTR_LABEL: label
-			},
+			data={LOCAL_ATTR_LABEL: label},
 			format="json",
 		)
 		assert response.status_code == status.HTTP_200_OK
@@ -196,8 +215,8 @@ class TestPresetCreate:
 		(
 			"@($&ASBL)",
 			False,
-			{"a":"dict"},
-			["a","list"],
+			{"a": "dict"},
+			["a", "list"],
 		),
 	)
 	def test_raises_serializer_exc(
@@ -207,13 +226,12 @@ class TestPresetCreate:
 	):
 		response: Response = admin_user_client.post(
 			self.endpoint,
-			data={
-				LOCAL_ATTR_LABEL: label
-			},
+			data={LOCAL_ATTR_LABEL: label},
 			format="json",
 		)
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert LDAPPreset.objects.count() == 0
+
 
 class TestPresetDelete:
 	endpoint = reverse("settings-preset-delete")
@@ -237,6 +255,7 @@ class TestPresetDelete:
 
 		assert response.status_code == status.HTTP_200_OK
 		assert LDAPPreset.objects.filter(name=m_preset_name).count() == 0
+
 
 class TestPresetEnable:
 	endpoint = reverse("settings-preset-enable")
@@ -264,6 +283,7 @@ class TestPresetEnable:
 		assert LDAPPreset.objects.filter(active=True).count() == 1
 		assert LDAPPreset.objects.get(active=True) == m_preset
 
+
 class TestPresetRename:
 	endpoint = reverse("settings-preset-rename")
 
@@ -281,13 +301,14 @@ class TestPresetRename:
 
 		response: Response = admin_user_client.post(
 			self.endpoint,
-			data={LOCAL_ATTR_ID: m_preset.id, LOCAL_ATTR_LABEL: "New Name"}
+			data={LOCAL_ATTR_ID: m_preset.id, LOCAL_ATTR_LABEL: "New Name"},
 		)
 		assert response.status_code == status.HTTP_200_OK
 
 		m_preset.refresh_from_db()
 		assert m_preset.name == "new_name"
 		assert m_preset.label == "New Name"
+
 
 class TestSave:
 	endpoint = reverse("settings-save")
@@ -297,9 +318,9 @@ class TestSave:
 			self.endpoint,
 			data={
 				"preset": {},
-				"settings":{},
+				"settings": {},
 			},
-			format="json"
+			format="json",
 		)
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert response.data.get("code") == "data_key_missing"
@@ -310,12 +331,12 @@ class TestSave:
 			self.endpoint,
 			data={
 				"preset": {"id": 999},
-				"settings":{
+				"settings": {
 					"local": {},
 					"ldap": {},
 				},
 			},
-			format="json"
+			format="json",
 		)
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert response.data.get("code") == "setting_preset_not_exists"
@@ -329,40 +350,63 @@ class TestSave:
 			(K_LDAP_LOG_READ, (not defaults.LDAP_LOG_READ), False),
 			(K_LDAP_LOG_UPDATE, (not defaults.LDAP_LOG_UPDATE), False),
 			(K_LDAP_LOG_DELETE, (not defaults.LDAP_LOG_DELETE), False),
-			(K_LDAP_LOG_OPEN_CONNECTION, (not defaults.LDAP_LOG_OPEN_CONNECTION), False),
-			(K_LDAP_LOG_CLOSE_CONNECTION, (not defaults.LDAP_LOG_CLOSE_CONNECTION), False),
+			(
+				K_LDAP_LOG_OPEN_CONNECTION,
+				(not defaults.LDAP_LOG_OPEN_CONNECTION),
+				False,
+			),
+			(
+				K_LDAP_LOG_CLOSE_CONNECTION,
+				(not defaults.LDAP_LOG_CLOSE_CONNECTION),
+				False,
+			),
 			(K_LDAP_LOG_LOGIN, (not defaults.LDAP_LOG_LOGIN), False),
 			(K_LDAP_LOG_LOGOUT, (not defaults.LDAP_LOG_LOGOUT), False),
 			(K_LDAP_DNS_LEGACY, (not defaults.LDAP_DNS_LEGACY), False),
 			(K_LDAP_AUTH_CONNECTION_USER_DN, "mock_dn", False),
 			(K_LDAP_AUTH_CONNECTION_USERNAME, "mock_user", False),
 			(K_LDAP_AUTH_CONNECTION_PASSWORD, "mock_password", False),
-			(K_EXCLUDE_COMPUTER_ACCOUNTS, (not defaults.EXCLUDE_COMPUTER_ACCOUNTS), False),
+			(
+				K_EXCLUDE_COMPUTER_ACCOUNTS,
+				(not defaults.EXCLUDE_COMPUTER_ACCOUNTS),
+				False,
+			),
 			(K_ADMIN_GROUP_TO_SEARCH, "mock_group_to_search", False),
 			(K_LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN, "EXMPLORG", False),
 			(K_LDAP_DOMAIN, "example.org", False),
 			(K_LDAP_AUTH_URL, ["ldaps://127.1.1.1"], False),
-			(K_LDAP_FIELD_MAP, {"some":"dict"}, False),
-
+			(K_LDAP_FIELD_MAP, {"some": "dict"}, False),
 			# Deleting overrides
 			(K_LDAP_LOG_CREATE, (not defaults.LDAP_LOG_CREATE), True),
 			(K_LDAP_LOG_READ, (not defaults.LDAP_LOG_READ), True),
 			(K_LDAP_LOG_UPDATE, (not defaults.LDAP_LOG_UPDATE), True),
 			(K_LDAP_LOG_DELETE, (not defaults.LDAP_LOG_DELETE), True),
-			(K_LDAP_LOG_OPEN_CONNECTION, (not defaults.LDAP_LOG_OPEN_CONNECTION), True),
-			(K_LDAP_LOG_CLOSE_CONNECTION, (not defaults.LDAP_LOG_CLOSE_CONNECTION), True),
+			(
+				K_LDAP_LOG_OPEN_CONNECTION,
+				(not defaults.LDAP_LOG_OPEN_CONNECTION),
+				True,
+			),
+			(
+				K_LDAP_LOG_CLOSE_CONNECTION,
+				(not defaults.LDAP_LOG_CLOSE_CONNECTION),
+				True,
+			),
 			(K_LDAP_LOG_LOGIN, (not defaults.LDAP_LOG_LOGIN), True),
 			(K_LDAP_LOG_LOGOUT, (not defaults.LDAP_LOG_LOGOUT), True),
 			(K_LDAP_DNS_LEGACY, (not defaults.LDAP_DNS_LEGACY), True),
 			(K_LDAP_AUTH_CONNECTION_USER_DN, "mock_dn", True),
 			(K_LDAP_AUTH_CONNECTION_USERNAME, "mock_user", True),
 			(K_LDAP_AUTH_CONNECTION_PASSWORD, "mock_password", True),
-			(K_EXCLUDE_COMPUTER_ACCOUNTS, (not defaults.EXCLUDE_COMPUTER_ACCOUNTS), True),
+			(
+				K_EXCLUDE_COMPUTER_ACCOUNTS,
+				(not defaults.EXCLUDE_COMPUTER_ACCOUNTS),
+				True,
+			),
 			(K_ADMIN_GROUP_TO_SEARCH, "mock_group_to_search", True),
 			(K_LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN, "EXMPLORG", True),
 			(K_LDAP_DOMAIN, "example.org", True),
 			(K_LDAP_AUTH_URL, ["ldaps://127.1.1.1"], True),
-			(K_LDAP_FIELD_MAP, {"some":"dict"}, False),
+			(K_LDAP_FIELD_MAP, {"some": "dict"}, False),
 		),
 	)
 	def test_success_adding_ldap_override(
@@ -398,7 +442,7 @@ class TestSave:
 			self.endpoint,
 			data={
 				"preset": {"id": ldap_preset.id},
-				"settings":{
+				"settings": {
 					"local": {},
 					"ldap": {setting_key: {LOCAL_ATTR_VALUE: m_value}},
 				},
@@ -427,23 +471,65 @@ class TestSave:
 		"setting_key, setting_value",
 		(
 			# Booleans with wrong types
-			(K_LDAP_LOG_CREATE, "string",),
-			(K_LDAP_LOG_READ, "string",),
-			(K_LDAP_LOG_UPDATE, "string",),
-			(K_LDAP_LOG_DELETE, "string",),
-			(K_LDAP_LOG_OPEN_CONNECTION, "string",),
-			(K_LDAP_LOG_CLOSE_CONNECTION, "string",),
-			(K_LDAP_LOG_LOGIN, "string",),
-			(K_LDAP_LOG_LOGOUT, "string",),
-			(K_LDAP_DNS_LEGACY, "string",),
-			(K_EXCLUDE_COMPUTER_ACCOUNTS, "string",),
+			(
+				K_LDAP_LOG_CREATE,
+				"string",
+			),
+			(
+				K_LDAP_LOG_READ,
+				"string",
+			),
+			(
+				K_LDAP_LOG_UPDATE,
+				"string",
+			),
+			(
+				K_LDAP_LOG_DELETE,
+				"string",
+			),
+			(
+				K_LDAP_LOG_OPEN_CONNECTION,
+				"string",
+			),
+			(
+				K_LDAP_LOG_CLOSE_CONNECTION,
+				"string",
+			),
+			(
+				K_LDAP_LOG_LOGIN,
+				"string",
+			),
+			(
+				K_LDAP_LOG_LOGOUT,
+				"string",
+			),
+			(
+				K_LDAP_DNS_LEGACY,
+				"string",
+			),
+			(
+				K_EXCLUDE_COMPUTER_ACCOUNTS,
+				"string",
+			),
 			# Strings with wrong types
 			(K_LDAP_AUTH_CONNECTION_USER_DN, False),
-			(K_LDAP_AUTH_CONNECTION_USERNAME, None,),
-			(K_LDAP_AUTH_CONNECTION_PASSWORD, ["list"],),
-			(K_ADMIN_GROUP_TO_SEARCH, {"a":"dict"},),
+			(
+				K_LDAP_AUTH_CONNECTION_USERNAME,
+				None,
+			),
+			(
+				K_LDAP_AUTH_CONNECTION_PASSWORD,
+				["list"],
+			),
+			(
+				K_ADMIN_GROUP_TO_SEARCH,
+				{"a": "dict"},
+			),
 			# List with wrong type
-			(K_LDAP_AUTH_URL, "ldaps://127.1.1.1",),
+			(
+				K_LDAP_AUTH_URL,
+				"ldaps://127.1.1.1",
+			),
 		),
 	)
 	def test_raises_serializer_error(
@@ -458,7 +544,7 @@ class TestSave:
 			self.endpoint,
 			data={
 				"preset": {"id": ldap_preset.id},
-				"settings":{
+				"settings": {
 					"local": {},
 					"ldap": {setting_key: {LOCAL_ATTR_VALUE: setting_value}},
 				},
@@ -493,7 +579,7 @@ class TestSave:
 			self.endpoint,
 			data={
 				"preset": {"id": ldap_preset.id},
-				"settings":{
+				"settings": {
 					"local": {setting_key: {LOCAL_ATTR_VALUE: setting_value}},
 					"ldap": {},
 				},
@@ -529,7 +615,7 @@ class TestSave:
 			self.endpoint,
 			data={
 				"preset": {"id": ldap_preset.id},
-				"settings":{
+				"settings": {
 					"DEFAULT_ADMIN_ENABLED": m_status,
 					"DEFAULT_ADMIN_PWD": m_password,
 					"local": {},

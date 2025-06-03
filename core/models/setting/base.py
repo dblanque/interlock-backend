@@ -12,7 +12,11 @@ from typing import Sequence, Type, TypeVar, overload
 from copy import deepcopy
 from rest_framework.serializers import ValidationError
 
-T = TypeVar('T', bound="BaseSetting")  # Replace 'YourBaseClass' with the actual base class
+T = TypeVar(
+	"T", bound="BaseSetting"
+)  # Replace 'YourBaseClass' with the actual base class
+
+
 def add_fields_from_dict(
 	fields_dict: dict,
 	validators_dict: dict = None,
@@ -111,14 +115,10 @@ class BaseSetting(BaseModel):
 			raise ValidationError(
 				"%s must be of type %s" % (choice_field, expected_type)
 			)
-		
+
 	@overload
 	def save(
-		self,
-		force_insert = ...,
-		force_update = ...,
-		using = ...,
-		update_fields = ...
+		self, force_insert=..., force_update=..., using=..., update_fields=...
 	): ...
 
 	def save(self, **kwargs):

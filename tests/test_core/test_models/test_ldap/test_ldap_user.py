@@ -421,6 +421,7 @@ class TestPropertyIsEnabled:
 
 		assert m_ldap_user.is_enabled == expected
 
+
 class TestPropertyCanChangePassword:
 	def test_raises_no_entry(
 		self,

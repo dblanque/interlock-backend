@@ -1,8 +1,10 @@
 ########################### Standard Pytest Imports ############################
 from pytest_mock import MockerFixture
+
 ################################################################################
 from core.auth.local import EmailAuthBackend
 from django.core.exceptions import ObjectDoesNotExist
+
 
 class TestEmailAuthBackend:
 	auth_instance = EmailAuthBackend()
@@ -13,8 +15,7 @@ class TestEmailAuthBackend:
 			m_user_cls = mocker.Mock()
 			m_user_cls.objects.get.return_value = m_user
 			mocker.patch(
-				"core.auth.local.get_user_model",
-				return_value=m_user_cls
+				"core.auth.local.get_user_model", return_value=m_user_cls
 			)
 			m_user.check_password.return_value = True
 			result = TestEmailAuthBackend.auth_instance.authenticate(
@@ -30,8 +31,7 @@ class TestEmailAuthBackend:
 			m_user_cls = mocker.Mock()
 			m_user_cls.objects.get.return_value = m_user
 			mocker.patch(
-				"core.auth.local.get_user_model",
-				return_value=m_user_cls
+				"core.auth.local.get_user_model", return_value=m_user_cls
 			)
 			m_user.check_password.return_value = False
 			result = TestEmailAuthBackend.auth_instance.authenticate(
@@ -48,8 +48,7 @@ class TestEmailAuthBackend:
 			m_user_cls.DoesNotExist = ObjectDoesNotExist
 			m_user_cls.objects.get.side_effect = m_user_cls.DoesNotExist
 			mocker.patch(
-				"core.auth.local.get_user_model",
-				return_value=m_user_cls
+				"core.auth.local.get_user_model", return_value=m_user_cls
 			)
 			m_user.check_password.return_value = False
 			result = TestEmailAuthBackend.auth_instance.authenticate(
@@ -66,8 +65,7 @@ class TestEmailAuthBackend:
 			m_user_cls = mocker.Mock()
 			m_user_cls.objects.get.return_value = m_user
 			mocker.patch(
-				"core.auth.local.get_user_model",
-				return_value=m_user_cls
+				"core.auth.local.get_user_model", return_value=m_user_cls
 			)
 			result = TestEmailAuthBackend.auth_instance.get_user(1)
 			m_user_cls.objects.get.assert_called_once_with(pk=1)
@@ -79,8 +77,7 @@ class TestEmailAuthBackend:
 			m_user_cls.DoesNotExist = ObjectDoesNotExist
 			m_user_cls.objects.get.side_effect = m_user_cls.DoesNotExist
 			mocker.patch(
-				"core.auth.local.get_user_model",
-				return_value=m_user_cls
+				"core.auth.local.get_user_model", return_value=m_user_cls
 			)
 			result = TestEmailAuthBackend.auth_instance.get_user(1)
 			m_user_cls.objects.get.assert_called_once_with(pk=1)

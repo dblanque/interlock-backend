@@ -2,6 +2,7 @@
 import pytest
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture
+
 ################################################################################
 from rest_framework.response import Response
 from rest_framework import status
@@ -40,18 +41,20 @@ from core.models.choices.log import (
 from tests.test_core.type_hints import LDAPConnectorMock
 from interlock_backend.encrypt import aes_encrypt, aes_decrypt
 
+
 @pytest.fixture(autouse=True)
 def f_log_mixin(mocker: MockerFixture):
 	m_log_mixin = mocker.Mock(name="m_log_mixin")
 	mocker.patch("core.views.ldap.user.DBLogMixin", m_log_mixin)
 	return m_log_mixin
 
+
 @pytest.fixture(autouse=True)
 def f_logger(mocker: MockerFixture):
 	return mocker.patch(
-		"core.views.ldap.user.logger",
-		mocker.Mock(name="m_logger")
+		"core.views.ldap.user.logger", mocker.Mock(name="m_logger")
 	)
+
 
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector) -> LDAPConnectorMock:
@@ -81,10 +84,7 @@ class TestList:
 		# Mock LDAP connection and data
 		m_ldap_users = {
 			"users": [
-				{
-					LOCAL_ATTR_USERNAME: "testuser",
-					LOCAL_ATTR_IS_ENABLED: True
-				},
+				{LOCAL_ATTR_USERNAME: "testuser", LOCAL_ATTR_IS_ENABLED: True},
 			],
 			"headers": [LOCAL_ATTR_USERNAME, LOCAL_ATTR_IS_ENABLED],
 		}
@@ -251,9 +251,7 @@ class TestInsert:
 				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_EMAIL]
 			),
 		)
-		m_ldap_user_insert.assert_called_once_with(
-			data=expected_m_data_call
-		)
+		m_ldap_user_insert.assert_called_once_with(data=expected_m_data_call)
 		m_ldap_set_password.assert_called_once_with(
 			user_dn=m_distinguished_name,
 			user_pwd_new=m_data.get(LOCAL_ATTR_PASSWORD),
@@ -344,8 +342,10 @@ class TestInsert:
 
 		# Asserts
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
-		assert response.data.get("errors")\
-			.get(LOCAL_ATTR_PASSWORD_CONFIRM)[0] == "Passwords do not match"
+		assert (
+			response.data.get("errors").get(LOCAL_ATTR_PASSWORD_CONFIRM)[0]
+			== "Passwords do not match"
+		)
 		m_ldap_user_exists.assert_not_called()
 		m_ldap_user_insert.assert_not_called()
 		m_ldap_set_password.assert_not_called()
@@ -794,7 +794,9 @@ class TestChangePassword:
 			username=m_data[LOCAL_ATTR_USERNAME],
 			return_exception=False,
 		)
-		m_get_user_object.assert_called_once_with(username=m_data[LOCAL_ATTR_USERNAME])
+		m_get_user_object.assert_called_once_with(
+			username=m_data[LOCAL_ATTR_USERNAME]
+		)
 		m_ldap_set_password.assert_called_once_with(
 			user_dn=m_user_entry.entry_dn,
 			user_pwd_new=m_data[LOCAL_ATTR_PASSWORD],
@@ -914,13 +916,13 @@ class TestUnlock:
 @pytest.fixture
 def f_bulk_insert_data(f_runtime_settings: RuntimeSettingsSingleton):
 	result = {
-		"headers":[
+		"headers": [
 			LOCAL_ATTR_USERNAME,
 			LOCAL_ATTR_EMAIL,
 			LOCAL_ATTR_FIRST_NAME,
 			LOCAL_ATTR_LAST_NAME,
 		],
-		"users":[
+		"users": [
 			# Should Succeed
 			{
 				LOCAL_ATTR_USERNAME: "testuser1",
@@ -951,17 +953,19 @@ def f_bulk_insert_data(f_runtime_settings: RuntimeSettingsSingleton):
 			},
 		],
 		LOCAL_ATTR_PATH: f"OU=Test,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
-		"mapping":{
-			h: h for h in (
+		"mapping": {
+			h: h
+			for h in (
 				LOCAL_ATTR_USERNAME,
 				LOCAL_ATTR_EMAIL,
 				LOCAL_ATTR_FIRST_NAME,
 				LOCAL_ATTR_LAST_NAME,
 			)
 		},
-		"placeholder_password":"mock_password",
+		"placeholder_password": "mock_password",
 	}
 	return result
+
 
 class TestBulkInsert:
 	endpoint = "/api/ldap/users/bulk_insert/"
@@ -972,15 +976,10 @@ class TestBulkInsert:
 			"headers",
 			"users",
 		),
-		ids=[
-			"Raises on missing headers key",
-			"Raises on missing users key"
-		]
+		ids=["Raises on missing headers key", "Raises on missing users key"],
 	)
 	def test_raises_missing_data_key(
-		self,
-		admin_user_client: APIClient,
-		missing_key: str
+		self, admin_user_client: APIClient, missing_key: str
 	):
 		bad_data = {
 			"headers": "some_value",
@@ -1028,7 +1027,7 @@ class TestBulkInsert:
 				LOCAL_ATTR_LAST_NAME: "User 4",
 			},
 		)
-		exists_results = [ u.get("exists", False) for u in m_users ]
+		exists_results = [u.get("exists", False) for u in m_users]
 		m_exists = mocker.patch.object(
 			LDAPUserViewSet,
 			"ldap_user_exists",
@@ -1036,10 +1035,12 @@ class TestBulkInsert:
 		)
 		insert_results = []
 		for u in m_users:
-			if u.get("exists", False): continue
+			if u.get("exists", False):
+				continue
 			if not u.get("fails_insert", False):
 				insert_results.append(
-					"CN=%s,%s" % (
+					"CN=%s,%s"
+					% (
 						u.get(LOCAL_ATTR_USERNAME),
 						f_bulk_insert_data.get(LOCAL_ATTR_PATH),
 					)
@@ -1049,12 +1050,14 @@ class TestBulkInsert:
 		m_insert = mocker.patch.object(
 			LDAPUserViewSet,
 			"ldap_user_insert",
-			side_effect=tuple(insert_results)
+			side_effect=tuple(insert_results),
 		)
 		password_results = []
 		for u in m_users:
-			if u.get("exists", False): continue
-			if u.get("fails_insert", False): continue
+			if u.get("exists", False):
+				continue
+			if u.get("fails_insert", False):
+				continue
 			if not u.get("fails_password", False):
 				password_results.append(None)
 			else:
@@ -1062,7 +1065,7 @@ class TestBulkInsert:
 		m_set_password = mocker.patch.object(
 			LDAPUserViewSet,
 			"ldap_set_password",
-			side_effect=tuple(password_results)
+			side_effect=tuple(password_results),
 		)
 		for _k in _pop_keys:
 			for u in m_users:
@@ -1090,9 +1093,10 @@ class TestBulkInsert:
 			return_exception=False,
 		)
 		m_insert.assert_any_call(
-			data=m_users[0] | {
+			data=m_users[0]
+			| {
 				LOCAL_ATTR_PATH: f"OU=Test,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
-				LOCAL_ATTR_PERMISSIONS: [LDAP_UF_NORMAL_ACCOUNT]
+				LOCAL_ATTR_PERMISSIONS: [LDAP_UF_NORMAL_ACCOUNT],
 			},
 			exclude_keys=m_expected_exclude_keys,
 			return_exception=False,
@@ -1109,9 +1113,10 @@ class TestBulkInsert:
 			return_exception=False,
 		)
 		m_insert.assert_any_call(
-			data=m_users[3] | {
+			data=m_users[3]
+			| {
 				LOCAL_ATTR_PATH: f"OU=Test,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
-				LOCAL_ATTR_PERMISSIONS: [LDAP_UF_NORMAL_ACCOUNT]
+				LOCAL_ATTR_PERMISSIONS: [LDAP_UF_NORMAL_ACCOUNT],
 			},
 			exclude_keys=m_expected_exclude_keys,
 			return_exception=False,
@@ -1144,22 +1149,19 @@ class TestBulkInsert:
 		m_users: list[dict] = f_bulk_insert_data.get("users")
 		f_bulk_insert_data["users"] = [m_users[0]]
 		m_exists = mocker.patch.object(
-			LDAPUserViewSet,
-			"ldap_user_exists",
-			return_value=False
+			LDAPUserViewSet, "ldap_user_exists", return_value=False
 		)
 		m_insert = mocker.patch.object(
 			LDAPUserViewSet,
 			"ldap_user_insert",
-			return_value="CN=%s,%s" % (
+			return_value="CN=%s,%s"
+			% (
 				m_users[0].get(LOCAL_ATTR_USERNAME),
 				f_bulk_insert_data.get(LOCAL_ATTR_PATH),
-			)
+			),
 		)
 		m_set_password = mocker.patch.object(
-			LDAPUserViewSet,
-			"ldap_set_password",
-			return_value=None
+			LDAPUserViewSet, "ldap_set_password", return_value=None
 		)
 
 		response: Response = admin_user_client.post(
@@ -1181,9 +1183,13 @@ class TestBulkInsert:
 			return_exception=False,
 		)
 		m_insert.assert_any_call(
-			data=m_users[0] | {
+			data=m_users[0]
+			| {
 				LOCAL_ATTR_PATH: f"OU=Test,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
-				LOCAL_ATTR_PERMISSIONS: [LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_ACCOUNT_DISABLE]
+				LOCAL_ATTR_PERMISSIONS: [
+					LDAP_UF_NORMAL_ACCOUNT,
+					LDAP_UF_ACCOUNT_DISABLE,
+				],
 			},
 			exclude_keys=m_expected_exclude_keys,
 			return_exception=False,
@@ -1219,22 +1225,19 @@ class TestBulkInsert:
 			}
 		]
 		m_exists = mocker.patch.object(
-			LDAPUserViewSet,
-			"ldap_user_exists",
-			return_value=False
+			LDAPUserViewSet, "ldap_user_exists", return_value=False
 		)
 		m_insert = mocker.patch.object(
 			LDAPUserViewSet,
 			"ldap_user_insert",
-			return_value="CN=%s,%s" % (
+			return_value="CN=%s,%s"
+			% (
 				m_expected_user_dict[LOCAL_ATTR_USERNAME],
 				f_bulk_insert_data.get(LOCAL_ATTR_PATH),
-			)
+			),
 		)
 		m_set_password = mocker.patch.object(
-			LDAPUserViewSet,
-			"ldap_set_password",
-			return_value=None
+			LDAPUserViewSet, "ldap_set_password", return_value=None
 		)
 
 		response: Response = admin_user_client.post(
@@ -1256,15 +1259,19 @@ class TestBulkInsert:
 			return_exception=False,
 		)
 		m_insert.assert_any_call(
-			data=m_expected_user_dict | {
+			data=m_expected_user_dict
+			| {
 				LOCAL_ATTR_PATH: f"OU=Test,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
-				LOCAL_ATTR_PERMISSIONS: [LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_ACCOUNT_DISABLE]
+				LOCAL_ATTR_PERMISSIONS: [
+					LDAP_UF_NORMAL_ACCOUNT,
+					LDAP_UF_ACCOUNT_DISABLE,
+				],
 			},
 			exclude_keys=m_expected_exclude_keys,
 			return_exception=False,
 		)
 		m_set_password.assert_not_called()
-	
+
 	def test_with_per_user_password(
 		self,
 		admin_user_client: APIClient,
@@ -1273,7 +1280,9 @@ class TestBulkInsert:
 		f_runtime_settings: RuntimeSettingsSingleton,
 	):
 		f_bulk_insert_data.pop("placeholder_password", None)
-		f_bulk_insert_data["headers"] = f_bulk_insert_data["headers"] + [LOCAL_ATTR_PASSWORD]
+		f_bulk_insert_data["headers"] = f_bulk_insert_data["headers"] + [
+			LOCAL_ATTR_PASSWORD
+		]
 		m_expected_exclude_keys = (
 			LOCAL_ATTR_PASSWORD,
 			LOCAL_ATTR_DN,  # We don't want any front-end generated DN
@@ -1285,23 +1294,17 @@ class TestBulkInsert:
 		f_bulk_insert_data["users"] = m_users
 
 		m_exists = mocker.patch.object(
-			LDAPUserViewSet,
-			"ldap_user_exists",
-			return_value=False
+			LDAPUserViewSet, "ldap_user_exists", return_value=False
 		)
 		m_user_dn = "CN=%s,%s" % (
 			m_users[0][LOCAL_ATTR_USERNAME],
 			f_bulk_insert_data.get(LOCAL_ATTR_PATH),
 		)
 		m_insert = mocker.patch.object(
-			LDAPUserViewSet,
-			"ldap_user_insert",
-			return_value=m_user_dn
+			LDAPUserViewSet, "ldap_user_insert", return_value=m_user_dn
 		)
 		m_set_password = mocker.patch.object(
-			LDAPUserViewSet,
-			"ldap_set_password",
-			return_value=None
+			LDAPUserViewSet, "ldap_set_password", return_value=None
 		)
 
 		response: Response = admin_user_client.post(
@@ -1324,7 +1327,7 @@ class TestBulkInsert:
 		)
 		expected_user_data = m_users[0] | {
 			LOCAL_ATTR_PATH: f"OU=Test,{f_runtime_settings.LDAP_AUTH_SEARCH_BASE}",
-			LOCAL_ATTR_PERMISSIONS: [LDAP_UF_NORMAL_ACCOUNT]
+			LOCAL_ATTR_PERMISSIONS: [LDAP_UF_NORMAL_ACCOUNT],
 		}
 		del expected_user_data[LOCAL_ATTR_PASSWORD]
 		m_insert.assert_any_call(
@@ -1338,15 +1341,17 @@ class TestBulkInsert:
 			set_by_admin=True,
 		)
 
+
 @pytest.fixture
 def f_bulk_update_data():
 	return {
-		"users":["testuser1", "testuser2"],
+		"users": ["testuser1", "testuser2"],
 		LOCAL_ATTR_PERMISSIONS: [LDAP_UF_NORMAL_ACCOUNT],
-		"values":{
+		"values": {
 			LOCAL_ATTR_COUNTRY: "Argentina",
-		}
+		},
 	}
+
 
 class TestBulkUpdate:
 	endpoint = "/api/ldap/users/bulk_update/"
@@ -1359,9 +1364,11 @@ class TestBulkUpdate:
 	):
 		expected_user_count = len(f_bulk_update_data["users"])
 		m_exists = mocker.patch.object(
-			LDAPUserViewSet, "ldap_user_exists", return_value=True)
+			LDAPUserViewSet, "ldap_user_exists", return_value=True
+		)
 		m_update = mocker.patch.object(
-			LDAPUserViewSet, "ldap_user_update", return_value=True)
+			LDAPUserViewSet, "ldap_user_update", return_value=True
+		)
 		response: Response = admin_user_client.post(
 			self.endpoint,
 			data=f_bulk_update_data,
@@ -1378,11 +1385,15 @@ class TestBulkUpdate:
 				username=u,
 				return_exception=False,
 			)
-			m_update.assert_any_call(data={
-				LOCAL_ATTR_USERNAME: u,
-				LOCAL_ATTR_PERMISSIONS: f_bulk_update_data[LOCAL_ATTR_PERMISSIONS],
-				LOCAL_ATTR_COUNTRY: "Argentina",
-			})
+			m_update.assert_any_call(
+				data={
+					LOCAL_ATTR_USERNAME: u,
+					LOCAL_ATTR_PERMISSIONS: f_bulk_update_data[
+						LOCAL_ATTR_PERMISSIONS
+					],
+					LOCAL_ATTR_COUNTRY: "Argentina",
+				}
+			)
 
 	def test_not_exists_raises(
 		self,
@@ -1391,9 +1402,11 @@ class TestBulkUpdate:
 		mocker: MockerFixture,
 	):
 		m_exists = mocker.patch.object(
-			LDAPUserViewSet, "ldap_user_exists", return_value=False)
+			LDAPUserViewSet, "ldap_user_exists", return_value=False
+		)
 		m_update = mocker.patch.object(
-			LDAPUserViewSet, "ldap_user_update", return_value=None)
+			LDAPUserViewSet, "ldap_user_update", return_value=None
+		)
 		response: Response = admin_user_client.post(
 			self.endpoint,
 			data=f_bulk_update_data,
@@ -1415,9 +1428,11 @@ class TestBulkUpdate:
 			LOCAL_ATTR_COUNTRY: "Some Inexistent Country"
 		}
 		m_exists = mocker.patch.object(
-			LDAPUserViewSet, "ldap_user_exists", return_value=True)
+			LDAPUserViewSet, "ldap_user_exists", return_value=True
+		)
 		m_update = mocker.patch.object(
-			LDAPUserViewSet, "ldap_user_update", return_value=None)
+			LDAPUserViewSet, "ldap_user_update", return_value=None
+		)
 		response: Response = admin_user_client.post(
 			self.endpoint,
 			data=f_bulk_update_data,
@@ -1441,9 +1456,11 @@ class TestBulkUpdate:
 	):
 		user_count = len(f_bulk_update_data["users"])
 		m_exists = mocker.patch.object(
-			LDAPUserViewSet, "ldap_user_exists", return_value=True)
+			LDAPUserViewSet, "ldap_user_exists", return_value=True
+		)
 		m_update = mocker.patch.object(
-			LDAPUserViewSet, "ldap_user_update", side_effect=Exception)
+			LDAPUserViewSet, "ldap_user_update", side_effect=Exception
+		)
 		response: Response = admin_user_client.post(
 			self.endpoint,
 			data=f_bulk_update_data,
@@ -1479,15 +1496,17 @@ class TestBulkUpdate:
 		m_exists.assert_not_called()
 		m_update.assert_not_called()
 
+
 @pytest.fixture
 def f_bulk_change_status_data():
 	return {
-		"users":[
-			{LOCAL_ATTR_USERNAME:"testuser1"},
-			{LOCAL_ATTR_USERNAME:"testuser2"},
+		"users": [
+			{LOCAL_ATTR_USERNAME: "testuser1"},
+			{LOCAL_ATTR_USERNAME: "testuser2"},
 		],
-		"disable": False
+		"disable": False,
 	}
+
 
 class TestBulkChangeStatus:
 	endpoint = "/api/ldap/users/bulk_change_status/"
@@ -1495,17 +1514,33 @@ class TestBulkChangeStatus:
 	@pytest.mark.parametrize(
 		"flatten_users, disable, expected",
 		(
-			(False, True, False,),
-			(False, False, True,),
-			(True, True, False,),
-			(True, False, True,),
+			(
+				False,
+				True,
+				False,
+			),
+			(
+				False,
+				False,
+				True,
+			),
+			(
+				True,
+				True,
+				False,
+			),
+			(
+				True,
+				False,
+				True,
+			),
 		),
 		ids=[
 			"User dict list, disable is True, expects enable False",
 			"User dict list, disable is False, expects enable True",
 			"Username list, disable is True, expects enable False",
 			"Username list, disable is False, expects enable True",
-		]
+		],
 	)
 	def test_success(
 		self,
@@ -1519,7 +1554,8 @@ class TestBulkChangeStatus:
 	):
 		if flatten_users:
 			f_bulk_change_status_data["users"] = [
-				u.get(LOCAL_ATTR_USERNAME) for u in f_bulk_change_status_data["users"]
+				u.get(LOCAL_ATTR_USERNAME)
+				for u in f_bulk_change_status_data["users"]
 			]
 		f_bulk_change_status_data["disable"] = disable
 		user_count = len(f_bulk_change_status_data["users"])
@@ -1529,7 +1565,7 @@ class TestBulkChangeStatus:
 			side_effect=(
 				None,
 				Exception,
-			)
+			),
 		)
 		response: Response = admin_user_client.post(
 			self.endpoint,
@@ -1555,7 +1591,8 @@ class TestBulkChangeStatus:
 	):
 		del f_bulk_change_status_data["disable"]
 		m_change_status = mocker.patch.object(
-			LDAPUserViewSet, "ldap_user_change_status")
+			LDAPUserViewSet, "ldap_user_change_status"
+		)
 		response: Response = admin_user_client.post(
 			self.endpoint,
 			data=f_bulk_change_status_data,
@@ -1569,7 +1606,7 @@ class TestBulkChangeStatus:
 		(
 			[],
 			[False],
-			{"users":[]},
+			{"users": []},
 		),
 	)
 	def test_raises_bad_request_users_not_list(
@@ -1581,7 +1618,8 @@ class TestBulkChangeStatus:
 	):
 		f_bulk_change_status_data["users"] = users
 		m_change_status = mocker.patch.object(
-			LDAPUserViewSet, "ldap_user_change_status")
+			LDAPUserViewSet, "ldap_user_change_status"
+		)
 		response: Response = admin_user_client.post(
 			self.endpoint,
 			data=f_bulk_change_status_data,
@@ -1590,12 +1628,14 @@ class TestBulkChangeStatus:
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		m_change_status.assert_not_called()
 
+
 @pytest.fixture
 def f_bulk_delete_data():
 	return [
-		{LOCAL_ATTR_USERNAME:"testuser1"},
-		{LOCAL_ATTR_USERNAME:"testuser2"},
+		{LOCAL_ATTR_USERNAME: "testuser1"},
+		{LOCAL_ATTR_USERNAME: "testuser2"},
 	]
+
 
 class TestBulkDelete:
 	endpoint = "/api/ldap/users/bulk_delete/"
@@ -1612,7 +1652,7 @@ class TestBulkDelete:
 		flatten_users: bool,
 		f_bulk_delete_data: list[dict, str],
 		admin_user_client: APIClient,
-		mocker: MockerFixture
+		mocker: MockerFixture,
 	):
 		flattened_users = [
 			u.get(LOCAL_ATTR_USERNAME) for u in f_bulk_delete_data
@@ -1627,9 +1667,8 @@ class TestBulkDelete:
 		assert response.data.get("data") == flattened_users
 		m_delete.call_count == len(flattened_users)
 		for u in f_bulk_delete_data:
-			m_delete.assert_any_call(
-				username=u.get(LOCAL_ATTR_USERNAME)
-			)
+			m_delete.assert_any_call(username=u.get(LOCAL_ATTR_USERNAME))
+
 
 class TestBulkUnlock:
 	endpoint = "/api/ldap/users/bulk_unlock/"
@@ -1647,7 +1686,7 @@ class TestBulkUnlock:
 		f_bulk_delete_data: list[dict, str],
 		f_ldap_connector: LDAPConnectorMock,
 		admin_user_client: APIClient,
-		mocker: MockerFixture
+		mocker: MockerFixture,
 	):
 		m_ldap_result = {"description": "success"}
 		f_ldap_connector.connection.result = m_ldap_result
@@ -1664,9 +1703,7 @@ class TestBulkUnlock:
 		assert response.data.get("data") == flattened_users
 		m_unlock.call_count == len(flattened_users)
 		for u in f_bulk_delete_data:
-			m_unlock.assert_any_call(
-				username=u.get(LOCAL_ATTR_USERNAME)
-			)
+			m_unlock.assert_any_call(username=u.get(LOCAL_ATTR_USERNAME))
 
 	def test_unhandled_error(
 		self,
@@ -1685,6 +1722,7 @@ class TestBulkUnlock:
 		)
 		assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 		m_unlock.call_count == len(f_bulk_delete_data)
+
 
 class TestSelfChangePassword:
 	endpoint = "/api/ldap/users/self_change_password/"
@@ -1735,18 +1773,27 @@ class TestSelfChangePassword:
 	@pytest.mark.parametrize(
 		"bad_data, expected_exc",
 		(
-			({
-				LOCAL_ATTR_PASSWORD: False,
-				LOCAL_ATTR_PASSWORD_CONFIRM: "mock_password",
-			}, "Not a valid string"),
-			({
-				LOCAL_ATTR_PASSWORD: "mock_password",
-				LOCAL_ATTR_PASSWORD_CONFIRM: None,
-			}, "may not be null"),
-			({
-				LOCAL_ATTR_PASSWORD: "some_mock_password",
-				LOCAL_ATTR_PASSWORD_CONFIRM: "mock_password_does_not_match",
-			}, "Passwords do not match"),
+			(
+				{
+					LOCAL_ATTR_PASSWORD: False,
+					LOCAL_ATTR_PASSWORD_CONFIRM: "mock_password",
+				},
+				"Not a valid string",
+			),
+			(
+				{
+					LOCAL_ATTR_PASSWORD: "mock_password",
+					LOCAL_ATTR_PASSWORD_CONFIRM: None,
+				},
+				"may not be null",
+			),
+			(
+				{
+					LOCAL_ATTR_PASSWORD: "some_mock_password",
+					LOCAL_ATTR_PASSWORD_CONFIRM: "mock_password_does_not_match",
+				},
+				"Passwords do not match",
+			),
 		),
 	)
 	def test_raises_serializer_invalid(
@@ -1787,12 +1834,12 @@ class TestSelfChangePassword:
 		m_ldap_user.exists = False
 		m_ldap_user.can_change_password = True
 		m_ldap_user_cls = mocker.patch(
-			"core.views.ldap.user.LDAPUser",
-			return_value=m_ldap_user
+			"core.views.ldap.user.LDAPUser", return_value=m_ldap_user
 		)
 		# Mock set password method
 		m_set_password = mocker.patch.object(
-			LDAPUserViewSet, "ldap_set_password")
+			LDAPUserViewSet, "ldap_set_password"
+		)
 
 		# Execution
 		response: Response = normal_user_client.post(
@@ -1813,7 +1860,7 @@ class TestSelfChangePassword:
 				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
 				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_DN],
 				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_UAC],
-			]
+			],
 		)
 		m_set_password.assert_not_called()
 		f_log_mixin.log.assert_not_called()
@@ -1837,12 +1884,12 @@ class TestSelfChangePassword:
 		m_ldap_user.exists = True
 		m_ldap_user.can_change_password = False
 		m_ldap_user_cls = mocker.patch(
-			"core.views.ldap.user.LDAPUser",
-			return_value=m_ldap_user
+			"core.views.ldap.user.LDAPUser", return_value=m_ldap_user
 		)
 		# Mock set password method
 		m_set_password = mocker.patch.object(
-			LDAPUserViewSet, "ldap_set_password")
+			LDAPUserViewSet, "ldap_set_password"
+		)
 
 		# Execution
 		response: Response = normal_user_client.post(
@@ -1863,7 +1910,7 @@ class TestSelfChangePassword:
 				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
 				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_DN],
 				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_UAC],
-			]
+			],
 		)
 		m_set_password.assert_not_called()
 		f_log_mixin.log.assert_not_called()
@@ -1896,12 +1943,12 @@ class TestSelfChangePassword:
 		m_ldap_user.exists = True
 		m_ldap_user.can_change_password = True
 		m_ldap_user_cls = mocker.patch(
-			"core.views.ldap.user.LDAPUser",
-			return_value=m_ldap_user
+			"core.views.ldap.user.LDAPUser", return_value=m_ldap_user
 		)
 		# Mock set password method
 		m_set_password = mocker.patch.object(
-			LDAPUserViewSet, "ldap_set_password")
+			LDAPUserViewSet, "ldap_set_password"
+		)
 
 		# Execution
 		response: Response = normal_user_client.post(
@@ -1922,7 +1969,7 @@ class TestSelfChangePassword:
 				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_USERNAME],
 				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_DN],
 				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_UAC],
-			]
+			],
 		)
 		m_set_password.assert_called_once_with(
 			user_dn=normal_user.distinguished_name,
@@ -1938,6 +1985,7 @@ class TestSelfChangePassword:
 			log_target=normal_user.username,
 			message=LOG_EXTRA_USER_CHANGE_PASSWORD,
 		)
+
 
 class TestSelfUpdate:
 	endpoint = "/api/ldap/users/self_update/"
@@ -1956,12 +2004,9 @@ class TestSelfUpdate:
 		(
 			{
 				LOCAL_ATTR_USERNAME: "some_other_username",
-				LOCAL_ATTR_COUNTRY: "Some Country"
+				LOCAL_ATTR_COUNTRY: "Some Country",
 			},
-			{
-				LOCAL_ATTR_DN: "some_dn",
-				LOCAL_ATTR_COUNTRY: "Some Country"
-			},
+			{LOCAL_ATTR_DN: "some_dn", LOCAL_ATTR_COUNTRY: "Some Country"},
 		),
 	)
 	def test_raises_bad_request(
@@ -1997,10 +2042,14 @@ class TestSelfUpdate:
 			LOCAL_ATTR_ADDRESS: "Some Address",
 			LOCAL_ATTR_IS_ENABLED: True,
 			LOCAL_ATTR_UAC: 1234,
-			LOCAL_ATTR_PERMISSIONS: [LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_ACCOUNT_DISABLE]
+			LOCAL_ATTR_PERMISSIONS: [
+				LDAP_UF_NORMAL_ACCOUNT,
+				LDAP_UF_ACCOUNT_DISABLE,
+			],
 		}
 		m_ldap_user_update = mocker.patch.object(
-			LDAPUserViewSet, "ldap_user_update")
+			LDAPUserViewSet, "ldap_user_update"
+		)
 
 		# Mock local django user data
 		normal_user.user_type = USER_TYPE_LDAP
@@ -2015,7 +2064,11 @@ class TestSelfUpdate:
 		# Assertions
 		assert response.status_code == status.HTTP_200_OK
 		expected_data = m_data.copy()
-		for key in (LOCAL_ATTR_IS_ENABLED, LOCAL_ATTR_UAC, LOCAL_ATTR_PERMISSIONS):
+		for key in (
+			LOCAL_ATTR_IS_ENABLED,
+			LOCAL_ATTR_UAC,
+			LOCAL_ATTR_PERMISSIONS,
+		):
 			expected_data.pop(key, None)
 		m_ldap_user_update.assert_called_once_with(
 			username=normal_user.username,
@@ -2023,6 +2076,7 @@ class TestSelfUpdate:
 		)
 		normal_user.refresh_from_db()
 		normal_user.email == m_email
+
 
 class TestSelfInfo:
 	endpoint = "/api/ldap/users/self_info/"
@@ -2085,10 +2139,8 @@ class TestSelfFetch:
 		mock_attrs = {
 			LOCAL_ATTR_FIRST_NAME: normal_user.first_name,
 			LOCAL_ATTR_LAST_NAME: normal_user.last_name,
-			LOCAL_ATTR_FULL_NAME: "%s %s" % (
-				normal_user.first_name,
-				normal_user.last_name
-			),
+			LOCAL_ATTR_FULL_NAME: "%s %s"
+			% (normal_user.first_name, normal_user.last_name),
 			LOCAL_ATTR_USERNAME: normal_user.username,
 			LOCAL_ATTR_EMAIL: normal_user.email,
 			LOCAL_ATTR_PHONE: "+5491112345678",
@@ -2101,7 +2153,8 @@ class TestSelfFetch:
 			LOCAL_ATTR_COUNTRY_ISO: 117,
 			LOCAL_ATTR_WEBSITE: "test.example.com",
 			LOCAL_ATTR_DN: normal_user.distinguished_name,
-			LOCAL_ATTR_UPN: "%s@%s" % (
+			LOCAL_ATTR_UPN: "%s@%s"
+			% (
 				normal_user.username,
 				f_runtime_settings.LDAP_DOMAIN,
 			),
@@ -2112,9 +2165,7 @@ class TestSelfFetch:
 		}
 
 		m_ldap_user_fetch = mocker.patch.object(
-			LDAPUserViewSet,
-			"ldap_user_fetch",
-			return_value=mock_attrs
+			LDAPUserViewSet, "ldap_user_fetch", return_value=mock_attrs
 		)
 
 		response: Response = normal_user_client.get(self.endpoint)
@@ -2134,7 +2185,9 @@ class TestSelfFetch:
 		normal_user_client: APIClient,
 		mocker: MockerFixture,
 	):
-		m_ldap_user_fetch = mocker.patch.object(LDAPUserViewSet, "ldap_user_fetch")
+		m_ldap_user_fetch = mocker.patch.object(
+			LDAPUserViewSet, "ldap_user_fetch"
+		)
 
 		response: Response = normal_user_client.get(self.endpoint)
 

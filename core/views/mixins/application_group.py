@@ -105,15 +105,17 @@ class ApplicationSecurityGroupViewMixin(viewsets.ViewSetMixin):
 
 		asg = self.queryset.get(id=pk)
 		if not asg.application.id == data["application"]:
-			raise BadRequest(data={
-				"detail":"Application ID does not match "+\
-				"with this Application Group"
-			})
+			raise BadRequest(
+				data={
+					"detail": "Application ID does not match "
+					+ "with this Application Group"
+				}
+			)
 
 		if "users" in data:
-			users = self.user_queryset \
-				.filter(pk__in=data["users"]) \
-				.values_list("id", flat=True)
+			users = self.user_queryset.filter(pk__in=data["users"]).values_list(
+				"id", flat=True
+			)
 			data["users"] = users
 		else:
 			data["users"] = asg.users.values_list("id", flat=True)

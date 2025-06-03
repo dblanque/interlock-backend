@@ -2,6 +2,7 @@
 import pytest
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
+
 ################################################################################
 from django.urls import reverse
 from tests.test_core.conftest import (
@@ -17,6 +18,7 @@ from rest_framework import status
 from core.models.interlock_settings import InterlockSetting
 from core.models.user import USER_TYPE_LDAP, User
 
+
 @pytest.fixture
 def f_connector(mocker: MockerFixture, g_ldap_connector: ConnectorFactory):
 	return g_ldap_connector(
@@ -25,14 +27,19 @@ def f_connector(mocker: MockerFixture, g_ldap_connector: ConnectorFactory):
 			# Mock CONNECTION_OPEN, CONNECTION_CLOSE
 			"bound": mocker.PropertyMock(
 				name="m_bound",
-				side_effect=(True, False,),
+				side_effect=(
+					True,
+					False,
+				),
 			)
-		}
+		},
 	)
+
 
 @pytest.fixture(autouse=True)
 def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
 	return g_runtime_settings(patch_path="core.views.home.RuntimeSettings")
+
 
 @pytest.fixture
 def f_users(user_factory: UserFactory):
@@ -40,11 +47,12 @@ def f_users(user_factory: UserFactory):
 		user_factory(username=f"test_c_{n}", email=f"test_c_{n}@example.com")
 		for n in range(4)
 	]
-	for n in range(0,3):
+	for n in range(0, 3):
 		m_users[n].user_type = USER_TYPE_LDAP
 		m_users[n].save()
 		m_users[n].refresh_from_db()
 	return m_users
+
 
 class TestList:
 	endpoint = reverse("home-list")
@@ -53,10 +61,19 @@ class TestList:
 	@pytest.mark.parametrize(
 		"use_tls, use_ssl",
 		(
-			(False, False,),
-			(True, False,),
-			(False, True,),
-		)
+			(
+				False,
+				False,
+			),
+			(
+				True,
+				False,
+			),
+			(
+				False,
+				True,
+			),
+		),
 	)
 	def test_success_ldap_enabled(
 		self,
@@ -74,8 +91,9 @@ class TestList:
 
 		m_server = mocker.Mock(name="m_server")
 		m_server.host = "127.0.0.1"
-		f_connector.connection.server_pool.get_current_server \
-			.return_value = m_server
+		f_connector.connection.server_pool.get_current_server.return_value = (
+			m_server
+		)
 
 		response: Response = admin_user_client.get(self.endpoint)
 
@@ -93,7 +111,7 @@ class TestList:
 		(
 			True,
 			False,
-		)
+		),
 	)
 	def test_success_ldap_disabled(
 		self,
@@ -108,8 +126,9 @@ class TestList:
 			g_interlock_ldap_disabled.delete_permanently()
 		m_server = mocker.Mock(name="m_server")
 		m_server.host = "127.0.0.1"
-		f_connector.connection.server_pool.get_current_server \
-			.return_value = m_server
+		f_connector.connection.server_pool.get_current_server.return_value = (
+			m_server
+		)
 
 		response: Response = admin_user_client.get(self.endpoint)
 
@@ -127,8 +146,9 @@ class TestList:
 		admin_user_client: APIClient,
 		g_interlock_ldap_enabled,
 	):
-		f_connector.connection.server_pool.get_current_server \
-			.side_effect = Exception
+		f_connector.connection.server_pool.get_current_server.side_effect = (
+			Exception
+		)
 
 		response: Response = admin_user_client.get(self.endpoint)
 

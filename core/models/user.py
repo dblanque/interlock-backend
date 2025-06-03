@@ -34,7 +34,8 @@ from typing_extensions import Self
 # ---------------------------------------------------------------------------- #
 
 if TYPE_CHECKING:
-    from core.models.application import ApplicationSecurityGroup
+	from core.models.application import ApplicationSecurityGroup
+
 
 class BaseUserManager(DjangoBaseUserManager):
 	use_in_migrations = True
@@ -287,10 +288,11 @@ class User(BaseUser):
 		null=True, blank=True, default=None
 	)
 	ldap_password_tag = models.BinaryField(null=True, blank=True, default=None)
-	
+
 	# Avoids circular imports
 	if TYPE_CHECKING:
 		asg_member: QuerySet[ApplicationSecurityGroup]
+
 	@property
 	def encrypted_password(self):
 		"""Returns tuple of BinaryField memoryview objects"""

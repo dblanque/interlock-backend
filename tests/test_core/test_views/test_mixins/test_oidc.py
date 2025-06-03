@@ -65,6 +65,7 @@ def f_ldap_connector(g_ldap_connector) -> MockType:
 def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
 	return g_runtime_settings()
 
+
 class OidcUriFactory(Protocol):
 	def __call__(
 		self,
@@ -75,6 +76,7 @@ class OidcUriFactory(Protocol):
 		client_id=None,
 		redirect_uri=None,
 	) -> str: ...
+
 
 @pytest.fixture
 def f_oidc_uri(f_runtime_settings: RuntimeSettingsSingleton) -> OidcUriFactory:
@@ -158,9 +160,8 @@ def test_get_user_groups_local_user(
 	f_application,
 	f_application_group: ApplicationSecurityGroup,
 ):
-	assert get_user_groups(user=f_user_local) == [
-		str(f_application_group.uuid)
-	]
+	assert get_user_groups(user=f_user_local) == [str(f_application_group.uuid)]
+
 
 @pytest.mark.django_db
 def test_get_user_groups_ldap_user(
@@ -169,9 +170,7 @@ def test_get_user_groups_ldap_user(
 	f_application_group: ApplicationSecurityGroup,
 ):
 	m_ldap_user_attrs = {
-		LOCAL_ATTR_USER_GROUPS: [
-			{LOCAL_ATTR_DN: "some_group_dn"}
-		]
+		LOCAL_ATTR_USER_GROUPS: [{LOCAL_ATTR_DN: "some_group_dn"}]
 	}
 	m_ldap_user_mixin: LDAPUserMixin = mocker.MagicMock()
 	m_ldap_user_mixin.ldap_user_fetch.return_value = m_ldap_user_attrs

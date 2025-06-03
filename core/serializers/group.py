@@ -14,7 +14,8 @@ def group_type_validator(v: str):
 	try:
 		if v.upper().startswith("SCOPE_"):
 			raise serializers.ValidationError(
-				"Group Scope cannot be set in Group Type field.")
+				"Group Scope cannot be set in Group Type field."
+			)
 
 		LDAPGroupTypes[v]
 	except serializers.ValidationError:
@@ -27,13 +28,15 @@ def group_scope_validator(v: str):
 	try:
 		if v.upper().startswith("TYPE_"):
 			raise serializers.ValidationError(
-				"Group Type cannot be set in Group Scope field.")
+				"Group Type cannot be set in Group Scope field."
+			)
 
 		LDAPGroupTypes[v]
 	except serializers.ValidationError:
 		raise
 	except:
 		raise serializers.ValidationError("Group Scope is invalid")
+
 
 class LDAPGroupSerializer(serializers.Serializer):
 	# Common Name

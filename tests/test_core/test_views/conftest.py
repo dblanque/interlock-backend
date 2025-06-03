@@ -2,13 +2,16 @@
 ########################### Standard Pytest Imports ############################
 import pytest
 from pytest import FixtureRequest
+
 ################################################################################
 from rest_framework.test import APIClient
 from core.ldap.defaults import LDAP_DOMAIN
+
 # Models
 from core.models.user import User, USER_TYPE_LDAP, USER_TYPE_LOCAL
 from core.models.application import Application, ApplicationSecurityGroup
 from oidc_provider.models import Client
+
 # Other
 from rest_framework_simplejwt.tokens import RefreshToken
 from typing import Protocol
@@ -20,8 +23,9 @@ from typing import Protocol
 
 _ACCESS_NAME = SIMPLE_JWT["AUTH_COOKIE_NAME"]
 _REFRESH_NAME = SIMPLE_JWT["REFRESH_COOKIE_NAME"]
-_JWT_SAMESITE=SIMPLE_JWT["AUTH_COOKIE_SAME_SITE"]
-_JWT_SECURE=SIMPLE_JWT["AUTH_COOKIE_SECURE"]
+_JWT_SAMESITE = SIMPLE_JWT["AUTH_COOKIE_SAME_SITE"]
+_JWT_SECURE = SIMPLE_JWT["AUTH_COOKIE_SECURE"]
+
 
 @pytest.fixture(
 	params=[
@@ -145,9 +149,7 @@ def g_ldap_domain_endpoints(request: FixtureRequest):
 
 
 # Filtered fixture - only LDAP domain endpoints
-excluded_from_auth_required = (
-	"/api/ldap/domain/details/",
-)
+excluded_from_auth_required = ("/api/ldap/domain/details/",)
 
 
 @pytest.fixture(
@@ -163,6 +165,7 @@ excluded_from_auth_required = (
 def g_authenticated_endpoints(request: FixtureRequest):
 	return request.param
 
+
 excluded_from_admin_only = (
 	"/api/ldap/domain/details/",
 	"/api/ldap/users/self_change_password/",
@@ -170,6 +173,7 @@ excluded_from_admin_only = (
 	"/api/ldap/users/self_fetch/",
 	"/api/ldap/users/self_info/",
 )
+
 
 @pytest.fixture(
 	params=[
@@ -190,6 +194,7 @@ def api_client():
 	"""Unauthenticated API client"""
 	return APIClient()
 
+
 class UserFactory(Protocol):
 	def __call__(
 		self,
@@ -200,6 +205,7 @@ class UserFactory(Protocol):
 		is_superuser=False,
 		**kwargs,
 	) -> User: ...
+
 
 @pytest.fixture
 def user_factory(db) -> UserFactory:
@@ -253,6 +259,7 @@ class APIClientFactory(Protocol):
 		refresh_token: RefreshToken = None,
 	) -> APIClient: ...
 
+
 @pytest.fixture
 def f_api_client(api_client: APIClient):
 	def maker(user: User, **kwargs):
@@ -276,31 +283,35 @@ def f_api_client(api_client: APIClient):
 				api_client.cookies[cookie]["samesite"] = _JWT_SAMESITE
 				api_client.cookies[cookie]["secure"] = _JWT_SECURE
 		return api_client
+
 	return maker
+
 
 @pytest.fixture
 def disabled_user_client(
-	disabled_user: User,
-	f_api_client: APIClientFactory
+	disabled_user: User, f_api_client: APIClientFactory
 ) -> APIClient:
 	"""Authenticated API client for disabled user"""
 	return f_api_client(user=disabled_user)
 
+
 @pytest.fixture
 def normal_user_client(
-	normal_user: User,
-	f_api_client: APIClientFactory
+	normal_user: User, f_api_client: APIClientFactory
 ) -> APIClient:
 	return f_api_client(user=normal_user)
 
+
 @pytest.fixture
 def admin_user_client(
-	admin_user: User,
-	f_api_client: APIClientFactory
+	admin_user: User, f_api_client: APIClientFactory
 ) -> APIClient:
 	return f_api_client(user=admin_user)
 
+
 MOCK_PASSWORD = "mock_password"
+
+
 @pytest.fixture
 def f_user_local(user_factory: UserFactory):
 	"""Test creating a user with all fields"""
