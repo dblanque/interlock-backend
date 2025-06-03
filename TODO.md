@@ -21,6 +21,12 @@ Target Mid-June release
 	* auth <d>
 	* home <d>
 	* settings
+		* save (do with mocks)
+		* reset
+		* test
+		* sync_users
+		* prune_users
+		* purge_users
 	* logs
 	* oidc
 	* totp
