@@ -7,6 +7,7 @@ Target Mid-June release
 * Create video summary of features as IdP
 
 # Tasks
+* fix test_cookie_jwt_refresh_valid_token
 * core.models.ldap_object <d>
 * core.models.ldap_user <d>
 * core.models.ldap_group <d>
