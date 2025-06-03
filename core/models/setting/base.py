@@ -8,7 +8,7 @@ from core.models.types.settings import (
 	make_field_db_name,
 	DEFAULT_FIELD_ARGS,
 )
-from typing import Sequence, Type, TypeVar, overload
+from typing import Type, TypeVar, overload
 from copy import deepcopy
 from rest_framework.serializers import ValidationError
 
@@ -126,71 +126,73 @@ class BaseSetting(BaseModel):
 		return super().save(**kwargs)
 
 	def clean(self):
-		if not self.type or len(self.type) <= 0:
-			raise ValidationError("Type is required.")
-		for choice_type, choice_fields in self.setting_fields.items():
-			if self.type == choice_type:
+		if not self.type:
+			raise ValidationError(
+				"BaseSetting instance requires type attr to be set."
+			)
+		for choice_key, choice_fields in self.setting_fields.items():
+			if self.type == choice_key:
 				if isinstance(choice_fields, str):
 					self._validate_value(
-						choice_type=choice_type,
+						choice_type=choice_key,
 						choice_field=choice_fields,
 					)
-				elif isinstance(choice_fields, Sequence):
-					for cf in choice_fields:
+				elif isinstance(choice_fields, (tuple, set, list)):
+					for sub_fld in choice_fields:
 						self._validate_value(
-							choice_type=choice_type,
-							choice_field=cf,
+							choice_type=choice_key,
+							choice_field=sub_fld,
 						)
 		return super().clean()
 
+	@classmethod
+	def get_type_value_fields(cls, t) -> tuple | list:
+		_vf = cls.setting_fields[t]
+		if isinstance(_vf, str):
+			return (_vf,)
+		elif isinstance(_vf, (tuple, set, list)):
+			return tuple(_vf) if not isinstance(_vf, tuple) else _vf
+
+	@property
+	def value_fields(self) -> tuple | list:
+		return self.get_type_value_fields(self.type)
+
 	@property
 	def value(self):
-		value_fields = self.setting_fields[self.type]
-		if isinstance(value_fields, str):
-			return getattr(self, make_field_db_name(value_fields))
-		elif isinstance(value_fields, tuple):
+		if len(self.value_fields) == 1:
+			return getattr(self, make_field_db_name(self.value_fields[0]))
+		else:
 			r = []
-			for vf in value_fields:
+			for vf in self.value_fields:
 				r.append(getattr(self, make_field_db_name(vf)))
 			return r
-		else:
-			raise TypeError("value_fields must be str or tuple.")
 
-	def _set_value(self, v, value_fields: str | tuple) -> None:
-		if isinstance(value_fields, str):
-			setattr(self, make_field_db_name(value_fields), v)
-		elif isinstance(value_fields, tuple):
-			if isinstance(v, str):
-				raise ValueError(
-					"Value must be a tuple with the same length as the value fields."
-				)
+	def _set_value(self, v, value_fields: tuple) -> None:
+		if len(value_fields) == 1:
+			field = value_fields[0]
+			setattr(self, make_field_db_name(field), v)
+		else:
 			for index, field in enumerate(value_fields):
-				if isinstance(v, Sequence) and not isinstance(v, bytes):
+				if isinstance(v, (tuple, set, list)):
 					setattr(self, make_field_db_name(field), v[index])
 				else:
 					setattr(self, make_field_db_name(field), None)
-		else:
-			raise TypeError("value_fields must be str or tuple.")
 
 	def _value_setter(self, value):
-		if not self.type or len(self.type) <= 0:
+		if not self.type:
 			raise ValidationError(
-				"Type is required for BaseSetting based models."
+				"BaseSetting instance requires type attr to be set."
 			)
 		# Set unrelated value fields to None
 		for field in self.setting_fields.values():
-			self._set_value(None, value_fields=field)
+			self._set_value(None, value_fields=(field,))
 
 		# Set corresponding value field
-		self._set_value(value, value_fields=self.setting_fields[self.type])
+		self._set_value(value, value_fields=self.value_fields)
 
 	@value.setter
 	def value(self, value):
 		self._value_setter(value)
-
-	@property
-	def value_field(self):
-		return self.setting_fields[self.type]
 
 	def __str__(self):
 		return f"{getattr(self, self.type, None)} - {self.value}"

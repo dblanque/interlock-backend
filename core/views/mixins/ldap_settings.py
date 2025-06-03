@@ -14,6 +14,16 @@ from django.db import transaction
 from rest_framework import viewsets
 
 ### Core
+from interlock_backend.settings import DEFAULT_SUPERUSER_USERNAME
+from interlock_backend.encrypt import aes_decrypt, aes_encrypt
+from core.config.runtime import RuntimeSettings
+from core.ldap.connector import (
+	test_ldap_connection,
+	LDAPConnector,
+	LDAPConnectionOptions,
+)
+from core.utils.db import db_table_exists
+
 #### Models
 from core.models.interlock_settings import (
 	InterlockSetting,
@@ -29,34 +39,42 @@ from core.models.ldap_settings import (
 	LDAP_SETTING_MAP,
 )
 
+#### Serializers
+from core.serializers.ldap_settings import LDAPSettingSerializer
+from core.serializers.interlock_settings import InterlockSettingSerializer
+
 #### Constants
 from core.ldap import defaults
-from core.constants.attrs.local import LOCAL_ATTR_VALUE, LOCAL_ATTR_TYPE
+from core.constants.attrs.local import (
+	LOCAL_ATTR_NAME,
+	LOCAL_ATTR_TYPE,
+	LOCAL_ATTR_VALUE,
+	LOCAL_ATTR_PRESET,
+	LOCAL_ATTR_DN,
+)
+from core.models.types.settings import make_field_db_name, TYPE_AES_ENCRYPT
 from core.constants.settings import (
 	K_LDAP_AUTH_TLS_VERSION,
 	K_LDAP_AUTH_CONNECTION_PASSWORD,
+	K_LDAP_FIELD_MAP,
 )
 
 #### Exceptions
-from core.exceptions import ldap as exc_ldap
+from core.exceptions import (
+	base as exc_base,
+	ldap as exc_ldap,
+	ldap_settings as exc_set,
+)
+from rest_framework.serializers import ValidationError
 from django.core.exceptions import ObjectDoesNotExist
 
-#### Mixins
-from core.utils.network import net_port_test
-
 ### Others
-from core.config.runtime import RuntimeSettings
-from core.ldap.connector import (
-	test_ldap_connection,
-	LDAPConnector,
-	LDAPConnectionOptions,
-)
-from core.utils.db import db_table_exists
+from core.utils.network import net_port_test
 from enum import Enum
-from interlock_backend.settings import DEFAULT_SUPERUSER_USERNAME
-from interlock_backend.encrypt import aes_decrypt
 import logging
+import ssl
 ################################################################################
+
 
 logger = logging.getLogger(__name__)
 
@@ -308,3 +326,204 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 		logger.info("Test Connection Endpoint Result: ")
 		logger.info(result)
 		return result
+
+	def set_value_fields(self, value, value_fields, data):
+		if len(value_fields) == 1:
+			fld = value_fields[0]
+			data[make_field_db_name(fld)] = value
+		else:
+			if not isinstance(value, (list, set, tuple)):
+				raise ValidationError(
+					"Cannot use sequence value fields if parsed value"\
+					" is not a sequence.")
+			for idx, fld in enumerate(value_fields):
+				data[make_field_db_name(fld)] = value[idx]
+		return data
+
+	def parse_local_setting_data(
+			self,
+			param_name: str,
+			param_type: str,
+			param_value,
+		):
+			setting_data = {
+				LOCAL_ATTR_NAME: param_name,
+				LOCAL_ATTR_TYPE: param_type,
+			}
+			value_fields = InterlockSetting.get_type_value_fields(param_type)
+			return self.set_value_fields(
+				param_value,
+				value_fields,
+				setting_data,
+			)
+
+	def save_local_settings(self, local_settings: dict):
+		"""
+		Validates and Serializes data for Interlock Settings, then saves it.
+		"""
+		param_name: str
+		param_value: dict | str | bool | int | list[str]
+		# Interlock Settings
+		for param_name, param_value in local_settings.items():
+			if not param_name in INTERLOCK_SETTING_PUBLIC:
+				continue
+			if not param_name in INTERLOCK_SETTING_MAP:
+				raise exc_set.SettingTypeDoesNotMatch(
+					data={"field": param_name}
+				)
+			param_type = INTERLOCK_SETTING_MAP[param_name]
+			param_value = param_value.pop(LOCAL_ATTR_VALUE)
+
+			serializer = InterlockSettingSerializer(
+				data=self.parse_local_setting_data(
+					param_name=param_name,
+					param_type=param_type,
+					param_value=param_value,
+				)
+			)
+			serializer.is_valid(raise_exception=True)
+			validated_data = serializer.validated_data
+
+			try:
+				setting_instance = InterlockSetting.objects.get(
+					name=param_name
+				)
+				for attr in validated_data:
+					setattr(setting_instance, attr, validated_data[attr])
+			except ObjectDoesNotExist:
+				setting_instance = InterlockSetting(**validated_data)
+			setting_instance.save()
+
+	def parse_ldap_setting_value(self, name: str, t: str, v):
+		"""Parses an LDAP Setting Value for Serialization / Validation
+
+		Args:
+			name (str): LDAP Setting Key Name
+			t (str): LDAP Setting Type
+			v (Any): LDAP Setting Value
+		
+		Returns:
+			Parsed Value.
+		"""
+		if t == TYPE_AES_ENCRYPT.lower():
+			if not isinstance(v, str):
+				raise ValidationError(
+					f"{TYPE_AES_ENCRYPT} type setting value must be of type str"
+				)
+			return aes_encrypt(v)
+		elif name == K_LDAP_FIELD_MAP:
+			v: dict
+			if not isinstance(v, dict):
+				raise ValidationError(
+					f"{K_LDAP_FIELD_MAP} must be of type dict"
+				)
+			_non_nullables = list(defaults.LDAP_AUTH_USER_LOOKUP_FIELDS)
+			_non_nullables.append(LOCAL_ATTR_DN)
+			for fld in _non_nullables:
+				if not v.get(fld, None):
+					raise ValidationError(
+						f"{fld} is required in dict for {K_LDAP_FIELD_MAP}"
+					)
+			for _sub_k, _sub_v in v.items():
+				_sub_v: str
+				if _sub_v.lower() in (
+					"none",
+					"null",
+				):
+					if _sub_k in set(_non_nullables):
+						raise ValidationError({
+							_sub_k: "Field is not nullable."
+						})
+					v[_sub_k] = None
+			return v
+		return v
+
+	def parse_ldap_setting_data(
+			self,
+			param_name: str,
+			param_type: str,
+			param_value,
+			settings_preset: LDAPPreset,
+		):
+			setting_data = {
+				LOCAL_ATTR_NAME: param_name,
+				LOCAL_ATTR_TYPE: param_type,
+				LOCAL_ATTR_PRESET: settings_preset,
+			}
+			value = self.parse_ldap_setting_value(
+				name=param_name,
+				t=param_type,
+				v=param_value,
+			)
+			value_fields = LDAPSetting.get_type_value_fields(param_type)
+			return self.set_value_fields(value, value_fields, setting_data)
+
+	def save_ldap_settings(
+			self,
+			ldap_settings: dict,
+			settings_preset: LDAPPreset,
+		):
+		"""Validates and Serializes data for LDAP Settings, then saves it."""
+		param_name: str
+		param_value: dict | str | bool | int | list[str]
+		# LDAP Settings
+		for param_name, param_value in ldap_settings.items():
+			if not param_name in LDAP_SETTING_MAP:
+				raise exc_set.SettingTypeDoesNotMatch(
+					data={"field": param_name}
+				)
+			param_type = LDAP_SETTING_MAP[param_name].lower()
+			param_value = param_value.pop("value")
+
+			is_default = False
+			if param_name == K_LDAP_AUTH_TLS_VERSION:
+				is_default = getattr(ssl, param_value) == getattr(
+					defaults, param_name, None
+				)
+			elif param_name == K_LDAP_AUTH_CONNECTION_PASSWORD:
+				if not param_value:
+					is_default = True
+			else:
+				is_default = param_value == getattr(
+					defaults, param_name, None
+				)
+
+			# If value is same as default
+			if is_default:
+				try:
+					if LDAPSetting.objects.filter(
+						name=param_name, preset_id=settings_preset
+					).exists():
+						LDAPSetting.objects.get(
+							name=param_name, preset_id=settings_preset
+						).delete_permanently()
+				except:
+					pass
+			# If value is an override
+			else:
+				parsed_data = self.parse_ldap_setting_data(
+					param_name=param_name,
+					param_type=param_type,
+					param_value=param_value,
+					settings_preset=settings_preset,
+				)
+
+				serializer = LDAPSettingSerializer(data=parsed_data)
+				serializer.is_valid(raise_exception=True)
+				validated_data = serializer.validated_data
+
+				try:
+					setting_instance = LDAPSetting.objects.get(
+						name=param_name,
+						preset=settings_preset,
+					)
+					for attr in validated_data:
+						setattr(
+							setting_instance, attr, validated_data[attr]
+						)
+				except ObjectDoesNotExist:
+					setting_instance = LDAPSetting(
+						**validated_data,
+						preset=settings_preset,
+					)
+				setting_instance.save()

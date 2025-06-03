@@ -13,21 +13,14 @@ from core.exceptions import (
 	base as exc_base,
 	ldap_settings as exc_set,
 )
-from django.core.exceptions import ObjectDoesNotExist
 
 ### Models
 from core.views.mixins.logs import LogMixin
-from core.models.types.settings import TYPE_AES_ENCRYPT
 from core.models.choices.log import (
 	LOG_ACTION_READ,
 	LOG_ACTION_UPDATE,
 	LOG_CLASS_SET,
 	LOG_TARGET_ALL,
-)
-from core.models.interlock_settings import (
-	InterlockSetting,
-	INTERLOCK_SETTING_PUBLIC,
-	INTERLOCK_SETTING_MAP,
 )
 from core.models.ldap_settings import (
 	LDAP_SETTING_MAP,
@@ -44,11 +37,7 @@ from core.views.mixins.ldap.user import LDAPUserBaseMixin
 from core.views.base import BaseViewSet
 
 ### Serializers
-from core.serializers.ldap_settings import (
-	LDAPSettingSerializer,
-	LDAPPresetSerializer,
-)
-from core.serializers.interlock_settings import InterlockSettingSerializer
+from core.serializers.ldap_settings import LDAPPresetSerializer
 
 ### REST Framework
 from rest_framework.request import Request
@@ -59,16 +48,14 @@ from rest_framework.decorators import action
 from core.constants.attrs import (
 	LOCAL_ATTR_ID,
 	LOCAL_ATTR_NAME,
-	LOCAL_ATTR_TYPE,
 	LOCAL_ATTR_VALUE,
-	LOCAL_ATTR_PRESET,
 	LOCAL_ATTR_LABEL,
+	LOCAL_ATTR_ACTIVE,
 )
-from core.constants.settings import K_LDAP_LOG_MAX, K_LDAP_AUTH_TLS_VERSION
-from core.ldap import defaults
+from core.constants.settings import K_LDAP_LOG_MAX
 from core.decorators.login import auth_required, admin_required
 from django.db import transaction
-import logging, ssl
+import logging
 ################################################################################
 
 DBLogMixin = LogMixin()
@@ -90,8 +77,8 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 				{
 					LOCAL_ATTR_NAME: p.name,
 					LOCAL_ATTR_ID: p.id,
-					"label": p.label,
-					"active": p.active or False,
+					LOCAL_ATTR_LABEL: p.label,
+					LOCAL_ATTR_ACTIVE: p.active or False,
 				}
 			)
 
@@ -268,110 +255,11 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		admin_password = data_settings.pop("DEFAULT_ADMIN_PWD", None)
 		local_settings: dict = data_settings.pop("local")
 		ldap_settings: dict = data_settings.pop("ldap")
-		self.set_admin_status(status=admin_enabled, password=admin_password)
 
-		# TODO move this to mixin
 		with transaction.atomic():
-			param_name: str
-			param_value: dict | str | bool | int | list[str]
-			# Interlock Settings
-			for param_name, param_value in local_settings.items():
-				if not param_name in INTERLOCK_SETTING_PUBLIC:
-					continue
-				if not param_name in INTERLOCK_SETTING_MAP:
-					raise exc_set.SettingTypeDoesNotMatch(
-						data={"field": param_name}
-					)
-				param_type = INTERLOCK_SETTING_MAP[param_name]
-				param_value = param_value.pop(LOCAL_ATTR_VALUE)
-
-				serializer = InterlockSettingSerializer(
-					data={
-						LOCAL_ATTR_NAME: param_name,
-						LOCAL_ATTR_TYPE: param_type.lower(),
-						LOCAL_ATTR_VALUE: param_value,
-					}
-				)
-				if not serializer.is_valid():
-					raise exc_set.SettingSerializerError(
-						data={"key": param_name, "errors": serializer.errors}
-					)
-				validated_data = serializer.validated_data
-
-				try:
-					setting_instance = InterlockSetting.objects.get(
-						name=param_name
-					)
-					for attr in validated_data:
-						setattr(setting_instance, attr, validated_data[attr])
-				except ObjectDoesNotExist:
-					setting_instance = InterlockSetting(**validated_data)
-				setting_instance.save()
-
-			# LDAP Settings
-			for param_name, param_value in ldap_settings.items():
-				if not param_name in LDAP_SETTING_MAP:
-					raise exc_set.SettingTypeDoesNotMatch(
-						data={"field": param_name}
-					)
-				param_type = LDAP_SETTING_MAP[param_name]
-				param_value = param_value.pop("value")
-
-				is_default = False
-				if param_name == K_LDAP_AUTH_TLS_VERSION:
-					is_default = getattr(ssl, param_value) == getattr(
-						defaults, param_name, None
-					)
-				else:
-					is_default = param_value == getattr(
-						defaults, param_name, None
-					)
-
-				# If value is same as default
-				if is_default:
-					try:
-						if LDAPSetting.objects.filter(
-							name=param_name, preset_id=settings_preset
-						).exists():
-							LDAPSetting.objects.get(
-								name=param_name, preset_id=settings_preset
-							).delete_permanently()
-					except:
-						pass
-				# If value is an override
-				else:
-					serializer = LDAPSettingSerializer(
-						data={
-							LOCAL_ATTR_NAME: param_name,
-							LOCAL_ATTR_TYPE: param_type.lower(),
-							LOCAL_ATTR_PRESET: settings_preset,
-							LOCAL_ATTR_VALUE: param_value,
-						}
-					)
-					if not serializer.is_valid():
-						raise exc_set.SettingSerializerError(
-							data={
-								"key": param_name,
-								"errors": serializer.errors,
-							}
-						)
-					validated_data = serializer.validated_data
-
-					try:
-						setting_instance = LDAPSetting.objects.get(
-							name=param_name,
-							preset=settings_preset,
-						)
-						for attr in validated_data:
-							setattr(
-								setting_instance, attr, validated_data[attr]
-							)
-					except ObjectDoesNotExist:
-						setting_instance = LDAPSetting(
-							**validated_data,
-							preset=settings_preset,
-						)
-					setting_instance.save()
+			self.set_admin_status(status=admin_enabled, password=admin_password)
+			self.save_local_settings(local_settings)
+			self.save_ldap_settings(ldap_settings, settings_preset)
 
 		DBLogMixin.log(
 			user=request.user.id,
