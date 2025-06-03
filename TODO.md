@@ -25,13 +25,7 @@ Target Mid-June release
 	* application group <t> - gotta do mocking
 	* auth <d>
 	* home <d>
-	* settings
-		* save (do with mocks)
-		* reset
-		* test
-		* sync_users
-		* prune_users
-		* purge_users
+	* settings <d>
 	* logs
 	* oidc
 	* totp
