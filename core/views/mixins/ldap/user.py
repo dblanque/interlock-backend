@@ -807,7 +807,7 @@ class LDAPUserBaseMixin(LDAPUserMixin):
 
 			ldap_users: list[dict] = self._get_all_ldap_users()
 			for ldap_user in ldap_users:
-				user = None
+				user: User = None
 				_username = ldap_user.get(LOCAL_ATTR_USERNAME, None)
 				is_non_admin_builtin = self.is_built_in_user(
 					username=_username,
@@ -857,7 +857,7 @@ class LDAPUserBaseMixin(LDAPUserMixin):
 			force_admin=True if not responsible_user else False,
 		) as ldc:
 			self.ldap_connection = ldc.connection
-			users = User.objects.filter(user_type=USER_TYPE_LDAP)
+			users: list[User] = User.objects.filter(user_type=USER_TYPE_LDAP)
 			for user in users:
 				if not self.ldap_user_exists(
 					username=user.username,
