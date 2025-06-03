@@ -138,7 +138,7 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 						username=serialized_data.get(LOCAL_ATTR_USERNAME)
 					)
 			with transaction.atomic():
-				user_instance = User.objects.create(**serialized_data)
+				user_instance: User = User(**serialized_data)
 				user_instance.set_password(password)
 				user_instance.save()
 
@@ -163,7 +163,7 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 		code = 0
 		code_msg = "ok"
 		pk = int(pk)
-		user_instance = User.objects.get(id=pk)
+		user_instance: User = User.objects.get(id=pk)
 		data = {}
 		DBLogMixin.log(
 			user=request.user.id,
@@ -266,7 +266,7 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 			)
 
 		try:
-			user_instance = User.objects.get(id=pk)
+			user_instance: User = User.objects.get(id=pk)
 		except ObjectDoesNotExist:
 			raise exc_user.UserDoesNotExist
 		user_instance.is_enabled = data.pop("enabled")
@@ -303,7 +303,7 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 					data={"errors": f"Must contain field {field}."}
 				)
 		try:
-			user_instance = User.objects.get(id=pk)
+			user_instance: User = User.objects.get(id=pk)
 		except ObjectDoesNotExist:
 			raise exc_user.UserDoesNotExist
 
