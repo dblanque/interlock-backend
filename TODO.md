@@ -28,6 +28,8 @@ Target Mid-June release
 ## Issues
 ### High Priority
 * Move Interlock RSA Key to class instances as a singleton. <d>
+* Normalize in and out for Settings, DEFAULT_ADMIN_ENABLED and DEFAULT_ADMIN_PWD
+	should be within LOCAL instead of LDAP settings in both fetch and save.
 * Implement LDAP Group Serializer usage.
 * Add LDAP_DEFAULT_USER_CLASSES, LDAP_DEFAULT_GROUP_CLASSES to ldap settings.
 * Check TOTP support for non admin users
