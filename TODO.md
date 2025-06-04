@@ -29,7 +29,7 @@ Target Mid-June release
 	* logs - next week
 	* oidc - friday?
 	* totp - thursday?
-	* user - wednesday
+	* user - wednesday <d>
 
 ## Issues
 ### High Priority
