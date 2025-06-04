@@ -150,10 +150,8 @@ class TestInsert:
 		)
 		m_log = mocker.patch("core.views.user.DBLogMixin.log")
 
-		# Act
 		response: Response = admin_user_client.post(self.endpoint, user_data)
 
-		# Assert
 		assert response.status_code == status.HTTP_200_OK
 		assert response.data == {"code": 0, "code_msg": "ok"}
 
@@ -191,10 +189,8 @@ class TestInsert:
 			"core.views.user.UserViewSet.ldap_user_exists"
 		)
 
-		# Act
 		response: Response = admin_user_client.post(self.endpoint, invalid_data)
 
-		# Assert
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		m_ldap_user_exists.assert_not_called()
 		assert "errors" in response.data
@@ -216,10 +212,8 @@ class TestInsert:
 			"core.views.user.UserViewSet.ldap_user_exists"
 		)
 
-		# Act
 		response: Response = admin_user_client.post(self.endpoint, invalid_data)
 
-		# Assert
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		m_ldap_user_exists.assert_not_called()
 		assert "errors" in response.data
