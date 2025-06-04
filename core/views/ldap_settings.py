@@ -298,23 +298,27 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 		for param_name, param_data in data.items():
 			if param_name not in LDAP_SETTING_MAP:
-				raise exc_base.BadRequest(data={
-					"detail": f"Invalid field name ({param_name}).",
-				})
+				raise exc_base.BadRequest(
+					data={
+						"detail": f"Invalid field name ({param_name}).",
+					}
+				)
 			param_type = param_data[LOCAL_ATTR_TYPE]
 			expected_param_type = LDAP_SETTING_MAP[param_name].lower()
 			if expected_param_type != param_type:
-				raise exc_set.SettingTypeDoesNotMatch(data={
-					"detail": f"Invalid field type for {param_name} ({expected_param_type})."
-				})
+				raise exc_set.SettingTypeDoesNotMatch(
+					data={
+						"detail": f"Invalid field type for {param_name} ({expected_param_type})."
+					}
+				)
 			if param_type in LDAP_SETTINGS_CHOICES_MAP:
 				if (
 					param_data[LOCAL_ATTR_VALUE]
 					not in LDAP_SETTINGS_CHOICES_MAP[param_type]
 				):
-					raise exc_set.SettingChoiceIsInvalid({
-						"detail": f"{param_type} field value is invalid."
-					})
+					raise exc_set.SettingChoiceIsInvalid(
+						{"detail": f"{param_type} field value is invalid."}
+					)
 
 		data = self.test_ldap_settings(data)
 		if not data:

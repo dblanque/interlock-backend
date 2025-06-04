@@ -1,6 +1,7 @@
 ########################### Standard Pytest Imports ############################
 import pytest
 from pytest_mock import MockerFixture
+
 ################################################################################
 from django.urls import reverse
 
@@ -55,6 +56,7 @@ class LdapPresetFactory(Protocol):
 @pytest.fixture(autouse=True)
 def f_resync_patch(mocker: MockerFixture):
 	mocker.patch.object(SettingsViewSet, "resync_settings")
+
 
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector: ConnectorFactory):
@@ -348,8 +350,8 @@ class TestSave:
 				"settings": {
 					"DEFAULT_ADMIN_ENABLED": m_admin_enabled,
 					"DEFAULT_ADMIN_PWD": m_admin_password,
-					"local":"mock_local_dict",
-					"ldap":"mock_ldap_dict"
+					"local": "mock_local_dict",
+					"ldap": "mock_ldap_dict",
 				},
 			},
 			format="json",
@@ -361,10 +363,11 @@ class TestSave:
 		)
 		m_save_local_settings.assert_called_once_with("mock_local_dict")
 		m_save_ldap_settings.assert_called_once_with(
-			"mock_ldap_dict", m_ldap_preset,
+			"mock_ldap_dict",
+			m_ldap_preset,
 		)
 		m_resync_settings.assert_called_once()
-		
+
 	def test_raises_no_preset(self, admin_user_client: APIClient):
 		response: Response = admin_user_client.post(
 			self.endpoint,
@@ -392,7 +395,6 @@ class TestSave:
 		)
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert response.data.get("code") == "setting_preset_not_exists"
-
 
 	@pytest.mark.parametrize(
 		"m_status, m_password",
@@ -438,6 +440,7 @@ class TestSave:
 			log_target_class=LOG_CLASS_SET,
 		)
 
+
 class TestReset:
 	endpoint = reverse("settings-reset")
 
@@ -448,25 +451,27 @@ class TestReset:
 		fc_ldap_preset: LdapPresetFactory,
 	):
 		m_ldap_preset = fc_ldap_preset(active=True)
-		m_setting = LDAPSetting(**{
-			LOCAL_ATTR_NAME: K_LDAP_AUTH_URL,
-			LOCAL_ATTR_TYPE: TYPE_LDAP_URI,
-			LOCAL_ATTR_PRESET: m_ldap_preset,
-			LOCAL_ATTR_VALUE: ["ldap://127.1.1.1:389"]
-		})
+		m_setting = LDAPSetting(
+			**{
+				LOCAL_ATTR_NAME: K_LDAP_AUTH_URL,
+				LOCAL_ATTR_TYPE: TYPE_LDAP_URI,
+				LOCAL_ATTR_PRESET: m_ldap_preset,
+				LOCAL_ATTR_VALUE: ["ldap://127.1.1.1:389"],
+			}
+		)
 		m_setting.save()
 		assert LDAPPreset.objects.filter(active=True).count() == 1
 		assert LDAPSetting.objects.filter(preset=m_ldap_preset.id).exists()
 
 		m_resync_settings = mocker.patch.object(
-			SettingsViewSet,
-			"resync_settings"
+			SettingsViewSet, "resync_settings"
 		)
 		response: Response = admin_user_client.get(self.endpoint)
 		assert response.status_code == status.HTTP_200_OK
 
 		m_resync_settings.assert_called_once()
 		assert not LDAPSetting.objects.filter(preset=m_ldap_preset.id).exists()
+
 
 class TestLdapTestEndpoint:
 	endpoint = reverse("settings-test")
@@ -483,17 +488,16 @@ class TestLdapTestEndpoint:
 			"test_ldap_settings",
 			return_value="mock_result",
 		)
-		m_data = SettingsViewMixin()\
-			.get_ldap_settings(preset_id=m_ldap_preset.id)
+		m_data = SettingsViewMixin().get_ldap_settings(
+			preset_id=m_ldap_preset.id
+		)
 		for _k in ("DEFAULT_ADMIN_ENABLED", "DEFAULT_ADMIN_PWD"):
 			if _k in m_data:
 				del m_data[_k]
 		m_data["some_bad_key"] = True
 
 		response: Response = admin_user_client.post(
-			self.endpoint,
-			data=m_data,
-			format="json"
+			self.endpoint, data=m_data, format="json"
 		)
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert "Invalid field" in response.data.get("detail")
@@ -511,17 +515,16 @@ class TestLdapTestEndpoint:
 			"test_ldap_settings",
 			return_value="mock_result",
 		)
-		m_data = SettingsViewMixin()\
-			.get_ldap_settings(preset_id=m_ldap_preset.id)
+		m_data = SettingsViewMixin().get_ldap_settings(
+			preset_id=m_ldap_preset.id
+		)
 		for _k in ("DEFAULT_ADMIN_ENABLED", "DEFAULT_ADMIN_PWD"):
 			if _k in m_data:
 				del m_data[_k]
 		m_data[K_LDAP_AUTH_USE_SSL][LOCAL_ATTR_TYPE] = TYPE_LDAP_URI
 
 		response: Response = admin_user_client.post(
-			self.endpoint,
-			data=m_data,
-			format="json"
+			self.endpoint, data=m_data, format="json"
 		)
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert "Invalid field type for" in response.data.get("detail")
@@ -539,17 +542,16 @@ class TestLdapTestEndpoint:
 			"test_ldap_settings",
 			return_value="mock_result",
 		)
-		m_data = SettingsViewMixin()\
-			.get_ldap_settings(preset_id=m_ldap_preset.id)
+		m_data = SettingsViewMixin().get_ldap_settings(
+			preset_id=m_ldap_preset.id
+		)
 		for _k in ("DEFAULT_ADMIN_ENABLED", "DEFAULT_ADMIN_PWD"):
 			if _k in m_data:
 				del m_data[_k]
 		m_data[K_LDAP_AUTH_TLS_VERSION][LOCAL_ATTR_VALUE] = "some_bad_value"
 
 		response: Response = admin_user_client.post(
-			self.endpoint,
-			data=m_data,
-			format="json"
+			self.endpoint, data=m_data, format="json"
 		)
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert "field value is invalid" in response.data.get("detail")
@@ -567,16 +569,15 @@ class TestLdapTestEndpoint:
 			"test_ldap_settings",
 			return_value=None,
 		)
-		m_data = SettingsViewMixin()\
-			.get_ldap_settings(preset_id=m_ldap_preset.id)
+		m_data = SettingsViewMixin().get_ldap_settings(
+			preset_id=m_ldap_preset.id
+		)
 		for _k in ("DEFAULT_ADMIN_ENABLED", "DEFAULT_ADMIN_PWD"):
 			if _k in m_data:
 				del m_data[_k]
 
 		response: Response = admin_user_client.post(
-			self.endpoint,
-			data=m_data,
-			format="json"
+			self.endpoint, data=m_data, format="json"
 		)
 		assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
 		assert response.data.get("code") == "ldap_bind_test_failed"
@@ -594,20 +595,20 @@ class TestLdapTestEndpoint:
 			"test_ldap_settings",
 			return_value="mock_result",
 		)
-		m_data = SettingsViewMixin()\
-			.get_ldap_settings(preset_id=m_ldap_preset.id)
+		m_data = SettingsViewMixin().get_ldap_settings(
+			preset_id=m_ldap_preset.id
+		)
 		for _k in ("DEFAULT_ADMIN_ENABLED", "DEFAULT_ADMIN_PWD"):
 			if _k in m_data:
 				del m_data[_k]
 
 		response: Response = admin_user_client.post(
-			self.endpoint,
-			data=m_data,
-			format="json"
+			self.endpoint, data=m_data, format="json"
 		)
 		assert response.status_code == status.HTTP_200_OK
 		assert response.data.get("data") == "mock_result"
 		m_test_fn.assert_called_once_with(m_data)
+
 
 class TestSyncUsers:
 	endpoint = reverse("settings-sync-users")
@@ -626,13 +627,14 @@ class TestSyncUsers:
 			return_value=(
 				m_synced_users,
 				m_updated_users,
-			)
+			),
 		)
 		response: Response = admin_user_client.get(self.endpoint)
 		assert response.status_code == status.HTTP_200_OK
 		m_ldap_users_sync.assert_called_once_with(responsible_user=admin_user)
 		assert response.data.get("synced_users") == m_synced_users
 		assert response.data.get("updated_users") == m_updated_users
+
 
 class TestPruneUsers:
 	endpoint = reverse("settings-prune-users")
@@ -645,18 +647,17 @@ class TestPruneUsers:
 	):
 		m_pruned_count = 3
 		m_prune_fn = mocker.patch.object(
-			LDAPUserBaseMixin,
-			"ldap_users_prune",
-			return_value=m_pruned_count
+			LDAPUserBaseMixin, "ldap_users_prune", return_value=m_pruned_count
 		)
 		response: Response = admin_user_client.get(self.endpoint)
 		assert response.status_code == status.HTTP_200_OK
 		m_prune_fn.assert_called_once_with(responsible_user=admin_user)
 		assert response.data.get("count") == m_pruned_count
 
+
 class TestPurgeUsers:
 	endpoint = reverse("settings-purge-users")
-	
+
 	def test_success(
 		self,
 		mocker: MockerFixture,
@@ -666,9 +667,7 @@ class TestPurgeUsers:
 		m_logger = mocker.patch("core.views.ldap_settings.logger")
 		m_purged_count = 3
 		m_purge_fn = mocker.patch.object(
-			LDAPUserBaseMixin,
-			"ldap_users_purge",
-			return_value=m_purged_count
+			LDAPUserBaseMixin, "ldap_users_purge", return_value=m_purged_count
 		)
 		response: Response = admin_user_client.get(self.endpoint)
 		assert response.status_code == status.HTTP_200_OK

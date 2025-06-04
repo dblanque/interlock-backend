@@ -10,6 +10,7 @@ from core.constants.attrs.local import LOCAL_ATTR_TYPE
 from rest_framework.exceptions import ValidationError
 from core.models.types.settings import make_field_db_name
 
+
 class LDAPPresetSerializer(serializers.ModelSerializer):
 	name = serializers.CharField(
 		validators=[RegexValidator("^[A-Za-z0-9_-]*$")]

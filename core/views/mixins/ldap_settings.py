@@ -334,28 +334,29 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 		else:
 			if not isinstance(value, (list, set, tuple)):
 				raise ValidationError(
-					"Cannot use sequence value fields if parsed value"\
-					" is not a sequence.")
+					"Cannot use sequence value fields if parsed value"
+					" is not a sequence."
+				)
 			for idx, fld in enumerate(value_fields):
 				data[make_field_db_name(fld)] = value[idx]
 		return data
 
 	def parse_local_setting_data(
-			self,
-			param_name: str,
-			param_type: str,
+		self,
+		param_name: str,
+		param_type: str,
+		param_value,
+	):
+		setting_data = {
+			LOCAL_ATTR_NAME: param_name,
+			LOCAL_ATTR_TYPE: param_type,
+		}
+		value_fields = InterlockSetting.get_type_value_fields(param_type)
+		return self.set_value_fields(
 			param_value,
-		):
-			setting_data = {
-				LOCAL_ATTR_NAME: param_name,
-				LOCAL_ATTR_TYPE: param_type,
-			}
-			value_fields = InterlockSetting.get_type_value_fields(param_type)
-			return self.set_value_fields(
-				param_value,
-				value_fields,
-				setting_data,
-			)
+			value_fields,
+			setting_data,
+		)
 
 	def save_local_settings(self, local_settings: dict):
 		"""
@@ -385,9 +386,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 			validated_data = serializer.validated_data
 
 			try:
-				setting_instance = InterlockSetting.objects.get(
-					name=param_name
-				)
+				setting_instance = InterlockSetting.objects.get(name=param_name)
 				for attr in validated_data:
 					setattr(setting_instance, attr, validated_data[attr])
 			except ObjectDoesNotExist:
@@ -401,7 +400,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 			name (str): LDAP Setting Key Name
 			t (str): LDAP Setting Type
 			v (Any): LDAP Setting Value
-		
+
 		Returns:
 			Parsed Value.
 		"""
@@ -431,38 +430,38 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 					"null",
 				):
 					if _sub_k in set(_non_nullables):
-						raise ValidationError({
-							_sub_k: "Field is not nullable."
-						})
+						raise ValidationError(
+							{_sub_k: "Field is not nullable."}
+						)
 					v[_sub_k] = None
 			return v
 		return v
 
 	def parse_ldap_setting_data(
-			self,
-			param_name: str,
-			param_type: str,
-			param_value,
-			settings_preset: LDAPPreset,
-		):
-			setting_data = {
-				LOCAL_ATTR_NAME: param_name,
-				LOCAL_ATTR_TYPE: param_type,
-				LOCAL_ATTR_PRESET: settings_preset,
-			}
-			value = self.parse_ldap_setting_value(
-				name=param_name,
-				t=param_type,
-				v=param_value,
-			)
-			value_fields = LDAPSetting.get_type_value_fields(param_type)
-			return self.set_value_fields(value, value_fields, setting_data)
+		self,
+		param_name: str,
+		param_type: str,
+		param_value,
+		settings_preset: LDAPPreset,
+	):
+		setting_data = {
+			LOCAL_ATTR_NAME: param_name,
+			LOCAL_ATTR_TYPE: param_type,
+			LOCAL_ATTR_PRESET: settings_preset,
+		}
+		value = self.parse_ldap_setting_value(
+			name=param_name,
+			t=param_type,
+			v=param_value,
+		)
+		value_fields = LDAPSetting.get_type_value_fields(param_type)
+		return self.set_value_fields(value, value_fields, setting_data)
 
 	def save_ldap_settings(
-			self,
-			ldap_settings: dict,
-			settings_preset: LDAPPreset,
-		):
+		self,
+		ldap_settings: dict,
+		settings_preset: LDAPPreset,
+	):
 		"""Validates and Serializes data for LDAP Settings, then saves it."""
 		param_name: str
 		param_value: dict | str | bool | int | list[str]
@@ -484,9 +483,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 				if not param_value:
 					is_default = True
 			else:
-				is_default = param_value == getattr(
-					defaults, param_name, None
-				)
+				is_default = param_value == getattr(defaults, param_name, None)
 
 			# If value is same as default
 			if is_default:
@@ -518,9 +515,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 						preset=settings_preset,
 					)
 					for attr in validated_data:
-						setattr(
-							setting_instance, attr, validated_data[attr]
-						)
+						setattr(setting_instance, attr, validated_data[attr])
 				except ObjectDoesNotExist:
 					setting_instance = LDAPSetting(
 						**validated_data,
