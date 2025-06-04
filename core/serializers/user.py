@@ -40,6 +40,11 @@ def validate_password_match(password: str, password_confirm: str) -> str:
 
 
 class UserSerializer(serializers.ModelSerializer):
+	password = serializers.CharField(
+		required=False,
+		write_only=True,
+		allow_blank=True,
+	)
 	password_confirm = serializers.CharField(
 		required=False,
 		write_only=True,
@@ -56,11 +61,6 @@ class UserSerializer(serializers.ModelSerializer):
 			LOCAL_ATTR_PASSWORD,
 			LOCAL_ATTR_PASSWORD_CONFIRM,
 		)
-		extra_kwargs = {
-			LOCAL_ATTR_PASSWORD: {
-				"write_only": True
-			}  # Also hide password in responses
-		}
 
 	def validate(self, data: dict):
 		"""Handle password confirmation validation"""
