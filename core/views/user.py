@@ -138,10 +138,10 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 				)
 		with transaction.atomic():
 			user_instance: User = User(**serialized_data)
-			if password is not None:
-				user_instance.set_password(password)
-			else:
+			if password is None:
 				user_instance.set_unusable_password()
+			else:
+				user_instance.set_password(password)
 			user_instance.save()
 
 		DBLogMixin.log(
