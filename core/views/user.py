@@ -12,7 +12,7 @@ from core.views.base import BaseViewSet
 from core.views.mixins.ldap.user import LDAPUserMixin
 
 # Models
-from core.models.user import User
+from core.models.user import User, USER_TYPE_LOCAL
 from core.models.interlock_settings import (
 	InterlockSetting,
 	INTERLOCK_SETTING_ENABLE_LDAP,
@@ -60,6 +60,7 @@ from core.constants.attrs import (
 	LOCAL_ATTR_FIRST_NAME,
 	LOCAL_ATTR_LAST_NAME,
 	LOCAL_ATTR_EMAIL,
+	LOCAL_ATTR_ENABLED,
 )
 from django.db import transaction
 from core.decorators.login import auth_required, admin_required
@@ -128,16 +129,19 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 		if not serializer.is_valid():
 			raise BadRequest(data={"errors": serializer.errors})
 
-		serialized_data = serializer.data
+		validated_data = serializer.validated_data
+		if LOCAL_ATTR_USERTYPE in validated_data:
+			del validated_data[LOCAL_ATTR_USERTYPE]
+
 		if ldap_backend_enabled:
 			# Open LDAP Connection
 			with LDAPConnector(force_admin=True) as ldc:
 				self.ldap_connection = ldc.connection
 				self.ldap_user_exists(
-					username=serialized_data.get(LOCAL_ATTR_USERNAME)
+					username=validated_data.get(LOCAL_ATTR_USERNAME)
 				)
 		with transaction.atomic():
-			user_instance: User = User(**serialized_data)
+			user_instance: User = User(**validated_data)
 			if password is None:
 				user_instance.set_unusable_password()
 			else:
@@ -165,7 +169,10 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 		code = 0
 		code_msg = "ok"
 		pk = int(pk)
-		user_instance: User = User.objects.get(id=pk)
+		try:
+			user_instance: User = User.objects.get(id=pk)
+		except ObjectDoesNotExist:
+			raise exc_user.UserDoesNotExist
 		data = {}
 
 		DBLogMixin.log(
@@ -196,9 +203,10 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 		)
 		for key in EXCLUDE_FIELDS:
 			if key in data:
-				data.pop(key)
+				del data[key]
 		serializer = self.serializer_class(data=data, partial=True)
 
+		# Validate Data
 		if not serializer.is_valid():
 			raise BadRequest(data={"errors": serializer.errors})
 
@@ -207,8 +215,15 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 		except ObjectDoesNotExist:
 			raise exc_user.UserDoesNotExist
 
-		for key in data:
-			setattr(user_instance, key, data[key])
+		if user_instance.user_type != USER_TYPE_LOCAL:
+			raise exc_user.UserNotLocalType
+
+		# Set data
+		password = data.get(LOCAL_ATTR_PASSWORD, None)
+		for key in serializer.validated_data:
+			setattr(user_instance, key, serializer.validated_data[key])
+		if password:
+			user_instance.set_password(password)
 		user_instance.save()
 
 		DBLogMixin.log(
@@ -234,13 +249,17 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 		pk = int(pk)
 		with transaction.atomic():
 			try:
-				user_instance = User.objects.get(id=pk)
+				user_instance: User = User.objects.get(id=pk)
 			except ObjectDoesNotExist:
 				raise exc_user.UserDoesNotExist
+
+			if user_instance.user_type != USER_TYPE_LOCAL:
+				raise exc_user.UserNotLocalType
 
 			if req_user.id == pk:
 				raise exc_user.UserAntiLockout
 			user_instance.delete_permanently()
+
 
 		DBLogMixin.log(
 			user=request.user.id,
@@ -263,16 +282,22 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 		code_msg = "ok"
 		data: dict = request.data
 		pk = int(pk)
-		if not "enabled" in data or not isinstance(data["enabled"], bool):
+		if (
+			not LOCAL_ATTR_ENABLED in data or
+			not isinstance(data[LOCAL_ATTR_ENABLED], bool)
+		):
 			raise BadRequest(
-				data={"errors": "Must contain field enabled (bool)"}
+				data={"detail": "Must contain field 'enabled' of type bool)"}
 			)
 
 		try:
 			user_instance: User = User.objects.get(id=pk)
 		except ObjectDoesNotExist:
 			raise exc_user.UserDoesNotExist
-		user_instance.is_enabled = data.pop("enabled")
+
+		if user_instance.user_type != USER_TYPE_LOCAL:
+			raise exc_user.UserNotLocalType
+		user_instance.is_enabled = data.pop(LOCAL_ATTR_ENABLED)
 		user_instance.save()
 
 		DBLogMixin.log(
@@ -310,6 +335,9 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 		except ObjectDoesNotExist:
 			raise exc_user.UserDoesNotExist
 
+		if user_instance.user_type != USER_TYPE_LOCAL:
+			raise exc_user.UserNotLocalType
+
 		# Validate Data
 		serializer = self.serializer_class(data=data, partial=True)
 		if not serializer.is_valid():
@@ -343,6 +371,10 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 		code = 0
 		code_msg = "ok"
 		data: dict = request.data
+
+		if user.user_type != USER_TYPE_LOCAL:
+			raise exc_user.UserNotLocalType
+
 		for field in (LOCAL_ATTR_PASSWORD, LOCAL_ATTR_PASSWORD_CONFIRM):
 			if not field in data:
 				raise BadRequest(
@@ -380,6 +412,10 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 		code = 0
 		code_msg = "ok"
 		data: dict = request.data
+
+		if user.user_type != USER_TYPE_LOCAL:
+			raise exc_user.UserNotLocalType
+
 		FIELDS = (
 			LOCAL_ATTR_FIRST_NAME,
 			LOCAL_ATTR_LAST_NAME,
