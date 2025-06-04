@@ -64,6 +64,7 @@ from core.constants.attrs import (
 from django.db import transaction
 from core.decorators.login import auth_required, admin_required
 from core.constants.user import LOCAL_PUBLIC_FIELDS, LOCAL_PUBLIC_FIELDS_BASIC
+from django.db.models import F
 import logging
 ################################################################################
 
@@ -83,32 +84,28 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 			LOCAL_ATTR_ID,
 			LOCAL_ATTR_DN,
 		)
-		user_queryset = User.objects.all()
+		user_queryset = User.objects.annotate(
+			distinguished_name=F(f"_{LOCAL_ATTR_DN}"),
+		).all()
 		DBLogMixin.log(
 			user=request.user.id,
 			operation_type=LOG_ACTION_READ,
 			log_target_class=LOG_CLASS_USER,
 		)
-		result = list(user_queryset.values(*LOCAL_PUBLIC_FIELDS_BASIC))
-		key_to_fix = f"_{LOCAL_ATTR_DN}"
-		for user in result:
-			_v = user.pop(key_to_fix, None)
-			if _v:
-				user[LOCAL_ATTR_DN] = _v
 
-		headers = list(LOCAL_PUBLIC_FIELDS_BASIC)
-		for i, v in enumerate(headers):
-			if v == key_to_fix:
-				headers[i] = LOCAL_ATTR_DN
+		result = list(user_queryset.values(*LOCAL_PUBLIC_FIELDS_BASIC))
+		headers = [
+			field
+			for field in LOCAL_PUBLIC_FIELDS_BASIC
+			if not field in VALUE_ONLY
+		]
 
 		return Response(
 			data={
 				"code": code,
 				"code_msg": code_msg,
 				"users": result,
-				"headers": [
-					field for field in headers if not field in VALUE_ONLY
-				],
+				"headers": headers,
 			}
 		)
 
@@ -120,27 +117,32 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 		code_msg = "ok"
 		data: dict = request.data
 		serializer = self.serializer_class(data=data)
-		password = None
-		ldap_backend_enabled = InterlockSetting.objects.get(
-			name=INTERLOCK_SETTING_ENABLE_LDAP
-		)
+		password = data.get(LOCAL_ATTR_PASSWORD, None)
+		try:
+			ldap_backend_enabled = InterlockSetting.objects.get(
+				name=INTERLOCK_SETTING_ENABLE_LDAP
+			).value
+		except ObjectDoesNotExist:
+			ldap_backend_enabled = False
 
 		if not serializer.is_valid():
 			raise BadRequest(data={"errors": serializer.errors})
-		else:
-			serialized_data = serializer.data
-			password = serialized_data.get(LOCAL_ATTR_PASSWORD)
-			if ldap_backend_enabled:
-				# Open LDAP Connection
-				with LDAPConnector(force_admin=True) as ldc:
-					self.ldap_connection = ldc.connection
-					self.ldap_user_exists(
-						username=serialized_data.get(LOCAL_ATTR_USERNAME)
-					)
-			with transaction.atomic():
-				user_instance: User = User(**serialized_data)
+
+		serialized_data = serializer.data
+		if ldap_backend_enabled:
+			# Open LDAP Connection
+			with LDAPConnector(force_admin=True) as ldc:
+				self.ldap_connection = ldc.connection
+				self.ldap_user_exists(
+					username=serialized_data.get(LOCAL_ATTR_USERNAME)
+				)
+		with transaction.atomic():
+			user_instance: User = User(**serialized_data)
+			if password is not None:
 				user_instance.set_password(password)
-				user_instance.save()
+			else:
+				user_instance.set_unusable_password()
+			user_instance.save()
 
 		DBLogMixin.log(
 			user=request.user.id,
@@ -165,6 +167,7 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 		pk = int(pk)
 		user_instance: User = User.objects.get(id=pk)
 		data = {}
+
 		DBLogMixin.log(
 			user=request.user.id,
 			operation_type=LOG_ACTION_READ,
