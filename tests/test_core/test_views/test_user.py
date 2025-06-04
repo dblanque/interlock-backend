@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from core.models.user import User
 from core.exceptions.ldap import LDAPObjectExists
-from tests.test_core.test_views.conftest import UserFactory
+from tests.test_core.test_views.conftest import UserFactory, APIClientFactory
 from tests.test_core.conftest import ConnectorFactory, LDAPConnectorMock
 from core.constants.attrs.local import (
 	LOCAL_ATTR_ID,
@@ -24,6 +24,8 @@ from core.constants.attrs.local import (
 	LOCAL_ATTR_EMAIL,
 	LOCAL_ATTR_IS_ENABLED,
 	LOCAL_ATTR_ENABLED,
+	LOCAL_ATTR_FIRST_NAME,
+	LOCAL_ATTR_LAST_NAME,
 )
 from core.models.choices.log import (
 	LOG_CLASS_USER,
@@ -33,6 +35,8 @@ from core.models.choices.log import (
 	LOG_ACTION_DELETE,
 	LOG_EXTRA_ENABLE,
 	LOG_EXTRA_DISABLE,
+	LOG_EXTRA_USER_CHANGE_PASSWORD,
+	LOG_EXTRA_USER_END_USER_UPDATE,
 )
 from core.constants.user import LOCAL_PUBLIC_FIELDS
 
@@ -100,8 +104,8 @@ class TestInsert(BaseViewTestClass):
 	):
 		m_data = {
 			LOCAL_ATTR_USERNAME: "new_user",
-			LOCAL_ATTR_PASSWORD: "mockpassword",
-			LOCAL_ATTR_PASSWORD_CONFIRM: "mockpassword",
+			LOCAL_ATTR_PASSWORD: "newpassword123",
+			LOCAL_ATTR_PASSWORD_CONFIRM: "newpassword123",
 			LOCAL_ATTR_EMAIL: "new@example.com",
 			LOCAL_ATTR_IS_ENABLED: True,
 		}
@@ -385,7 +389,7 @@ class TestUpdate(BaseViewTestClass):
 		f_log: MockType,
 	):
 		m_save = mocker.patch.object(User, "save")
-		m_password = "newpasswordtotest"
+		m_password = "newpassword123"
 
 		response: Response = admin_user_client.put(
 			self.endpoint + f"{f_user_test.id}/",
@@ -495,7 +499,7 @@ class TestChangeStatus(BaseViewTestClassWithPk):
 		admin_user_client: APIClient,
 		admin_user: User,
 		f_user_test: User,
-		f_log: MockType,	
+		f_log: MockType,
 	):
 		self._pk = f_user_test.id
 
@@ -538,6 +542,24 @@ class TestChangeStatus(BaseViewTestClassWithPk):
 		m_save.assert_not_called()
 		f_log.assert_not_called()
 
+	def test_raises_antilockout(
+		self,
+		mocker: MockerFixture,
+		admin_user_client: APIClient,
+		admin_user: User,
+		f_log: MockType,	
+	):
+		m_save = mocker.patch.object(User, "save")
+		self._pk = admin_user.id
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={LOCAL_ATTR_ENABLED: True},
+			format="json",
+		)
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		m_save.assert_not_called()
+		f_log.assert_not_called()
+
 	def test_raises_not_exists(
 		self,
 		mocker: MockerFixture,
@@ -555,11 +577,210 @@ class TestChangeStatus(BaseViewTestClassWithPk):
 		m_save.assert_not_called()
 		f_log.assert_not_called()
 
-# class TestChangePassword:
-# 	endpoint = reverse("users-change-password")
+class TestChangePassword(BaseViewTestClassWithPk):
+	_endpoint = "users-change-password"
 
-# class TestSelfChangePassword:
-# 	endpoint = reverse("users-self-change-password")
+	def test_success(
+		self,
+		admin_user_client: APIClient,
+		admin_user: User,
+		f_user_test: User,
+		f_log: MockType,
+	):
+		self._pk = f_user_test.id
+		m_password = "newpassword123"
+		assert not f_user_test.check_password(m_password)
 
-# class TestSelfUpdate:
-# 	endpoint = reverse("users-self-update")
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={
+				LOCAL_ATTR_PASSWORD: m_password,
+				LOCAL_ATTR_PASSWORD_CONFIRM: m_password,
+			}
+		)
+		
+		assert response.status_code == status.HTTP_200_OK
+		assert response.data.get("data")\
+			.get(LOCAL_ATTR_USERNAME) == f_user_test.username
+		f_user_test.refresh_from_db()
+		assert f_user_test.check_password(m_password)
+		f_log.assert_called_once_with(
+			user=admin_user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=f_user_test.username,
+			message=LOG_EXTRA_USER_CHANGE_PASSWORD,
+		)
+
+	def test_raises_not_local(
+		self,
+		mocker: MockerFixture,
+		admin_user_client: APIClient,
+		f_user_ldap: User,
+		f_log: MockType,	
+	):
+		m_save = mocker.patch.object(User, "save")
+		self._pk = f_user_ldap.id
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={
+				LOCAL_ATTR_PASSWORD: "mock",
+				LOCAL_ATTR_PASSWORD_CONFIRM: "mock",
+			},
+			format="json",
+		)
+		assert response.status_code == status.HTTP_406_NOT_ACCEPTABLE
+		m_save.assert_not_called()
+		f_log.assert_not_called()
+
+	def test_raises_not_exists(
+		self,
+		mocker: MockerFixture,
+		admin_user_client: APIClient,
+		f_log: MockType,	
+	):
+		m_save = mocker.patch.object(User, "save")
+		self._pk = 999
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={
+				LOCAL_ATTR_PASSWORD: "mock",
+				LOCAL_ATTR_PASSWORD_CONFIRM: "mock",
+			},
+			format="json",
+		)
+		assert response.status_code == status.HTTP_404_NOT_FOUND
+		m_save.assert_not_called()
+		f_log.assert_not_called()
+
+class TestSelfChangePassword(BaseViewTestClass):
+	_endpoint = "users-self-change-password"
+
+	def test_raises_not_local(
+		self,
+		mocker: MockerFixture,
+		f_api_client: APIClientFactory,
+		f_user_ldap: User,
+		f_log: MockType,
+	):
+		ldap_user_client = f_api_client(user=f_user_ldap)
+		m_save = mocker.patch.object(User, "save")
+		response: Response = ldap_user_client.post(
+			self.endpoint,
+			data={},
+			format="json",
+		)
+		assert response.status_code == status.HTTP_406_NOT_ACCEPTABLE
+		m_save.assert_not_called()
+		f_log.assert_not_called()
+
+	@pytest.mark.parametrize(
+		"invalid_key",
+		(
+			LOCAL_ATTR_USERNAME,
+			LOCAL_ATTR_ID,
+		),
+	)
+	def test_raises_on_invalid_keys(
+		self,
+		mocker: MockerFixture,
+		invalid_key: str,
+		f_api_client: APIClientFactory,
+		f_user_local: User,
+		f_log: MockType,
+	):
+		ldap_user_client = f_api_client(user=f_user_local)
+		m_save = mocker.patch.object(User, "save")
+		response: Response = ldap_user_client.post(
+			self.endpoint,
+			data={invalid_key: "some_value"},
+			format="json",
+		)
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		m_save.assert_not_called()
+		f_log.assert_not_called()
+
+	def test_success(
+		self,
+		f_api_client: APIClientFactory,
+		f_user_local: User,
+		f_log: MockType,
+	):
+		ldap_user_client = f_api_client(user=f_user_local)
+		m_password = "newpassword123"
+		assert not f_user_local.check_password(m_password)
+
+		response: Response = ldap_user_client.post(
+			self.endpoint,
+			data={
+				LOCAL_ATTR_PASSWORD: m_password,
+				LOCAL_ATTR_PASSWORD_CONFIRM: m_password,
+			},
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_200_OK
+		assert response.data.get("data")\
+			.get(LOCAL_ATTR_USERNAME) == f_user_local.username
+		f_user_local.refresh_from_db()
+		assert f_user_local.check_password(m_password)
+		f_log.assert_called_once_with(
+			user=f_user_local.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=f_user_local.username,
+			message=LOG_EXTRA_USER_CHANGE_PASSWORD,
+		)
+
+class TestSelfUpdate(BaseViewTestClass):
+	_endpoint = "users-self-update"
+
+	def test_raises_not_local(
+		self,
+		mocker: MockerFixture,
+		f_api_client: APIClientFactory,
+		f_user_ldap: User,
+		f_log: MockType,
+	):
+		ldap_user_client = f_api_client(user=f_user_ldap)
+		m_save = mocker.patch.object(User, "save")
+		response: Response = ldap_user_client.post(
+			self.endpoint,
+			data={},
+			format="json",
+		)
+		assert response.status_code == status.HTTP_406_NOT_ACCEPTABLE
+		m_save.assert_not_called()
+		f_log.assert_not_called()
+
+	def test_success(
+		self,
+		f_api_client: APIClientFactory,
+		f_user_local: User,
+		f_log: MockType,
+	):
+		m_data = {
+			LOCAL_ATTR_FIRST_NAME: "New First Name",
+			LOCAL_ATTR_LAST_NAME: "New Last Name",
+			LOCAL_ATTR_EMAIL: "newemail@example.com",
+		}
+		m_api_client = f_api_client(user=f_user_local)
+		response: Response = m_api_client.put(
+			self.endpoint,
+			data=m_data,
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_200_OK
+		f_user_local.refresh_from_db()
+		assert f_user_local.first_name == m_data[LOCAL_ATTR_FIRST_NAME]
+		assert f_user_local.last_name == m_data[LOCAL_ATTR_LAST_NAME]
+		assert f_user_local.email == m_data[LOCAL_ATTR_EMAIL]
+		f_log.assert_called_once_with(
+			user=f_user_local.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=f_user_local.username,
+			message=LOG_EXTRA_USER_END_USER_UPDATE,
+		)
+
