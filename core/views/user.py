@@ -118,7 +118,7 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 		code_msg = "ok"
 		data: dict = request.data
 		serializer = self.serializer_class(data=data)
-		password = data.get(LOCAL_ATTR_PASSWORD, None)
+
 		try:
 			ldap_backend_enabled = InterlockSetting.objects.get(
 				name=INTERLOCK_SETTING_ENABLE_LDAP
@@ -142,6 +142,7 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 				)
 		with transaction.atomic():
 			user_instance: User = User(**validated_data)
+			password = serializer.validated_data.get(LOCAL_ATTR_PASSWORD, None)
 			if password is None:
 				user_instance.set_unusable_password()
 			else:
@@ -219,9 +220,10 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 			raise exc_user.UserNotLocalType
 
 		# Set data
-		password = data.get(LOCAL_ATTR_PASSWORD, None)
 		for key in serializer.validated_data:
 			setattr(user_instance, key, serializer.validated_data[key])
+
+		password = serializer.validated_data.get(LOCAL_ATTR_PASSWORD, None)
 		if password:
 			user_instance.set_password(password)
 		user_instance.save()
@@ -247,6 +249,9 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 		code = 0
 		code_msg = "ok"
 		pk = int(pk)
+		if req_user.id == pk:
+			raise exc_user.UserAntiLockout
+
 		with transaction.atomic():
 			try:
 				user_instance: User = User.objects.get(id=pk)
@@ -256,10 +261,7 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 			if user_instance.user_type != USER_TYPE_LOCAL:
 				raise exc_user.UserNotLocalType
 
-			if req_user.id == pk:
-				raise exc_user.UserAntiLockout
 			user_instance.delete_permanently()
-
 
 		DBLogMixin.log(
 			user=request.user.id,
@@ -278,10 +280,12 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 	@auth_required
 	@admin_required
 	def change_status(self, request: Request, pk):
+		req_user: User = request.user
 		code = 0
 		code_msg = "ok"
 		data: dict = request.data
 		pk = int(pk)
+
 		if (
 			not LOCAL_ATTR_ENABLED in data or
 			not isinstance(data[LOCAL_ATTR_ENABLED], bool)
@@ -289,6 +293,9 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 			raise BadRequest(
 				data={"detail": "Must contain field 'enabled' of type bool)"}
 			)
+
+		if req_user.id == pk:
+			raise exc_user.UserAntiLockout
 
 		try:
 			user_instance: User = User.objects.get(id=pk)
@@ -330,6 +337,7 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 				raise BadRequest(
 					data={"errors": f"Must contain field {field}."}
 				)
+
 		try:
 			user_instance: User = User.objects.get(id=pk)
 		except ObjectDoesNotExist:
@@ -375,6 +383,15 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 		if user.user_type != USER_TYPE_LOCAL:
 			raise exc_user.UserNotLocalType
 
+		for field in (
+			LOCAL_ATTR_USERNAME,
+			LOCAL_ATTR_ID,
+		):
+			if field in data:
+				raise BadRequest(data={
+					"detail":f"Field is not allowed ({field})."
+				})
+
 		for field in (LOCAL_ATTR_PASSWORD, LOCAL_ATTR_PASSWORD_CONFIRM):
 			if not field in data:
 				raise BadRequest(
@@ -416,13 +433,13 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 		if user.user_type != USER_TYPE_LOCAL:
 			raise exc_user.UserNotLocalType
 
-		FIELDS = (
+		ALLOWED_FIELDS = (
 			LOCAL_ATTR_FIRST_NAME,
 			LOCAL_ATTR_LAST_NAME,
 			LOCAL_ATTR_EMAIL,
 		)
 		for key in data:
-			if not key in FIELDS:
+			if not key in ALLOWED_FIELDS:
 				del data[key]
 		serializer = self.serializer_class(data=data, partial=True)
 
