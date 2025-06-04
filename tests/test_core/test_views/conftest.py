@@ -20,6 +20,7 @@ from http import HTTPMethod
 from pytest import FixtureRequest
 from interlock_backend.test_settings import SIMPLE_JWT
 from typing import Protocol
+from django.urls import reverse
 
 _ACCESS_NAME = SIMPLE_JWT["AUTH_COOKIE_NAME"]
 _REFRESH_NAME = SIMPLE_JWT["REFRESH_COOKIE_NAME"]
@@ -483,3 +484,26 @@ def f_endpoints_default_mock_result():
 			"delete": status.HTTP_200_OK,
 		},
 	}
+
+class BaseViewTestClass:
+	_endpoint = None
+
+	@property
+	def endpoint(self):
+		if not self._endpoint:
+			raise NotImplementedError("Test class requires an endpoint")
+		return reverse(self._endpoint)
+
+class BaseViewTestClassWithPk:
+	_endpoint = None
+	_pk = None
+
+	@property
+	def endpoint(self):
+		if not self._endpoint:
+			raise NotImplementedError("Test class requires an endpoint")
+		if not self._pk:
+			raise NotImplementedError(
+				"Test class requires a primary key for reverse url fetching"
+			)
+		return reverse(self._endpoint, args=(self._pk,))
