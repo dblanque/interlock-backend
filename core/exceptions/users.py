@@ -139,6 +139,13 @@ class UserNotSynced(CoreException):
 class UserNotLDAPType(CoreException):
 	status_code = status.HTTP_406_NOT_ACCEPTABLE
 	default_detail = (
-		"User is not of LDAP Type and cannot change its own LDAP Password."
+		"User is not of LDAP Type, cannot perform this operation."
 	)
 	default_code = "user_not_ldap_type"
+
+class UserNotLocalType(CoreException):
+	status_code = status.HTTP_406_NOT_ACCEPTABLE
+	default_detail = (
+		"User is not of Local Type, cannot perform this operation."
+	)
+	default_code = "user_not_local_type"
