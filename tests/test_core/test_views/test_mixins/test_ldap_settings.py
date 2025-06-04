@@ -1,8 +1,10 @@
 ########################### Standard Pytest Imports ############################
 import pytest
 from pytest_mock import MockerFixture, MockType
+
 ################################################################################
 from django.db import transaction
+
 ### Models
 from core.models.interlock_settings import (
 	InterlockSetting,
@@ -27,6 +29,7 @@ from core.ldap import defaults
 from core.constants.settings import *
 from rest_framework.serializers import ValidationError
 from interlock_backend.encrypt import aes_decrypt, aes_encrypt
+
 
 @pytest.fixture(autouse=True)
 def auto_teardown():
@@ -120,7 +123,9 @@ class TestLDAPSettingsMixin:
 			assert LDAPPreset.objects.count() == 0
 
 	class TestResyncUsers:
-		def test_resync_users_ldap_disabled(self, mocker: MockerFixture, mixin: SettingsViewMixin):
+		def test_resync_users_ldap_disabled(
+			self, mocker: MockerFixture, mixin: SettingsViewMixin
+		):
 			# Setup
 			mixin.resync_users = SettingsViewMixin.resync_users
 
@@ -143,7 +148,11 @@ class TestLDAPSettingsMixin:
 			m_connector.assert_not_called()
 
 		def test_resync_users_ldap_enabled_success(
-			self, mocker: MockerFixture, mixin: SettingsViewMixin, ldap_setting, test_user: User
+			self,
+			mocker: MockerFixture,
+			mixin: SettingsViewMixin,
+			ldap_setting,
+			test_user: User,
 		):
 			# Mock LDAP connector and operations
 			m_connector = mocker.MagicMock()
@@ -161,11 +170,17 @@ class TestLDAPSettingsMixin:
 
 			# Verify
 			assert result is None
-			m_ldap_instance.get_user.assert_called_once_with(username="testuser")
+			m_ldap_instance.get_user.assert_called_once_with(
+				username="testuser"
+			)
 			test_user.refresh_from_db()  # Verify user was saved
 
 		def test_resync_users_ldap_enabled_with_error(
-			self, mocker: MockerFixture, mixin: SettingsViewMixin, ldap_setting: LDAPSetting, test_user: User
+			self,
+			mocker: MockerFixture,
+			mixin: SettingsViewMixin,
+			ldap_setting: LDAPSetting,
+			test_user: User,
 		):
 			# Mock LDAP connector and operations
 			m_connector = mocker.MagicMock()
@@ -218,7 +233,10 @@ class TestLDAPSettingsMixin:
 			m_connector.assert_not_called()
 
 		def test_resync_users_multiple_users(
-			self, mocker: MockerFixture, mixin: SettingsViewMixin, ldap_setting: LDAPSetting
+			self,
+			mocker: MockerFixture,
+			mixin: SettingsViewMixin,
+			ldap_setting: LDAPSetting,
 		):
 			User.objects.create(username="user1", user_type=USER_TYPE_LDAP)
 			User.objects.create(username="user2", user_type=USER_TYPE_LDAP)
@@ -242,7 +260,10 @@ class TestLDAPSettingsMixin:
 			# Verify
 			assert result is None
 			assert m_ldap_instance.get_user.call_count == 2
-			calls = [mocker.call(username="user1"), mocker.call(username="user2")]
+			calls = [
+				mocker.call(username="user1"),
+				mocker.call(username="user2"),
+			]
 			m_ldap_instance.get_user.assert_has_calls(calls, any_order=True)
 
 	class TestNormalizePresetName:
@@ -261,7 +282,9 @@ class TestLDAPSettingsMixin:
 
 	class TestGetActiveSettingsPreset:
 		def test_get_active_settings_preset_exists(
-			self, mixin: SettingsViewMixin, ldap_preset: LDAPPreset,
+			self,
+			mixin: SettingsViewMixin,
+			ldap_preset: LDAPPreset,
 		):
 			preset = mixin.get_active_settings_preset()
 			assert preset.id == ldap_preset.id
@@ -275,11 +298,15 @@ class TestLDAPSettingsMixin:
 			assert LDAPPreset.objects.count() == 1
 
 	class TestResyncSettings:
-		def test_resync_settings(self, mixin: SettingsViewMixin, mocker: MockerFixture):
+		def test_resync_settings(
+			self, mixin: SettingsViewMixin, mocker: MockerFixture
+		):
 			m_resync: MockType = mocker.patch(
 				"core.views.mixins.ldap_settings.RuntimeSettings.resync"
 			)
-			m_resync_users: MockType = mocker.patch.object(mixin, "resync_users")
+			m_resync_users: MockType = mocker.patch.object(
+				mixin, "resync_users"
+			)
 			mixin.resync_settings()
 			m_resync.assert_called_once()
 			m_resync_users.assert_called_once()
@@ -343,10 +370,14 @@ class TestLDAPSettingsMixin:
 
 	class TestTestLdapSettings:
 		def test_test_ldap_settings_success(
-			self, mixin: SettingsViewMixin, ldap_test_data: dict, mocker: MockerFixture
+			self,
+			mixin: SettingsViewMixin,
+			ldap_test_data: dict,
+			mocker: MockerFixture,
 		):
 			mocker.patch(
-				"core.views.mixins.ldap_settings.net_port_test", return_value=True
+				"core.views.mixins.ldap_settings.net_port_test",
+				return_value=True,
 			)
 			m_test_conn = mocker.patch(
 				"core.views.mixins.ldap_settings.test_ldap_connection"
@@ -362,19 +393,27 @@ class TestLDAPSettingsMixin:
 			m_test_conn.assert_called_once()
 
 		def test_test_ldap_settings_port_unreachable(
-			self, mixin: SettingsViewMixin, ldap_test_data: dict, mocker: MockerFixture
+			self,
+			mixin: SettingsViewMixin,
+			ldap_test_data: dict,
+			mocker: MockerFixture,
 		):
 			mocker.patch(
-				"core.views.mixins.ldap_settings.net_port_test", return_value=False
+				"core.views.mixins.ldap_settings.net_port_test",
+				return_value=False,
 			)
 			with pytest.raises(exc_ldap.PortUnreachable):
 				mixin.test_ldap_settings(ldap_test_data)
 
 		def test_test_ldap_settings_connection_failed(
-			self, mixin: SettingsViewMixin, ldap_test_data: dict, mocker: MockerFixture
+			self,
+			mixin: SettingsViewMixin,
+			ldap_test_data: dict,
+			mocker: MockerFixture,
 		):
 			mocker.patch(
-				"core.views.mixins.ldap_settings.net_port_test", return_value=True
+				"core.views.mixins.ldap_settings.net_port_test",
+				return_value=True,
 			)
 			mocker.patch(
 				"core.views.mixins.ldap_settings.test_ldap_connection",
@@ -414,9 +453,13 @@ class TestLDAPSettingsMixin:
 			)
 			setting_instance.save()
 
-			mixin.save_local_settings(local_settings={
-				INTERLOCK_SETTING_ENABLE_LDAP: {LOCAL_ATTR_VALUE: setting_value}
-			})
+			mixin.save_local_settings(
+				local_settings={
+					INTERLOCK_SETTING_ENABLE_LDAP: {
+						LOCAL_ATTR_VALUE: setting_value
+					}
+				}
+			)
 
 			setting_instance = InterlockSetting.objects.get(name=setting_key)
 			assert setting_instance.value == setting_value
@@ -462,9 +505,8 @@ class TestLDAPSettingsMixin:
 						LOCAL_ATTR_EMAIL: "mock_fld",
 						LOCAL_ATTR_DN: "mock_fld",
 					},
-					False
+					False,
 				),
-
 				# Deleting overrides
 				(K_LDAP_LOG_CREATE, (not defaults.LDAP_LOG_CREATE), True),
 				(K_LDAP_LOG_READ, (not defaults.LDAP_LOG_READ), True),
@@ -502,7 +544,7 @@ class TestLDAPSettingsMixin:
 						LOCAL_ATTR_EMAIL: "mock_fld",
 						LOCAL_ATTR_DN: "mock_fld",
 					},
-					True
+					True,
 				),
 			),
 		)
@@ -632,7 +674,9 @@ class TestLDAPSettingsMixin:
 		):
 			with pytest.raises(ValidationError):
 				mixin.save_ldap_settings(
-					ldap_settings={setting_key: {LOCAL_ATTR_VALUE: setting_value}},
+					ldap_settings={
+						setting_key: {LOCAL_ATTR_VALUE: setting_value}
+					},
 					settings_preset=ldap_preset,
 				)
 			assert not LDAPSetting.objects.filter(
