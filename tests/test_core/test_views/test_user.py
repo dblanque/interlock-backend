@@ -74,8 +74,16 @@ class TestList:
 class TestInsert:
 	endpoint = reverse("users-insert")
 
+	@pytest.mark.parametrize(
+		"with_password",
+		(
+			True,
+			False
+		),
+	)
 	def test_success_with_ldap_disabled(
 		self,
+		with_password: bool,
 		admin_user_client: APIClient,
 		mocker: MockerFixture,
 		g_interlock_ldap_disabled,
@@ -87,6 +95,10 @@ class TestInsert:
 			LOCAL_ATTR_EMAIL: "new@example.com",
 			LOCAL_ATTR_IS_ENABLED: True,
 		}
+		if not with_password:
+			m_password = m_data.pop(LOCAL_ATTR_PASSWORD)
+			del m_data[LOCAL_ATTR_PASSWORD_CONFIRM]
+
 		m_log = mocker.patch("core.views.user.DBLogMixin.log")
 		m_ldap_user_exists = mocker.patch(
 			"core.views.user.UserViewSet.ldap_user_exists"
@@ -105,7 +117,11 @@ class TestInsert:
 		user: User = User.objects.get(username=m_data[LOCAL_ATTR_USERNAME])
 		assert user.email == m_data[LOCAL_ATTR_EMAIL]
 		m_ldap_user_exists.assert_not_called()
-		assert user.check_password(m_data[LOCAL_ATTR_PASSWORD])
+		if with_password:
+			assert user.check_password(m_data[LOCAL_ATTR_PASSWORD])
+		else:
+			assert not user.check_password(m_password)
+			assert not user.check_password("")
 
 		# Verify logging
 		m_log.assert_called_once_with(
@@ -168,6 +184,7 @@ class TestInsert:
 		invalid_data = {
 			LOCAL_ATTR_USERNAME: "someuser",
 			LOCAL_ATTR_EMAIL: "invalid-email",
+			LOCAL_ATTR_PASSWORD_CONFIRM: "mockpassword",
 			# Missing password
 		}
 		m_ldap_user_exists = mocker.patch(
@@ -181,8 +198,32 @@ class TestInsert:
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		m_ldap_user_exists.assert_not_called()
 		assert "errors" in response.data
-		assert LOCAL_ATTR_PASSWORD in response.data["errors"]
 		assert LOCAL_ATTR_EMAIL in response.data["errors"]
+
+	def test_serializer_password_validation_failure(
+		self,
+		admin_user_client: APIClient,
+		mocker: MockerFixture,
+	):
+		"""Test invalid payload returns BadRequest"""
+		invalid_data = {
+			LOCAL_ATTR_USERNAME: "someuser",
+			LOCAL_ATTR_EMAIL: "email@example.com",
+			LOCAL_ATTR_PASSWORD: "mockpassword",
+			# Missing password confirm
+		}
+		m_ldap_user_exists = mocker.patch(
+			"core.views.user.UserViewSet.ldap_user_exists"
+		)
+
+		# Act
+		response: Response = admin_user_client.post(self.endpoint, invalid_data)
+
+		# Assert
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		m_ldap_user_exists.assert_not_called()
+		assert "errors" in response.data
+		assert LOCAL_ATTR_PASSWORD_CONFIRM in response.data["errors"]
 
 	def test_ldap_user_exists_raises_error(
 		self,
