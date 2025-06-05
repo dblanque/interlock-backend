@@ -26,9 +26,9 @@ Target Mid-June release
 	* auth <d>
 	* home <d>
 	* settings <d>
-	* logs - next week
+	* logs - next week <d>
 	* oidc - friday?
-	* totp - thursday?
+	* totp - thursday? <d>
 	* user - wednesday <d>
 
 ## Issues
