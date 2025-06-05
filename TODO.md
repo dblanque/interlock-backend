@@ -59,6 +59,7 @@ Target Mid-June release
 * Add logging to all Application Security Group model operations
 * Add logging to all TOTP operations
 * Add rsa encryption key re-generation in settings (must de-crypt and re-encrypt data)
+* Add bool setting key for Interlock -> ALLOW_LDAP_TO_OVERRIDE_LOCAL_USERS
 
 ## Nice would-haves
 * Add browser fingerprint model.
