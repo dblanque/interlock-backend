@@ -34,7 +34,7 @@ class SettingResetFail(CoreException):
 
 
 class SettingPresetNotExists(CoreException):
-	status_code = status.HTTP_400_BAD_REQUEST
+	status_code = status.HTTP_404_NOT_FOUND
 	default_detail = "Settings Preset does not Exist"
 	default_code = "setting_preset_not_exists"
 
