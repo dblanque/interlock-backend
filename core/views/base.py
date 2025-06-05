@@ -16,6 +16,9 @@ class BaseViewSet(viewsets.ViewSet):  # pragma: no cover
 	"""
 	Base ViewSet that disables all default endpoints unless implemented.
 	"""
+	def not_found(self, request, pk=None):
+		raise NotFound
+
 	def list(self, request, pk=None):
 		raise NotFound
 
