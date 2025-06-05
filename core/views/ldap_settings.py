@@ -56,6 +56,7 @@ from core.constants.attrs import (
 from core.constants.settings import K_LDAP_LOG_MAX
 from core.decorators.login import auth_required, admin_required
 from django.db import transaction
+from django.core.exceptions import ObjectDoesNotExist
 import logging
 ################################################################################
 
@@ -164,11 +165,15 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		code = 0
 		if not LOCAL_ATTR_ID in data:
 			raise exc_base.MissingDataKey(data={"key": LOCAL_ATTR_ID})
+
 		preset_id = data[LOCAL_ATTR_ID]
-		if not LDAPPreset.objects.filter(id=preset_id).exists():
+		try:
+			LDAPPreset.objects.get(id=preset_id)
+		except ObjectDoesNotExist:
 			raise exc_set.SettingPresetNotExists
+
 		active_preset = self.get_active_settings_preset()
-		if active_preset.id == preset_id:
+		if active_preset.id == int(preset_id):
 			raise exc_set.SettingPresetMustBeDisabled
 		LDAPPreset.objects.get(id=preset_id).delete_permanently()
 		return Response(data={"code": code, "code_msg": "ok"})
@@ -181,18 +186,21 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		code = 0
 		if not LOCAL_ATTR_ID in data:
 			raise exc_base.MissingDataKey(data={"key": LOCAL_ATTR_ID})
+
 		preset_id = data[LOCAL_ATTR_ID]
-		if not LDAPPreset.objects.filter(id=preset_id).exists():
+		try:
+			new_preset = LDAPPreset.objects.get(id=preset_id)
+		except ObjectDoesNotExist:
 			raise exc_set.SettingPresetNotExists
+
 		with transaction.atomic():
-			active_preset = self.get_active_settings_preset()
-			active_preset.active = (
+			old_preset = self.get_active_settings_preset()
+			old_preset.active = (
 				None  # Don't set this to False, DB Constraints
 			)
-			active_preset.save()
-			inactive_preset = LDAPPreset.objects.get(id=preset_id)
-			inactive_preset.active = True
-			inactive_preset.save()
+			old_preset.save()
+			new_preset.active = True
+			new_preset.save()
 
 		self.resync_settings()
 		return Response(data={"code": code, "code_msg": "ok"})
@@ -208,9 +216,11 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 				raise exc_base.MissingDataKey(data={"key": k})
 		preset_id = data[LOCAL_ATTR_ID]
 		preset_label = data[LOCAL_ATTR_LABEL]
-		if not LDAPPreset.objects.filter(id=preset_id).exists():
+
+		try:
+			preset = LDAPPreset.objects.get(id=preset_id)
+		except ObjectDoesNotExist:
 			raise exc_set.SettingPresetNotExists
-		preset = LDAPPreset.objects.get(id=preset_id)
 
 		serializer = LDAPPresetSerializer(
 			data={
