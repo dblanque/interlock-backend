@@ -229,7 +229,7 @@ def test_cookie_jwt_refresh_valid_token(
 
 	# Verify the tokens are valid by attempting to decode them
 	AccessToken(access_token.token)
-	RefreshToken(refresh_token)
+	RefreshToken(refresh_token.token)
 
 
 def test_cookie_jwt_refresh_invalid_token(
