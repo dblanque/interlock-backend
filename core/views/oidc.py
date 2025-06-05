@@ -138,7 +138,7 @@ class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
 
 		# PROMPT
 		prompt = request.GET.get("prompt", None)
-		if isinstance(prompt, str) and prompt.lower() == "none":
+		if not prompt or (isinstance(prompt, str) and prompt.lower() == "none"):
 			prompt = None
 		elif not prompt in OIDC_ALLOWED_PROMPTS:
 			return login_redirect_bad_request("oidc_prompt_unsupported")
@@ -146,7 +146,8 @@ class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
 		# VALIDATION
 		try:
 			self.authorize.validate_params()
-		except:
+		except Exception as e:
+			logger.exception(e)
 			return login_redirect_bad_request()
 
 		OIDC_COOKIE = request.COOKIES.get(
