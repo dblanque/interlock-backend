@@ -261,6 +261,60 @@ class TestPresetDelete:
 		assert response.status_code == status.HTTP_200_OK
 		assert LDAPPreset.objects.filter(name=m_preset_name).count() == 0
 
+	def test_raises_must_be_disabled(
+		self,
+		admin_user_client: APIClient,
+		fc_ldap_preset: LdapPresetFactory,
+	):
+		m_preset_name = "test_preset_delete"
+		m_preset = fc_ldap_preset(
+			name=m_preset_name,
+			label="Test Preset Delete",
+			active=True,
+		)
+		m_preset.save()
+
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={LOCAL_ATTR_ID: m_preset.id},
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		m_preset.refresh_from_db()
+
+	def test_raises_missing_key(
+		self,
+		admin_user_client: APIClient,
+		fc_ldap_preset: LdapPresetFactory,
+	):
+		m_preset_name = "test_preset_delete"
+		m_preset = fc_ldap_preset(
+			name=m_preset_name,
+			label="Test Preset Delete",
+		)
+		m_preset.save()
+
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={},
+		)
+
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert response.data.get("code") == "data_key_missing"
+		assert LDAPPreset.objects.filter(name=m_preset_name).exists()
+
+	def test_preset_not_exists(
+		self,
+		admin_user_client: APIClient,
+	):
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={LOCAL_ATTR_ID: 999},
+		)
+
+		assert response.status_code == status.HTTP_404_NOT_FOUND
+		assert response.data.get("code") == "setting_preset_not_exists"
 
 class TestPresetEnable:
 	endpoint = reverse("settings-preset-enable")
@@ -288,6 +342,34 @@ class TestPresetEnable:
 		assert LDAPPreset.objects.filter(active=True).count() == 1
 		assert LDAPPreset.objects.get(active=True) == m_preset
 
+	def test_raises_does_not_exist(
+		self,
+		admin_user_client: APIClient,
+	):
+
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={LOCAL_ATTR_ID: 999},
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_404_NOT_FOUND
+		assert not LDAPPreset.objects.all().exists()
+		assert response.data.get("code") == "setting_preset_not_exists"
+
+	def test_raises_missing_key(
+		self,
+		admin_user_client: APIClient,
+	):
+
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={},
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert response.data.get("code") == "data_key_missing"
 
 class TestPresetRename:
 	endpoint = reverse("settings-preset-rename")
@@ -313,6 +395,46 @@ class TestPresetRename:
 		m_preset.refresh_from_db()
 		assert m_preset.name == "new_name"
 		assert m_preset.label == "New Name"
+
+	def test_raises_does_not_exist(
+		self,
+		admin_user_client: APIClient,
+	):
+
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data={LOCAL_ATTR_ID: 999, LOCAL_ATTR_LABEL: "New Name"},
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_404_NOT_FOUND
+		assert not LDAPPreset.objects.all().exists()
+		assert response.data.get("code") == "setting_preset_not_exists"
+
+	@pytest.mark.parametrize(
+		"delete_key",
+		(
+			LOCAL_ATTR_ID,
+			LOCAL_ATTR_LABEL,
+		),
+	)
+	def test_raises_missing_key(
+		self,
+		delete_key: str,
+		admin_user_client: APIClient,
+	):
+		m_data = {LOCAL_ATTR_ID: 999, LOCAL_ATTR_LABEL: "New Name"}
+		if delete_key in m_data:
+			del m_data[delete_key]
+
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=m_data,
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert response.data.get("code") == "data_key_missing"
 
 
 class TestSave:
@@ -393,7 +515,7 @@ class TestSave:
 			},
 			format="json",
 		)
-		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert response.status_code == status.HTTP_404_NOT_FOUND
 		assert response.data.get("code") == "setting_preset_not_exists"
 
 	@pytest.mark.parametrize(
