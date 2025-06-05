@@ -40,6 +40,7 @@ Target Mid-June release
 * Add LDAP_DEFAULT_USER_CLASSES, LDAP_DEFAULT_GROUP_CLASSES to ldap settings.
 * Check TOTP support for non admin users
 * Add Application Group LDAP Object Pruning
+* Normalize API Endpoint naming and methods
 
 ### Medium Priority
 * Add LDAP User Syncing <d>
