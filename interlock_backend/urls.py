@@ -74,13 +74,50 @@ if DEBUG == True:
 
 # URL PATTERNS SET HERE
 urlpatterns = [
-	# {BASE_URL} /
-	path("", include(router.urls)),
+	# User Viewset Overrides
+	# path(
+	# 	"api/users/<int:pk>/",
+	# 	UserViewSet.as_view({
+	# 		"get": UserViewSet.fetch.__name__,
+	# 		"delete": UserViewSet.delete.__name__,
+	# 		"post": UserViewSet.update.__name__,
+	# 		"patch": UserViewSet.update.__name__,
+	# 		"put": UserViewSet.update.__name__,
+	# 	}),
+	# 	name="users-detail",
+	# ),
+	# Application Viewset Overrides
+	# path(
+	# 	"api/applications/<int:pk>/",
+	# 	ApplicationViewSet.as_view({
+	# 		"get": ApplicationViewSet.fetch.__name__,
+	# 		"delete": ApplicationViewSet.delete.__name__,
+	# 		"post": ApplicationViewSet.update.__name__,
+	# 		"patch": ApplicationViewSet.update.__name__,
+	# 		"put": ApplicationViewSet.update.__name__,
+	# 	}),
+	# 	name="applications-detail",
+	# ),
+	# Application Group Viewset Overrides
+	# path(
+	# 	"api/application-groups/<int:pk>/",
+	# 	ApplicationGroupViewSet.as_view({
+	# 		"get": ApplicationGroupViewSet.retrieve.__name__,
+	# 		"delete": ApplicationGroupViewSet.delete.__name__,
+	# 		"post": ApplicationGroupViewSet.update.__name__,
+	# 		"patch": ApplicationGroupViewSet.update.__name__,
+	# 		"put": ApplicationGroupViewSet.update.__name__,
+	# 	}),
+	# 	name="application-groups-detail",
+	# ),
+	# Settings Viewset Overrides
 	path(
 		"api/settings/fetch/<int:pk>/",
 		SettingsViewSet.as_view({"get": "fetch"}),
 		name="settings-fetch",
 	),
+	# {BASE_URL} /
+	path("", include(router.urls)),
 	# {BASE_URL} /admin
 	path("admin/", admin.site.urls),
 	# {BASE_URL} api/token/*
