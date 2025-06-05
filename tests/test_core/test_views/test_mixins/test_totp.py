@@ -255,14 +255,12 @@ class TestDeleteDeviceTotpForUser:
 		mocker.patch(
 			"core.views.mixins.totp.get_user_totp_device", return_value=f_device
 		)
-		m_totp_device = mocker.patch(
-			"core.views.mixins.totp.TOTPDevice.objects.get"
-		)
 
 		result = delete_device_totp_for_user(f_user)
 
-		assert result == m_totp_device.return_value.delete.return_value
-		assert f_user.recovery_codes == []
+		f_device.delete.assert_called_once()
+		assert result is True
+		assert not f_user.recovery_codes
 		f_user.save.assert_called()
 		f_logger.info.assert_called_once_with(
 			"TOTP Device deleted for user %s", f_user.username
@@ -277,7 +275,7 @@ class TestDeleteDeviceTotpForUser:
 			"core.views.mixins.totp.get_user_totp_device", return_value=None
 		)
 
-		assert delete_device_totp_for_user(f_user) is True
+		assert not delete_device_totp_for_user(f_user)
 
 
 class TestFetchDeviceTotpForUser:

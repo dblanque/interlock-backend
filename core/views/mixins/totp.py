@@ -106,11 +106,10 @@ def delete_device_totp_for_user(user: User) -> bool:
 	device = get_user_totp_device(user)
 	if not device:
 		return False
-	totp_device = TOTPDevice.objects.get(user_id=user.id)
+	device.delete()
 	user.recovery_codes = []
 	user.save()
 	logger.info("TOTP Device deleted for user %s", user.username)
-	totp_device.delete()
 	return True
 
 
