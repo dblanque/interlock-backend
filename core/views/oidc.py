@@ -63,7 +63,6 @@ from interlock_backend.settings import (
 	OIDC_INTERLOCK_LOGIN_COOKIE,
 	OIDC_SKIP_CONSENT_EXPIRE,
 )
-
 ################################################################################
 logger = logging.getLogger(__name__)
 
@@ -204,12 +203,3 @@ class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
 					login_url = f"{LOGIN_URL}/?{QK_ERROR}=true&{QK_ERROR_DETAIL}={_error}"
 					return self.abort_redirect(redirect(login_url))
 			return redirect_response
-
-
-# class CustomTokenView(TokenView):
-# 	def post(self, request, *args, **kwargs):
-# 		# Add custom token issuance logic (e.g., track token grants)
-# 		response = super().post(request, *args, **kwargs)
-# 		if 'access_token' in response.data:
-# 			track_access_token(request.user, response.data['access_token'])
-# 		return response
