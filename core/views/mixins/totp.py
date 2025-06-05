@@ -28,7 +28,7 @@ from django_otp import devices_for_user
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
 
-def get_user_totp_device(user: User, confirmed=None) -> TOTPDevice:
+def get_user_totp_device(user: User, confirmed=False) -> TOTPDevice:
 	devices = devices_for_user(user, confirmed=confirmed)
 	for device in devices:
 		if isinstance(device, TOTPDevice):
@@ -96,15 +96,22 @@ def fetch_device_totp_for_user(user: User) -> str:
 	return set_interlock_otp_label(device.config_url, user)
 
 
-def delete_device_totp_for_user(user: User) -> tuple[int, dict[str, int]]:
+def delete_device_totp_for_user(user: User) -> bool:
+	"""Deletes TOTPDevice for requested user.
+
+	Returns:
+		bool: True if a device is deleted,
+		False if no device to delete is found.
+	"""
 	device = get_user_totp_device(user)
 	if not device:
-		return True
+		return False
 	totp_device = TOTPDevice.objects.get(user_id=user.id)
 	user.recovery_codes = []
 	user.save()
 	logger.info("TOTP Device deleted for user %s", user.username)
-	return totp_device.delete()
+	totp_device.delete()
+	return True
 
 
 def validate_user_otp(
