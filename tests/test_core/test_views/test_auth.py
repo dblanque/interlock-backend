@@ -20,7 +20,7 @@ import time
 
 
 class TestRefresh:
-	endpoint = reverse("token_refresh")
+	endpoint = reverse("token-refresh")
 
 	def test_get_refresh_access_valid(
 		self,
@@ -154,7 +154,7 @@ class TestRefresh:
 
 
 class TestLogout:
-	endpoint = reverse("token_revoke")
+	endpoint = reverse("token-revoke")
 
 	@pytest.mark.parametrize(
 		"user_fixture_type",
