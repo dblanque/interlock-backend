@@ -40,50 +40,52 @@ EMPTY_TOKEN = ""
 DATE_FMT_COOKIE = "%a, %d %b %Y %H:%M:%S GMT"
 BAD_LOGIN_LIMIT = 5
 
-
-def RemoveTokenResponse(
-	request: HttpRequest, remove_refresh=False, bad_login_count=False
-) -> Response:
-	response = Response(status=status.HTTP_401_UNAUTHORIZED)
-	response.set_cookie(
-		key=JWT_SETTINGS["AUTH_COOKIE_NAME"],
-		value="expired",
-		httponly=True,
-		samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
-		domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
-	)
-	if remove_refresh:
+class RemoveTokenResponse:
+	def __new__(
+		cls,
+		request: HttpRequest,
+		remove_refresh=False,
+		bad_login_count=False
+	):
+		response = Response(status=status.HTTP_401_UNAUTHORIZED)
 		response.set_cookie(
-			key=JWT_SETTINGS["REFRESH_COOKIE_NAME"],
+			key=JWT_SETTINGS["AUTH_COOKIE_NAME"],
 			value="expired",
 			httponly=True,
 			samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
 			domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
 		)
-
-	if bad_login_count:
-		try:
-			bad_login_count = int(request.COOKIES.get(BAD_LOGIN_COOKIE_NAME))
-		except:
-			bad_login_count = 0
-			pass
-		if bad_login_count < BAD_LOGIN_LIMIT:
-			bad_login_count = int(bad_login_count) + 1
-		else:
-			bad_login_count = 0
-		try:
+		if remove_refresh:
 			response.set_cookie(
-				key=BAD_LOGIN_COOKIE_NAME,
-				value=bad_login_count,
-				httponly=False,
+				key=JWT_SETTINGS["REFRESH_COOKIE_NAME"],
+				value="expired",
+				httponly=True,
 				samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
 				domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
 			)
-		except:
-			pass
-	response.data = {"remaining_login_count": BAD_LOGIN_LIMIT - bad_login_count}
-	return response
 
+		if bad_login_count:
+			try:
+				bad_login_count = int(request.COOKIES.get(BAD_LOGIN_COOKIE_NAME))
+			except:
+				bad_login_count = 0
+				pass
+			if bad_login_count < BAD_LOGIN_LIMIT:
+				bad_login_count = int(bad_login_count) + 1
+			else:
+				bad_login_count = 0
+			try:
+				response.set_cookie(
+					key=BAD_LOGIN_COOKIE_NAME,
+					value=bad_login_count,
+					httponly=False,
+					samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
+					domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
+				)
+			except:
+				pass
+		response.data = {"remaining_login_count": BAD_LOGIN_LIMIT - bad_login_count}
+		return response
 
 class CookieJWTAuthentication(JWTAuthentication):
 	def authenticate(self, request: HttpRequest) -> tuple[User, AccessToken]:
