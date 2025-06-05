@@ -75,9 +75,22 @@ class TestList(BaseViewTestClass):
 		admin_user_client: APIClient,
 		f_log_dataset: list[Log],
 	):
+		expected_headers = {
+			"id",
+			"date",
+			"user",
+			"actionType",
+			"objectClass",
+			"affectedObject",
+			"extraMessage",
+		}
+
+		# Execution
 		response: Response = admin_user_client.get(self.endpoint)
-		response_logs = response.data.get("logs")
+		response_logs: list[dict] = response.data.get("logs")
 		assert response.status_code == status.HTTP_200_OK
+
+		# Assertions
 		assert isinstance(response_logs, list)
 		assert len(response_logs) == len(f_log_dataset)
 		assert all(
@@ -89,15 +102,11 @@ class TestList(BaseViewTestClass):
 			.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
 		assert response_logs[1]["objectClass"] == LOG_CLASS_GROUP
 		assert response_logs[2]["objectClass"] == LOG_CLASS_DNSR
-		assert set(response.data.get("headers")) == {
-			"id",
-			"date",
-			"user",
-			"actionType",
-			"objectClass",
-			"affectedObject",
-			"extraMessage",
-		}
+		assert all(
+			set(l.keys()) == expected_headers
+			for l in response_logs
+		)
+		assert set(response.data.get("headers")) == expected_headers
 
 	def test_success_no_logs(
 		self,
