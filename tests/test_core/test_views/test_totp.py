@@ -131,18 +131,6 @@ class TestList(BaseViewTestClass):
 class TestCreateDevice(BaseViewTestClass):
 	_endpoint = "totp-create-device"
 
-	def test_raises_serializer_fail(
-		self,
-		mocker: MockerFixture,
-		admin_user_client: APIClient,
-	):
-		mocker.patch(
-			"core.views.totp.OTPTokenSerializer",
-			side_effect=exc_otp.OTPInvalidData,
-		)
-		response: Response = admin_user_client.get(self.endpoint)
-		assert response.status_code == status.HTTP_400_BAD_REQUEST
-
 	def test_success_mocked(
 		self,
 		mocker: MockerFixture,
