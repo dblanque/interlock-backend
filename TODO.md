@@ -27,7 +27,7 @@ Target Mid-June release
 	* home <d>
 	* settings <d>
 	* logs - next week <d>
-	* oidc - friday?
+	* oidc - friday <d>
 	* totp - thursday? <d>
 	* user - wednesday <d>
 
@@ -51,6 +51,7 @@ Target Mid-June release
 * Add LDAP User Export
 
 ### Low Priority
+* Improve OIDC Exception Responses to frontend
 * Add OIDC Prompt Features?
 	* login <d>
 	* consent <d>
