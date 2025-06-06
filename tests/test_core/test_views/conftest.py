@@ -84,6 +84,11 @@ _JWT_SECURE = SIMPLE_JWT["AUTH_COOKIE_SECURE"]
 		("/api/application/{pk}/delete/", HTTPMethod.DELETE),
 		("/api/application/{pk}/fetch/", HTTPMethod.GET),
 		("/api/application/{pk}/", HTTPMethod.PUT),
+		# Local User
+		# Token
+		# OIDC
+		# Logs
+		# Settings
 	],
 	ids=lambda x: f"{x[1]}: {x[0]}",
 )

@@ -30,6 +30,7 @@ Target Mid-June release
 	* oidc - friday <d>
 	* totp - thursday? <d>
 	* user - wednesday <d>
+* Finish generic endpoint tests (unauthorized, ldap disabled, etc.).
 * User is_built_in
 * core.constants.search_attrs_builder
 * core.serializers.ldap
