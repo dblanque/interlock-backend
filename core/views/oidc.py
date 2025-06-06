@@ -36,6 +36,7 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
 from urllib.parse import quote
 from rest_framework.response import Response
+from rest_framework import status
 from rest_framework.decorators import action
 from urllib.parse import urlparse, parse_qs
 
@@ -148,7 +149,9 @@ class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
 			self.authorize.validate_params()
 		except Exception as e:
 			logger.exception(e)
-			return login_redirect_bad_request()
+			return login_redirect_bad_request(
+				error_detail=status.HTTP_406_NOT_ACCEPTABLE
+			)
 
 		OIDC_COOKIE = request.COOKIES.get(
 			OIDC_INTERLOCK_LOGIN_COOKIE, OIDC_COOKIE_VUE_REDIRECT
@@ -164,14 +167,16 @@ class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
 		)
 
 		# TODO - Check if user is in application's groups (LDAP, Local, etc.)
-		# Redirect to login
-		if (
+		user_requires_auth = (
 			user.is_anonymous
 			or not user.is_authenticated
 			or not user.is_enabled
 			or prompt == OIDC_PROMPT_LOGIN
 			or require_consent
-		):
+		)
+
+		# Redirect to login if user requires auth
+		if user_requires_auth:
 			if OIDC_COOKIE == OIDC_COOKIE_VUE_ABORT:
 				redirect_response = redirect(f"{LOGIN_URL}/?{QK_ERROR}=true")
 				redirect_response.delete_cookie(OIDC_INTERLOCK_LOGIN_COOKIE)
@@ -181,14 +186,21 @@ class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
 				OIDC_COOKIE_VUE_LOGIN,
 			):
 				return self.login_redirect()
+
 		# Redirect to login with failure code
 		else:
+			# If user is not in ACL for requested resource, deny
 			if not self.user_can_access_app(user=user):
-				return login_redirect_bad_request(error_detail=403)
+				return login_redirect_bad_request(
+					error_detail=status.HTTP_403_FORBIDDEN,
+				)
 			redirect_response: HttpResponse = redirect(
 				self.authorize.create_response_uri()
 			)
+
+			# Remove redirection cookie
 			redirect_response.delete_cookie(OIDC_INTERLOCK_LOGIN_COOKIE)
+
 			if hasattr(redirect_response, "headers"):
 				_redirect_url = None
 				_parsed_url = None
@@ -198,8 +210,8 @@ class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
 						_redirect_url = redirect_response.headers[location_key]
 						_parsed_url = urlparse(_redirect_url)
 						_parsed_query = parse_qs(_parsed_url.query)
-				if _parsed_query and "error" in _parsed_query:
-					_error = quote(_parsed_query["error"][0])
+				if _parsed_query and QK_ERROR in _parsed_query:
+					_error = quote(_parsed_query[QK_ERROR][0])
 					logger.error(f"OIDC Error: {_error}")
 					login_url = f"{LOGIN_URL}/?{QK_ERROR}=true&{QK_ERROR_DETAIL}={_error}"
 					return self.abort_redirect(redirect(login_url))
