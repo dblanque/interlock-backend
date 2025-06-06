@@ -5,11 +5,18 @@ from pytest_mock import MockerFixture, MockType
 ################################################################################
 from tests.test_core.type_hints import LDAPConnectorMock
 from core.views.mixins.ldap.user import LDAPUserMixin
+from core.ldap.connector import recursive_member_search
 from core.models.application import Application, ApplicationSecurityGroup
-from core.models.user import User, USER_TYPE_LDAP, USER_TYPE_LOCAL
+from core.models.user import User
 from core.views.mixins.oidc import get_user_groups
 from interlock_backend.settings import OIDC_INTERLOCK_LOGIN_COOKIE
-from core.constants.attrs.local import LOCAL_ATTR_USER_GROUPS, LOCAL_ATTR_DN
+from core.constants.attrs import (
+	LOCAL_ATTR_USER_GROUPS,
+	LOCAL_ATTR_DN,
+	LDAP_ATTR_DN,
+	LDAP_ATTR_GROUP_MEMBERS,
+	LDAP_ATTR_OBJECT_CLASS,
+)
 from core.constants.oidc import (
 	QK_NEXT,
 	OIDC_PROMPT_NONE,
@@ -34,12 +41,14 @@ from core.views.mixins.oidc import (
 	userinfo,
 	CustomScopeClaims,
 )
-from oidc_provider.models import Client, UserConsent
+from oidc_provider.models import UserConsent
 from django.http import QueryDict
-from typing import Protocol, Union
+from typing import Protocol
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
-from tests.test_core.conftest import RuntimeSettingsFactory
-from tests.test_core.test_views.conftest import UserFactory
+from tests.test_core.conftest import (
+	RuntimeSettingsFactory,
+	LDAPEntryFactoryProtocol,
+)
 
 ################################################################################
 ################################# FIXTURES #####################################
@@ -437,7 +446,7 @@ class TestUserCanAccessApp:
 		assert f_authorize_mixin.user_can_access_app(f_user_ldap)
 
 	@staticmethod
-	def test_user_not_in_group(
+	def test_ldap_user_not_in_group(
 		mocker: MockerFixture,
 		f_authorize_mixin: OidcAuthorizeMixin,
 		f_user_ldap: User,
@@ -457,7 +466,7 @@ class TestUserCanAccessApp:
 		)
 
 	@staticmethod
-	def test_user_in_group(
+	def test_local_user_in_group(
 		f_authorize_mixin: OidcAuthorizeMixin,
 		f_user_local: MockType,
 		f_application: MockType,
@@ -473,18 +482,27 @@ class TestUserCanAccessApp:
 	def test_with_ldap_user_access(
 		mocker: MockerFixture,
 		f_authorize_mixin: OidcAuthorizeMixin,
-		f_user_ldap: MockType,
+		f_user_ldap: User,
 		f_application: MockType,
 		f_security_group: MockType,
 		f_ldap_connector: LDAPConnectorMock,
+		fc_ldap_entry: LDAPEntryFactoryProtocol,
 	) -> None:
 		f_authorize_mixin.application = f_application
+		f_ldap_connector.connection.entries=[
+			fc_ldap_entry(spec=False, **{
+				LDAP_ATTR_DN: "some_group_dn",
+				LDAP_ATTR_GROUP_MEMBERS: [f_user_ldap.distinguished_name],
+				LDAP_ATTR_OBJECT_CLASS: ["top","group"]
+			})
+		]
 		mocker.patch(
 			"core.views.mixins.oidc.ApplicationSecurityGroup.objects.get",
 			return_value=f_security_group,
 		)
 		m_recursive_search = mocker.patch(
-			"core.views.mixins.oidc.recursive_member_search", return_value=True
+			"core.views.mixins.oidc.recursive_member_search",
+			wraps=recursive_member_search,
 		)
 		assert f_authorize_mixin.user_can_access_app(f_user_ldap)
 		m_recursive_search.assert_called_once_with(
