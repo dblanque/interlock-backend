@@ -30,6 +30,14 @@ Target Mid-June release
 	* oidc - friday <d>
 	* totp - thursday? <d>
 	* user - wednesday <d>
+* User is_built_in
+* core.constants.search_attrs_builder
+* core.serializers.ldap
+	* country_dcc_validator
+	* website_validator
+* core.serializers.token
+	* validate -> get_user_totp_device block
+	* TokenRefreshSerializer -> validate
 
 ## Issues
 ### High Priority
@@ -65,6 +73,7 @@ Target Mid-June release
 * Add bool setting key for Interlock -> ALLOW_LDAP_TO_OVERRIDE_LOCAL_USERS
 
 ## Nice would-haves
+* Add TEST Record Resolution to frontend.
 * Add browser fingerprint model.
 * Add browser fingerprint claim to simplejwt tokens.
 * Remove redundant translations for card titles, use action + class with TC.
