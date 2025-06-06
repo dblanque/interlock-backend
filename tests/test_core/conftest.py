@@ -93,7 +93,7 @@ def g_runtime_settings(mocker: MockerFixture) -> RuntimeSettingsFactory:
 class ConnectorFactory(Protocol):
 	def __call__(
 		self,
-		patch_path: str,
+		patch_path: str = "core.ldap.connector.LDAPConnector",
 		use_spec=False,
 		mock_enter: MockType = None,
 		mock_exit: MockType = None,
@@ -110,7 +110,7 @@ def g_ldap_connector(mocker: MockerFixture) -> ConnectorFactory:
 			raise exc_value
 
 	def maker(
-		patch_path: str,
+		patch_path: str = "core.ldap.connector.LDAPConnector",
 		use_spec=False,
 		mock_enter: MockType = None,
 		mock_exit: MockType = None,
@@ -147,7 +147,8 @@ def g_ldap_connector(mocker: MockerFixture) -> ConnectorFactory:
 		m_cxt_manager.__exit__ = fake_exit if not mock_exit else mock_exit
 
 		# Patch Connector
-		m_connector_cls = mocker.patch(patch_path, return_value=m_cxt_manager)
+		if patch_path:
+			m_connector_cls = mocker.patch(patch_path, return_value=m_cxt_manager)
 		m_connector.cxt_manager = m_cxt_manager
 		m_connector.cls_mock = m_connector_cls
 		return m_connector
@@ -195,7 +196,10 @@ def fc_ldap_entry(
 ) -> LDAPEntryFactoryProtocol:
 	def maker(**kwargs):
 		if "spec" in kwargs:
-			mock: LDAPEntry = mocker.MagicMock(spec=kwargs.pop("spec"))
+			_spec = kwargs.pop("spec")
+			mock: LDAPEntry = mocker.MagicMock(
+				spec=LDAPEntry if isinstance(_spec, bool) else _spec
+			)
 		else:
 			mock: LDAPEntry = mocker.MagicMock()
 		mock.entry_attributes = []
