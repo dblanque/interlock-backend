@@ -76,7 +76,7 @@ class TokenRefreshSerializer(jwt_serializers.TokenRefreshSerializer):
 	def validate(self, attrs):
 		self.user: User
 		data = super().validate(attrs)
-		if not user_auth_fail_conditions(self.user) is True:
+		if user_auth_fail_conditions(self.user) is not True:
 			raise AuthenticationFailed
 		return data
 
