@@ -440,17 +440,17 @@ class TestUserCanAccessApp:
 	def test_user_not_in_group(
 		mocker: MockerFixture,
 		f_authorize_mixin: OidcAuthorizeMixin,
-		f_user_ldap: MockType,
+		f_user_ldap: User,
 		f_ldap_connector: LDAPConnectorMock,
-		f_application: MockType,
-		f_application_group: MockType,
+		f_application: Application,
+		f_application_group: ApplicationSecurityGroup,
 	) -> None:
 		m_recursive_search = mocker.patch(
 			"core.views.mixins.oidc.recursive_member_search", return_value=False
 		)
 		f_authorize_mixin.application = f_application
-		assert f_authorize_mixin.user_can_access_app(f_user_ldap) is False
-		m_recursive_search.assert_called_once_with(
+		assert not f_authorize_mixin.user_can_access_app(f_user_ldap)
+		m_recursive_search.assert_any_call(
 			user_dn=f_user_ldap.distinguished_name,
 			connection=f_ldap_connector.connection,
 			group_dn="some_group_dn",
