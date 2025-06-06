@@ -160,7 +160,7 @@ class TestUpdate:
 		f_application_group: ApplicationSecurityGroup,
 		f_client: Client,
 	):
-		assert f_application_group.users.count() == 2
+		assert f_application_group.users.count() == 1
 		response: Response = admin_user_client.put(
 			self.endpoint.format(pk=f_application_group.id),
 			data={
