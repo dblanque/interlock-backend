@@ -14,5 +14,5 @@ def test_ldap_backend_disabled(
 ):
 	url, method = g_ldap_domain_endpoints
 	method = getattr(admin_user_client, method.lower())
-	response: Response = method(url)
+	response: Response = method(url.format(pk=0))
 	assert response.status_code == status.HTTP_418_IM_A_TEAPOT
