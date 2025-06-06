@@ -85,10 +85,37 @@ _JWT_SECURE = SIMPLE_JWT["AUTH_COOKIE_SECURE"]
 		("/api/application/{pk}/fetch/", HTTPMethod.GET),
 		("/api/application/{pk}/", HTTPMethod.PUT),
 		# Local User
+		("/api/users/", HTTPMethod.GET),
+		("/api/users/insert/", HTTPMethod.POST),
+		("/api/users/{pk}/fetch/", HTTPMethod.GET),
+		("/api/users/{pk}/", HTTPMethod.PUT),
+		("/api/users/{pk}/delete/", HTTPMethod.DELETE),
+		("/api/users/{pk}/delete/", HTTPMethod.POST),
+		("/api/users/{pk}/change_status/", HTTPMethod.POST),
+		("/api/users/{pk}/change_password/", HTTPMethod.POST),
+		("/api/users/self_change_password/", HTTPMethod.POST),
+		("/api/users/self_change_password/", HTTPMethod.PUT),
+		("/api/users/self_update/", HTTPMethod.POST),
+		("/api/users/self_update/", HTTPMethod.PUT),
+		# Logs
+		("/api/logs/", HTTPMethod.GET),
+		("/api/logs/reset/", HTTPMethod.GET),
+		("/api/logs/truncate/", HTTPMethod.POST),
+		# Settings
+		("/api/settings/", HTTPMethod.GET),
+		("/api/settings/fetch/{pk}/", HTTPMethod.GET),
+		("/api/settings/preset_create/", HTTPMethod.POST),
+		("/api/settings/preset_delete/", HTTPMethod.POST),
+		("/api/settings/preset_enable/", HTTPMethod.POST),
+		("/api/settings/preset_rename/", HTTPMethod.POST),
+		("/api/settings/save/", HTTPMethod.POST),
+		("/api/settings/reset/", HTTPMethod.GET),
+		("/api/settings/test/", HTTPMethod.POST),
+		("/api/settings/sync_users/", HTTPMethod.GET),
+		("/api/settings/prune_users/", HTTPMethod.GET),
+		("/api/settings/purge_users/", HTTPMethod.GET),
 		# Token
 		# OIDC
-		# Logs
-		# Settings
 	],
 	ids=lambda x: f"{x[1]}: {x[0]}",
 )
