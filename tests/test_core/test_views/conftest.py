@@ -353,7 +353,11 @@ def f_application():
 
 
 @pytest.fixture
-def f_application_group(f_application: Application, f_user_local, f_user_ldap):
+def f_application_group(
+	f_application: Application,
+	f_user_local: User,
+	f_user_ldap: User,
+):
 	"""Fixture creating a test application group in the database"""
 	m_asg = ApplicationSecurityGroup(
 		application=f_application,
@@ -362,7 +366,7 @@ def f_application_group(f_application: Application, f_user_local, f_user_ldap):
 	)
 	m_asg.save()
 	m_asg.users.add(f_user_local)
-	m_asg.users.add(f_user_ldap)
+	m_asg.ldap_objects.append(f_user_ldap.distinguished_name)
 	m_asg.save()
 	return m_asg
 
