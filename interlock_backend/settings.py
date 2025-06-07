@@ -14,7 +14,35 @@ from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import gettext_lazy as _
 from datetime import timedelta
 from django.core.management.utils import get_random_secret_key
+from typing import overload, Any
 import mimetypes
+
+_local_django_settings = None
+try:
+	from interlock_backend import local_django_settings as _local_django_settings
+except ImportError:
+	pass
+
+@overload
+def load_override(key: str) -> None: ...
+@overload
+def load_override(key: str, default: Any) -> None: ...
+def load_override(key: str, *args: Any, **kwargs: Any) -> None:
+	"""Override a global variable if it exists in local_django_settings.
+	
+	Args:
+		key: Name of the variable to override
+		default: Fallback value if the variable doesn't exist
+	"""
+	# Check if default was provided (positional or keyword)
+	default_provided = 'default' in kwargs or len(args) > 0
+
+	if _local_django_settings is not None and hasattr(_local_django_settings, key):
+		globals()[key] = getattr(_local_django_settings, key)
+	elif default_provided:
+		# Use provided default (could be None)
+		globals()[key] = kwargs.get('default', args[0] if args else None)
+
 mimetypes.add_type("text/css", ".css", True)
 
 ################################################################################
@@ -69,10 +97,7 @@ DEFAULT_SUPERUSER_PASSWORD = "interlock"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
-try:
-	from interlock_backend.local_django_settings import DEBUG
-except ImportError:
-	pass
+load_override("DEBUG")
 
 ################################################################################
 ################################# URLs and CORS ################################
@@ -81,16 +106,13 @@ FRONT_URL: str = None
 URLS: list[str] = []
 DEV_URL = "127.0.0.1:3000"
 ALLOWED_HOSTS = []
-
-try:
-	from interlock_backend.local_django_settings import (
-		FRONT_URL,
-		URLS,
-		DEV_URL,
-		ALLOWED_HOSTS,
-	)
-except ImportError:
-	pass
+for k in (
+	"FRONT_URL",
+	"URLS",
+	"DEV_URL",
+	"ALLOWED_HOSTS",
+):
+	load_override(k)
 
 if not FRONT_URL:
 	FRONT_URL = DEV_URL
@@ -241,19 +263,17 @@ PERF_LOGGING_ROUND = 6
 AES_RSA_PERF_LOGGING = False
 DIRTREE_PERF_LOGGING = False
 
-try:
-	from interlock_backend.local_django_settings import (
-		LOG_LEVEL,
-		LDAP3_MODULE_LOG_LEVEL,
-		LDAP_CONNECTOR_LOG_LEVEL,
-		LDAP_DNS_LOG_LEVEL,
-		PERF_LOGGING_ROUND,
-		AES_RSA_PERF_LOGGING,
-		DIRTREE_PERF_LOGGING,
-		DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS,
-	)
-except ImportError:
-	pass
+for k in (
+	"LOG_LEVEL",
+	"LDAP3_MODULE_LOG_LEVEL",
+	"LDAP_CONNECTOR_LOG_LEVEL",
+	"LDAP_DNS_LOG_LEVEL",
+	"PERF_LOGGING_ROUND",
+	"AES_RSA_PERF_LOGGING",
+	"DIRTREE_PERF_LOGGING",
+	"DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS",
+):
+	load_override(k)
 
 LOGGING = {
 	"version": 1,
