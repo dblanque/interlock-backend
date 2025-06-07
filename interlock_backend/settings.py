@@ -291,21 +291,19 @@ LOGGING = {
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
-DATABASES = None
-if not DATABASES:
-	DATABASES = {
-		"default": {
-			"ENGINE": "django.db.backends.postgresql",
-			"NAME": "interlockdb",
-			"USER": "interlockadmin",
-			"PASSWORD": "Clave1234",  # Change this password
-			"HOST": "127.0.0.1",  # Or an IP Address that your DB is hosted on
-			"PORT": "5432",
-		},
-		"test": {
-			"NAME": f"test_interlockdb",
-		},
-	}
+DATABASES = {
+	"default": {
+		"ENGINE": "django.db.backends.postgresql",
+		"NAME": "interlockdb",
+		"USER": "interlockadmin",
+		"PASSWORD": "Clave1234",  # Change this password
+		"HOST": "127.0.0.1",  # Or an IP Address that your DB is hosted on
+		"PORT": "5432",
+	},
+	"test": {
+		"NAME": f"test_interlockdb",
+	},
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
