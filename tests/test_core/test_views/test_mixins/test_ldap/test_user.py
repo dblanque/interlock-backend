@@ -202,6 +202,37 @@ def f_ldap_user_cls(mocker: MockerFixture, f_ldap_user_instance):
 		return_value=f_ldap_user_instance,
 	)
 
+class TestIsBuiltinUser:
+	@pytest.mark.parametrize(
+		"username, sid, ignore_admin, expected",
+		(
+			("Administrator", None, False, True),
+			(None, "S-1-5-1234-500", False, True),
+			("Administrator", None, True, False),
+			(None, "S-1-5-1234-500", True, False),
+			("Guest", None, False, True),
+			(None, "S-1-5-1234-501", False, True),
+			("Guest", "S-1-5-1234-501", True, True),
+			("krbtgt", None, False, True),
+			(None, "S-1-5-1234-502", False, True),
+			("krbtgt", "S-1-5-1234-502", True, True),
+			("TestUser", None, False, False),
+			(None, "S-1-5-1234-1234", False, False),
+		),
+	)
+	def test_success(
+		self,
+		f_user_mixin: LDAPUserMixin,
+		username: str,
+		sid: str,
+		ignore_admin: bool,
+		expected: bool,
+	):
+		assert f_user_mixin.is_built_in_user(
+			username=username,
+			security_id=sid,
+			ignore_admin=ignore_admin,
+		) == expected
 
 class TestGetUserObjectFilter:
 	def test_xor_raises(self, f_user_mixin: LDAPUserMixin):
