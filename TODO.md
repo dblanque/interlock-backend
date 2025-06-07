@@ -8,7 +8,7 @@ Target Mid-June release
 
 # Tasks
 * Finish generic endpoint tests (unauthorized, ldap disabled, etc.).
-* User is_built_in
+* User is_built_in <d>
 * core.constants.search_attrs_builder
 * core.serializers.ldap
 	* country_dcc_validator
