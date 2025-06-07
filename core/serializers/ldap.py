@@ -12,8 +12,7 @@ WEBSITE_RE = re.compile(
 
 def ldap_user_validator(v: str):
 	def has_invalid_chars(s: str):
-		return re.match(r'.*[\.\@\]\["\:\;\|\=\+\*\?\<\>\/\\\,]', s) is not None
-
+		return re.match(r'.*[\.\@\]\["\:\;\|\=\+\*\?\<\>\/\\\,\s]', s) is not None
 	return not has_invalid_chars(v)
 
 
@@ -38,14 +37,16 @@ def country_validator(v: str):
 
 
 def country_dcc_validator(v: int):
+	if v is False or v is None:
+		raise ValidationError("Country DCC must be a numeric value.")
 	try:
-		if v == 0:
+		if isinstance(v, (str, int)) and int(v) == 0:
 			return True
 		for codes in LDAP_COUNTRIES.values():
-			if int(codes.get("dccCode")) == v:
+			if int(codes.get("dccCode")) == int(v):
 				return v
 	except:
-		pass
+		raise ValidationError(f"Country DCC code ({v}) is invalid.")
 	raise ValidationError(f"Country DCC code ({v}) not found.")
 
 
@@ -57,7 +58,7 @@ def country_iso_validator(v: str):
 			if codes.get("isoCode") == v:
 				return v
 	except:
-		pass
+		raise ValidationError(f"Country DCC code ({v}) is invalid.")
 	raise ValidationError(f"Country DCC code ({v}) not found.")
 
 
