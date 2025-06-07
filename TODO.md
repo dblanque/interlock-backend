@@ -7,6 +7,20 @@ Target Mid-June release
 * Create video summary of features as IdP
 
 # Tasks
+* Finish generic endpoint tests (unauthorized, ldap disabled, etc.).
+* User is_built_in
+* core.constants.search_attrs_builder
+* core.serializers.ldap
+	* country_dcc_validator
+	* website_validator
+* core.serializers.token
+	* validate -> get_user_totp_device block
+	* TokenRefreshSerializer -> validate
+* core.views.mixins.SettingsViewMixin
+	* set_value_fields - mock test
+	* parse_local_setting_data - mock test
+	* parse_ldap_setting_value - mock test
+	* parse_ldap_setting_data - mock test
 * fix test_cookie_jwt_refresh_valid_token
 * core.models.ldap_object <d>
 * core.models.ldap_user <d>
@@ -14,12 +28,6 @@ Target Mid-June release
 * core.models.ldap_tree - MONDAY <d>
 * core.ldap.ldap_settings - TUESDAY <d>
 * core.serializers.group - THURSDAY <d>
-* core.views.mixins - <d>
-	* SettingsViewMixin
-		* set_value_fields
-		* parse_local_setting_data
-		* parse_ldap_setting_value
-		* parse_ldap_setting_data
 * core.views
 	* application <t> - gotta do mocking
 	* application group <t> - gotta do mocking
@@ -30,15 +38,6 @@ Target Mid-June release
 	* oidc - friday <d>
 	* totp - thursday? <d>
 	* user - wednesday <d>
-* Finish generic endpoint tests (unauthorized, ldap disabled, etc.).
-* User is_built_in
-* core.constants.search_attrs_builder
-* core.serializers.ldap
-	* country_dcc_validator
-	* website_validator
-* core.serializers.token
-	* validate -> get_user_totp_device block
-	* TokenRefreshSerializer -> validate
 
 ## Issues
 ### High Priority
