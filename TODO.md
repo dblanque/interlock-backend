@@ -21,7 +21,7 @@ Target Mid-June release
 	* parse_local_setting_data - mock test
 	* parse_ldap_setting_value - mock test
 	* parse_ldap_setting_data - mock test
-* fix test_cookie_jwt_refresh_valid_token
+* fix test_cookie_jwt_refresh_valid_token <d>
 * core.models.ldap_object <d>
 * core.models.ldap_user <d>
 * core.models.ldap_group <d>
