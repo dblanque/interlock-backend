@@ -10,9 +10,7 @@ Target Mid-June release
 * Finish generic endpoint tests (unauthorized, ldap disabled, etc.).
 * User is_built_in <d>
 * core.constants.search_attrs_builder
-* core.serializers.ldap
-	* country_dcc_validator
-	* website_validator
+* core.serializers.ldap <d>
 * core.serializers.token
 	* validate -> get_user_totp_device block
 	* TokenRefreshSerializer -> validate
