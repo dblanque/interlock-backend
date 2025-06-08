@@ -54,7 +54,7 @@ Target Mid-June release
 * Add LDAP User Syncing <d>
 * Add LDAP User Purging <d>
 * Add LDAP User Pruning <d>
-* Add Local User/ASG bulk actions
+* Add Local User
 * Add Local User Import/Export
 * Add LDAP User Export
 
@@ -65,6 +65,7 @@ Target Mid-June release
 	* consent <d>
 	* select_account <n>
 	* create <n>
+* Add Application Security Group Bulk actions
 * Add logging to all Application Security Group model operations
 * Add logging to all TOTP operations
 * Add rsa encryption key re-generation in settings (must de-crypt and re-encrypt data)
