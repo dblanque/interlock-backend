@@ -1,5 +1,9 @@
 Target Mid-June release
+* Finish High-Medium Priority items.
+* Finish all automated tests
 * Do manual testing of all systems
+* Create new pgp/gpg for apt repo (with expiry)
+* Create .deb for apt repo key installation and updating
 * Update and fix .deb package installer
 * Update Public site with new screenshots
 * Create general video summary
