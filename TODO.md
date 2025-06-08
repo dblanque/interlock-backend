@@ -27,8 +27,8 @@ Target Mid-June release
 * core.ldap.ldap_settings - TUESDAY <d>
 * core.serializers.group - THURSDAY <d>
 * core.views
-	* application <t> - gotta do mocking
-	* application group <t> - gotta do mocking
+	* application <d>
+	* application group <d>
 	* auth <d>
 	* home <d>
 	* settings <d>
@@ -54,12 +54,14 @@ Target Mid-June release
 * Add LDAP User Syncing <d>
 * Add LDAP User Purging <d>
 * Add LDAP User Pruning <d>
-* Move Self endpoints to separate viewset?
-* Add Local User bulk actions
+* Add Local User Bulk Actions
 * Add Local User Import/Export
 * Add LDAP User Export
+* Add logging to all Application Security Group model operations
+* Add logging to all TOTP operations
 
-### Low Priority
+### Low Priority (Post Release)
+* Normalize Endpoints to RESTful standard
 * Improve OIDC Exception Responses to frontend
 * Add OIDC Prompt Features?
 	* login <d>
@@ -67,10 +69,9 @@ Target Mid-June release
 	* select_account <n>
 	* create <n>
 * Add Application Security Group Bulk actions
-* Add logging to all Application Security Group model operations
-* Add logging to all TOTP operations
 * Add rsa encryption key re-generation in settings (must de-crypt and re-encrypt data)
 * Add bool setting key for Interlock -> ALLOW_LDAP_TO_OVERRIDE_LOCAL_USERS
+* Move Self endpoints to separate viewset?
 
 ## Nice would-haves
 * Add TEST Record Resolution to frontend.
