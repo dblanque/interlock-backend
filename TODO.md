@@ -54,7 +54,8 @@ Target Mid-June release
 * Add LDAP User Syncing <d>
 * Add LDAP User Purging <d>
 * Add LDAP User Pruning <d>
-* Add Local User
+* Move Self endpoints to separate viewset?
+* Add Local User bulk actions
 * Add Local User Import/Export
 * Add LDAP User Export
 

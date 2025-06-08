@@ -464,3 +464,31 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 				"code_msg": code_msg,
 			}
 		)
+
+	@admin_required
+	@auth_required
+	@action(detail=False, methods=["post"], url_path="bulk/insert")
+	def bulk_insert(self):
+		pass
+
+	@admin_required
+	@auth_required
+	@action(detail=False, methods=["put", "post"], url_path="bulk/update")
+	def bulk_update(self):
+		pass
+
+	@admin_required
+	@auth_required
+	@action(detail=False, methods=["delete", "post"], url_path="bulk/delete")
+	def bulk_delete(self):
+		pass
+
+	@admin_required
+	@auth_required
+	@action(
+		detail=False,
+		methods=["put", "patch", "post"],
+		url_path="bulk/change-status",
+	)
+	def bulk_change_status(self):
+		pass
