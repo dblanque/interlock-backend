@@ -535,6 +535,11 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 					user_instance: User = User.objects.get(id=pk)
 				except ObjectDoesNotExist:
 					raise exc_user.UserDoesNotExist
+				
+				if user_instance.user_type != USER_TYPE_LOCAL:
+					raise exc_user.UserNotLocalType(data={
+						"detail": f"User {user_instance.username} is not of Local Type."
+					})
 
 				# Validate Data
 				serializer = self.serializer_class(data=values, partial=True)
