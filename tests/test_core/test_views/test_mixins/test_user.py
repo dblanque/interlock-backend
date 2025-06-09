@@ -18,7 +18,6 @@ from core.constants.attrs import *
 from core.exceptions import (
 	base as exc_base,
 	users as exc_users,
-	ldap as exc_ldap,
 )
 
 @pytest.fixture
@@ -433,8 +432,89 @@ class TestCheckUserExists:
 				LDAP_ATTR_EMAIL: f_user_ldap.email,
 			})	
 		]
-		with pytest.raises(exc_ldap.LDAPObjectExists):
+		with pytest.raises(exc_users.UserExists):
 			assert f_all_users_mixin.check_user_exists(
 				username=f_user_ldap.username,
 				email=f_user_ldap.email,
 			)
+
+class TestBulkCheckUsers:
+	def test_raises_local_user(
+		self,
+		f_user_local: User,
+		f_user_ldap: User,
+		g_interlock_ldap_enabled,
+		f_all_users_mixin: AllUserMixins,
+		f_ldap_connector: LDAPConnectorMock,
+		fc_ldap_entry: LDAPEntryFactoryProtocol,
+	):
+		f_ldap_connector.connection.entries = [
+			fc_ldap_entry(spec=False, **{
+				LDAP_ATTR_USERNAME_SAMBA_ADDS: f_user_ldap.username,
+				LDAP_ATTR_EMAIL: f_user_ldap.email,
+			})	
+		]
+		with pytest.raises(exc_users.UserExists):
+			f_all_users_mixin.bulk_check_users(
+				[(f_user_local.username, f_user_local.email,)]
+			)
+
+	def test_raises_ldap_user(
+		self,
+		f_user_ldap: User,
+		g_interlock_ldap_enabled,
+		f_all_users_mixin: AllUserMixins,
+		f_ldap_connector: LDAPConnectorMock,
+		fc_ldap_entry: LDAPEntryFactoryProtocol,
+	):
+		f_ldap_connector.connection.entries = [
+			fc_ldap_entry(spec=False, **{
+				LDAP_ATTR_USERNAME_SAMBA_ADDS: f_user_ldap.username,
+				LDAP_ATTR_EMAIL: f_user_ldap.email,
+			})	
+		]
+		with pytest.raises(exc_users.UserExists):
+			f_all_users_mixin.bulk_check_users(
+				[(f_user_ldap.username, f_user_ldap.email,)]
+			)
+
+	def test_returns_local_user_exists(
+		self,
+		f_user_local: User,
+		f_all_users_mixin: AllUserMixins,
+		f_ldap_connector: LDAPConnectorMock,
+	):
+		assert f_all_users_mixin.bulk_check_users(
+			[(f_user_local.username, f_user_local.email,)],
+			raise_exception=False,
+		)
+
+	def test_returns_ldap_user_exists(
+		self,
+		f_user_ldap: User,
+		g_interlock_ldap_enabled,
+		f_all_users_mixin: AllUserMixins,
+		f_ldap_connector: LDAPConnectorMock,
+		fc_ldap_entry: LDAPEntryFactoryProtocol,
+	):
+		f_ldap_connector.connection.entries = [
+			fc_ldap_entry(spec=False, **{
+				LDAP_ATTR_USERNAME_SAMBA_ADDS: f_user_ldap.username,
+				LDAP_ATTR_EMAIL: f_user_ldap.email,
+			})	
+		]
+		assert f_all_users_mixin.bulk_check_users(
+			[(f_user_ldap.username, f_user_ldap.email,)],
+			raise_exception=False,
+		)
+
+	def test_not_exists_success(
+		self,
+		f_all_users_mixin: AllUserMixins,
+		f_ldap_connector: LDAPConnectorMock,
+	):
+		assert not f_all_users_mixin.bulk_check_users(
+			[
+				("someuser", "someuser@example.com",),
+			]
+		)
