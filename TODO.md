@@ -59,10 +59,11 @@ Target Mid-June release
 * Add LDAP User Purging <d>
 * Add LDAP User Pruning <d>
 * Add Local User Bulk Actions
-	* Update
-	* Delete
-	* Enable/Disable
-* Add Local User Import/Export
+	* Update (Backend done, Front TBD)
+	* Delete (Backend done, Front TBD)
+	* Enable/Disable (Backend done, Front TBD)
+* Add Local User Import (Backend done, To-do Tests, Front TBD)
+* Add Local User Export
 * Add LDAP User Export
 * Add logging to all Application Security Group model operations
 * Add logging to all TOTP operations
