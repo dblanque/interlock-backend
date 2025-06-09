@@ -786,6 +786,97 @@ class TestSelfUpdate(BaseViewTestClass):
 		)
 
 
+class TestBulkUpdate(BaseViewTestClass):
+	_endpoint = "users-bulk-update"
+
+	@pytest.mark.parametrize(
+		"delete_key",
+		(
+			"users",
+			"values",
+		),
+	)
+	def test_raises_on_missing_key(
+		self,
+		mocker: MockerFixture,
+		admin_user_client: APIClient,
+		delete_key: str,
+	):
+		m_validated_user_pk_list = mocker.patch.object(
+			UserViewSet,
+			"validated_user_pk_list",
+		)
+		m_data = {
+			"users":["somelst"],
+			"values":["somelst"],
+		}
+		del m_data[delete_key]
+
+		response: Response = admin_user_client.put(
+			self.endpoint,
+			data=m_data,
+			format="json"
+		)
+
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert response.data.get("code") == "bad_request"
+		m_validated_user_pk_list.assert_not_called()
+
+	def test_raises_on_non_existing_user(
+		self,
+		mocker: MockerFixture,
+		admin_user_client: APIClient,
+	):
+		m_data = {
+			"users":[999],
+			"values":["somelst"],
+		}
+
+		response: Response = admin_user_client.put(
+			self.endpoint,
+			data=m_data,
+			format="json"
+		)
+
+		assert response.status_code == status.HTTP_404_NOT_FOUND
+		assert response.data.get("code") == "user_does_not_exist"
+
+	def test_success(
+		self,
+		admin_user: User,
+		admin_user_client: APIClient,
+		f_user_local: User,
+		f_user_test: User,
+		f_log: MockType,
+	):
+		m_users = (admin_user, f_user_local, f_user_test,)
+		m_user_pks = [u.id for u in m_users]
+		response: Response = admin_user_client.put(
+			self.endpoint,
+			data={
+				"users": m_user_pks,
+				"values": {
+					LOCAL_ATTR_FIRST_NAME: "Mock",
+					LOCAL_ATTR_LAST_NAME: "Name",
+				}
+			},
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_200_OK
+		assert response.data.get("count") == len(m_user_pks)
+		for u in m_users:
+			u.refresh_from_db()
+			assert getattr(u, LOCAL_ATTR_FIRST_NAME) == "Mock"
+			assert getattr(u, LOCAL_ATTR_LAST_NAME) == "Name"
+			f_log.assert_any_call(
+				user=admin_user.id,
+				operation_type=LOG_ACTION_UPDATE,
+				log_target_class=LOG_CLASS_USER,
+				log_target=u.username,
+			)
+		f_log.call_count == len(m_user_pks)
+
 class TestBulkDelete(BaseViewTestClass):
 	_endpoint = "users-bulk-delete"
 
