@@ -93,10 +93,6 @@ _JWT_SECURE = SIMPLE_JWT["AUTH_COOKIE_SECURE"]
 		("/api/users/{pk}/delete/", HTTPMethod.POST),
 		("/api/users/{pk}/change_status/", HTTPMethod.POST),
 		("/api/users/{pk}/change_password/", HTTPMethod.POST),
-		("/api/users/self_change_password/", HTTPMethod.POST),
-		("/api/users/self_change_password/", HTTPMethod.PUT),
-		("/api/users/self_update/", HTTPMethod.POST),
-		("/api/users/self_update/", HTTPMethod.PUT),
 		# Logs
 		("/api/logs/", HTTPMethod.GET),
 		("/api/logs/reset/", HTTPMethod.GET),
@@ -154,9 +150,6 @@ ldap_endpoints = (
 	"/api/ldap/users/bulk_change_status/",
 	"/api/ldap/users/bulk_delete/",
 	"/api/ldap/users/bulk_unlock/",
-	"/api/ldap/users/self_change_password/",
-	"/api/ldap/users/self_update/",
-	"/api/ldap/users/self_fetch/",
 	# LDAP Directory Tree and OUs
 	"/api/ldap/ou/",
 	"/api/ldap/ou/dirtree/",
