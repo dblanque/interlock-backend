@@ -20,8 +20,20 @@ from core.exceptions import (
 	base as exc_base,
 )
 
+# Serializers
+from core.serializers.user import UserSerializer
+
+### Constants
+from core.constants.attrs.local import LOCAL_ATTR_USERNAME
+from core.models.choices.log import (
+	LOG_ACTION_UPDATE,
+	LOG_CLASS_USER,
+)
+
 ### Other
+
 import logging
+from django.db import transaction
 from core.views.mixins.logs import LogMixin
 ################################################################################
 
@@ -29,6 +41,7 @@ DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
 class UserMixin(viewsets.ViewSetMixin):
+	serializer_class = UserSerializer
 
 	def validated_user_pk_list(self, data: dict) -> list[int]:
 		"""
@@ -86,3 +99,115 @@ class UserMixin(viewsets.ViewSetMixin):
 		user_instance.save()
 
 		return user_instance
+
+	def bulk_create_from_csv(self, request_user: User, data: dict) -> int:
+		"""Create Users from CSV Rows
+		
+		Returns:
+			tuple: created_users (int), error_users (int)
+		"""
+		created_users = 0
+		error_users = 0
+
+		headers = data.pop("headers", None)
+		user_rows = data.pop("users", None)
+		csv_map = data.pop("mapping", None)
+		index_map = {}
+
+		for required_key in (headers, csv_map,):
+			if not required_key:
+				raise exc_base.BadRequest(data={
+					"detail": f"Key {required_key} is required in request data."
+				})
+
+		# Map Header Column Indexes
+		if csv_map:
+			for local_alias, csv_alias in csv_map:
+				index_map[headers.index(csv_alias)] = local_alias
+		else:
+			index_map = {
+				idx: local_alias
+				for idx, local_alias in enumerate(headers)
+			}
+
+		with transaction.atomic():
+			for row in user_rows:
+				# Exists Check
+				exists = User.objects\
+					.filter(username=index_map[LOCAL_ATTR_USERNAME])\
+					.exists()
+				if exists:
+					error_users += 1
+					continue
+
+				# Validate Data
+				user_attrs = {}
+				for idx, value in enumerate(row):
+					user_attrs[index_map[idx]] = value
+				serializer = self.serializer_class(data=user_attrs)
+				try:
+					serializer.is_valid(raise_exception=True)
+				except:
+					error_users += 1
+					continue
+				validated_data = serializer.validated_data
+
+				# Create User Instance
+				try:
+					user_instance = User(**validated_data)
+					user_instance.save()
+				except:
+					error_users += 1
+					continue
+
+				created_users += 1
+
+				# Log operation
+				DBLogMixin.log(
+					user=request_user.id,
+					operation_type=LOG_ACTION_UPDATE,
+					log_target_class=LOG_CLASS_USER,
+					log_target=user_instance.username,
+				)
+		return created_users, error_users
+	
+	def bulk_create_from_dicts(self, request_user: User, data: dict):
+		"""Create Users from Dictionaries
+		
+		Returns:
+			tuple: created_users (int), error_users (int)
+		"""
+		created_users = 0
+		error_users = 0
+
+		user_dicts = data.pop("dict_users", None)
+		with transaction.atomic():
+			for user in user_dicts:
+				# Validate Data
+				try:
+					serializer = self.serializer_class(data=user)
+					serializer.is_valid(raise_exception=True)
+				except:
+					error_users += 1
+					continue
+				validated_data = serializer.validated_data
+
+				# Create User
+				try:
+					user_instance = User(**validated_data)
+					user_instance.save()
+				except:
+					error_users += 1
+					continue
+
+				created_users += 1
+
+				# Log operation
+				DBLogMixin.log(
+					user=request_user.id,
+					operation_type=LOG_ACTION_UPDATE,
+					log_target_class=LOG_CLASS_USER,
+					log_target=user_instance.username,
+				)
+
+		return created_users, error_users

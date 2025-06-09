@@ -29,9 +29,6 @@ from core.models.choices.log import (
 	LOG_EXTRA_USER_CHANGE_PASSWORD,
 )
 
-# Serializers
-from core.serializers.user import UserSerializer
-
 # Exceptions
 from django.core.exceptions import ObjectDoesNotExist
 from core.exceptions import users as exc_user
@@ -75,7 +72,6 @@ logger = logging.getLogger(__name__)
 
 
 class UserViewSet(BaseViewSet, UserMixin, LDAPUserMixin):
-	serializer_class = UserSerializer
 
 	@auth_required
 	@admin_required
@@ -463,21 +459,43 @@ class UserViewSet(BaseViewSet, UserMixin, LDAPUserMixin):
 	@admin_required
 	@auth_required
 	@action(detail=False, methods=["post"], url_path="bulk/insert")
-	def bulk_insert(self):
-		# 
-		# csv_map = data.pop("mapping", None)
-		# index_map = {}
+	def bulk_insert(self, request: Request,):
+		request_user: User = request.user
+		code = 0
+		code_msg = "ok"
+		data = request.data
+		created_users = 0
+		error_users = 0
+
+		# Do not pop this as it is later used/popped in each bulk method
+		user_rows = data.get("users", None)
+		user_dicts = data.get("dict_users", None)
+
+		if (not user_rows and not user_dicts) or (user_rows and user_dicts):
+			raise BadRequest(data={
+				"detail":	"To bulk insert users you must provide either the "\
+							"users or dict_users fields."
+			})
 		
-		# # Map Header Column Indexes
-		# if csv_map:
-		# 	for local_alias, csv_alias in csv_map:
-		# 		index_map[local_alias] = headers.index(csv_alias)
-		# else:
-		# 	index_map = {
-		# 		local_alias: idx
-		# 		for idx, local_alias in enumerate(headers)
-		# 	}
-		pass
+		if user_rows: # Insert from CSV
+			created_users, error_users = self.bulk_create_from_csv(
+				request_user=request_user,
+				data=data,
+			)
+		elif user_dicts: # Insert from list of dicts
+			created_users, error_users = self.bulk_create_from_dicts(
+				request_user=request_user,
+				data=data,
+			)
+
+		return Response(
+			data={
+				"code": code,
+				"code_msg": code_msg,
+				"count": created_users,
+				"count_error": error_users,
+			}
+		)
 
 	@admin_required
 	@auth_required
