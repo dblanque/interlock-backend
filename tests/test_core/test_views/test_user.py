@@ -39,6 +39,7 @@ from core.models.choices.log import (
 	LOG_EXTRA_USER_END_USER_UPDATE,
 )
 from core.constants.user import LOCAL_PUBLIC_FIELDS
+from core.views.user import UserViewSet
 
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector: ConnectorFactory):
@@ -784,3 +785,154 @@ class TestSelfUpdate(BaseViewTestClass):
 			message=LOG_EXTRA_USER_END_USER_UPDATE,
 		)
 
+
+class TestBulkDelete(BaseViewTestClass):
+	_endpoint = "users-bulk-delete"
+
+	def test_raises_anti_lockout(
+		self,
+		mocker: MockerFixture,
+		admin_user: User,
+		admin_user_client: APIClient,
+		f_user_local: User,
+		f_user_ldap: User,
+		f_log: MockType,
+	):
+		m_delete_permanently = mocker.patch.object(User, "delete_permanently")
+		response: Response = admin_user_client.delete(
+			self.endpoint,
+			data={"users":[admin_user.id, f_user_ldap.id, f_user_local.id]},
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert response.data.get("code") == "user_anti_lockout"
+		m_delete_permanently.assert_not_called()
+		f_log.assert_not_called()
+
+	def test_non_existing_user_delete(
+		self,
+		mocker: MockerFixture,
+		admin_user_client: APIClient,
+	):
+		m_delete_permanently = mocker.patch.object(User, "delete_permanently")
+		response: Response = admin_user_client.delete(
+			self.endpoint,
+			data={"users":[999]},
+			format="json",
+		)
+		m_delete_permanently.assert_not_called()
+		assert response.status_code == status.HTTP_200_OK
+		assert response.data.get("count_error") == 1
+
+	def test_success(
+		self,
+		admin_user_client: APIClient,
+		f_user_local: User,
+	):
+		response: Response = admin_user_client.delete(
+			self.endpoint,
+			data={"users":[f_user_local.id]},
+			format="json",
+		)
+		assert response.status_code == status.HTTP_200_OK
+		assert response.data.get("count") == 1
+		assert not User.objects.filter(id=f_user_local.id).exists()
+
+class TestBulkChangeStatus(BaseViewTestClass):
+	_endpoint = "users-bulk-change-status"
+
+	def test_raises_anti_lockout(
+		self,
+		mocker: MockerFixture,
+		admin_user: User,
+		admin_user_client: APIClient,
+		f_log: MockType,
+	):
+		m_user_change_status = mocker.patch.object(UserViewSet, "user_change_status")
+		response: Response = admin_user_client.put(
+			self.endpoint,
+			data={
+				"users": [admin_user.id],
+				LOCAL_ATTR_ENABLED: True,
+			},
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert response.data.get("code") == "user_anti_lockout"
+		m_user_change_status.assert_not_called()
+		f_log.assert_not_called()
+
+	def test_raises_enabled_not_bool(
+		self,
+		mocker: MockerFixture,
+		admin_user_client: APIClient,
+		f_log: MockType,
+	):
+		m_user_change_status = mocker.patch.object(UserViewSet, "user_change_status")
+		response: Response = admin_user_client.put(
+			self.endpoint,
+			data={
+				"users": [999],
+				LOCAL_ATTR_ENABLED: "somevalue",
+			},
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		assert "must be of type bool" in response.data.get("detail")
+		m_user_change_status.assert_not_called()
+		f_log.assert_not_called()
+
+	@pytest.mark.parametrize(
+		("previous", "target", "expected"),
+		(
+			(True, True, True,),
+			(False, False, False,),
+			(False, True, True,),
+			(True, False, False,),
+		),
+	)
+	def test_success(
+		self,
+		admin_user: User,
+		admin_user_client: APIClient,
+		f_user_local: User,
+		f_user_test: User,
+		f_log: MockType,
+		previous: bool,
+		target: bool,
+		expected: bool,
+	):
+		f_user_local.is_enabled = previous
+		f_user_local.save()
+		f_user_test.is_enabled = previous
+		f_user_test.save()
+
+		response: Response = admin_user_client.put(
+			self.endpoint,
+			data={
+				"users": [f_user_local.id, f_user_test.id],
+				LOCAL_ATTR_ENABLED: target,
+			},
+			format="json",
+		)
+
+		assert response.status_code == status.HTTP_200_OK
+		assert response.data.get("count") == 2
+		f_user_local.refresh_from_db()
+		assert f_user_local.is_enabled == expected
+		f_user_test.refresh_from_db()
+		assert f_user_test.is_enabled == expected
+		f_log.call_count == 2
+		for user in (f_user_test, f_user_local):
+			f_log.assert_any_call(
+				user=admin_user.id,
+				operation_type=LOG_ACTION_UPDATE,
+				log_target_class=LOG_CLASS_USER,
+				log_target=user.username,
+				message=LOG_EXTRA_ENABLE
+				if target
+				else LOG_EXTRA_DISABLE,
+			)
