@@ -76,6 +76,13 @@ class TestUserChangeStatus():
 				raise_exception=True,
 			)
 
+	def test_returns_none_on_not_exists(self, f_mixin: UserMixin):
+		assert f_mixin.user_change_status(
+			user_pk=999,
+			target_status=True,
+			raise_exception=False,
+		) is None
+
 	def test_raises_not_local_user(
 		self,
 		f_mixin: UserMixin,
