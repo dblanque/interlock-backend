@@ -8,5 +8,5 @@ def test_normal_user_forbidden(
 ):
 	url, method = g_admin_endpoints
 	method = getattr(normal_user_client, method.lower())
-	response: Response = method(url)
+	response: Response = method(url.format(pk=0))
 	assert response.status_code == status.HTTP_403_FORBIDDEN
