@@ -259,9 +259,8 @@ class UserViewSet(BaseViewSet, UserMixin, LDAPUserMixin):
 			except ObjectDoesNotExist:
 				raise exc_user.UserDoesNotExist
 
-			if user_instance.user_type != USER_TYPE_LOCAL:
-				raise exc_user.UserNotLocalType
-
+			# Deletion of local instances of remote users should
+			# also be allowed in the event of needing a manual cleanup.
 			user_instance.delete_permanently()
 
 		DBLogMixin.log(
@@ -470,8 +469,66 @@ class UserViewSet(BaseViewSet, UserMixin, LDAPUserMixin):
 	@admin_required
 	@auth_required
 	@action(detail=False, methods=["put", "post"], url_path="bulk/update")
-	def bulk_update(self):
-		pass
+	def bulk_update(self, request: Request):
+		user: User = request.user
+		code = 0
+		code_msg = "ok"
+		data = request.data
+		updated_users = 0
+		error_users = 0
+		
+		# Validate data keys
+		if any(
+			v not in data
+			for v in (
+				"headers",
+				"users",
+				"values",
+			)
+		):
+			raise BadRequest
+		
+		headers = data.pop("headers")
+		users = self.validated_user_pk_list(data=data)
+		values = data.pop("values")
+		mapping = data.pop("mapping", None)
+
+		with transaction.atomic():
+			for pk in users:
+				# Retrieve User
+				try:
+					user_instance: User = User.objects.get(id=pk)
+				except ObjectDoesNotExist:
+					error_users += 1
+					raise exc_user.UserDoesNotExist
+
+				# Validate Data
+				serializer = self.serializer_class(data=values)
+				try:
+					serializer.is_valid(raise_exception=True)
+				except:
+					error_users += 1
+					raise
+
+				# Set new data
+				validated_data = serializer.validated_data
+				for k, v in validated_data:
+					setattr(user_instance, k, v)
+
+				# Save
+				user_instance.save()
+				updated_users += 1
+
+		return Response(
+			data={
+				"code": code,
+				"code_msg": code_msg,
+				"count": updated_users,
+				"count_error": error_users,
+			}
+		)
+
+
 
 	@admin_required
 	@auth_required
@@ -493,9 +550,19 @@ class UserViewSet(BaseViewSet, UserMixin, LDAPUserMixin):
 		with transaction.atomic():
 			for pk in users:
 				try:
+					# Deletion of local instances of remote users should
+					# also be allowed in the event of needing a manual cleanup.
 					user_instance: User = User.objects.get(id=pk)
 					user_instance.delete_permanently()
 					deleted_users += 1
+
+					# Log operation
+					DBLogMixin.log(
+						user=req_user.id,
+						operation_type=LOG_ACTION_DELETE,
+						log_target_class=LOG_CLASS_USER,
+						log_target=user_instance.username,
+					)
 				except ObjectDoesNotExist:
 					logger.warning("Could not delete non-existent user (Primary Key: %s)" % (pk))
 					error_users += 1
@@ -541,11 +608,12 @@ class UserViewSet(BaseViewSet, UserMixin, LDAPUserMixin):
 				user_instance = self.user_change_status(
 					user_pk=pk,
 					target_status=target_status,
-					raise_exception=False,
 				)
+
 				if user_instance:
 					updated_users += 1
 
+					# Log Operation
 					DBLogMixin.log(
 						user=request.user.id,
 						operation_type=LOG_ACTION_UPDATE,
@@ -555,14 +623,11 @@ class UserViewSet(BaseViewSet, UserMixin, LDAPUserMixin):
 						if target_status
 						else LOG_EXTRA_DISABLE,
 					)
-				else:
-					error_users += 1
 
 		return Response(
 			data={
 				"code": code,
 				"code_msg": code_msg,
 				"count": updated_users,
-				"count_error": error_users,
 			}
 		)
