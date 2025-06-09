@@ -61,6 +61,11 @@ class UserFieldValidatorFailed(CoreException):
 
 class UserDoesNotExist(CoreException):
 	status_code = status.HTTP_404_NOT_FOUND
+	default_detail = "User does not exist"
+	default_code = "user_does_not_exist"
+
+class UserDnDoesNotExist(CoreException):
+	status_code = status.HTTP_404_NOT_FOUND
 	default_detail = "User Distinguished Name does not exist"
 	default_code = "user_dn_does_not_exist"
 
