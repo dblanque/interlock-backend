@@ -9,7 +9,6 @@
 # ---------------------------------- IMPORTS -----------------------------------#
 # Views
 from core.views.base import BaseViewSet
-from core.views.mixins.ldap.user import LDAPUserMixin
 
 # Models
 from core.models.user import User, USER_TYPE_LOCAL
@@ -44,6 +43,8 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 # Mixins
+from core.views.mixins.user import UserMixin
+from core.views.mixins.ldap.user import LDAPUserMixin
 from core.views.mixins.logs import LogMixin
 
 # Others
@@ -73,7 +74,7 @@ DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
 
-class UserViewSet(BaseViewSet, LDAPUserMixin):
+class UserViewSet(BaseViewSet, UserMixin, LDAPUserMixin):
 	serializer_class = UserSerializer
 
 	@auth_required
@@ -291,21 +292,16 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 			not isinstance(data[LOCAL_ATTR_ENABLED], bool)
 		):
 			raise BadRequest(
-				data={"detail": "Must contain field 'enabled' of type bool)"}
+				data={"detail": "Must contain field 'enabled' of type bool."}
 			)
 
 		if req_user.id == pk:
 			raise exc_user.UserAntiLockout
 
-		try:
-			user_instance: User = User.objects.get(id=pk)
-		except ObjectDoesNotExist:
-			raise exc_user.UserDoesNotExist
-
-		if user_instance.user_type != USER_TYPE_LOCAL:
-			raise exc_user.UserNotLocalType
-		user_instance.is_enabled = data.pop(LOCAL_ATTR_ENABLED)
-		user_instance.save()
+		user_instance = self.user_change_status(
+			user_pk=pk,
+			target_status=data.pop(LOCAL_ATTR_ENABLED),
+		)
 
 		DBLogMixin.log(
 			user=request.user.id,
@@ -480,8 +476,38 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 	@admin_required
 	@auth_required
 	@action(detail=False, methods=["delete", "post"], url_path="bulk/delete")
-	def bulk_delete(self):
-		pass
+	def bulk_delete(self, request: Request, pk=None):
+		req_user: User = request.user
+		code = 0
+		code_msg = "ok"
+		data: dict = request.data
+		users: list[int] = self.validated_user_pk_list(data=data)
+		deleted_users = 0
+		error_users = 0
+
+		if req_user.id in users:
+			raise exc_user.UserAntiLockout(data={
+				"detail": "Responsible user cannot be within selection."
+			})
+
+		with transaction.atomic():
+			for pk in users:
+				try:
+					user_instance: User = User.objects.get(id=pk)
+					user_instance.delete_permanently()
+					deleted_users += 1
+				except ObjectDoesNotExist:
+					logger.warning("Could not delete non-existent user (Primary Key: %s)" % (pk))
+					error_users += 1
+
+		return Response(
+			data={
+				"code": code,
+				"code_msg": code_msg,
+				"count": deleted_users,
+				"count_error": error_users,
+			}
+		)
 
 	@admin_required
 	@auth_required
@@ -490,5 +516,53 @@ class UserViewSet(BaseViewSet, LDAPUserMixin):
 		methods=["put", "patch", "post"],
 		url_path="bulk/change-status",
 	)
-	def bulk_change_status(self):
-		pass
+	def bulk_change_status(self, request: Request, pk=None):
+		req_user: User = request.user
+		code = 0
+		code_msg = "ok"
+		data: dict = request.data
+		updated_users = 0
+		error_users = 0
+		users: list[int] = self.validated_user_pk_list(data=data)
+		target_status = data.pop(LOCAL_ATTR_ENABLED, None)
+
+		if not isinstance(target_status, bool):
+			raise BadRequest(
+				data={"detail": "Request data 'enabled' must be of type bool."}
+			)
+
+		if req_user.id in users:
+			raise exc_user.UserAntiLockout(data={
+				"detail": "Responsible user cannot be within selection."
+			})
+
+		with transaction.atomic():
+			for pk in users:
+				user_instance = self.user_change_status(
+					user_pk=pk,
+					target_status=target_status,
+					raise_exception=False,
+				)
+				if user_instance:
+					updated_users += 1
+
+					DBLogMixin.log(
+						user=request.user.id,
+						operation_type=LOG_ACTION_UPDATE,
+						log_target_class=LOG_CLASS_USER,
+						log_target=user_instance.username,
+						message=LOG_EXTRA_ENABLE
+						if target_status
+						else LOG_EXTRA_DISABLE,
+					)
+				else:
+					error_users += 1
+
+		return Response(
+			data={
+				"code": code,
+				"code_msg": code_msg,
+				"count": updated_users,
+				"count_error": error_users,
+			}
+		)
