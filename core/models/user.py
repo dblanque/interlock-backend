@@ -316,10 +316,6 @@ class User(BaseUser):
 		else:
 			self._distinguished_name = v
 
-	@property
-	def is_active(self):
-		return not self.deleted and self.is_enabled
-
 	def __setattr__(self, name, value):
 		if name == "distinguished_name":
 			if self.user_type != USER_TYPE_LDAP:
