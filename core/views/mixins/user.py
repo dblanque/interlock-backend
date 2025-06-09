@@ -31,7 +31,10 @@ logger = logging.getLogger(__name__)
 class UserMixin(viewsets.ViewSetMixin):
 
 	def validated_user_pk_list(self, data: dict) -> list[int]:
-		"""Validates that User Primary Key List is composed of integers."""
+		"""
+		Validates that request data 'users' Primary Key List is composed of
+		integers.
+		"""
 		users: list[int] = data.pop("users", [])
 		if not users or not isinstance(users, list):
 			raise exc_base.BadRequest(
