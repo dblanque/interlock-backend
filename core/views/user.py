@@ -464,34 +464,40 @@ class UserViewSet(BaseViewSet, UserMixin, LDAPUserMixin):
 	@auth_required
 	@action(detail=False, methods=["post"], url_path="bulk/insert")
 	def bulk_insert(self):
+		# 
+		# csv_map = data.pop("mapping", None)
+		# index_map = {}
+		
+		# # Map Header Column Indexes
+		# if csv_map:
+		# 	for local_alias, csv_alias in csv_map:
+		# 		index_map[local_alias] = headers.index(csv_alias)
+		# else:
+		# 	index_map = {
+		# 		local_alias: idx
+		# 		for idx, local_alias in enumerate(headers)
+		# 	}
 		pass
 
 	@admin_required
 	@auth_required
 	@action(detail=False, methods=["put", "post"], url_path="bulk/update")
 	def bulk_update(self, request: Request):
-		user: User = request.user
+		request_user: User = request.user
 		code = 0
 		code_msg = "ok"
 		data = request.data
 		updated_users = 0
-		error_users = 0
 		
 		# Validate data keys
 		if any(
 			v not in data
-			for v in (
-				"headers",
-				"users",
-				"values",
-			)
+			for v in ("users", "values",)
 		):
 			raise BadRequest
-		
-		headers = data.pop("headers")
+
 		users = self.validated_user_pk_list(data=data)
 		values = data.pop("values")
-		mapping = data.pop("mapping", None)
 
 		with transaction.atomic():
 			for pk in users:
@@ -499,36 +505,36 @@ class UserViewSet(BaseViewSet, UserMixin, LDAPUserMixin):
 				try:
 					user_instance: User = User.objects.get(id=pk)
 				except ObjectDoesNotExist:
-					error_users += 1
 					raise exc_user.UserDoesNotExist
 
 				# Validate Data
-				serializer = self.serializer_class(data=values)
-				try:
-					serializer.is_valid(raise_exception=True)
-				except:
-					error_users += 1
-					raise
+				serializer = self.serializer_class(data=values, partial=True)
+				serializer.is_valid(raise_exception=True)
 
 				# Set new data
 				validated_data = serializer.validated_data
-				for k, v in validated_data:
+				for k, v in validated_data.items():
 					setattr(user_instance, k, v)
 
 				# Save
 				user_instance.save()
 				updated_users += 1
 
+				# Log operation
+				DBLogMixin.log(
+					user=request_user.id,
+					operation_type=LOG_ACTION_UPDATE,
+					log_target_class=LOG_CLASS_USER,
+					log_target=user_instance.username,
+				)
+
 		return Response(
 			data={
 				"code": code,
 				"code_msg": code_msg,
 				"count": updated_users,
-				"count_error": error_users,
 			}
 		)
-
-
 
 	@admin_required
 	@auth_required
