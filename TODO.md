@@ -80,6 +80,7 @@ Target Mid-June release
 * Add rsa encryption key re-generation in settings (must de-crypt and re-encrypt data)
 * Add bool setting key for Interlock -> ALLOW_LDAP_TO_OVERRIDE_LOCAL_USERS
 * Move Self endpoints to separate viewset?
+* Cleanup unused exceptions
 
 ## Nice would-haves
 * Add TEST Record Resolution to frontend.
