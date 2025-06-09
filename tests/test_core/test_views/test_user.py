@@ -824,7 +824,6 @@ class TestBulkUpdate(BaseViewTestClass):
 
 	def test_raises_on_non_existing_user(
 		self,
-		mocker: MockerFixture,
 		admin_user_client: APIClient,
 	):
 		m_data = {
