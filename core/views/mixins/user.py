@@ -52,7 +52,8 @@ class UserMixin(viewsets.ViewSetMixin):
 		target_status: bool,
 		raise_exception: bool = True,
 	) -> User | None:
-		"""Changes a Local User's Status (Enabled/Disabled)
+		"""Changes a Local User's Status (Enabled/Disabled).
+		Performs User Type check before applying changes.
 
 		Args:
 			user_pk (int): Users' Primary Key.
@@ -62,6 +63,7 @@ class UserMixin(viewsets.ViewSetMixin):
 
 		Raises:
 			UserDoesNotExist: When raise_exception is True.		
+			UserNotLocalType: When user type is not local.
 
 		Returns:
 			User: The target user's username
