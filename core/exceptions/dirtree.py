@@ -30,5 +30,5 @@ class DirtreeRename(CoreException):
 
 class DirtreeNewNameIsOld(CoreException):
 	status_code = status.HTTP_400_BAD_REQUEST
-	default_detail = "LDAP Object could not be moved"
-	default_code = "dirtree_move_error"
+	default_detail = "LDAP Object name has not changed"
+	default_code = "dirtree_name_not_changed"
