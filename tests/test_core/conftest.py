@@ -22,36 +22,30 @@ from copy import deepcopy
 @pytest.fixture
 def g_interlock_ldap_enabled(db):
 	# Fake LDAP Enabled
-	s = None
-	try:
-		s = InterlockSetting.objects.get(name=INTERLOCK_SETTING_ENABLE_LDAP)
-		if not s.value:
-			s.value = True
-			s.save()
-	except ObjectDoesNotExist:
-		pass
-	if not s:
-		s = InterlockSetting.objects.create(
-			name=INTERLOCK_SETTING_ENABLE_LDAP, type=TYPE_BOOL, value=True
-		)
+	InterlockSetting.objects.update_or_create(
+		defaults={
+			"value": True,
+			"type": TYPE_BOOL,
+		},
+		name=INTERLOCK_SETTING_ENABLE_LDAP,
+	)
+	s = InterlockSetting.objects.get(name=INTERLOCK_SETTING_ENABLE_LDAP)
+	assert s.value
 	return s
 
 
 @pytest.fixture
 def g_interlock_ldap_disabled(db):
 	# Fake LDAP Disabled
-	s = None
-	try:
-		s = InterlockSetting.objects.get(name=INTERLOCK_SETTING_ENABLE_LDAP)
-		if s.value:
-			s.value = False
-			s.save()
-	except ObjectDoesNotExist:
-		pass
-	if not s:
-		s = InterlockSetting.objects.create(
-			name=INTERLOCK_SETTING_ENABLE_LDAP, type=TYPE_BOOL, value=False
-		)
+	InterlockSetting.objects.update_or_create(
+		defaults={
+			"value": False,
+			"type": TYPE_BOOL,
+		},
+		name=INTERLOCK_SETTING_ENABLE_LDAP,
+	)
+	s = InterlockSetting.objects.get(name=INTERLOCK_SETTING_ENABLE_LDAP)
+	assert not s.value
 	return s
 
 

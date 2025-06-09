@@ -12,11 +12,6 @@ from core.views.base import BaseViewSet
 
 # Models
 from core.models.user import User, USER_TYPE_LOCAL
-from core.models.interlock_settings import (
-	InterlockSetting,
-	INTERLOCK_SETTING_ENABLE_LDAP,
-)
-from core.ldap.connector import LDAPConnector
 from core.models.choices.log import (
 	LOG_ACTION_CREATE,
 	LOG_ACTION_READ,
@@ -40,8 +35,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 # Mixins
-from core.views.mixins.user import UserMixin
-from core.views.mixins.ldap.user import LDAPUserMixin
+from core.views.mixins.user import AllUserMixins
 from core.views.mixins.logs import LogMixin
 
 # Others
@@ -65,13 +59,14 @@ from core.decorators.login import auth_required, admin_required
 from core.constants.user import LOCAL_PUBLIC_FIELDS, LOCAL_PUBLIC_FIELDS_BASIC
 from django.db.models import F
 import logging
+from typing import Any
 ################################################################################
 
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
 
-class UserViewSet(BaseViewSet, UserMixin, LDAPUserMixin):
+class UserViewSet(BaseViewSet, AllUserMixins):
 
 	@auth_required
 	@admin_required
@@ -116,13 +111,6 @@ class UserViewSet(BaseViewSet, UserMixin, LDAPUserMixin):
 		data: dict = request.data
 		serializer = self.serializer_class(data=data)
 
-		try:
-			ldap_backend_enabled = InterlockSetting.objects.get(
-				name=INTERLOCK_SETTING_ENABLE_LDAP
-			).value
-		except ObjectDoesNotExist:
-			ldap_backend_enabled = False
-
 		if not serializer.is_valid():
 			raise BadRequest(data={"errors": serializer.errors})
 
@@ -130,13 +118,7 @@ class UserViewSet(BaseViewSet, UserMixin, LDAPUserMixin):
 		if LOCAL_ATTR_USERTYPE in validated_data:
 			del validated_data[LOCAL_ATTR_USERTYPE]
 
-		if ldap_backend_enabled:
-			# Open LDAP Connection
-			with LDAPConnector(force_admin=True) as ldc:
-				self.ldap_connection = ldc.connection
-				self.ldap_user_exists(
-					username=validated_data.get(LOCAL_ATTR_USERNAME)
-				)
+		self.check_user_exists(username=validated_data.get(LOCAL_ATTR_USERNAME))
 		with transaction.atomic():
 			user_instance: User = User(**validated_data)
 			password = serializer.validated_data.get(LOCAL_ATTR_PASSWORD, None)
@@ -459,7 +441,7 @@ class UserViewSet(BaseViewSet, UserMixin, LDAPUserMixin):
 	@admin_required
 	@auth_required
 	@action(detail=False, methods=["post"], url_path="bulk/insert")
-	def bulk_insert(self, request: Request,):
+	def bulk_insert(self, request: Request):
 		request_user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -468,8 +450,8 @@ class UserViewSet(BaseViewSet, UserMixin, LDAPUserMixin):
 		error_users = 0
 
 		# Do not pop this as it is later used/popped in each bulk method
-		user_rows = data.get("users", None)
-		user_dicts = data.get("dict_users", None)
+		user_rows: list[list[Any]] = data.pop("users", None)
+		user_dicts: list[dict[Any]] = data.pop("dict_users", None)
 
 		if (not user_rows and not user_dicts) or (user_rows and user_dicts):
 			raise BadRequest(data={
@@ -478,14 +460,43 @@ class UserViewSet(BaseViewSet, UserMixin, LDAPUserMixin):
 			})
 		
 		if user_rows: # Insert from CSV
+			# Map indices for local attrs
+			index_map = self.map_bulk_create_attrs(
+				headers=data.pop("headers", None),
+				csv_map=data.pop("mapping", None)
+			)
+
+			# Check that no username or email overlaps
+			username_col = None
+			email_col = None
+			for idx, local_alias in index_map.items():
+				if local_alias == LOCAL_ATTR_USERNAME:
+					username_col = idx
+				elif local_alias == LOCAL_ATTR_EMAIL:
+					email_col = idx
+
+			usernames_and_emails = [
+				(u[username_col], u[email_col])
+				for u in user_rows
+			]
+			self.bulk_check_users(usernames_and_emails)
+
+			# Perform creation operations
 			created_users, error_users = self.bulk_create_from_csv(
 				request_user=request_user,
-				data=data,
+				user_rows=user_rows,
+				index_map=index_map,
 			)
 		elif user_dicts: # Insert from list of dicts
+			self.bulk_check_users([
+				(
+					u.get(LOCAL_ATTR_USERNAME),
+					u.get(LOCAL_ATTR_EMAIL, None),
+				) for u in user_dicts
+			])
 			created_users, error_users = self.bulk_create_from_dicts(
 				request_user=request_user,
-				data=data,
+				user_dicts=user_dicts,
 			)
 
 		return Response(
