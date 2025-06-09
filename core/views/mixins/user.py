@@ -25,6 +25,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from core.exceptions import (
 	users as exc_user,
 	base as exc_base,
+	ldap as exc_ldap,
 )
 
 ### Serializers
@@ -303,21 +304,39 @@ class AllUserMixins(LDAPUserMixin, UserMixin):
 		except ObjectDoesNotExist:
 			self.ldap_backend_enabled = False
 
-	def check_user_exists(self, username: str = None, email: str = None):
+	def check_user_exists(
+		self,
+		username: str = None,
+		email: str = None,
+		raise_exception: bool = True,
+	):
 		"""Checks if a user exists Locally and in LDAP if enabled."""
+		exists = False
 		self.get_ldap_backend_enabled()
 
 		if self.ldap_backend_enabled:
 			# Open LDAP Connection
 			with LDAPConnector(force_admin=True) as ldc:
 				self.ldap_connection = ldc.connection
-				self.ldap_user_exists(username=username, email=email)
-		self.local_user_exists(username=username, email=email)
+				try:
+					exists = self.ldap_user_exists(
+						username=username,
+						email=email,
+						return_exception=raise_exception,
+					)
+				except exc_ldap.LDAPObjectExists:
+					raise exc_user.UserExists
+		exists = self.local_user_exists(
+			username=username,
+			email=email,
+			raise_exception=raise_exception,
+		)
+		return exists
 
 	def bulk_check_users(
 		self,
 		l: list[tuple[str, str]],
-		raise_exception=True
+		raise_exception=True,
 	) -> bool | exc_user.UserExists:
 		result = False
 		for username, email in l:
