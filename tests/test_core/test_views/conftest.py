@@ -93,6 +93,8 @@ _JWT_SECURE = SIMPLE_JWT["AUTH_COOKIE_SECURE"]
 		("/api/users/{pk}/delete/", HTTPMethod.POST),
 		("/api/users/{pk}/change_status/", HTTPMethod.POST),
 		("/api/users/{pk}/change_password/", HTTPMethod.POST),
+		("/api/users/self_update/", HTTPMethod.POST),
+		("/api/users/self_change_password/", HTTPMethod.POST),
 		# Logs
 		("/api/logs/", HTTPMethod.GET),
 		("/api/logs/reset/", HTTPMethod.GET),
@@ -198,6 +200,8 @@ excluded_from_admin_only = (
 	"/api/ldap/users/self_update/",
 	"/api/ldap/users/self_fetch/",
 	"/api/ldap/users/self_info/",
+	"/api/users/self_update/",
+	"/api/users/self_change_password/",
 )
 
 
