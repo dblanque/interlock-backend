@@ -3,10 +3,10 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.views.user
+# Module: core.views.ldap.user
 # Contains the ViewSet for User related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### Exceptions
 from core.exceptions.base import PermissionDenied, BadRequest
 from core.exceptions import base as exc_base, users as exc_user
