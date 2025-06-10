@@ -88,7 +88,8 @@ def f_default_ilck_settings():
 
 @pytest.fixture
 def f_default_superadmin(user_factory: UserFactory):
-	return user_factory(username=DEFAULT_SUPERUSER_USERNAME, email=None)
+	if not User.objects.filter(username=DEFAULT_SUPERUSER_USERNAME).exists():
+		return user_factory(username=DEFAULT_SUPERUSER_USERNAME, email=None)
 
 
 @pytest.fixture

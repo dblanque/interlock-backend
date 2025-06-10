@@ -846,7 +846,7 @@ class TestUnlock:
 
 		# Assertions
 		assert response.status_code == status.HTTP_404_NOT_FOUND
-		assert response.data.get("code") == "user_dn_does_not_exist"
+		assert response.data.get("code") == "user_does_not_exist"
 		m_ldap_user_exists.assert_called_once_with(
 			username="someuser",
 			return_exception=False,

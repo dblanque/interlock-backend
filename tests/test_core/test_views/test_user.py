@@ -11,7 +11,7 @@ from rest_framework.test import APIClient
 from rest_framework.response import Response
 from rest_framework import status
 from core.models.user import User
-from core.exceptions.ldap import LDAPObjectExists
+from core.exceptions import users as exc_user
 from tests.test_core.test_views.conftest import UserFactory, APIClientFactory
 from tests.test_core.conftest import ConnectorFactory, LDAPConnectorMock
 from core.constants.attrs.local import (
@@ -74,7 +74,7 @@ class TestList(BaseViewTestClass):
 		assert f_user_ldap.distinguished_name in {
 			u.get(LOCAL_ATTR_DN) for u in response_users
 		}
-		assert len(response.data.get("users")) == 3
+		assert len(response.data.get("users")) == User.objects.all().count()
 		assert set(response.data.get("headers")) == set(
 			[
 				LOCAL_ATTR_USERNAME,
@@ -95,7 +95,7 @@ class TestInsert(BaseViewTestClass):
 			False
 		),
 	)
-	def test_success_with_ldap_disabled(
+	def test_success(
 		self,
 		with_password: bool,
 		admin_user_client: APIClient,
@@ -114,8 +114,9 @@ class TestInsert(BaseViewTestClass):
 			m_password = m_data.pop(LOCAL_ATTR_PASSWORD)
 			del m_data[LOCAL_ATTR_PASSWORD_CONFIRM]
 
-		m_ldap_user_exists = mocker.patch(
-			"core.views.user.UserViewSet.ldap_user_exists"
+		m_check_user_exists = mocker.patch.object(
+			UserViewSet,
+			"check_user_exists",
 		)
 
 		response: Response = admin_user_client.post(
@@ -130,7 +131,9 @@ class TestInsert(BaseViewTestClass):
 		# Verify user creation
 		user: User = User.objects.get(username=m_data[LOCAL_ATTR_USERNAME])
 		assert user.email == m_data[LOCAL_ATTR_EMAIL]
-		m_ldap_user_exists.assert_not_called()
+		m_check_user_exists.assert_called_once_with(
+			username=m_data[LOCAL_ATTR_USERNAME]
+		)
 		if with_password:
 			assert user.check_password(m_data[LOCAL_ATTR_PASSWORD])
 		else:
@@ -145,48 +148,6 @@ class TestInsert(BaseViewTestClass):
 			log_target=m_data[LOCAL_ATTR_USERNAME],
 		)
 
-	def test_success_with_ldap_enabled(
-		self,
-		mocker: MockerFixture,
-		f_ldap_connector: LDAPConnectorMock,
-		admin_user_client: APIClient,
-		g_interlock_ldap_enabled,
-		f_log: MockType,
-	):
-		user_data = {
-			LOCAL_ATTR_USERNAME: "ldap_user",
-			LOCAL_ATTR_PASSWORD: "mockpassword",
-			LOCAL_ATTR_PASSWORD_CONFIRM: "mockpassword",
-			LOCAL_ATTR_EMAIL: "ldap@example.com",
-			LOCAL_ATTR_IS_ENABLED: True,
-		}
-		m_ldap_user_exists = mocker.patch(
-			"core.views.user.UserViewSet.ldap_user_exists", return_value=False
-		)
-
-		response: Response = admin_user_client.post(self.endpoint, user_data)
-
-		assert response.status_code == status.HTTP_200_OK
-		assert response.data == {"code": 0, "code_msg": "ok"}
-
-		# Verify LDAP checks
-		f_ldap_connector.cls_mock.assert_called_once_with(force_admin=True)
-		m_ldap_user_exists.assert_called_once_with(
-			username=user_data[LOCAL_ATTR_USERNAME]
-		)
-
-		# Verify user creation
-		user: User = User.objects.get(username=user_data[LOCAL_ATTR_USERNAME])
-		assert user.email == user_data[LOCAL_ATTR_EMAIL]
-
-		# Verify logging
-		f_log.assert_called_once_with(
-			user=mocker.ANY,
-			operation_type=LOG_ACTION_CREATE,
-			log_target_class=LOG_CLASS_USER,
-			log_target=user_data[LOCAL_ATTR_USERNAME],
-		)
-
 	def test_serializer_validation_failure(
 		self,
 		mocker: MockerFixture,
@@ -199,14 +160,15 @@ class TestInsert(BaseViewTestClass):
 			LOCAL_ATTR_PASSWORD_CONFIRM: "mockpassword",
 			# Missing password
 		}
-		m_ldap_user_exists = mocker.patch(
-			"core.views.user.UserViewSet.ldap_user_exists"
+		m_check_user_exists = mocker.patch.object(
+			UserViewSet,
+			"check_user_exists",
 		)
 
 		response: Response = admin_user_client.post(self.endpoint, invalid_data)
 
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
-		m_ldap_user_exists.assert_not_called()
+		m_check_user_exists.assert_not_called()
 		assert "errors" in response.data
 		assert LOCAL_ATTR_EMAIL in response.data["errors"]
 
@@ -222,14 +184,15 @@ class TestInsert(BaseViewTestClass):
 			LOCAL_ATTR_PASSWORD: "mockpassword",
 			# Missing password confirm
 		}
-		m_ldap_user_exists = mocker.patch(
-			"core.views.user.UserViewSet.ldap_user_exists"
+		m_check_user_exists = mocker.patch.object(
+			UserViewSet,
+			"check_user_exists",
 		)
 
 		response: Response = admin_user_client.post(self.endpoint, invalid_data)
 
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
-		m_ldap_user_exists.assert_not_called()
+		m_check_user_exists.assert_not_called()
 		assert "errors" in response.data
 		assert LOCAL_ATTR_PASSWORD_CONFIRM in response.data["errors"]
 
@@ -246,20 +209,18 @@ class TestInsert(BaseViewTestClass):
 			LOCAL_ATTR_PASSWORD_CONFIRM: "mockpassword",
 			LOCAL_ATTR_EMAIL: "exists@example.com",
 		}
-		m_ldap_user_exists = mocker.patch(
-			"core.views.user.UserViewSet.ldap_user_exists",
-			side_effect=LDAPObjectExists(data={
-				"detail":"User already exists in LDAP"
-			}),
+		m_check_user_exists = mocker.patch.object(
+			UserViewSet,
+			"check_user_exists",
+			side_effect=exc_user.UserExists
 		)
-
 		response: Response = admin_user_client.post(self.endpoint, user_data)
 
 		assert response.status_code == status.HTTP_409_CONFLICT
-		m_ldap_user_exists.assert_called_once_with(
+		m_check_user_exists.assert_called_once_with(
 			username=user_data[LOCAL_ATTR_USERNAME]
 		)
-		assert "User already exists in LDAP" in response.data.get("detail")
+		assert "already exists" in response.data.get("detail")
 
 		# Verify no user was created
 		assert not User.objects.filter(
@@ -464,9 +425,10 @@ class TestDelete(BaseViewTestClassWithPk):
 		m_delete_permanently.assert_not_called()
 		f_log.assert_not_called()
 
-	def test_raises_not_local(
+	def test_accepts_not_local(
 		self,
 		mocker: MockerFixture,
+		admin_user: User,
 		admin_user_client: APIClient,
 		f_user_ldap: User,
 		f_log: MockType,
@@ -475,10 +437,15 @@ class TestDelete(BaseViewTestClassWithPk):
 		self._pk = f_user_ldap.id
 
 		response: Response = admin_user_client.delete(self.endpoint)
-		assert response.status_code == status.HTTP_406_NOT_ACCEPTABLE
+		assert response.status_code == status.HTTP_200_OK
 		assert User.objects.filter(username=f_user_ldap.username).exists()
-		m_delete_permanently.assert_not_called()
-		f_log.assert_not_called()
+		m_delete_permanently.assert_called_once()
+		f_log.assert_called_once_with(
+			user=admin_user.id,
+			operation_type=LOG_ACTION_DELETE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=f_user_ldap.username,
+		)
 
 
 class TestChangeStatus(BaseViewTestClassWithPk):
