@@ -5,6 +5,9 @@
 ################################################################################
 # Module: core.constants.attrs.local
 
+DATE_FORMAT_ISO_8601 = "%Y-%m-%dT%H:%M:%S%Z"
+DATE_FORMAT_ISO_8601_ALT = "%Y-%m-%d %H:%M:%S %z"
+
 LOCAL_ATTR_ID = "id"
 LOCAL_ATTR_UUID = "uuid"
 LOCAL_ATTR_VALUE = "value"
