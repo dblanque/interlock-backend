@@ -43,7 +43,7 @@ from core.views.user import UserViewSet
 
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector: ConnectorFactory):
-	return g_ldap_connector(patch_path="core.views.user.LDAPConnector")
+	return g_ldap_connector(patch_path="core.views.mixins.user.LDAPConnector")
 
 @pytest.fixture
 def f_user_test(user_factory: UserFactory) -> User:
@@ -784,6 +784,72 @@ class TestSelfUpdate(BaseViewTestClass):
 			log_target=f_user_local.username,
 			message=LOG_EXTRA_USER_END_USER_UPDATE,
 		)
+
+
+class TestBulkInsert(BaseViewTestClass):
+	_endpoint = "users-bulk-insert"
+
+	def test_success_csv(
+		self,
+		mocker: MockerFixture,
+		admin_user: User,
+		admin_user_client: APIClient,
+	):
+		m_index_map = {0: LOCAL_ATTR_USERNAME, 1: LOCAL_ATTR_EMAIL}
+		m_index_map_fn = mocker.patch.object(
+			UserViewSet,
+			"map_bulk_create_attrs",
+			return_value=m_index_map,
+		)
+		m_bulk_check_users = mocker.patch.object(
+			UserViewSet,
+			"bulk_check_users",
+		)
+		m_bulk_create_from_csv = mocker.patch.object(
+			UserViewSet,
+			"bulk_create_from_csv",
+			return_value = (2, 0),
+		)
+		m_bulk_create_from_dicts = mocker.patch.object(
+			UserViewSet,
+			"bulk_create_from_dicts",
+		)
+		m_users = [
+			["importeduser1","iu1@example.com", "First", "Last",],
+			["importeduser2","iu2@example.com", "First", "Last",],
+		]
+		m_data = {
+			"headers": "mock_headers",
+			"mapping": "mock_mapping",
+			"users": m_users
+		}
+
+		# Execution
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=m_data,
+			format="json",
+		)
+
+		# Assertions
+		assert response.status_code == status.HTTP_200_OK
+		assert response.data.get("count") == 2
+		m_index_map_fn.assert_called_once_with(
+			headers=m_data["headers"],
+			csv_map=m_data["mapping"],
+		)
+		m_bulk_check_users.assert_called_once_with(
+			[
+				(m_users[0][0], m_users[0][1]),
+				(m_users[1][0], m_users[1][1]),
+			]
+		)
+		m_bulk_create_from_csv.assert_called_once_with(
+			request_user=admin_user,
+			user_rows=m_users,
+			index_map=m_index_map,
+		)
+		m_bulk_create_from_dicts.assert_not_called()
 
 
 class TestBulkUpdate(BaseViewTestClass):
