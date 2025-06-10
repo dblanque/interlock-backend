@@ -851,6 +851,95 @@ class TestBulkInsert(BaseViewTestClass):
 		)
 		m_bulk_create_from_dicts.assert_not_called()
 
+	def test_success_dicts(
+		self,
+		mocker: MockerFixture,
+		admin_user: User,
+		admin_user_client: APIClient,
+	):
+		m_index_map_fn = mocker.patch.object(
+			UserViewSet,
+			"map_bulk_create_attrs",
+		)
+		m_bulk_check_users = mocker.patch.object(
+			UserViewSet,
+			"bulk_check_users",
+		)
+		m_bulk_create_from_csv = mocker.patch.object(
+			UserViewSet,
+			"bulk_create_from_csv",
+		)
+		m_bulk_create_from_dicts = mocker.patch.object(
+			UserViewSet,
+			"bulk_create_from_dicts",
+			return_value = (1, 0),
+		)
+		m_users = [{
+			LOCAL_ATTR_USERNAME: "importeduser1",
+			LOCAL_ATTR_EMAIL: "iu1@example.com"
+		}]
+		m_data = { "dict_users": m_users }
+
+		# Execution
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=m_data,
+			format="json",
+		)
+
+		# Assertions
+		assert response.status_code == status.HTTP_200_OK
+		assert response.data.get("count") == 1
+		m_index_map_fn.assert_not_called()
+		m_bulk_create_from_csv.assert_not_called()
+		m_bulk_check_users.assert_called_once_with(
+			[(m_users[0][LOCAL_ATTR_USERNAME], m_users[0][LOCAL_ATTR_EMAIL])]
+		)
+		m_bulk_create_from_dicts.assert_called_once_with(
+			request_user=admin_user,
+			user_dicts=m_users
+		)
+
+	def test_raises_overlapping_operations(
+		self,
+		mocker: MockerFixture,
+		admin_user: User,
+		admin_user_client: APIClient,
+	):
+		m_index_map_fn = mocker.patch.object(
+			UserViewSet,
+			"map_bulk_create_attrs",
+		)
+		m_bulk_check_users = mocker.patch.object(
+			UserViewSet,
+			"bulk_check_users",
+		)
+		m_bulk_create_from_csv = mocker.patch.object(
+			UserViewSet,
+			"bulk_create_from_csv",
+		)
+		m_bulk_create_from_dicts = mocker.patch.object(
+			UserViewSet,
+			"bulk_create_from_dicts",
+		)
+		m_data = {
+			"users": "somevalue",
+			"dict_users": "somevalue",
+		}
+
+		# Execution
+		response: Response = admin_user_client.post(
+			self.endpoint,
+			data=m_data,
+			format="json",
+		)
+
+		# Assertions
+		assert response.status_code == status.HTTP_400_BAD_REQUEST
+		m_index_map_fn.assert_not_called()
+		m_bulk_create_from_csv.assert_not_called()
+		m_bulk_check_users.assert_not_called()
+		m_bulk_create_from_dicts.assert_not_called()
 
 class TestBulkUpdate(BaseViewTestClass):
 	_endpoint = "users-bulk-update"
