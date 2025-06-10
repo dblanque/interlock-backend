@@ -22,7 +22,7 @@
             "request": "launch",
             "program": "${file}",
             "purpose": ["debug-test"],
-            "console": "integratedTerminal",
+            // "console": "integratedTerminal",
             "justMyCode": false
         }
     ]
