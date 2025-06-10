@@ -458,12 +458,12 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 				"detail":	"To bulk insert users you must provide either the "\
 							"users or dict_users fields."
 			})
-		
+
 		if user_rows: # Insert from CSV
 			# Map indices for local attrs
 			index_map = self.map_bulk_create_attrs(
 				headers=data.pop("headers", None),
-				csv_map=data.pop("mapping", None)
+				csv_map=data.pop("mapping", None),
 			)
 
 			# Check that no username or email overlaps
