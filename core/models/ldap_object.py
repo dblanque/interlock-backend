@@ -481,17 +481,23 @@ class LDAPObject:
 			# Have to contrast with value sets, as LDAP can sometimes return
 			# single element list/arrays, and we want to ensure de-duplicated
 			# lists.
-			if isinstance(entry_value, str):
-				entry_value = [entry_value]
-			elif not isinstance(entry_value, list):
-				logger.warning("Bad value type for local %s field", local_alias)
-			entry_value = set(entry_value)
+			if entry_value:
+				if isinstance(entry_value, str):
+					entry_value = [entry_value]
+				elif not isinstance(entry_value, list):
+					logger.warning("Bad value type for local %s field", local_alias)
+				entry_value = set(entry_value)
+			else:
+				entry_value = {}
 
-			if isinstance(local_value, str):
-				local_value = [local_value]
-			elif not isinstance(local_value, list):
-				logger.warning("Bad value type for ldap %s field", ldap_alias)
-			local_value = set(local_value)
+			if local_value:
+				if isinstance(local_value, str):
+					local_value = [local_value]
+				elif not isinstance(local_value, list):
+					logger.warning("Bad value type for ldap %s field", ldap_alias)
+				local_value = set(local_value)
+			else:
+				local_value = {}
 
 		# For verbosity
 		has_changed = entry_value != local_value
@@ -582,7 +588,11 @@ class LDAPObject:
 			if not local_value:
 				delete_attrs[ldap_alias] = [(MODIFY_DELETE, [])]
 			else:
-				replace_attrs[ldap_alias] = [(MODIFY_REPLACE, [local_value])]
+				if not isinstance(local_value, list):
+					local_value = [local_value]
+				replace_attrs[ldap_alias] = [
+					(MODIFY_REPLACE, local_value)
+				]
 
 		attrs = replace_attrs | delete_attrs
 
