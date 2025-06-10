@@ -256,7 +256,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		for required_key in (
 			LOCAL_ATTR_USERNAME,
-			"enabled",
+			LOCAL_ATTR_ENABLED,
 		):
 			if required_key not in data or data.get(required_key, None) is None:
 				raise BadRequest(
@@ -265,7 +265,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 					}
 				)
 		username = data.pop(LOCAL_ATTR_USERNAME)
-		enabled = data.pop("enabled")
+		enabled = data.pop(LOCAL_ATTR_ENABLED)
 
 		######################## Set LDAP Attributes ###########################
 		self.search_filter = LDAPFilter.eq(
@@ -728,10 +728,10 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		code = 0
 		code_msg = "ok"
 		request_data = request.data
-		disable_users = request_data.get("disable", None)
+		enable_users = request_data.get(LOCAL_ATTR_ENABLED, None)
 		data: list[dict] | list[str] = request_data["users"]
 
-		if disable_users is None:
+		if enable_users is None:
 			raise BadRequest
 		if not isinstance(data, list) or not data:
 			raise BadRequest
@@ -759,7 +759,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 					username = user_data.get(LOCAL_ATTR_USERNAME, None)
 				try:
 					self.ldap_user_change_status(
-						username=username, enabled=(not disable_users)
+						username=username, enabled=enable_users
 					)
 					success.append(username)
 				except:

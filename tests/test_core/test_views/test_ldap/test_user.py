@@ -1504,7 +1504,7 @@ def f_bulk_change_status_data():
 			{LOCAL_ATTR_USERNAME: "testuser1"},
 			{LOCAL_ATTR_USERNAME: "testuser2"},
 		],
-		"disable": False,
+		LOCAL_ATTR_ENABLED: False,
 	}
 
 
@@ -1512,40 +1512,40 @@ class TestBulkChangeStatus:
 	endpoint = "/api/ldap/users/bulk_change_status/"
 
 	@pytest.mark.parametrize(
-		"flatten_users, disable, expected",
+		"flatten_users, enabled, expected",
 		(
 			(
 				False,
-				True,
+				False,
 				False,
 			),
 			(
 				False,
-				False,
+				True,
 				True,
 			),
 			(
 				True,
-				True,
+				False,
 				False,
 			),
 			(
 				True,
-				False,
+				True,
 				True,
 			),
 		),
 		ids=[
-			"User dict list, disable is True, expects enable False",
-			"User dict list, disable is False, expects enable True",
-			"Username list, disable is True, expects enable False",
-			"Username list, disable is False, expects enable True",
+			"User dict list, enable is True, expects enable False",
+			"User dict list, enable is False, expects enable True",
+			"Username list, enable is True, expects enable False",
+			"Username list, enable is False, expects enable True",
 		],
 	)
 	def test_success(
 		self,
 		flatten_users: bool,
-		disable: bool,
+		enabled: bool,
 		expected: bool,
 		admin_user_client: APIClient,
 		f_logger: Logger,
@@ -1557,7 +1557,7 @@ class TestBulkChangeStatus:
 				u.get(LOCAL_ATTR_USERNAME)
 				for u in f_bulk_change_status_data["users"]
 			]
-		f_bulk_change_status_data["disable"] = disable
+		f_bulk_change_status_data[LOCAL_ATTR_ENABLED] = enabled
 		user_count = len(f_bulk_change_status_data["users"])
 		m_change_status = mocker.patch.object(
 			LDAPUserViewSet,
@@ -1589,7 +1589,7 @@ class TestBulkChangeStatus:
 		f_bulk_change_status_data: dict,
 		mocker: MockerFixture,
 	):
-		del f_bulk_change_status_data["disable"]
+		del f_bulk_change_status_data[LOCAL_ATTR_ENABLED]
 		m_change_status = mocker.patch.object(
 			LDAPUserViewSet, "ldap_user_change_status"
 		)
