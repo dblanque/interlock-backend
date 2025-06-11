@@ -6,12 +6,10 @@
 # Module: core.utils.main
 # Contains extra utilities and functions
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 from core.ldap.defaults import LDAP_LDIF_IDENTIFIERS
 from typing import Iterable, Any, overload
 from ldap3 import Entry as LDAPEntry, Attribute as LDAPAttribute
-from core.config.runtime import RuntimeSettings
-
 
 @overload
 def getlocalkeyforldapattr(v: str, default: str = None): ...
@@ -19,6 +17,8 @@ def getlocalkeyforldapattr(v: str, default: str = None): ...
 
 def getlocalkeyforldapattr(v: str, *args, **kwargs):
 	"""Returns local alias for LDAP Attribute Key"""
+	from core.config.runtime import RuntimeSettings
+
 	for local_alias, ldap_alias in RuntimeSettings.LDAP_FIELD_MAP.items():
 		if ldap_alias == v:
 			return local_alias

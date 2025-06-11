@@ -91,3 +91,8 @@ class LDAPBackendException(CoreException):
 	status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
 	default_detail = "LDAP Backend Exception"
 	default_code = "ldap_backend_exception"
+
+class ImproperlyConfigured(CoreException):
+	status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+	default_detail = "Improperly Configured"
+	default_code = "improperly_configured"

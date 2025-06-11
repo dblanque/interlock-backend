@@ -10,7 +10,7 @@
 # Contributors:
 # - Dylan Blanque
 # - Brian Blanque
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 from core.ldap import defaults
 from core.models.ldap_settings import (
 	LDAP_SETTING_MAP,
@@ -20,7 +20,8 @@ from core.models.ldap_settings import (
 	LDAP_SETTING_TABLE,
 	LDAP_PRESET_TABLE,
 )
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, AppRegistryNotReady
+from django.apps import apps
 from interlock_backend.encrypt import aes_decrypt
 from core.utils.db import db_table_exists
 import sys
@@ -31,7 +32,6 @@ from random import getrandbits
 
 logger = logging.getLogger(__name__)
 this_module = sys.modules[__name__]
-
 
 # ! You also have to add the settings to the following files:
 # core.models.ldap_settings
@@ -88,29 +88,36 @@ class RuntimeSettingsSingleton:
 			cls._instance = super().__new__(cls, *args, **kwargs)
 		return cls._instance
 
-	def __newUuid__(self):
+	def __new_uuid__(self):
 		self.uuid = uuid1(node=uuid_getnode(), clock_seq=getrandbits(14))
 
 	def __init__(self):
-		if self._initialized:
+		if self._initialized or not apps.ready:
+			if not apps.ready:
+				logger.error(
+					"%s was incorrectly initialized before all apps were ready."
+					% (self.__class__.__name__)
+				)
 			return
-		self.__newUuid__()
+		self.__new_uuid__()
 
 		# Set defaults / constants
-		for k, v in defaults.__dict__.items():
-			setattr(self, k, v)
-		self.resync()
+		for k in LDAP_SETTING_MAP.keys():
+			setattr(self, k, getattr(defaults, k))
+		self.resync(raise_exc=True)
 		self._initialized = True
 
 	def postsync(self) -> None:
 		pass
 
 	def resync(self, raise_exc=False) -> bool:
-		self.__newUuid__()
+		self.__new_uuid__()
 		try:
-			_current_settings: dict = get_settings(self.uuid)
+			_current_settings: dict = self.get_settings(self.uuid)
 			for k, v in _current_settings.items():
 				setattr(self, k, v)
+		except AppRegistryNotReady:
+			raise
 		except:
 			if raise_exc:
 				raise
@@ -119,47 +126,49 @@ class RuntimeSettingsSingleton:
 		self.postsync()
 		return True
 
-
-def get_settings(uuid, quiet=False) -> dict:
-	if not quiet:
-		logger.info(
-			f"Re-synchronizing settings for {this_module} (Configuration Instance {uuid})"
-		)
-	active_preset = None
-	r = {}
-
-	for t in [LDAP_PRESET_TABLE, LDAP_SETTING_TABLE]:
-		if not db_table_exists(t):
-			logger.warning(
-				"Table %s does not exist, please check migrations.", t
+	def get_settings(self, uuid, quiet=False) -> dict:
+		if not quiet:
+			logger.info(
+				"Re-synchronizing settings for %s (Configuration Instance %s)" %
+				( this_module, uuid )
 			)
+		active_preset = None
+		r = {}
 
-	if db_table_exists(LDAP_PRESET_TABLE):
-		try:
-			active_preset = LDAPPreset.objects.get(active=True)
-		except ObjectDoesNotExist:
-			pass
-
-	# For constant, value_type in...
-	for setting_key, setting_type in LDAP_SETTING_MAP.items():
-		setting_instance = None
-		if db_table_exists(LDAP_SETTING_TABLE):
-			# Get Setting Override if it exists
-			try:
-				setting_instance = LDAPSetting.objects.get(
-					name=setting_key, preset_id=active_preset
+		for t in [LDAP_PRESET_TABLE, LDAP_SETTING_TABLE]:
+			if not db_table_exists(t):
+				logger.warning(
+					"Table %s does not exist, please check migrations.", t
 				)
+
+		if db_table_exists(LDAP_PRESET_TABLE):
+			try:
+				active_preset = LDAPPreset.objects.get(active=True)
 			except ObjectDoesNotExist:
 				pass
-		# Default
-		value_default = getattr(defaults, setting_key)
 
-		if not setting_instance:
-			r[setting_key] = value_default
-		else:
-			if setting_type == TYPE_AES_ENCRYPT and setting_instance:
-				setting_value = aes_decrypt(*setting_instance.value)
+		# For constant, value_type in...
+		for setting_key, setting_type in LDAP_SETTING_MAP.items():
+			setting_instance = None
+			if db_table_exists(LDAP_SETTING_TABLE):
+				# Get Setting Override if it exists
+				try:
+					setting_instance = LDAPSetting.objects.get(
+						name=setting_key,
+						preset=active_preset,
+						type=setting_type,
+					)
+				except ObjectDoesNotExist:
+					pass
+			# Default
+			value_default = getattr(defaults, setting_key)
+
+			if not setting_instance:
+				r[setting_key] = value_default
 			else:
-				setting_value = setting_instance.value
-			r[setting_key] = setting_value
-	return r
+				if setting_type == TYPE_AES_ENCRYPT and setting_instance:
+					setting_value = aes_decrypt(*setting_instance.value)
+				else:
+					setting_value = setting_instance.value
+				r[setting_key] = setting_value
+		return r

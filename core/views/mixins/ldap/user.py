@@ -6,7 +6,7 @@
 # Module: core.views.mixins.ldap.user
 # Contains the Mixin for User related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### ViewSets
 from rest_framework import viewsets
 from rest_framework.request import Request
@@ -75,7 +75,7 @@ from core.utils.filetime import to_datetime
 from django.utils import timezone as tz
 
 ### Others
-from typing import Any
+from typing import Any, TypedDict
 from django.db import transaction
 from core.type_hints.connector import LDAPConnectionProtocol
 from core.ldap.filter import LDAPFilter, LDAPFilterType
@@ -86,6 +86,9 @@ import re
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
+class LdapListResult(TypedDict):
+	headers: list[str]
+	users: list[dict[Any]]
 
 class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 	"""LDAP User Mixin
@@ -376,11 +379,11 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 			user_list.append(user_dict)
 		return user_list
 
-	def ldap_user_list(self) -> dict:
-		"""
-		Returns dictionary with the following keys:
-		* headers: Headers list() for the front-end data-table
-		* users: Users dict()
+	def ldap_user_list(self) -> LdapListResult:
+		"""List LDAP Users
+
+		Returns:
+			LdapListResult: Dictionary containing headers and users.
 		"""
 		user_list = self._get_all_ldap_users()
 

@@ -8,7 +8,7 @@
 # - Bind User connector for Administrative Privilege Operations
 # - Recursive directory listing functions
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 # Typing
 from typing import TypedDict
 from typing_extensions import NotRequired
@@ -68,6 +68,7 @@ import logging
 import sys
 from typing import Iterable
 from uuid import uuid4
+from django.conf import settings
 ###############################################################################
 
 this_module = sys.modules[__name__]
@@ -270,6 +271,7 @@ class LDAPConnector(object):
 	connection: LDAPConnectionProtocol = None
 	log_debug_prefix = "[DEBUG - LDAPConnector] | "
 	_entered = False
+	_pytest = False
 
 	def __init__(
 		self,
@@ -279,6 +281,26 @@ class LDAPConnector(object):
 		is_authenticating=False,
 		**kwargs,
 	):
+		try:
+			self._pytest = settings.LDAP_CONNECTOR_PYTEST_MODE
+		except:
+			pass
+
+		if not self._pytest:
+			if RuntimeSettings.LDAP_DOMAIN in ("example.com", "example.org",):
+				raise exc_base.ImproperlyConfigured(data={
+					"detail":"LDAP Domain cannot be %s" % (
+						RuntimeSettings.LDAP_DOMAIN
+					)
+				})
+
+			if RuntimeSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN == "EXAMPLE":
+				raise exc_base.ImproperlyConfigured(data={
+					"detail":"LDAP Realm cannot be %s" % (
+						RuntimeSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN
+					)
+				})
+
 		is_local_superuser = hasattr(user, "username") and (
 			user.username == DEFAULT_SUPERUSER_USERNAME
 			or (user.is_superuser and user.user_type == USER_TYPE_LOCAL)

@@ -6,11 +6,17 @@
 # Module: core.views.user
 # Contains the Django User ViewSet and related methods
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 # Views
 from core.views.base import BaseViewSet
 
+# Django
+from django.db import transaction
+from django.http import StreamingHttpResponse
+from django.utils import timezone as tz
+
 # Models
+from django.db.models import F
 from core.models.user import User, USER_TYPE_LOCAL
 from core.models.choices.log import (
 	LOG_ACTION_CREATE,
@@ -22,6 +28,8 @@ from core.models.choices.log import (
 	LOG_EXTRA_ENABLE,
 	LOG_EXTRA_DISABLE,
 	LOG_EXTRA_USER_CHANGE_PASSWORD,
+	LOG_EXTRA_EXPORT,
+	LOG_TARGET_ALL,
 )
 
 # Serializers
@@ -41,8 +49,9 @@ from rest_framework.decorators import action
 from core.views.mixins.user import AllUserMixins
 from core.views.mixins.logs import LogMixin
 
-# Others
+# Constants
 from core.constants.attrs import (
+	DATE_FORMAT_CSV,
 	LOCAL_ATTR_ID,
 	LOCAL_ATTR_USERTYPE,
 	LOCAL_ATTR_MODIFIED,
@@ -51,18 +60,21 @@ from core.constants.attrs import (
 	LOCAL_ATTR_PASSWORD_CONFIRM,
 	LOCAL_ATTR_USERNAME,
 	LOCAL_ATTR_DN,
+	LOCAL_ATTR_LAST_LOGIN,
 	LOCAL_ATTR_LAST_LOGIN_WIN32,
 	LOCAL_ATTR_FIRST_NAME,
 	LOCAL_ATTR_LAST_NAME,
 	LOCAL_ATTR_EMAIL,
 	LOCAL_ATTR_ENABLED,
 )
-from django.db import transaction
-from core.decorators.login import auth_required, admin_required
 from core.constants.user import LOCAL_PUBLIC_FIELDS, LOCAL_PUBLIC_FIELDS_BASIC
-from django.db.models import F
-import logging
+
+# Others
+from core.utils.csv import csv_iterator
+from datetime import datetime
+from core.decorators.login import auth_required, admin_required
 from typing import Any
+import logging
 ################################################################################
 
 DBLogMixin = LogMixin()
@@ -179,6 +191,7 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 			LOCAL_ATTR_MODIFIED,
 			LOCAL_ATTR_CREATED,
 			LOCAL_ATTR_USERTYPE,
+			LOCAL_ATTR_LAST_LOGIN,
 			LOCAL_ATTR_LAST_LOGIN_WIN32,
 			LOCAL_ATTR_DN,
 			LOCAL_ATTR_USERNAME,
@@ -690,4 +703,42 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 				"code_msg": code_msg,
 				"updated_users": updated_users,
 			}
+		)
+
+	@auth_required
+	@admin_required
+	@action(detail=False, methods=["get"], url_path="bulk/export")
+	def export_csv(self, request: Request):
+		request_user: User = request.user
+		date = tz.make_aware(datetime.now())
+		filename = "interlock_local_users_export_%s.csv" % (
+			date.strftime(DATE_FORMAT_CSV)
+		)
+
+		user_queryset = User.objects.annotate(
+			distinguished_name=F(f"_{LOCAL_ATTR_DN}"),
+		).all()
+
+		DBLogMixin.log(
+			user=request_user.id,
+			operation_type=LOG_ACTION_READ,
+			log_target_class=LOG_CLASS_USER,
+			log_target=LOG_TARGET_ALL,
+			message=LOG_EXTRA_EXPORT,
+		)
+
+		keys = list(LOCAL_PUBLIC_FIELDS)
+		for attr in (
+			LOCAL_ATTR_ID,
+			LOCAL_ATTR_CREATED,
+			LOCAL_ATTR_MODIFIED,
+			LOCAL_ATTR_LAST_LOGIN,
+		):
+			keys.remove(attr)
+		result = list(user_queryset.values(*keys))
+
+		return StreamingHttpResponse(
+			csv_iterator(result, keys),
+			content_type='text/csv',
+			headers={'Content-Disposition': f'attachment; filename="{filename}"'}
 		)

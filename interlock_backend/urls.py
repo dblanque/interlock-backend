@@ -6,7 +6,6 @@ from django.urls import path, include
 
 # Django-rest
 from rest_framework import routers
-from core.views.ldap.domain import LDAPDomainViewSet
 
 # CORE VIEWS
 from core.views.home import HomeViewSet
@@ -22,6 +21,7 @@ from core.views.ldap.group import LDAPGroupsViewSet
 from core.views.test import TestViewSet
 from core.views.gpo import GPOViewSet
 from core.views.liveness import LivenessViewSet
+from core.views.ldap.domain import LDAPDomainViewSet
 from core.views.ldap.record import LDAPRecordViewSet
 from core.views.debug import DebugViewSet
 from core.views.application_group import ApplicationGroupViewSet

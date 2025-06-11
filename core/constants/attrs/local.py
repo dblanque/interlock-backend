@@ -7,6 +7,7 @@
 
 DATE_FORMAT_ISO_8601 = "%Y-%m-%dT%H:%M:%S%Z"
 DATE_FORMAT_ISO_8601_ALT = "%Y-%m-%d %H:%M:%S %z"
+DATE_FORMAT_CSV = "%Y-%m-%d_%H:%M:%S"
 
 LOCAL_ATTR_ID = "id"
 LOCAL_ATTR_UUID = "uuid"
