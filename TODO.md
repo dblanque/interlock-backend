@@ -66,7 +66,6 @@ Target Mid-June release
 * Add logging to all TOTP operations
 
 ### Low Priority (Post Release)
-* Normalize Endpoints to RESTful standard
 * Improve OIDC Exception Responses to frontend
 * Add OIDC Prompt Features?
 	* login <d>
