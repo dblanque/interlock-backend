@@ -1075,7 +1075,7 @@ class TestBulkDestroy(BaseViewTestClass):
 		)
 		m_delete_permanently.assert_not_called()
 		assert response.status_code == status.HTTP_200_OK
-		assert response.data.get("count_error") == 1
+		assert response.data.get("failed_users") == 1
 
 	def test_success(
 		self,
