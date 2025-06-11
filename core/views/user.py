@@ -453,8 +453,8 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 		if (not user_rows and not user_dicts) or (user_rows and user_dicts):
 			raise BadRequest(
 				data={
-					"detail": "To bulk insert users you must provide either the "
-					"users or dict_users fields."
+					"detail": "To bulk insert users you must provide either the"
+					" users or dict_users fields."
 				}
 			)
 
