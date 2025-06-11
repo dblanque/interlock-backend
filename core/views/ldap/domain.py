@@ -6,7 +6,7 @@
 # Module: core.views.domain
 # Contains the ViewSet for Domain related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### Models
 from core.views.mixins.logs import LogMixin
 from core.models.interlock_settings import (

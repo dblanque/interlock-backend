@@ -6,7 +6,7 @@
 # Module: core.views.logs
 # Contains the ViewSet for Log related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### Exceptions
 from core.exceptions.logs import LogTruncateMinmaxNotFound
 

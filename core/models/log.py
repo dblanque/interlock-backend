@@ -6,7 +6,7 @@
 # Module: core.models.log
 # Contains the Model for Log Entries
 #
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### Django
 from django.utils.translation import gettext_lazy as _
 from django.db.models.manager import BaseManager as Manager

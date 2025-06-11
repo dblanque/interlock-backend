@@ -6,7 +6,7 @@
 # Module: core.models.validators.ldap_dns_record
 # Contains the Validators for DNS Records
 #
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 import sys
 import logging
 from rest_framework.serializers import ValidationError

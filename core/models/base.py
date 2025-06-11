@@ -6,7 +6,7 @@
 # Module: core.models.base
 # Contains the Base Model and Base Manager
 #
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 from django.db import models
 from django.db.models.manager import BaseManager as Manager
 from django.db.models.query import QuerySet

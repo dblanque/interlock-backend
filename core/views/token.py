@@ -7,7 +7,7 @@
 # Contributors: Martín Vilche
 # Contains the ViewSet for Token Authentication related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### Interlock
 from interlock_backend.settings import (
 	SIMPLE_JWT as JWT_SETTINGS,

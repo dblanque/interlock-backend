@@ -6,7 +6,7 @@
 # Module: core.views.base
 # Contains a Basic Parent Class ViewSet and methods shared to all ViewSets
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### REST Framework
 from rest_framework import viewsets
 from rest_framework.exceptions import NotFound

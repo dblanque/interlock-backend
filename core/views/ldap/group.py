@@ -6,7 +6,7 @@
 # Module: core.views.groups
 # Contains the ViewSet for Group related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### Models
 from core.models.user import User
 

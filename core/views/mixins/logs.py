@@ -6,7 +6,7 @@
 # Module: core.views.mixins.logs
 # Contains the Mixin for Log related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 from rest_framework import viewsets
 from core.config.runtime import RuntimeSettings
 from core.models.user import User

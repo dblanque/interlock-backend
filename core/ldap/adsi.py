@@ -8,10 +8,9 @@
 # - LDAP Permission Dictionary
 # - LDAP Manual Built-In Object Dictionary
 # - Important LDAP Query Functions
-###############################################################################
+################################################################################
 
-# ---------------------------------- IMPORTS -----------------------------------#
-from core.config.runtime import RuntimeSettings
+# ---------------------------------- IMPORTS --------------------------------- #
 from core.constants.attrs import LOCAL_ATTR_UAC, LOCAL_ATTR_USERNAME
 from typing import Union, Literal, TypedDict, Required
 from ldap3 import Entry as LDAPEntry
@@ -415,6 +414,8 @@ def list_user_perms(
 
 	Returns bool if perm_search is used.
 	"""
+	from core.config.runtime import RuntimeSettings
+
 	# Cast raw integer user permissions as string
 	uac_value = None
 	_uac_field = RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_UAC]

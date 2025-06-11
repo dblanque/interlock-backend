@@ -7,7 +7,7 @@
 # Contains the ViewSet for Directory Tree and Organizational Unit
 # related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### Exceptions
 from core.exceptions import (
 	base as exc_base,

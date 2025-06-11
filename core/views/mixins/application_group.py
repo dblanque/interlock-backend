@@ -6,7 +6,7 @@
 # Module: core.views.mixins.application_group
 # Contains the mixin for SSO Application Group related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### Models
 from core.models.user import User
 from core.models.application import Application, ApplicationSecurityGroup

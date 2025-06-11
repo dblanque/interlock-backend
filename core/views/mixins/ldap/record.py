@@ -6,7 +6,7 @@
 # Module: core.views.mixins.ldap.record
 # Contains the Mixin for DNS Record related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### Exceptions
 from core.exceptions import base as exc_base, ldap as exc_ldap, dns as exc_dns
 

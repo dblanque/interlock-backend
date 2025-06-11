@@ -6,7 +6,7 @@
 # Module: core.models.structs.ldap_dns_record
 # Contains the Models for DNS Record Types
 #
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 from struct import unpack, pack
 from impacket.structure import Structure
 from core.models.types.ldap_dns_record import RecordTypes

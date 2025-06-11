@@ -6,7 +6,7 @@
 # Module: core.views.auth
 # Contains the ViewSet for Authentication related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### Core
 from core.views.mixins.auth import CookieJWTAuthentication
 from core.views.mixins.logs import LogMixin

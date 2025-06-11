@@ -6,7 +6,7 @@
 # Module: core.views.application
 # Contains the ViewSet for SSO Application related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 # Constants
 from core.constants.oidc import (
 	QK_ERROR,

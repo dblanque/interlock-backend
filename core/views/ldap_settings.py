@@ -6,7 +6,7 @@
 # Module: core.views.settings
 # Contains the ViewSet for System Setting related operations
 #
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### Exceptions
 from core.exceptions.ldap import ConnectionTestFailed
 from core.exceptions import (

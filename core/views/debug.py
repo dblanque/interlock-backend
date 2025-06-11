@@ -6,7 +6,7 @@
 # Module: core.views.debug
 # Contains the ViewSet for Developer related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### ViewSets
 from .base import BaseViewSet
 

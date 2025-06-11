@@ -6,7 +6,7 @@
 # Module: core.views.application_group
 # Contains the ViewSet for SSO Application related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 # ViewSets
 from core.views.base import BaseViewSet
 

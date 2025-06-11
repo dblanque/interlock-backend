@@ -6,7 +6,7 @@
 # Module: core.views.mixins.oidc
 # Contains the Mixins for OIDC operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 # Constants
 from core.constants.oidc import (
 	QK_NEXT,

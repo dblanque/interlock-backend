@@ -6,7 +6,7 @@
 # Module: core.views.mixins.ldap.domain
 # Contains the Mixin for domain related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### Types
 from core.models.types.ldap_dns_record import RecordTypes
 

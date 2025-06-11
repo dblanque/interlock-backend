@@ -6,7 +6,7 @@
 # Module: core.views.mixins.application
 # Contains the mixin for SSO Application related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### Models
 from core.models.application import Application
 from oidc_provider.models import Client, ResponseType

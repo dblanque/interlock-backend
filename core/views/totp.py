@@ -6,7 +6,7 @@
 # Module: core.views.totp
 # Contains the ViewSet for TOTP Authentication related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### Rest Framework
 from rest_framework.request import Request
 from rest_framework.response import Response

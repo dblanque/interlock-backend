@@ -6,7 +6,7 @@
 # Module: core.models.dns
 # Contains the Models for DNS Zones and Records
 #
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 
 ### Exceptions
 from core.exceptions import (

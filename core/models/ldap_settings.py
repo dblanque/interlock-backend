@@ -6,7 +6,7 @@
 # Module: core.models.ldap_settings
 # Description:	Contains default LDAP Setting definitions
 #
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 from django.db import models
 from core.models.validators.ldap import ldap_uri_validator
 from django.utils.translation import gettext_lazy as _

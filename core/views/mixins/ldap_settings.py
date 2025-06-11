@@ -6,7 +6,7 @@
 # Module: core.views.mixins.ldap_settings
 # Contains the Mixin for Setting related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### Django
 from django.db import transaction
 

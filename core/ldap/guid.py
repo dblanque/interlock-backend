@@ -7,7 +7,7 @@
 
 # ! Tried doing this with impacket.structure but it doesn't work, had to manually
 # ! convert and reverse the byte groups.
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 import struct
 import uuid
 import logging

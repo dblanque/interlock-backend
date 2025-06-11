@@ -7,7 +7,7 @@
 # Contributors: Martín Vilche
 # Contains the ViewSet for Token Authentication related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### Django
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import AnonymousUser

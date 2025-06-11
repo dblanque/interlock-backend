@@ -6,7 +6,7 @@
 # Module: core.models.ldap_tree
 # Contains the Models for the LDAP Directory Tree
 #
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### Interlock
 from core.models.ldap_object import LDAPObject, LDAPObjectTypes
 from core.ldap.adsi import LDAP_BUILTIN_OBJECTS

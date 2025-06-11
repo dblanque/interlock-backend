@@ -8,7 +8,7 @@
 
 # Work in Progress
 # src: https://github.com/samba-team/samba/blob/master/python/samba/netcmd/gpo.py
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### REST Framework
 from rest_framework.response import Response
 

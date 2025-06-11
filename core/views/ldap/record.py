@@ -6,7 +6,7 @@
 # Module: core.views.record
 # Contains the ViewSet for DNS Record related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### Models
 from core.models.types.ldap_dns_record import *
 from core.models.user import User

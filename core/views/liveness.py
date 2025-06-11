@@ -6,7 +6,7 @@
 # Module: core.views.liveness
 # Description: Contains the ViewSet for Liveness related operations
 #
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 from core.views.base import BaseViewSet
 
 ### REST Framework

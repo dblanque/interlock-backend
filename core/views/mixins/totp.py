@@ -6,7 +6,7 @@
 # Module: core.views.mixins.totp
 # Contains the Mixin for TOTP related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### Models
 from core.config.runtime import RuntimeSettings
 from core.models.user import User

@@ -6,7 +6,7 @@
 # Module: core.views.mixins.ldap.group
 # Contains the Mixin for Group related operations
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### ViewSets
 from rest_framework import viewsets
 

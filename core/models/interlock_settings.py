@@ -6,7 +6,7 @@
 # Module: core.models.ilck_settings
 # Description:	Contains default LDAP Setting definitions
 #
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 from core.models.setting.base import BaseSetting, add_fields_from_dict
 from django.db import models
 from core.models.types.settings import (
