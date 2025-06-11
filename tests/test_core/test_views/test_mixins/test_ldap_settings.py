@@ -32,9 +32,11 @@ from interlock_backend.encrypt import aes_decrypt, aes_encrypt
 
 
 @pytest.fixture(autouse=True)
-def auto_teardown():
+def auto_teardown_settings():
 	yield
 	LDAPPreset.objects.all().delete()
+	LDAPSetting.objects.all().delete()
+	InterlockSetting.objects.all().delete()
 
 
 @pytest.fixture(autouse=True)

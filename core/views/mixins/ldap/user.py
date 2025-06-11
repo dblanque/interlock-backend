@@ -47,6 +47,10 @@ from ldap3.extend import (
 	MicrosoftExtendedOperations,
 )
 
+### Serializers
+from core.serializers.user import UserSerializer
+from rest_framework.serializers import ValidationError
+
 ### Mixins
 from core.views.mixins.ldap.group import GroupViewMixin
 
@@ -58,17 +62,22 @@ from core.exceptions import (
 )
 import logging
 
-### Others
-from django.db import transaction
-from core.serializers.user import UserSerializer
-from core.type_hints.connector import LDAPConnectionProtocol
+### Constants
+from core.constants.attrs import *
+from core.constants.user import LDAPUserSearchAttrBuilder
+from core.constants.user import BUILTIN_USERS, BUILTIN_ADMIN
+
+### Utils
 from core.utils.main import getldapattrvalue
 from ldap3.utils.dn import safe_dn
-from core.constants.user import LDAPUserSearchAttrBuilder
-from core.constants.attrs import *
+from core.utils.filetime import to_datetime
+from django.utils import timezone as tz
+
+### Others
+from django.db import transaction
+from core.type_hints.connector import LDAPConnectionProtocol
 from core.ldap.filter import LDAPFilter, LDAPFilterType
-from rest_framework.serializers import ValidationError
-from core.constants.user import BUILTIN_USERS, BUILTIN_ADMIN
+from datetime import datetime
 import re
 ################################################################################
 
@@ -705,7 +714,31 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			LOCAL_ATTR_EXPIRES_AT,
 		]:
 			if fld in _result:
-				_result[fld] = _result[fld].strftime(LDAP_DATE_FORMAT)
+				_result[fld] = _result[fld].strftime(DATE_FORMAT_ISO_8601_ALT)
+
+		# Filetime Dates
+		for fld in (
+			LOCAL_ATTR_LAST_LOGIN_WIN32,
+			LOCAL_ATTR_PWD_SET_AT,
+		):
+			_v = _result.pop(fld, None)
+			# Try to fetch last login from LDAP Timestamp
+			if _v:
+				_result[fld] = to_datetime(_v)
+				_result[fld] = tz.make_aware(
+					_result[fld]
+				).strftime(DATE_FORMAT_ISO_8601_ALT)
+			else:
+				# Try to get last login from local django synced user
+				try:
+					local_instance: User = User.objects.get(username=user_search)
+					_result[fld] = \
+						local_instance.last_login.strftime(DATE_FORMAT_ISO_8601_ALT)
+				except:
+					# Use datetime now if all else fails
+					_result[fld] = tz.make_aware(
+						datetime.now()
+					).strftime(DATE_FORMAT_ISO_8601_ALT)
 		return _result
 
 	def ldap_user_change_status(

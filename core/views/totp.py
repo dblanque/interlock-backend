@@ -44,6 +44,7 @@ DBLogMixin = LogMixin()
 class TOTPViewSet(BaseViewSet):
 	@auth_required
 	def list(self, request: Request):
+		"""Returns TOTP Device for request user"""
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -64,9 +65,10 @@ class TOTPViewSet(BaseViewSet):
 
 		return Response(data=data)
 
-	@action(detail=False, methods=["get"])
 	@auth_required
+	@action(detail=False, methods=["get"], url_path="create-device")
 	def create_device(self, request: Request):
+		"""Creates TOTP Device for request user"""
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -81,9 +83,10 @@ class TOTPViewSet(BaseViewSet):
 			}
 		)
 
-	@action(detail=False, methods=["put", "post"])
 	@auth_required
+	@action(detail=False, methods=["put", "post"], url_path="validate-device")
 	def validate_device(self, request: Request):
+		"""Validates TOTP Device for request user"""
 		user: User = request.user
 		data = request.data
 		code = 0
@@ -99,9 +102,10 @@ class TOTPViewSet(BaseViewSet):
 
 		return Response(data={"code": code, "code_msg": code_msg})
 
-	@action(detail=False, methods=["post", "delete"])
 	@auth_required
+	@action(detail=False, methods=["post", "delete"], url_path="delete-device")
 	def delete_device(self, request: Request):
+		"""Deletes TOTP Device for Request User"""
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -109,10 +113,11 @@ class TOTPViewSet(BaseViewSet):
 		delete_device_totp_for_user(user)
 		return Response(data={"code": code, "code_msg": code_msg})
 
-	@action(detail=False, methods=["post", "delete"])
 	@auth_required
 	@admin_required
+	@action(detail=False, methods=["post", "delete"], url_path="delete-for-user")
 	def delete_for_user(self, request: Request):
+		"""ADMIN ENDPOINT - Deletes TOTP Device for Specific User."""
 		user: User = request.user
 		code = 0
 		code_msg = "ok"

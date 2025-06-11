@@ -100,10 +100,9 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			}
 		)
 
-	@action(detail=True, methods=["get"])
 	@auth_required
 	@admin_required
-	def fetch(self, request: Request, pk):
+	def retrieve(self, request: Request, pk):
 		preset_id = int(pk)
 		code = 0
 
@@ -130,7 +129,6 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			}
 		)
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	def preset_create(self, request: Request, pk=None):
@@ -157,16 +155,11 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 		return Response(data={"code": code, "code_msg": "ok"})
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	def preset_delete(self, request: Request, pk=None):
-		data: dict = request.data
 		code = 0
-		if not LOCAL_ATTR_ID in data:
-			raise exc_base.MissingDataKey(data={"key": LOCAL_ATTR_ID})
-
-		preset_id = data[LOCAL_ATTR_ID]
+		preset_id = pk
 		try:
 			LDAPPreset.objects.get(id=preset_id)
 		except ObjectDoesNotExist:
@@ -178,16 +171,12 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		LDAPPreset.objects.get(id=preset_id).delete_permanently()
 		return Response(data={"code": code, "code_msg": "ok"})
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
-	def preset_enable(self, request: Request, pk=None):
-		data: dict = request.data
+	@action(detail=True, methods=["post"], url_name="enable", url_path="enable")
+	def preset_enable(self, request: Request, pk):
 		code = 0
-		if not LOCAL_ATTR_ID in data:
-			raise exc_base.MissingDataKey(data={"key": LOCAL_ATTR_ID})
-
-		preset_id = data[LOCAL_ATTR_ID]
+		preset_id = pk
 		try:
 			new_preset = LDAPPreset.objects.get(id=preset_id)
 		except ObjectDoesNotExist:
@@ -205,16 +194,15 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		self.resync_settings()
 		return Response(data={"code": code, "code_msg": "ok"})
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
-	def preset_rename(self, request: Request, pk=None):
+	@action(detail=True, methods=["post"], url_name="rename", url_path="rename")
+	def preset_rename(self, request: Request, pk):
 		data: dict = request.data
 		code = 0
-		for k in [LOCAL_ATTR_ID, LOCAL_ATTR_LABEL]:
-			if not k in data:
-				raise exc_base.MissingDataKey(data={"key": k})
-		preset_id = data[LOCAL_ATTR_ID]
+		if not LOCAL_ATTR_LABEL in data:
+			raise exc_base.MissingDataKey(data={"key": LOCAL_ATTR_LABEL})
+		preset_id = pk
 		preset_label = data[LOCAL_ATTR_LABEL]
 
 		try:
@@ -238,10 +226,11 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 		return Response(data={"code": code, "code_msg": "ok"})
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
+	@action(detail=False, methods=["post"])
 	def save(self, request: Request, pk=None):
+		"""Saves Preset Data to currently active preset"""
 		data_preset: dict = request.data["preset"]
 		data_settings: dict = request.data["settings"]
 		code = 0
@@ -286,9 +275,9 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			}
 		)
 
-	@action(detail=False, methods=["get"])
 	@auth_required
 	@admin_required
+	@action(detail=False, methods=["get"])
 	def reset(self, request: Request, pk=None):
 		data: dict = request.data
 		code = 0
@@ -299,9 +288,9 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		self.resync_settings()
 		return Response(data={"code": code, "code_msg": "ok", "data": data})
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
+	@action(detail=False, methods=["post"])
 	def test(self, request: Request, pk=None):
 		data: dict = request.data
 		code = 0
@@ -336,9 +325,9 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 		return Response(data={"code": code, "code_msg": "ok", "data": data})
 
-	@action(detail=False, methods=["get"])
 	@auth_required
 	@admin_required
+	@action(detail=False, methods=["get"], url_path="sync-users")
 	def sync_users(self, request: Request, pk=None):
 		"""Synchronizes LDAP Users to Local Database"""
 		synced_users, updated_users = LDAPUserBaseMixin().ldap_users_sync(
@@ -354,9 +343,9 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			}
 		)
 
-	@action(detail=False, methods=["get"])
 	@auth_required
 	@admin_required
+	@action(detail=False, methods=["get"], url_path="prune-users")
 	def prune_users(self, request: Request, pk=None):
 		"""Prunes LDAP Users from Local Database"""
 		pruned_users = LDAPUserBaseMixin().ldap_users_prune(
@@ -366,9 +355,9 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 			data={"code": 0, "code_msg": "ok", "count": pruned_users}
 		)
 
-	@action(detail=False, methods=["get"])
 	@auth_required
 	@admin_required
+	@action(detail=False, methods=["get"], url_path="purge-users")
 	def purge_users(self, request: Request, pk=None):
 		"""Synchronizes LDAP Users to Local Database"""
 		logger.warning(f"LDAP User Purge requested by {request.user.username}")

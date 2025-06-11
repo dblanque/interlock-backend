@@ -11,7 +11,6 @@
 from core.views.base import BaseViewSet
 
 ### Models
-from core.models.user import User
 from core.models.application import Application
 
 ### Mixins
@@ -48,10 +47,9 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 			}
 		)
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
-	def insert(self, request: Request):
+	def create(self, request: Request):
 		data: dict = request.data
 		code = 0
 		code_msg = "ok"
@@ -61,10 +59,9 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 		)
 		return Response(data={"code": code, "code_msg": code_msg})
 
-	@action(detail=True, methods=["delete"], url_path="delete")
 	@auth_required
 	@admin_required
-	def delete(self, request: Request, pk):
+	def destroy(self, request: Request, pk):
 		code = 0
 		code_msg = "ok"
 		application_id = int(pk)
@@ -77,10 +74,9 @@ class ApplicationViewSet(BaseViewSet, ApplicationViewMixin):
 			}
 		)
 
-	@action(detail=True, methods=["get"])
 	@auth_required
 	@admin_required
-	def fetch(self, request: Request, pk):
+	def retrieve(self, request: Request, pk):
 		code = 0
 		code_msg = "ok"
 		application_id = int(pk)

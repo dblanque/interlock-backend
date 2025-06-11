@@ -6,7 +6,7 @@ from pytest_mock import MockerFixture, MockType
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from tests.test_core.conftest import RuntimeSettingsFactory
 from core.models.user import User
-from core.views.ldap.organizational_unit import LDAPOrganizationalUnitViewSet
+from core.views.ldap.organizational_unit import LdapDirtreeViewSet
 from core.models.choices.log import (
 	LOG_ACTION_CREATE,
 	LOG_ACTION_DELETE,
@@ -21,6 +21,12 @@ from tests.test_core.type_hints import LDAPConnectorMock
 from rest_framework.test import APIClient
 from rest_framework.response import Response
 from rest_framework import status
+from core.constants.attrs.local import (
+	LOCAL_ATTR_DN,
+	LOCAL_ATTR_NAME,
+	LOCAL_ATTR_TYPE,
+	LOCAL_ATTR_PATH,
+)
 from core.constants.attrs.ldap import (
 	LDAP_ATTR_OBJECT_CLASS,
 	LDAP_ATTR_OBJECT_CATEGORY,
@@ -30,6 +36,7 @@ from core.constants.attrs.ldap import (
 	LDAP_ATTR_GROUP_TYPE,
 	LDAP_ATTR_SECURITY_ID,
 )
+from tests.test_core.test_views.conftest import BaseViewTestClass
 
 
 @pytest.fixture(autouse=True)
@@ -66,8 +73,8 @@ def f_interlock_ldap_enabled(g_interlock_ldap_enabled):
 	return g_interlock_ldap_enabled
 
 
-class TestList:
-	endpoint = "/api/ldap/ou/"
+class TestOrganizationalUnits(BaseViewTestClass):
+	_endpoint = "ldap/dirtree-organizational-units"
 
 	def test_ldap_tree_raises(
 		self, mocker: MockerFixture, admin_user_client: APIClient
@@ -138,8 +145,8 @@ class TestList:
 		assert response.data.get("ldapObjectList") == ["children"]
 
 
-class TestDirtree:
-	endpoint = "/api/ldap/ou/dirtree/"
+class TestDirtree(BaseViewTestClass):
+	_endpoint = "ldap/dirtree"
 
 	def test_ldap_tree_raises(
 		self, mocker: MockerFixture, admin_user_client: APIClient
@@ -151,7 +158,7 @@ class TestDirtree:
 			name="m_filter_to_string", return_value=m_filter_str
 		)
 		mocker.patch.object(
-			LDAPOrganizationalUnitViewSet,
+			LdapDirtreeViewSet,
 			"process_ldap_filter",
 			return_value=m_filter,
 		)
@@ -161,7 +168,7 @@ class TestDirtree:
 			"core.views.ldap.organizational_unit.LDAPTree",
 			side_effect=Exception,
 		)
-		response: Response = admin_user_client.post(self.endpoint)
+		response: Response = admin_user_client.put(self.endpoint)
 		assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 		assert response.data["code"] == "ldap_tree_err"
 
@@ -181,7 +188,7 @@ class TestDirtree:
 			name="m_filter_to_string", return_value=m_filter_str
 		)
 		m_process_ldap_filter = mocker.patch.object(
-			LDAPOrganizationalUnitViewSet,
+			LdapDirtreeViewSet,
 			"process_ldap_filter",
 			return_value=m_filter,
 		)
@@ -203,11 +210,12 @@ class TestDirtree:
 		)
 
 		# Execute
-		response: Response = admin_user_client.post(
+		response: Response = admin_user_client.put(
 			self.endpoint, data={"filter": {}}, format="json"
 		)
 
 		# Assertions
+		assert response.status_code == status.HTTP_200_OK
 		m_process_ldap_filter.assert_called_once_with(
 			data_filter={},
 			default_filter=None,
@@ -241,14 +249,14 @@ class TestDirtree:
 		assert response.data.get("ldapObjectList") == ["children"]
 
 
-class TestMove:
-	endpoint = "/api/ldap/ou/move/"
+class TestMove(BaseViewTestClass):
+	_endpoint = "ldap/dirtree-move"
 
 	@pytest.mark.parametrize(
 		"ldap_path, distinguished_name, expected_match",
 		(
 			("", "mock_dn", "destination is required"),
-			("mock_path", "", "distinguishedName is required"),
+			("mock_path", "", "distinguished_name is required"),
 		),
 	)
 	def test_raises_bad_request(
@@ -261,7 +269,7 @@ class TestMove:
 		f_ldap_connector: LDAPConnectorMock,
 	):
 		m_move_or_rename_object = mocker.patch.object(
-			LDAPOrganizationalUnitViewSet, "move_or_rename_object"
+			LdapDirtreeViewSet, "move_or_rename_object"
 		)
 
 		# Execute
@@ -270,7 +278,7 @@ class TestMove:
 			data={
 				"ldapObject": {
 					"destination": ldap_path,
-					"distinguishedName": distinguished_name,
+					LOCAL_ATTR_DN: distinguished_name,
 				}
 			},
 			format="json",
@@ -288,7 +296,7 @@ class TestMove:
 		f_ldap_connector: LDAPConnectorMock,
 	):
 		m_move_or_rename_object = mocker.patch.object(
-			LDAPOrganizationalUnitViewSet, "move_or_rename_object"
+			LdapDirtreeViewSet, "move_or_rename_object"
 		)
 		m_distinguished_name = "mock_dn"
 		m_ldap_path = "mock_path"
@@ -298,7 +306,7 @@ class TestMove:
 			self.endpoint,
 			data={
 				"ldapObject": {
-					"distinguishedName": m_distinguished_name,
+					LOCAL_ATTR_DN: m_distinguished_name,
 					"destination": m_ldap_path,
 				}
 			},
@@ -312,14 +320,14 @@ class TestMove:
 		assert response.status_code == status.HTTP_200_OK
 
 
-class TestRename:
-	endpoint = "/api/ldap/ou/rename/"
+class TestRename(BaseViewTestClass):
+	_endpoint = "ldap/dirtree-rename"
 
 	@pytest.mark.parametrize(
 		"new_rdn, distinguished_name, expected_match",
 		(
 			("", "mock_dn", "newRDN is required"),
-			("mock_rdn", "", "distinguishedName is required"),
+			("mock_rdn", "", "distinguished_name is required"),
 		),
 	)
 	def test_raises_bad_request(
@@ -332,7 +340,7 @@ class TestRename:
 		f_ldap_connector: LDAPConnectorMock,
 	):
 		m_move_or_rename_object = mocker.patch.object(
-			LDAPOrganizationalUnitViewSet, "move_or_rename_object"
+			LdapDirtreeViewSet, "move_or_rename_object"
 		)
 
 		# Execute
@@ -341,7 +349,7 @@ class TestRename:
 			data={
 				"ldapObject": {
 					"newRDN": new_rdn,
-					"distinguishedName": distinguished_name,
+					LOCAL_ATTR_DN: distinguished_name,
 				}
 			},
 			format="json",
@@ -359,7 +367,7 @@ class TestRename:
 		f_ldap_connector: LDAPConnectorMock,
 	):
 		m_move_or_rename_object = mocker.patch.object(
-			LDAPOrganizationalUnitViewSet, "move_or_rename_object"
+			LdapDirtreeViewSet, "move_or_rename_object"
 		)
 		m_distinguished_name = "mock_dn"
 		m_new_rdn = "mock_rdn"
@@ -369,7 +377,7 @@ class TestRename:
 			self.endpoint,
 			data={
 				"ldapObject": {
-					"distinguishedName": m_distinguished_name,
+					LOCAL_ATTR_DN: m_distinguished_name,
 					"newRDN": m_new_rdn,
 				}
 			},
@@ -383,8 +391,8 @@ class TestRename:
 		assert response.status_code == status.HTTP_200_OK
 
 
-class TestInsert:
-	endpoint = "/api/ldap/ou/insert/"
+class TestInsert(BaseViewTestClass):
+	_endpoint = "ldap/dirtree"
 
 	def test_raises_bad_request_no_object(
 		self,
@@ -415,9 +423,9 @@ class TestInsert:
 			self.endpoint,
 			data={
 				"ldapObject": {
-					"name": "mock_name",
-					"path": "mock_path",
-					"type": object_type,
+					LOCAL_ATTR_NAME: "mock_name",
+					LOCAL_ATTR_PATH: "mock_path",
+					LOCAL_ATTR_TYPE: object_type,
 				}
 			},
 			format="json",
@@ -430,9 +438,9 @@ class TestInsert:
 	@pytest.mark.parametrize(
 		"field_to_test",
 		(
-			"name",
-			"path",
-			"type",
+			LOCAL_ATTR_NAME,
+			LOCAL_ATTR_PATH,
+			LOCAL_ATTR_TYPE,
 		),
 	)
 	def test_raises_missing_field(
@@ -442,9 +450,9 @@ class TestInsert:
 		f_ldap_connector: LDAPConnectorMock,
 	):
 		m_data = {
-			"name": "mock_name",
-			"path": "mock_path",
-			"type": "mock_type",
+			LOCAL_ATTR_NAME: "mock_name",
+			LOCAL_ATTR_PATH: "mock_path",
+			LOCAL_ATTR_TYPE: "mock_type",
 		}
 		del m_data[field_to_test]
 
@@ -485,9 +493,9 @@ class TestInsert:
 			self.endpoint,
 			data={
 				"ldapObject": {
-					"name": "mock_name",
-					"path": "mock_path",
-					"type": "ou",
+					LOCAL_ATTR_NAME: "mock_name",
+					LOCAL_ATTR_PATH: "mock_path",
+					LOCAL_ATTR_TYPE: "ou",
 				}
 			},
 			format="json",
@@ -520,12 +528,12 @@ class TestInsert:
 		m_name = "mock_name"
 		m_path = "mock_path"
 		m_ldap_object = {
-			"name": m_name,
-			"path": m_path,
-			"type": object_type,
+			LOCAL_ATTR_NAME: m_name,
+			LOCAL_ATTR_PATH: m_path,
+			LOCAL_ATTR_TYPE: object_type,
 		}
 		prefix = "OU" if object_type == "ou" else "CN"
-		expected_attrs = {"name": m_name}
+		expected_attrs = {LOCAL_ATTR_NAME: m_name}
 		if object_type == "ou":
 			expected_attrs["ou"] = m_name
 
@@ -552,8 +560,8 @@ class TestInsert:
 		assert response.status_code == status.HTTP_200_OK
 
 
-class TestDelete:
-	endpoint = "/api/ldap/ou/delete/"
+class TestDelete(BaseViewTestClass):
+	_endpoint = "ldap/dirtree"
 
 	def test_raises_not_exists(
 		self,
@@ -561,8 +569,8 @@ class TestDelete:
 		f_ldap_connector: LDAPConnectorMock,
 	):
 		# Execute
-		response: Response = admin_user_client.post(
-			self.endpoint, data={"distinguishedName": None}, format="json"
+		response: Response = admin_user_client.patch(
+			self.endpoint, data={LOCAL_ATTR_DN: None}, format="json"
 		)
 		f_ldap_connector.cls_mock.assert_not_called()
 		assert response.status_code == status.HTTP_409_CONFLICT
@@ -580,8 +588,8 @@ class TestDelete:
 		f_ldap_connector.connection.delete.side_effect = Exception
 
 		# Execute
-		response: Response = admin_user_client.post(
-			self.endpoint, data={"distinguishedName": "mock_dn"}, format="json"
+		response: Response = admin_user_client.patch(
+			self.endpoint, data={LOCAL_ATTR_DN: "mock_dn"}, format="json"
 		)
 		f_ldap_connector.connection.delete.assert_called_once_with(dn="mock_dn")
 		f_ldap_connector.cls_mock.assert_called_once_with(admin_user)
@@ -595,9 +603,9 @@ class TestDelete:
 		f_log_mixin: LogMixin,
 	):
 		# Execute
-		response: Response = admin_user_client.post(
+		response: Response = admin_user_client.patch(
 			self.endpoint,
-			data={"name": "mock_name", "distinguishedName": "mock_dn"},
+			data={LOCAL_ATTR_NAME: "mock_name", LOCAL_ATTR_DN: "mock_dn"},
 			format="json",
 		)
 		f_ldap_connector.connection.delete.assert_called_once_with(dn="mock_dn")

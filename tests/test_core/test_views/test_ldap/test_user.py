@@ -11,6 +11,7 @@ from rest_framework.test import APIClient
 from core.exceptions.ldap import CouldNotOpenConnection
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from tests.test_core.conftest import RuntimeSettingsFactory
+from tests.test_core.test_views.conftest import BaseViewTestClass
 from datetime import datetime
 from django.utils.timezone import now as tz_aware_now
 from logging import Logger
@@ -25,12 +26,8 @@ from core.models.user import (
 	USER_TYPE_LOCAL,
 	USER_PASSWORD_FIELDS,
 )
-from core.exceptions import (
-	ldap as exc_ldap,
-	users as exc_users,
-)
+from core.exceptions import ldap as exc_ldap
 from core.constants.attrs.local import *
-from core.constants.attrs.ldap import LDAP_DATE_FORMAT
 from core.constants.user import LOCAL_PUBLIC_FIELDS
 from core.views.mixins.logs import LogMixin
 from core.models.choices.log import (
@@ -72,8 +69,8 @@ def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
 	return g_runtime_settings("core.views.ldap.user.RuntimeSettings")
 
 
-class TestList:
-	endpoint = "/api/ldap/users/"
+class TestList(BaseViewTestClass):
+	_endpoint = "ldap/users-list"
 
 	def test_list_users_success(
 		self,
@@ -134,8 +131,8 @@ class TestList:
 		assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
 
 
-class TestFetch:
-	endpoint = "/api/ldap/users/fetch/"
+class TestRetrieve(BaseViewTestClass):
+	_endpoint = "ldap/users-retrieve"
 
 	def test_raises_bad_request(
 		self,
@@ -165,8 +162,8 @@ class TestFetch:
 		assert response.data.get("data") == m_result
 
 
-class TestInsert:
-	endpoint = "/api/ldap/users/insert/"
+class TestInsert(BaseViewTestClass):
+	_endpoint = "ldap/users-list"
 
 	@pytest.mark.parametrize(
 		"m_data, use_email",
@@ -384,8 +381,8 @@ class TestInsert:
 		m_ldap_set_password.assert_not_called()
 
 
-class TestUpdate:
-	endpoint = "/api/ldap/users/update/"
+class TestUpdate(BaseViewTestClass):
+	_endpoint = "ldap/users-list"
 
 	def test_success(
 		self,
@@ -538,8 +535,8 @@ class TestUpdate:
 		m_ldap_user_update.assert_not_called()
 
 
-class TestChangeStatus:
-	endpoint = "/api/ldap/users/change_status/"
+class TestChangeStatus(BaseViewTestClass):
+	_endpoint = "ldap/users-change-status"
 
 	@pytest.mark.parametrize(
 		"enabled",
@@ -628,8 +625,8 @@ class TestChangeStatus:
 		m_change_status.assert_not_called()
 
 
-class TestDelete:
-	endpoint = "/api/ldap/users/delete/"
+class TestDestroy(BaseViewTestClass):
+	_endpoint = "ldap/users"
 
 	@pytest.mark.django_db
 	def test_success(
@@ -652,7 +649,7 @@ class TestDelete:
 		)
 
 		# Exec
-		response: Response = admin_user_client.post(
+		response: Response = admin_user_client.patch(
 			self.endpoint,
 			data={LOCAL_ATTR_USERNAME: m_username},
 			format="json",
@@ -678,7 +675,7 @@ class TestDelete:
 		)
 
 		# Exec
-		response: Response = admin_user_client.post(
+		response: Response = admin_user_client.patch(
 			self.endpoint,
 			data={},
 			format="json",
@@ -702,7 +699,7 @@ class TestDelete:
 		)
 
 		# Exec
-		response: Response = admin_user_client.post(
+		response: Response = admin_user_client.patch(
 			self.endpoint,
 			data={LOCAL_ATTR_USERNAME: admin_user.username},
 			format="json",
@@ -714,8 +711,8 @@ class TestDelete:
 		m_ldap_user_delete.assert_not_called()
 
 
-class TestChangePassword:
-	endpoint = "/api/ldap/users/change_password/"
+class TestChangePassword(BaseViewTestClass):
+	_endpoint = "ldap/users-change-password"
 
 	@pytest.mark.parametrize(
 		"m_data",
@@ -967,8 +964,8 @@ def f_bulk_insert_data(f_runtime_settings: RuntimeSettingsSingleton):
 	return result
 
 
-class TestBulkInsert:
-	endpoint = "/api/ldap/users/bulk_insert/"
+class TestBulkCreate(BaseViewTestClass):
+	_endpoint = "ldap/users-bulk-create"
 
 	@pytest.mark.parametrize(
 		"missing_key",
@@ -1353,8 +1350,8 @@ def f_bulk_update_data():
 	}
 
 
-class TestBulkUpdate:
-	endpoint = "/api/ldap/users/bulk_update/"
+class TestBulkUpdate(BaseViewTestClass):
+	_endpoint = "ldap/users-bulk-update"
 
 	def test_success(
 		self,
@@ -1508,8 +1505,8 @@ def f_bulk_change_status_data():
 	}
 
 
-class TestBulkChangeStatus:
-	endpoint = "/api/ldap/users/bulk_change_status/"
+class TestBulkChangeStatus(BaseViewTestClass):
+	_endpoint = "ldap/users-bulk-change-status"
 
 	@pytest.mark.parametrize(
 		"flatten_users, enabled, expected",
@@ -1637,8 +1634,8 @@ def f_bulk_delete_data():
 	]
 
 
-class TestBulkDelete:
-	endpoint = "/api/ldap/users/bulk_delete/"
+class TestBulkDestroy(BaseViewTestClass):
+	_endpoint = "ldap/users-bulk-destroy"
 
 	@pytest.mark.parametrize(
 		"flatten_users",
@@ -1670,8 +1667,8 @@ class TestBulkDelete:
 			m_delete.assert_any_call(username=u.get(LOCAL_ATTR_USERNAME))
 
 
-class TestBulkUnlock:
-	endpoint = "/api/ldap/users/bulk_unlock/"
+class TestBulkUnlock(BaseViewTestClass):
+	_endpoint = "ldap/users-bulk-unlock"
 
 	@pytest.mark.parametrize(
 		"flatten_users",
@@ -1724,8 +1721,8 @@ class TestBulkUnlock:
 		m_unlock.call_count == len(f_bulk_delete_data)
 
 
-class TestSelfChangePassword:
-	endpoint = "/api/ldap/users/self_change_password/"
+class TestSelfChangePassword(BaseViewTestClass):
+	_endpoint = "ldap/users-self-change-password"
 
 	def test_raises_not_ldap_user(self, normal_user_client: APIClient):
 		response: Response = normal_user_client.post(
@@ -1987,8 +1984,8 @@ class TestSelfChangePassword:
 		)
 
 
-class TestSelfUpdate:
-	endpoint = "/api/ldap/users/self_update/"
+class TestSelfUpdate(BaseViewTestClass):
+	_endpoint = "ldap/users-self-update"
 
 	def test_raises_not_ldap_user(self, normal_user_client: APIClient):
 		response: Response = normal_user_client.post(
@@ -2063,23 +2060,22 @@ class TestSelfUpdate:
 
 		# Assertions
 		assert response.status_code == status.HTTP_200_OK
-		expected_data = m_data.copy()
+		expected_data = m_data.copy() | {
+			LOCAL_ATTR_USERNAME: normal_user.username
+		}
 		for key in (
 			LOCAL_ATTR_IS_ENABLED,
 			LOCAL_ATTR_UAC,
 			LOCAL_ATTR_PERMISSIONS,
 		):
 			expected_data.pop(key, None)
-		m_ldap_user_update.assert_called_once_with(
-			username=normal_user.username,
-			user_data=expected_data,
-		)
+		m_ldap_user_update.assert_called_once_with(data=expected_data)
 		normal_user.refresh_from_db()
 		normal_user.email == m_email
 
 
-class TestSelfInfo:
-	endpoint = "/api/ldap/users/self_info/"
+class TestSelfInfo(BaseViewTestClass):
+	_endpoint = "ldap/users-self-info"
 
 	@pytest.mark.parametrize(
 		"user_prefix, expects_admin",
@@ -2118,8 +2114,8 @@ class TestSelfInfo:
 		assert data.get("admin_allowed", False) == expects_admin
 
 
-class TestSelfFetch:
-	endpoint = "/api/ldap/users/self_fetch/"
+class TestSelfFetch(BaseViewTestClass):
+	_endpoint = "ldap/users-self-fetch"
 
 	def test_success_ldap(
 		self,
@@ -2201,6 +2197,15 @@ class TestSelfFetch:
 		assert data[LOCAL_ATTR_EMAIL] == normal_user.email
 		assert data[LOCAL_ATTR_IS_ENABLED]
 		assert not data[LOCAL_ATTR_DN]
-		assert isinstance(data[LOCAL_ATTR_LAST_LOGIN], datetime)
-		assert isinstance(data[LOCAL_ATTR_CREATED], datetime)
-		assert isinstance(data[LOCAL_ATTR_MODIFIED], datetime)
+		assert datetime.strptime(
+			data[LOCAL_ATTR_LAST_LOGIN],
+			DATE_FORMAT_ISO_8601_ALT,
+		)
+		assert datetime.strptime(
+			data[LOCAL_ATTR_CREATED],
+			DATE_FORMAT_ISO_8601_ALT,
+		)
+		assert datetime.strptime(
+			data[LOCAL_ATTR_MODIFIED],
+			DATE_FORMAT_ISO_8601_ALT,
+		)

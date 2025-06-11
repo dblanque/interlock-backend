@@ -36,11 +36,10 @@ logger = logging.getLogger(__name__)
 
 
 class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def insert(self, request):
+	def create(self, request):
 		user: User = request.user
 		data: dict = request.data
 		code = 0
@@ -100,11 +99,10 @@ class LDAPRecordViewSet(BaseViewSet, DNSRecordMixin, DomainViewMixin):
 			}
 		)
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def delete(self, request):
+	def destroy(self, request):
 		user: User = request.user
 		data: dict = request.data
 		code = 0

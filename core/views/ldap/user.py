@@ -52,10 +52,12 @@ from core.constants.attrs import *
 from core.ldap.connector import LDAPConnector
 
 ### Others
+from core.constants.attrs.local import DATE_FORMAT_ISO_8601_ALT
 from core.ldap.filter import LDAPFilter
 from core.decorators.intercept import ldap_backend_intercept
 from core.constants.user import LOCAL_PUBLIC_FIELDS
 from core.config.runtime import RuntimeSettings
+from datetime import datetime
 import logging
 ################################################################################
 
@@ -98,11 +100,16 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			}
 		)
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def fetch(self, request: Request):
+	@action(
+		detail=False,
+		methods=["post"],
+		url_name="retrieve",
+		url_path="retrieve",
+	)
+	def retrieve_by_username(self, request: Request):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -129,11 +136,10 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			data={"code": code, "code_msg": code_msg, "data": user_data}
 		)
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def insert(self, request):
+	def create(self, request):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -244,10 +250,10 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		return Response(data={"code": code, "code_msg": code_msg})
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
+	@action(detail=False, methods=["post"], url_path="change-status")
 	def change_status(self, request: Request):
 		user: User = request.user
 		data: dict = request.data
@@ -298,11 +304,10 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		return Response(data={"code": code, "code_msg": code_msg})
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def delete(self, request: Request, pk=None):
+	def destroy(self, request: Request, pk=None):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -338,10 +343,10 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
+	@action(detail=False, methods=["post"], url_path="change-password")
 	def change_password(self, request: Request, pk=None):
 		user: User = request.user
 		code = 0
@@ -449,11 +454,11 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			data={"code": code, "code_msg": code_msg, "data": response_result}
 		)
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def bulk_insert(self, request: Request):
+	@action(detail=False, methods=["post"], url_path="bulk/create")
+	def bulk_create(self, request: Request):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -634,10 +639,10 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			},
 		)
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
+	@action(detail=False, methods=["post"], url_path="bulk/update")
 	def bulk_update(self, request: Request, pk=None):
 		user: User = request.user
 		code = 0
@@ -719,10 +724,10 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			}
 		)
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
+	@action(detail=False, methods=["post"], url_path="bulk/change-status")
 	def bulk_change_status(self, request: Request):
 		user: User = request.user
 		code = 0
@@ -773,11 +778,11 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			data={"code": code, "code_msg": code_msg, "data": success}
 		)
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def bulk_delete(self, request: Request, pk=None):
+	@action(detail=False, methods=["post"], url_path="bulk/destroy")
+	def bulk_destroy(self, request: Request, pk=None):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -800,10 +805,10 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			data={"code": code, "code_msg": code_msg, "data": deleted_users}
 		)
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
+	@action(detail=False, methods=["post"], url_path="bulk/unlock")
 	def bulk_unlock(self, request: Request, pk=None):
 		user: User = request.user
 		code = 0
@@ -836,9 +841,9 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			data={"code": code, "code_msg": code_msg, "data": response_result}
 		)
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@ldap_backend_intercept
+	@action(detail=False, methods=["post"], url_path="self/change-password")
 	def self_change_password(self, request: Request, pk=None):
 		user = request.user
 		user: User  # For type-hints
@@ -913,9 +918,9 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
 
-	@action(detail=False, methods=["put", "post"])
 	@auth_required
 	@ldap_backend_intercept
+	@action(detail=False, methods=["put", "post"], url_path="self/update")
 	def self_update(self, request: Request, pk=None):
 		user = request.user
 		user: User  # For type-hints
@@ -962,7 +967,9 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		with LDAPConnector(force_admin=True) as ldc:
 			self.ldap_connection = ldc.connection
 			ldap_user_search = user.username
-			self.ldap_user_update(username=ldap_user_search, user_data=data)
+			self.ldap_user_update(data=data | {
+				LOCAL_ATTR_USERNAME: user.username
+			})
 
 		logger.debug(self.ldap_connection.result)
 
@@ -988,8 +995,8 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		)
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
 
-	@action(detail=False, methods=["get"])
 	@auth_required
+	@action(detail=False, methods=["get"], url_path="self/info")
 	def self_info(self, request: Request):
 		"""Method used by all user types (Local, LDAP, etc.)"""
 		user: User = request.user
@@ -1005,9 +1012,9 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			data["admin_allowed"] = True
 		return Response(data={"code": code, "code_msg": "ok", "user": data})
 
-	@action(detail=False, methods=["get"])
 	@auth_required
 	@ldap_backend_intercept
+	@action(detail=False, methods=["get"], url_path="self/fetch")
 	def self_fetch(self, request: Request):
 		user: User = request.user
 		code = 0
@@ -1017,6 +1024,9 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			user_data = {}
 			for field in LOCAL_PUBLIC_FIELDS:
 				user_data[field] = getattr(user, field)
+			for k, v in user_data.items():
+				if isinstance(v, datetime):
+					user_data[k] = v.strftime(DATE_FORMAT_ISO_8601_ALT)
 		elif user.user_type == USER_TYPE_LDAP:
 			# Open LDAP Connection
 			with LDAPConnector(user) as ldc:

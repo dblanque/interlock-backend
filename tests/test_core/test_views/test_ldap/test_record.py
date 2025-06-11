@@ -7,7 +7,7 @@ from core.views.ldap.record import LDAPRecordViewSet
 from rest_framework.test import APIClient
 from rest_framework.response import Response
 from rest_framework import status
-
+from tests.test_core.test_views.conftest import BaseViewTestClass
 
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector) -> MockType:
@@ -25,8 +25,8 @@ def f_interlock_ldap_enabled(g_interlock_ldap_enabled):
 	return g_interlock_ldap_enabled
 
 
-class TestInsert:
-	endpoint = "/api/ldap/record/insert/"
+class TestInsert(BaseViewTestClass):
+	_endpoint = "ldap/record"
 
 	def test_record_not_in_request(self, admin_user_client: APIClient):
 		response: Response = admin_user_client.post(self.endpoint, data={})
@@ -116,16 +116,16 @@ class TestUpdate:
 		assert response.data["data"] == m_result
 
 
-class TestDelete:
-	endpoint = "/api/ldap/record/delete/"
+class TestDelete(BaseViewTestClass):
+	_endpoint = "ldap/record"
 
 	def test_record_not_in_request(self, admin_user_client: APIClient):
-		response: Response = admin_user_client.post(self.endpoint, data={})
+		response: Response = admin_user_client.patch(self.endpoint, data={})
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert response.data["code"] == "dns_record_not_in_request"
 
 	def test_overlapping_operations_raises(self, admin_user_client: APIClient):
-		response: Response = admin_user_client.post(
+		response: Response = admin_user_client.patch(
 			self.endpoint,
 			data={
 				"record": {"some": "record"},
@@ -148,7 +148,7 @@ class TestDelete:
 			LDAPRecordViewSet, "validate_record", m_validate_record
 		)
 		mocker.patch.object(LDAPRecordViewSet, "delete_record", m_delete_record)
-		response: Response = admin_user_client.post(
+		response: Response = admin_user_client.patch(
 			self.endpoint,
 			data={"record": m_request_record},
 			format="json",
@@ -178,7 +178,7 @@ class TestDelete:
 			LDAPRecordViewSet, "validate_record", m_validate_record
 		)
 		mocker.patch.object(LDAPRecordViewSet, "delete_record", m_delete_record)
-		response: Response = admin_user_client.post(
+		response: Response = admin_user_client.patch(
 			self.endpoint,
 			data={"records": [m_request_record_1, m_request_record_2]},
 			format="json",
@@ -197,7 +197,7 @@ class TestDelete:
 	):
 		m_request_record = ["some_record_attr", "some_value"]
 
-		response: Response = admin_user_client.post(
+		response: Response = admin_user_client.patch(
 			self.endpoint,
 			data={"record": m_request_record},
 			format="json",
@@ -211,7 +211,7 @@ class TestDelete:
 	):
 		m_request_records = 1
 
-		response: Response = admin_user_client.post(
+		response: Response = admin_user_client.patch(
 			self.endpoint,
 			data={"records": m_request_records},
 			format="json",
@@ -224,7 +224,7 @@ class TestDelete:
 	):
 		m_request_records = ["some_record_attr", "some_value"]
 
-		response: Response = admin_user_client.post(
+		response: Response = admin_user_client.patch(
 			self.endpoint,
 			data={"records": m_request_records},
 			format="json",

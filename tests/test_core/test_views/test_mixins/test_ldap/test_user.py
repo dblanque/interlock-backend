@@ -52,6 +52,7 @@ from tests.test_core.conftest import (
 	RuntimeSettingsFactory,
 	LDAPEntryFactoryProtocol,
 )
+from django.utils import timezone as tz
 
 
 @pytest.fixture
@@ -1070,7 +1071,9 @@ class TestFetch:
 		)
 		m_group_mixin.get_group_by_rid.return_value = m_primary_group
 		m_group_objects = [m_primary_group] + m_member_of_objects
-		m_when_created = datetime.today().strftime(LDAP_DATE_FORMAT)
+		m_when_created = tz.make_aware(
+			datetime.today()
+		).strftime(DATE_FORMAT_ISO_8601_ALT)
 
 		## UAC
 		expected_enabled = not (LDAP_UF_ACCOUNT_DISABLE in user_account_control)

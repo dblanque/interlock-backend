@@ -665,7 +665,7 @@ class TestDeleteZone:
 		m_entry_2 = mocker.Mock()
 		m_entry_2.entry_dn = "mock_dn_2"
 		m_records = [m_entry_1, m_entry_2]
-		m_connection.extend.standard.paged_search.return_value = m_records
+		m_connection.entries = m_records
 
 		# Execute
 		f_domain_mixin.delete_zone(
@@ -675,7 +675,7 @@ class TestDeleteZone:
 		# Assertions
 		f_ldap_connector.cls_mock.assert_called_once_with(admin_user)
 		m_ldap_dns.assert_called_once_with(m_connection)
-		m_connection.extend.standard.paged_search.assert_called_once_with(
+		m_connection.search.assert_called_once_with(
 			search_base=f"DC={f_runtime_settings.LDAP_DOMAIN},{m_dns_root}",
 			search_filter="(objectClass=dnsNode)",
 			search_scope=ldap3_LEVEL,

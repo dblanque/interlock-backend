@@ -494,16 +494,17 @@ class DomainViewMixin(viewsets.ViewSetMixin):
 			search_filter = LDAPFilter.eq(
 				LDAP_ATTR_OBJECT_CLASS, "dnsNode"
 			).to_string()
-			records = self.connection.extend.standard.paged_search(
+			self.connection.search(
 				search_base=search_target,
 				search_filter=search_filter,
 				search_scope=ldap3_LEVEL,
 				attributes=[
 					LDNS_ATTR_ENTRY_RECORD,
 					LDNS_ATTR_ENTRY_TOMBSTONED,
-					"name",
+					LDNS_ATTR_ENTRY_NAME,
 				],
 			)
+			records = self.connection.entries
 
 			for _record in list(records):
 				_record: LDAPEntry

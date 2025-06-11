@@ -45,9 +45,8 @@ logger = logging.getLogger(__name__)
 
 
 class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
-	@action(detail=False, methods=["get"])
 	@auth_required
-	def details(self, request: Request):
+	def get_details(self, request: Request):
 		_username_identifier = RuntimeSettings.LDAP_AUTH_USERNAME_IDENTIFIER
 		data = {
 			"realm": "",
@@ -110,11 +109,11 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 			target_zone = RuntimeSettings.LDAP_DOMAIN
 		return target_zone
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def zones(self, request: Request):
+	@action(detail=False, methods=["post"])
+	def get_zone(self, request: Request):
 		user: User = request.user
 		request_data: dict = request.data
 		target_zone = self.validate_zones_filter(data=request_data)
@@ -126,11 +125,10 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 			data={"code": 0, "code_msg": "ok", "data": response_data}
 		)
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def insert(self, request: Request):
+	def create(self, request: Request):
 		user: User = request.user
 		request_data: dict = request.data
 
@@ -154,11 +152,10 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 
 		return Response(data={"code": 0, "code_msg": "ok", "result": result})
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def delete(self, request: Request):
+	def destroy(self, request: Request):
 		user: User = request.user
 		request_data: dict = request.data
 		result_zone = None

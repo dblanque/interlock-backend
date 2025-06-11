@@ -9,7 +9,10 @@ from rest_framework.test import APIClient
 from rest_framework.response import Response
 from rest_framework import status
 from core.constants.attrs import LOCAL_ATTR_NAME
-
+from tests.test_core.test_views.conftest import (
+	BaseViewTestClass,
+	BaseViewTestClassWithPk,
+)
 
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector) -> MockType:
@@ -27,8 +30,8 @@ def f_interlock_ldap_enabled(g_interlock_ldap_enabled):
 	return g_interlock_ldap_enabled
 
 
-class TestList:
-	endpoint = "/api/ldap/groups/"
+class TestList(BaseViewTestClass):
+	_endpoint = "ldap/groups-list"
 
 	def test_success(self, mocker: MockerFixture, admin_user_client: APIClient):
 		m_list_groups = mocker.patch.object(
@@ -46,8 +49,8 @@ class TestList:
 		assert response.data.get("headers") == "valid_attributes"
 
 
-class TestFetch:
-	endpoint = "/api/ldap/groups/fetch/"
+class TestFetch(BaseViewTestClass):
+	_endpoint = "ldap/groups-retrieve-dn"
 
 	def test_raises_no_dn(
 		self, mocker: MockerFixture, admin_user_client: APIClient
@@ -70,8 +73,8 @@ class TestFetch:
 		assert response.data.get("data") == "group_dict"
 
 
-class TestInsert:
-	endpoint = "/api/ldap/groups/insert/"
+class TestInsert(BaseViewTestClass):
+	_endpoint = "ldap/groups-list"
 
 	def test_no_group_data_raises(
 		self, mocker: MockerFixture, admin_user_client: APIClient
@@ -104,8 +107,8 @@ class TestInsert:
 		assert response.status_code == status.HTTP_200_OK
 
 
-class TestUpdate:
-	endpoint = "/api/ldap/groups/update/"
+class TestUpdate(BaseViewTestClass):
+	_endpoint = "ldap/groups-list"
 
 	def test_no_group_data_raises(
 		self, mocker: MockerFixture, admin_user_client: APIClient
@@ -123,20 +126,20 @@ class TestUpdate:
 		assert response.status_code == status.HTTP_200_OK
 
 
-class TestDelete:
-	endpoint = "/api/ldap/groups/delete/"
+class TestDelete(BaseViewTestClass):
+	_endpoint = "ldap/groups"
 
 	def test_no_group_data_raises(
 		self, mocker: MockerFixture, admin_user_client: APIClient
 	):
 		mocker.patch.object(LDAPGroupsViewSet, "delete_group")
-		response: Response = admin_user_client.post(self.endpoint, data={})
+		response: Response = admin_user_client.patch(self.endpoint, data={})
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert response.data.get("detail") == "group dict is required"
 
 	def test_success(self, mocker: MockerFixture, admin_user_client: APIClient):
 		mocker.patch.object(LDAPGroupsViewSet, "delete_group")
-		response: Response = admin_user_client.post(
+		response: Response = admin_user_client.patch(
 			self.endpoint, data={"group": {"mock": "dict"}}, format="json"
 		)
 		assert response.status_code == status.HTTP_200_OK

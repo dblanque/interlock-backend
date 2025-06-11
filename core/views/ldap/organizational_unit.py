@@ -57,11 +57,17 @@ DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
 
-class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
+class LdapDirtreeViewSet(BaseViewSet, OrganizationalUnitMixin):
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def list(self, request: Request):
+	@action(
+		detail=False,
+		methods=["get"],
+		url_name="organizational-units",
+		url_path="organizational-units"
+	)
+	def get_organizational_units(self, request: Request):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -133,11 +139,10 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			}
 		)
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def dirtree(self, request: Request):
+	def list(self, request: Request):
 		user: User = request.user
 		data: dict = request.data
 		code = 0
@@ -213,10 +218,10 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			}
 		)
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
+	@action(detail=False, methods=["post"])
 	def move(self, request: Request):
 		user: User = request.user
 		data = request.data
@@ -229,7 +234,7 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				data={"detail": "ldapObject dict is required in data."}
 			)
 		ldap_path: str = ldap_object.get("destination", None)
-		distinguished_name: str = ldap_object.get("distinguishedName", None)
+		distinguished_name: str = ldap_object.get(LOCAL_ATTR_DN, None)
 
 		if not ldap_path:
 			raise exc_base.BadRequest(
@@ -237,7 +242,7 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			)
 		if not distinguished_name:
 			raise exc_base.BadRequest(
-				data={"detail": "distinguishedName is required."}
+				data={"detail": "distinguished_name is required."}
 			)
 
 		# Open LDAP Connection
@@ -255,10 +260,10 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			}
 		)
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
+	@action(detail=False, methods=["post"])
 	def rename(self, request: Request):
 		user: User = request.user
 		data = request.data
@@ -270,12 +275,12 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			raise exc_base.BadRequest(
 				data={"detail": "ldapObject dict is required in data."}
 			)
-		distinguished_name: str = ldap_object.get("distinguishedName", None)
+		distinguished_name: str = ldap_object.get(LOCAL_ATTR_DN, None)
 		new_rdn: str = ldap_object.get("newRDN", None)
 
 		if not distinguished_name:
 			raise exc_base.BadRequest(
-				data={"detail": "distinguishedName is required."}
+				data={"detail": "distinguished_name is required."}
 			)
 		if not new_rdn:
 			raise exc_base.BadRequest(data={"detail": "newRDN is required."})
@@ -294,11 +299,10 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			}
 		)
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def insert(self, request: Request):
+	def create(self, request: Request):
 		user: User = request.user
 		data = request.data
 		code = 0
@@ -311,21 +315,21 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			)
 
 		fields = (
-			"name",
-			"path",
-			"type",
+			LOCAL_ATTR_NAME,
+			LOCAL_ATTR_PATH,
+			LOCAL_ATTR_TYPE,
 		)
 		for _fld in fields:
 			if _fld not in ldap_object:
 				logger.error(_fld + " not in LDAP Object.")
 				raise exc_ou.MissingField(data={"field": _fld})
 
-		object_name: str = ldap_object["name"]
-		object_path: str = ldap_object["path"]
-		object_type: str = ldap_object["type"]
+		object_name: str = ldap_object[LOCAL_ATTR_NAME]
+		object_path: str = ldap_object[LOCAL_ATTR_PATH]
+		object_type: str = ldap_object[LOCAL_ATTR_TYPE]
 
 		# Validate object type
-		if ldap_object.get("type") not in (
+		if ldap_object.get(LOCAL_ATTR_TYPE) not in (
 			"ou",
 			"computer",
 			"printer",
@@ -336,7 +340,7 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 				}
 			)
 
-		attributes = {"name": object_name}
+		attributes = {LOCAL_ATTR_NAME: object_name}
 
 		if not object_type or object_type.lower() == "ou":
 			object_dn = f"OU={object_name},{object_path}"
@@ -387,18 +391,17 @@ class LDAPOrganizationalUnitViewSet(BaseViewSet, OrganizationalUnitMixin):
 			}
 		)
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def delete(self, request: Request, pk=None):
+	def destroy(self, request: Request, pk=None):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
 		data = request.data
 
-		object_name = data.get("name")
-		object_dn = data.get("distinguishedName", None)
+		object_name = data.get(LOCAL_ATTR_NAME)
+		object_dn = data.get(LOCAL_ATTR_DN, None)
 		if not object_dn:
 			raise exc_ldap.LDAPObjectDoesNotExist
 

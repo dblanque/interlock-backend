@@ -1,8 +1,5 @@
 ########################### Standard Pytest Imports ############################
 import pytest
-from pytest import FixtureRequest
-from pytest_mock import MockerFixture, MockType
-
 ################################################################################
 from rest_framework.test import APIClient
 from rest_framework.response import Response
@@ -15,10 +12,13 @@ from core.constants.attrs import (
 	LOCAL_ATTR_NAME,
 	LOCAL_ATTR_USERNAME,
 )
+from tests.test_core.test_views.conftest import (
+	BaseViewTestClass,
+	BaseViewTestClassWithPk,
+)
 
-
-class TestCreateInfo:
-	endpoint = "/api/application/group/create_info/"
+class TestCreateInfo(BaseViewTestClass):
+	_endpoint = "application/group-create-info"
 
 	def test_success_asg_exists(
 		self,
@@ -57,8 +57,8 @@ class TestCreateInfo:
 			assert username in usernames
 
 
-class TestInsert:
-	endpoint = "/api/application/group/insert/"
+class TestInsert(BaseViewTestClass):
+	_endpoint = "application/group-list"
 
 	def test_exists_raises(
 		self,
@@ -106,8 +106,8 @@ class TestInsert:
 		)
 
 
-class TestList:
-	endpoint = "/api/application/group/"
+class TestList(BaseViewTestClass):
+	_endpoint = "application/group-list"
 
 	def test_success(
 		self,
@@ -130,8 +130,8 @@ class TestList:
 		)
 
 
-class TestRetrieve:
-	endpoint = "/api/application/group/{pk}/"
+class TestRetrieve(BaseViewTestClassWithPk):
+	_endpoint = "application/group-detail"
 
 	def test_success(
 		self,
@@ -140,17 +140,16 @@ class TestRetrieve:
 		f_application_group: ApplicationSecurityGroup,
 		f_client: Client,
 	):
-		response: Response = admin_user_client.get(
-			self.endpoint.format(pk=f_application_group.id)
-		)
+		self._pk = f_application_group.id
+		response: Response = admin_user_client.get(self.endpoint)
 		data = response.data.get("data")
 		assert data[LOCAL_ATTR_ID] == f_application_group.id
 		assert data["enabled"]
 		assert data["application"][LOCAL_ATTR_ID] == f_application.id
 
 
-class TestUpdate:
-	endpoint = "/api/application/group/{pk}/"
+class TestUpdate(BaseViewTestClassWithPk):
+	_endpoint = "application/group-detail"
 
 	def test_success(
 		self,
@@ -160,9 +159,10 @@ class TestUpdate:
 		f_application_group: ApplicationSecurityGroup,
 		f_client: Client,
 	):
+		self._pk = f_application_group.id
 		assert f_application_group.users.count() == 1
 		response: Response = admin_user_client.put(
-			self.endpoint.format(pk=f_application_group.id),
+			self.endpoint,
 			data={
 				"application": f_application.id,
 				"users": [f_user_local.id],
@@ -183,8 +183,9 @@ class TestUpdate:
 		f_application_group: ApplicationSecurityGroup,
 		f_client: Client,
 	):
+		self._pk = f_application_group.id
 		response: Response = admin_user_client.put(
-			self.endpoint.format(pk=f_application_group.id),
+			self.endpoint,
 			data={
 				"application": f_application.id + 1,
 				"enabled": False,
@@ -196,8 +197,8 @@ class TestUpdate:
 		assert "does not match" in response.data.get("detail")
 
 
-class TestChangeStatus:
-	endpoint = "/api/application/group/{pk}/change_status/"
+class TestChangeStatus(BaseViewTestClassWithPk):
+	_endpoint = "application/group-change-status"
 
 	@pytest.mark.parametrize(
 		"was_enabled, data_enabled, expects_enabled",
@@ -240,12 +241,13 @@ class TestChangeStatus:
 		f_application_group: ApplicationSecurityGroup,
 		f_client: Client,
 	):
+		self._pk = f_application_group.id
 		f_application_group.enabled = was_enabled
 		f_application_group.save()
 		f_application_group.refresh_from_db()
 
 		response: Response = admin_user_client.patch(
-			self.endpoint.format(pk=f_application_group.id),
+			self.endpoint,
 			data={"enabled": data_enabled},
 			format="json",
 		)
@@ -254,8 +256,8 @@ class TestChangeStatus:
 		assert f_application_group.enabled == expects_enabled
 
 
-class TestDelete:
-	endpoint = "/api/application/group/{pk}/delete/"
+class TestDelete(BaseViewTestClassWithPk):
+	_endpoint = "application/group-detail"
 
 	def test_success(
 		self,
@@ -264,8 +266,13 @@ class TestDelete:
 		f_application_group: ApplicationSecurityGroup,
 		f_client: Client,
 	):
-		response: Response = admin_user_client.delete(
-			self.endpoint.format(pk=f_application_group.id),
-		)
+		self._pk = f_application_group.id
+		response: Response = admin_user_client.delete(self.endpoint)
 		assert response.status_code == status.HTTP_200_OK
+		assert ApplicationSecurityGroup.objects.count() == 0
+
+	def test_raises_not_exists(self, admin_user_client: APIClient):
+		self._pk = 999
+		response: Response = admin_user_client.delete(self.endpoint)
+		assert response.status_code == status.HTTP_404_NOT_FOUND
 		assert ApplicationSecurityGroup.objects.count() == 0

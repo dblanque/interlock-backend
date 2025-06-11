@@ -16,7 +16,7 @@ from rest_framework.test import APIClient
 from rest_framework.response import Response
 from rest_framework import status
 from core.models.validators.ldap import domain_validator
-
+from tests.test_core.test_views.conftest import BaseViewTestClass
 
 @pytest.fixture
 def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
@@ -30,8 +30,8 @@ def f_interlock_ldap_enabled(g_interlock_ldap_enabled):
 	return g_interlock_ldap_enabled
 
 
-class TestDetailsEndpoint:
-	endpoint = "/api/ldap/domain/details/"
+class TestDetailsEndpoint(BaseViewTestClass):
+	_endpoint = "ldap/domain"
 
 	def test_success_with_defaults(
 		self,
@@ -99,8 +99,8 @@ class TestDetailsEndpoint:
 		assert not details.get("debug", None)
 
 
-class TestZonesEndpoint:
-	endpoint = "/api/ldap/domain/zones/"
+class TestZonesEndpoint(BaseViewTestClass):
+	_endpoint = "ldap/domain-zone"
 
 	@pytest.mark.parametrize(
 		"domain, expects_default, expected_domain",
@@ -182,8 +182,8 @@ class TestZonesEndpoint:
 		assert response.data.get("code") == "dns_zone_missing"
 
 
-class TestInsertEndpoint:
-	endpoint = "/api/ldap/domain/insert/"
+class TestInsertEndpoint(BaseViewTestClass):
+	_endpoint = "ldap/domain"
 
 	def test_raises_no_target_zone(self, admin_user_client: APIClient):
 		response: Response = admin_user_client.post(
@@ -266,11 +266,11 @@ class TestInsertEndpoint:
 		assert response.status_code == status.HTTP_200_OK
 
 
-class TestDeleteEndpoint:
-	endpoint = "/api/ldap/domain/delete/"
+class TestDeleteEndpoint(BaseViewTestClass):
+	_endpoint = "ldap/domain"
 
 	def test_raises_no_target_zone(self, admin_user_client: APIClient):
-		response: Response = admin_user_client.post(
+		response: Response = admin_user_client.patch(
 			self.endpoint, data={}, format="json"
 		)
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -293,7 +293,7 @@ class TestDeleteEndpoint:
 		m_delete_zone = mocker.patch.object(
 			LDAPDomainViewSet, "delete_zone", return_value="mock_result"
 		)
-		response: Response = admin_user_client.post(
+		response: Response = admin_user_client.patch(
 			self.endpoint, data={"dnsZone": bad_value}, format="json"
 		)
 		m_delete_zone.assert_not_called()
@@ -321,7 +321,7 @@ class TestDeleteEndpoint:
 		m_delete_zone = mocker.patch.object(
 			LDAPDomainViewSet, "delete_zone", return_value="mock_result"
 		)
-		response: Response = admin_user_client.post(
+		response: Response = admin_user_client.patch(
 			self.endpoint, data={"dnsZone": bad_value}, format="json"
 		)
 		m_delete_zone.assert_not_called()
@@ -342,7 +342,7 @@ class TestDeleteEndpoint:
 		m_domain_validator = mocker.patch(
 			"core.views.ldap.domain.domain_validator", wraps=domain_validator
 		)
-		response: Response = admin_user_client.post(
+		response: Response = admin_user_client.patch(
 			self.endpoint, data={"dnsZone": "example.org"}, format="json"
 		)
 		m_delete_zone.assert_called_once_with(

@@ -32,9 +32,14 @@ logger = logging.getLogger(__name__)
 
 
 class ApplicationGroupViewSet(BaseViewSet, ApplicationSecurityGroupViewMixin):
-	@action(detail=False, methods=["get"])
 	@auth_required
 	@admin_required
+	@action(
+		detail=False,
+		methods=["get"],
+		url_name="create-info",
+		url_path="create-info",
+	)
 	def create_info(self, request: Request):
 		"""Returns required creation info for application groups"""
 		code = 0
@@ -52,10 +57,9 @@ class ApplicationGroupViewSet(BaseViewSet, ApplicationSecurityGroupViewMixin):
 				data["users"].append(user)
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
-	def insert(self, request: Request):
+	def create(self, request: Request):
 		data: dict = request.data
 		code = 0
 		code_msg = "ok"
@@ -101,9 +105,14 @@ class ApplicationGroupViewSet(BaseViewSet, ApplicationSecurityGroupViewMixin):
 		self.update_application_group(pk=pk, data=data)
 		return Response(data={"code": code, "code_msg": code_msg})
 
-	@action(detail=True, methods=["patch"])
 	@auth_required
 	@admin_required
+	@action(
+		detail=True,
+		methods=["patch"],
+		url_name="change-status",
+		url_path="change-status",
+	)
 	def change_status(self, request: Request, pk):
 		data: dict = request.data
 		code = 0
@@ -112,11 +121,9 @@ class ApplicationGroupViewSet(BaseViewSet, ApplicationSecurityGroupViewMixin):
 		self.change_application_group_status(pk=pk, data=data)
 		return Response(data={"code": code, "code_msg": code_msg})
 
-	@action(detail=True, methods=["delete"])
 	@auth_required
 	@admin_required
-	def delete(self, request: Request, pk):
-		data: dict = request.data
+	def destroy(self, request: Request, pk):
 		code = 0
 		code_msg = "ok"
 		pk = int(pk)

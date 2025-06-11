@@ -1,18 +1,4 @@
-"""MEP MIDDLE-WARE API URL Configuration
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-	https://docs.djangoproject.com/en/3.0/topics/http/urls/
-Examples:
-Function views
-	1. Add an import:  from my_app import views
-	2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-	1. Add an import:  from other_app.views import Home
-	2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-	1. Import the include() function: from django.urls import include, path
-	2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
+"""Interlock API URL Configuration"""
 
 #  Django
 from django.contrib import admin
@@ -29,7 +15,7 @@ from core.views.totp import TOTPViewSet
 from core.views.auth import AuthViewSet
 from core.views.user import UserViewSet
 from core.views.ldap.user import LDAPUserViewSet
-from core.views.ldap.organizational_unit import LDAPOrganizationalUnitViewSet
+from core.views.ldap.organizational_unit import LdapDirtreeViewSet
 from core.views.ldap_settings import SettingsViewSet
 from core.views.logs import LogsViewSet
 from core.views.ldap.group import LDAPGroupsViewSet
@@ -53,7 +39,7 @@ named_view_sets = {
 	r"ldap/groups": LDAPGroupsViewSet,
 	r"ldap/domain": LDAPDomainViewSet,
 	r"ldap/record": LDAPRecordViewSet,
-	r"ldap/ou": LDAPOrganizationalUnitViewSet,
+	r"ldap/dirtree": LdapDirtreeViewSet,
 	r"settings": SettingsViewSet,
 	r"logs": LogsViewSet,
 	r"liveness": LivenessViewSet,
@@ -74,49 +60,101 @@ if DEBUG == True:
 
 urlpatterns = [
 	# User Viewset Overrides
-	# path(
-	# 	"api/users/<int:pk>/",
-	# 	UserViewSet.as_view({
-	# 		"get": UserViewSet.fetch.__name__,
-	# 		"delete": UserViewSet.delete.__name__,
-	# 		"post": UserViewSet.update.__name__,
-	# 		"patch": UserViewSet.update.__name__,
-	# 		"put": UserViewSet.update.__name__,
-	# 	}),
-	# 	name="users-detail",
-	# ),
-	#
-	# Application Viewset Overrides
-	# path(
-	# 	"api/applications/<int:pk>/",
-	# 	ApplicationViewSet.as_view({
-	# 		"get": ApplicationViewSet.fetch.__name__,
-	# 		"delete": ApplicationViewSet.delete.__name__,
-	# 		"post": ApplicationViewSet.update.__name__,
-	# 		"patch": ApplicationViewSet.update.__name__,
-	# 		"put": ApplicationViewSet.update.__name__,
-	# 	}),
-	# 	name="applications-detail",
-	# ),
-	#
-	# Application Group Viewset Overrides
-	# path(
-	# 	"api/application-groups/<int:pk>/",
-	# 	ApplicationGroupViewSet.as_view({
-	# 		"get": ApplicationGroupViewSet.retrieve.__name__,
-	# 		"delete": ApplicationGroupViewSet.delete.__name__,
-	# 		"post": ApplicationGroupViewSet.update.__name__,
-	# 		"patch": ApplicationGroupViewSet.update.__name__,
-	# 		"put": ApplicationGroupViewSet.update.__name__,
-	# 	}),
-	# 	name="application-groups-detail",
-	# ),
-
+	path(
+		"api/users/<int:pk>/",
+		UserViewSet.as_view({
+			"get": UserViewSet.retrieve.__name__,
+			"delete": UserViewSet.destroy.__name__,
+			"post": UserViewSet.update.__name__,
+			"put": UserViewSet.update.__name__,
+		}),
+		name="users-detail",
+	),
+	path(
+		"api/users/",
+		UserViewSet.as_view({
+			"get": UserViewSet.list.__name__,
+			"post": UserViewSet.create.__name__,
+		}),
+		name="users",
+	),
+	# LDAP User Viewset Overrides
+	path(
+		"api/ldap/users/",
+		LDAPUserViewSet.as_view({
+			"get": LDAPUserViewSet.list.__name__,
+			"post": LDAPUserViewSet.create.__name__,
+			"put": LDAPUserViewSet.update.__name__,
+			"patch": LDAPUserViewSet.destroy.__name__,
+		}),
+		name="ldap/users",
+	),
+	# LDAP Group Viewset Overrides
+	path(
+		"api/ldap/groups/",
+		LDAPGroupsViewSet.as_view({
+			"get": LDAPGroupsViewSet.list.__name__,
+			"post": LDAPGroupsViewSet.create.__name__,
+			"put": LDAPGroupsViewSet.update.__name__,
+			"patch": LDAPGroupsViewSet.destroy.__name__,
+		}),
+		name="ldap/groups",
+	),
+	# LDAP DNS Record Viewset Overrides
+	path(
+		"api/ldap/record/",
+		LDAPRecordViewSet.as_view({
+			"post": LDAPRecordViewSet.create.__name__,
+			"put": LDAPRecordViewSet.update.__name__,
+			"patch": LDAPRecordViewSet.destroy.__name__,
+		}),
+		name="ldap/record",
+	),
+	# LDAP DNS Domain Viewset Overrides
+	path(
+		"api/ldap/domain/",
+		LDAPDomainViewSet.as_view({
+			"get": LDAPDomainViewSet.get_details.__name__,
+			"post": LDAPDomainViewSet.create.__name__,
+			"patch": LDAPDomainViewSet.destroy.__name__,
+		}),
+		name="ldap/domain",
+	),
+	path(
+		"api/ldap/domain/zone/",
+		LDAPDomainViewSet.as_view({
+			"get": LDAPDomainViewSet.get_zone.__name__,
+			"post": LDAPDomainViewSet.get_zone.__name__,
+		}),
+		name="ldap/domain-zone",
+	),
+	# Organizational Unit Viewset Overrides
+	path(
+		"api/ldap/dirtree/",
+		LdapDirtreeViewSet.as_view({
+			"get": LdapDirtreeViewSet.list.__name__,
+			"put": LdapDirtreeViewSet.list.__name__,
+			"post": LdapDirtreeViewSet.create.__name__,
+			"patch": LdapDirtreeViewSet.destroy.__name__,
+		}),
+		name="ldap/dirtree",
+	),
 	# Settings Viewset Overrides
 	path(
-		"api/settings/fetch/<int:pk>/",
-		SettingsViewSet.as_view({"get": "fetch"}),
-		name="settings-fetch",
+		"api/settings/",
+		SettingsViewSet.as_view({
+			"get": SettingsViewSet.list.__name__,
+			"post":SettingsViewSet.preset_create.__name__,
+		}),
+		name="settings",
+	),
+	path(
+		"api/settings/<int:pk>/",
+		SettingsViewSet.as_view({
+			"get": SettingsViewSet.retrieve.__name__,
+			"delete":SettingsViewSet.preset_delete.__name__,
+		}),
+		name="settings-detail",
 	),
 
 	# Router Endpoints

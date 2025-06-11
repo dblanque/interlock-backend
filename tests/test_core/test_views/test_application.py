@@ -6,10 +6,13 @@ from core.models.application import Application, ApplicationSecurityGroup
 from oidc_provider.models import Client
 from core.views.application import ApplicationViewSet
 from core.serializers.application import ApplicationSerializer
+from tests.test_core.test_views.conftest import (
+	BaseViewTestClass,
+	BaseViewTestClassWithPk,
+)
 
-
-class TestList:
-	endpoint = "/api/application/"
+class TestList(BaseViewTestClass):
+	_endpoint = "application-list"
 
 	def test_success(
 		self,
@@ -42,8 +45,8 @@ class TestList:
 		assert set(data.get("headers")) == set(m_headers)
 
 
-class TestInsert:
-	endpoint = "/api/application/insert/"
+class TestInsert(BaseViewTestClass):
+	_endpoint = "application-list"
 
 	def test_success(self, admin_user_client: APIClient):
 		response: Response = admin_user_client.post(
@@ -77,8 +80,8 @@ class TestInsert:
 		assert created_client.client_secret == created_app.client_secret
 
 
-class TestDelete:
-	endpoint = "/api/application/{pk}/delete/"
+class TestDelete(BaseViewTestClassWithPk):
+	_endpoint = "application-detail"
 
 	def test_success(
 		self,
@@ -88,9 +91,9 @@ class TestDelete:
 		f_client: Client,
 	):
 		m_app_id = Application.objects.first().id
-		m_endpoint = self.endpoint.format(pk=m_app_id)
+		self._pk = m_app_id
 
-		response: Response = admin_user_client.delete(m_endpoint)
+		response: Response = admin_user_client.delete(self.endpoint)
 
 		assert response.status_code == status.HTTP_200_OK
 		assert Application.objects.count() == 0
@@ -98,8 +101,8 @@ class TestDelete:
 		assert Client.objects.count() == 0
 
 
-class TestFetch:
-	endpoint = "/api/application/{pk}/fetch/"
+class TestFetch(BaseViewTestClassWithPk):
+	_endpoint = "application-detail"
 
 	def test_success(
 		self,
@@ -109,9 +112,9 @@ class TestFetch:
 		f_client: Client,
 	):
 		m_app_id = Application.objects.first().id
-		m_endpoint = self.endpoint.format(pk=m_app_id)
+		self._pk = m_app_id
 
-		response: Response = admin_user_client.get(m_endpoint)
+		response: Response = admin_user_client.get(self.endpoint)
 
 		assert response.status_code == status.HTTP_200_OK
 		data = response.data.get("data")
@@ -137,8 +140,8 @@ class TestFetch:
 		}
 
 
-class TestUpdate:
-	endpoint = "/api/application/{pk}/"
+class TestUpdate(BaseViewTestClassWithPk):
+	_endpoint = "application-detail"
 
 	def test_success(
 		self,
@@ -147,8 +150,9 @@ class TestUpdate:
 		f_application_group: ApplicationSecurityGroup,
 		f_client: Client,
 	):
+		self._pk = f_application.id
 		admin_user_client.put(
-			self.endpoint.format(pk=f_application.id),
+			self.endpoint,
 			data={"name": "New Name"},
 			format="json",
 		)

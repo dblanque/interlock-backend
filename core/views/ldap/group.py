@@ -79,11 +79,16 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 			}
 		)
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def fetch(self, request: Request):
+	@action(
+		detail=False,
+		methods=["post"],
+		url_name="retrieve-dn",
+		url_path="retrieve-dn",
+	)
+	def retrieve_dn(self, request: Request):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -118,11 +123,10 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 			}
 		)
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def insert(self, request: Request):
+	def create(self, request: Request):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -184,11 +188,10 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 
 		return Response(data={"code": code, "code_msg": code_msg})
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	def delete(self, request: Request, pk=None):
+	def destroy(self, request: Request, pk=None):
 		user: User = request.user
 		code = 0
 		code_msg = "ok"

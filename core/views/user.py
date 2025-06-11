@@ -102,10 +102,9 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 			}
 		)
 
-	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
-	def insert(self, request: Request, pk=None):
+	def create(self, request: Request, pk=None):
 		code = 0
 		code_msg = "ok"
 		data: dict = request.data
@@ -142,10 +141,9 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 			}
 		)
 
-	@action(detail=True, methods=["get"])
 	@auth_required
 	@admin_required
-	def fetch(self, request: Request, pk):
+	def retrieve(self, request: Request, pk):
 		code = 0
 		code_msg = "ok"
 		pk = int(pk)
@@ -220,10 +218,9 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 			}
 		)
 
-	@action(detail=True, methods=["delete", "post"])
 	@auth_required
 	@admin_required
-	def delete(self, request: Request, pk):
+	def destroy(self, request: Request, pk):
 		req_user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -254,9 +251,9 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 			}
 		)
 
-	@action(detail=True, methods=["post"])
 	@auth_required
 	@admin_required
+	@action(detail=True, methods=["post"], url_path="change-status")
 	def change_status(self, request: Request, pk):
 		req_user: User = request.user
 		code = 0
@@ -296,9 +293,9 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 			}
 		)
 
-	@action(detail=True, methods=["post"])
 	@auth_required
 	@admin_required
+	@action(detail=True, methods=["post"], url_path="change-password")
 	def change_password(self, request: Request, pk):
 		user: User = request.user
 		code = 0
@@ -345,8 +342,8 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 			}
 		)
 
-	@action(detail=False, methods=["post", "put"])
 	@auth_required
+	@action(detail=False, methods=["post", "put"], url_path="self/change-password")
 	def self_change_password(self, request: Request):
 		user: User = request.user
 		code = 0
@@ -395,8 +392,8 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 			}
 		)
 
-	@action(detail=False, methods=["post", "put"])
 	@auth_required
+	@action(detail=False, methods=["post", "put"], url_path="self/update")
 	def self_update(self, request: Request, pk=None):
 		user: User = request.user
 		code = 0
@@ -441,7 +438,7 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 	@admin_required
 	@auth_required
 	@action(detail=False, methods=["post"], url_path="bulk/insert")
-	def bulk_insert(self, request: Request):
+	def bulk_create(self, request: Request):
 		request_user: User = request.user
 		code = 0
 		code_msg = "ok"
@@ -573,7 +570,7 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 	@admin_required
 	@auth_required
 	@action(detail=False, methods=["delete", "post"], url_path="bulk/delete")
-	def bulk_delete(self, request: Request, pk=None):
+	def bulk_destroy(self, request: Request, pk=None):
 		req_user: User = request.user
 		code = 0
 		code_msg = "ok"

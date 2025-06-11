@@ -85,8 +85,8 @@ class TestList(BaseViewTestClass):
 		)
 
 
-class TestInsert(BaseViewTestClass):
-	_endpoint = "users-insert"
+class TestCreate(BaseViewTestClass):
+	_endpoint = "users-list"
 
 	@pytest.mark.parametrize(
 		"with_password",
@@ -227,8 +227,8 @@ class TestInsert(BaseViewTestClass):
 			username=user_data[LOCAL_ATTR_USERNAME]
 		).exists()
 
-class TestFetch(BaseViewTestClassWithPk):
-	_endpoint = "users-fetch"
+class TestRetrieve(BaseViewTestClassWithPk):
+	_endpoint = "users-detail"
 
 	def test_success(
 		self,
@@ -373,8 +373,8 @@ class TestUpdate(BaseViewTestClass):
 		assert not f_user_test.check_password(m_password)
 
 
-class TestDelete(BaseViewTestClassWithPk):
-	_endpoint = "users-delete"
+class TestDestroy(BaseViewTestClassWithPk):
+	_endpoint = "users-detail"
 
 	def test_success(
 		self,
@@ -753,8 +753,8 @@ class TestSelfUpdate(BaseViewTestClass):
 		)
 
 
-class TestBulkInsert(BaseViewTestClass):
-	_endpoint = "users-bulk-insert"
+class TestBulkCreate(BaseViewTestClass):
+	_endpoint = "users-bulk-create"
 
 	def test_success_csv(
 		self,
@@ -998,8 +998,8 @@ class TestBulkUpdate(BaseViewTestClass):
 			)
 		f_log.call_count == len(m_user_pks)
 
-class TestBulkDelete(BaseViewTestClass):
-	_endpoint = "users-bulk-delete"
+class TestBulkDestroy(BaseViewTestClass):
+	_endpoint = "users-bulk-destroy"
 
 	def test_raises_anti_lockout(
 		self,

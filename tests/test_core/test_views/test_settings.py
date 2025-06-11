@@ -1,9 +1,7 @@
 ########################### Standard Pytest Imports ############################
 import pytest
 from pytest_mock import MockerFixture
-
 ################################################################################
-from django.urls import reverse
 
 ### Models
 from core.models.ldap_settings import LDAPPreset, LDAPSetting
@@ -39,10 +37,18 @@ from core.views.ldap_settings import SettingsViewSet, SettingsViewMixin
 from core.views.mixins.ldap.user import LDAPUserBaseMixin
 
 ### Other
-from tests.test_core.test_views.conftest import UserFactory
+from tests.test_core.test_views.conftest import (
+	UserFactory,
+	BaseViewTestClass,
+	BaseViewTestClassWithPk,
+)
 from tests.test_core.conftest import ConnectorFactory
 from typing import Protocol
 
+@pytest.fixture(autouse=True)
+def reset_settings_and_presets():
+	LDAPPreset.objects.all().delete()
+	LDAPSetting.objects.all().delete()
 
 class LdapPresetFactory(Protocol):
 	def __call__(
@@ -97,8 +103,8 @@ def f_log_mixin(mocker: MockerFixture):
 	return mocker.patch("core.views.ldap_settings.DBLogMixin")
 
 
-class TestList:
-	endpoint = reverse("settings-list")
+class TestList(BaseViewTestClass):
+	_endpoint = "settings"
 
 	def test_success(
 		self,
@@ -130,8 +136,8 @@ class TestList:
 		assert response_data["active_preset"] == f_preset_01.id
 
 
-class TestFetch:
-	endpoint = reverse("settings-fetch", args=(1,))
+class TestFetch(BaseViewTestClassWithPk):
+	_endpoint = "settings-detail"
 
 	@pytest.mark.parametrize(
 		"superadmin_enabled",
@@ -163,6 +169,7 @@ class TestFetch:
 		f_preset_01 = fc_ldap_preset(
 			name="test_preset_01", label="Test Preset 01", active=True
 		)
+		self._pk = f_preset_01.id
 		f_preset_02 = fc_ldap_preset(
 			name="test_preset_02", label="Test Preset 02"
 		)
@@ -188,8 +195,8 @@ class TestFetch:
 		assert isinstance(response_data["settings"]["ldap"], dict)
 
 
-class TestPresetCreate:
-	endpoint = reverse("settings-preset-create")
+class TestPresetCreate(BaseViewTestClass):
+	_endpoint = "settings"
 
 	@pytest.mark.parametrize(
 		"label, expected_name",
@@ -239,8 +246,8 @@ class TestPresetCreate:
 		assert LDAPPreset.objects.count() == 0
 
 
-class TestPresetDelete:
-	endpoint = reverse("settings-preset-delete")
+class TestPresetDelete(BaseViewTestClassWithPk):
+	_endpoint = "settings-detail"
 
 	def test_success(
 		self,
@@ -253,11 +260,9 @@ class TestPresetDelete:
 			label="Test Preset Delete",
 		)
 		m_preset.save()
+		self._pk = m_preset.id
 
-		response: Response = admin_user_client.post(
-			self.endpoint,
-			data={LOCAL_ATTR_ID: m_preset.id},
-		)
+		response: Response = admin_user_client.delete(self.endpoint)
 
 		assert response.status_code == status.HTTP_200_OK
 		assert LDAPPreset.objects.filter(name=m_preset_name).count() == 0
@@ -274,8 +279,9 @@ class TestPresetDelete:
 			active=True,
 		)
 		m_preset.save()
+		self._pk = m_preset.id
 
-		response: Response = admin_user_client.post(
+		response: Response = admin_user_client.delete(
 			self.endpoint,
 			data={LOCAL_ATTR_ID: m_preset.id},
 			format="json",
@@ -284,41 +290,18 @@ class TestPresetDelete:
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		m_preset.refresh_from_db()
 
-	def test_raises_missing_key(
-		self,
-		admin_user_client: APIClient,
-		fc_ldap_preset: LdapPresetFactory,
-	):
-		m_preset_name = "test_preset_delete"
-		m_preset = fc_ldap_preset(
-			name=m_preset_name,
-			label="Test Preset Delete",
-		)
-		m_preset.save()
-
-		response: Response = admin_user_client.post(
-			self.endpoint,
-			data={},
-		)
-
-		assert response.status_code == status.HTTP_400_BAD_REQUEST
-		assert response.data.get("code") == "data_key_missing"
-		assert LDAPPreset.objects.filter(name=m_preset_name).exists()
-
 	def test_preset_not_exists(
 		self,
 		admin_user_client: APIClient,
 	):
-		response: Response = admin_user_client.post(
-			self.endpoint,
-			data={LOCAL_ATTR_ID: 999},
-		)
+		self._pk = 999
+		response: Response = admin_user_client.delete(self.endpoint)
 
 		assert response.status_code == status.HTTP_404_NOT_FOUND
 		assert response.data.get("code") == "setting_preset_not_exists"
 
-class TestPresetEnable:
-	endpoint = reverse("settings-preset-enable")
+class TestPresetEnable(BaseViewTestClassWithPk):
+	_endpoint = "settings-enable"
 
 	def test_success(
 		self,
@@ -331,11 +314,9 @@ class TestPresetEnable:
 			label="Test Preset Enable",
 		)
 		m_preset.save()
+		self._pk = m_preset.id
 
-		response: Response = admin_user_client.post(
-			self.endpoint,
-			data={LOCAL_ATTR_ID: m_preset.id},
-		)
+		response: Response = admin_user_client.post(self.endpoint)
 
 		assert response.status_code == status.HTTP_200_OK
 		m_preset.refresh_from_db()
@@ -347,10 +328,9 @@ class TestPresetEnable:
 		self,
 		admin_user_client: APIClient,
 	):
-
+		self._pk = 999
 		response: Response = admin_user_client.post(
 			self.endpoint,
-			data={LOCAL_ATTR_ID: 999},
 			format="json",
 		)
 
@@ -358,22 +338,8 @@ class TestPresetEnable:
 		assert not LDAPPreset.objects.all().exists()
 		assert response.data.get("code") == "setting_preset_not_exists"
 
-	def test_raises_missing_key(
-		self,
-		admin_user_client: APIClient,
-	):
-
-		response: Response = admin_user_client.post(
-			self.endpoint,
-			data={},
-			format="json",
-		)
-
-		assert response.status_code == status.HTTP_400_BAD_REQUEST
-		assert response.data.get("code") == "data_key_missing"
-
-class TestPresetRename:
-	endpoint = reverse("settings-preset-rename")
+class TestPresetRename(BaseViewTestClassWithPk):
+	_endpoint = "settings-rename"
 
 	def test_success(
 		self,
@@ -386,10 +352,11 @@ class TestPresetRename:
 			label="Test Preset Rename",
 		)
 		m_preset.save()
+		self._pk = m_preset.id
 
 		response: Response = admin_user_client.post(
 			self.endpoint,
-			data={LOCAL_ATTR_ID: m_preset.id, LOCAL_ATTR_LABEL: "New Name"},
+			data={LOCAL_ATTR_LABEL: "New Name"},
 		)
 		assert response.status_code == status.HTTP_200_OK
 
@@ -401,10 +368,11 @@ class TestPresetRename:
 		self,
 		admin_user_client: APIClient,
 	):
+		self._pk = 999
 
 		response: Response = admin_user_client.post(
 			self.endpoint,
-			data={LOCAL_ATTR_ID: 999, LOCAL_ATTR_LABEL: "New Name"},
+			data={LOCAL_ATTR_LABEL: "New Name"},
 			format="json",
 		)
 
@@ -412,25 +380,22 @@ class TestPresetRename:
 		assert not LDAPPreset.objects.all().exists()
 		assert response.data.get("code") == "setting_preset_not_exists"
 
-	@pytest.mark.parametrize(
-		"delete_key",
-		(
-			LOCAL_ATTR_ID,
-			LOCAL_ATTR_LABEL,
-		),
-	)
 	def test_raises_missing_key(
 		self,
-		delete_key: str,
 		admin_user_client: APIClient,
+		fc_ldap_preset: LdapPresetFactory,
 	):
-		m_data = {LOCAL_ATTR_ID: 999, LOCAL_ATTR_LABEL: "New Name"}
-		if delete_key in m_data:
-			del m_data[delete_key]
+		m_preset_name = "test_preset_rename"
+		m_preset = fc_ldap_preset(
+			name=m_preset_name,
+			label="Test Preset Rename",
+		)
+		m_preset.save()
+		self._pk = m_preset.id
 
 		response: Response = admin_user_client.post(
 			self.endpoint,
-			data=m_data,
+			data={},
 			format="json",
 		)
 
@@ -438,8 +403,8 @@ class TestPresetRename:
 		assert response.data.get("code") == "data_key_missing"
 
 
-class TestSave:
-	endpoint = reverse("settings-save")
+class TestSave(BaseViewTestClass):
+	_endpoint = "settings-save"
 
 	def test_success(
 		self,
@@ -564,8 +529,8 @@ class TestSave:
 		)
 
 
-class TestReset:
-	endpoint = reverse("settings-reset")
+class TestReset(BaseViewTestClass):
+	_endpoint = "settings-reset"
 
 	def test_success(
 		self,
@@ -596,8 +561,8 @@ class TestReset:
 		assert not LDAPSetting.objects.filter(preset=m_ldap_preset.id).exists()
 
 
-class TestLdapTestEndpoint:
-	endpoint = reverse("settings-test")
+class TestLdapTestEndpoint(BaseViewTestClass):
+	_endpoint = "settings-test"
 
 	def test_raises_setting_key_raises_bad_request(
 		self,
@@ -733,8 +698,8 @@ class TestLdapTestEndpoint:
 		m_test_fn.assert_called_once_with(m_data)
 
 
-class TestSyncUsers:
-	endpoint = reverse("settings-sync-users")
+class TestSyncUsers(BaseViewTestClass):
+	_endpoint = "settings-sync-users"
 
 	def test_success(
 		self,
@@ -759,8 +724,8 @@ class TestSyncUsers:
 		assert response.data.get("updated_users") == m_updated_users
 
 
-class TestPruneUsers:
-	endpoint = reverse("settings-prune-users")
+class TestPruneUsers(BaseViewTestClass):
+	_endpoint = "settings-prune-users"
 
 	def test_success(
 		self,
@@ -778,8 +743,8 @@ class TestPruneUsers:
 		assert response.data.get("count") == m_pruned_count
 
 
-class TestPurgeUsers:
-	endpoint = reverse("settings-purge-users")
+class TestPurgeUsers(BaseViewTestClass):
+	_endpoint = "settings-purge-users"
 
 	def test_success(
 		self,

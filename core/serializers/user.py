@@ -176,22 +176,22 @@ class LDAPUserSerializer(serializers.Serializer):
 	user_principal_name = serializers.CharField(required=False)
 	user_account_control = serializers.IntegerField(required=False)
 	created_at = serializers.DateTimeField(
-		format=LDAP_DATE_FORMAT,
+		format="iso-8601",
 		input_formats=[LDAP_DATE_FORMAT, "iso-8601"],
 		required=False,
 	)
 	modified_at = serializers.DateTimeField(
-		format=LDAP_DATE_FORMAT,
+		format="iso-8601",
 		input_formats=[LDAP_DATE_FORMAT, "iso-8601"],
 		required=False,
 	)
 	login_timestamp = serializers.DateTimeField(
-		format=LDAP_DATE_FORMAT,
+		format="iso-8601",
 		input_formats=[LDAP_DATE_FORMAT, "iso-8601"],
 		required=False,
 	)
 	expires_at = serializers.DateTimeField(
-		format=LDAP_DATE_FORMAT,
+		format="iso-8601",
 		input_formats=[LDAP_DATE_FORMAT, "iso-8601"],
 		required=False,
 	)
