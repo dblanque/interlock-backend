@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.views.mixins.user
+# Module: core.views.mixins.user.main
 # Contains the ViewSet for User related operations
 
 # ---------------------------------- IMPORTS --------------------------------- #
@@ -12,13 +12,10 @@ from rest_framework import viewsets
 
 ### Models
 from core.models.user import User, USER_TYPE_LOCAL
-from core.models.interlock_settings import (
-	InterlockSetting,
-	INTERLOCK_SETTING_ENABLE_LDAP,
-)
 
 ### Mixins
 from core.views.mixins.ldap.user import LDAPUserMixin
+from core.views.mixins.user.utils import UserUtilsMixin
 
 ### Exceptions
 from django.core.exceptions import ObjectDoesNotExist
@@ -33,7 +30,6 @@ from core.serializers.user import UserSerializer
 
 ### Constants
 from core.constants.attrs.local import LOCAL_ATTR_USERNAME, LOCAL_ATTR_EMAIL
-from core.constants.attrs import local as local_attrs
 from core.models.choices.log import (
 	LOG_ACTION_UPDATE,
 	LOG_CLASS_USER,
@@ -51,7 +47,7 @@ DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
 
-class UserMixin(viewsets.ViewSetMixin):
+class UserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 	serializer_class = UserSerializer
 
 	def local_user_exists(
@@ -131,79 +127,19 @@ class UserMixin(viewsets.ViewSetMixin):
 
 		return user_instance
 
-	def map_bulk_create_attrs(
-		self,
-		headers: list[str],
-		csv_map: dict[str] = None,
-	):
-		"""Map headers to local attributes
-
-		Returns:
-			dict: Mapped attribute keys { index: local_attr }
-		"""
-		index_map = {}
-
-		if not headers:
-			raise exc_base.BadRequest(
-				data={"detail": f"Key 'headers' is required in request data."}
-			)
-		if csv_map and not isinstance(csv_map, dict):
-			raise exc_base.BadRequest(
-				data={"detail": f"Key 'csv_map' must be of type dict"}
-			)
-
-		# Map Header Column Indexes
-		if csv_map:
-			for local_alias, csv_alias in csv_map.items():
-				index_map[headers.index(csv_alias)] = local_alias
-		else:
-			index_map = {
-				idx: local_alias for idx, local_alias in enumerate(headers)
-			}
-
-		_local_attrs = {
-			k: getattr(local_attrs, k)
-			for k in dir(local_attrs)
-			if k.startswith("LOCAL_")
-		}
-		# Validate Headers / Mappings
-		for unvalidated_local_alias in index_map.values():
-			if (
-				not isinstance(unvalidated_local_alias, str)
-				or not unvalidated_local_alias in _local_attrs.values()
-			):
-				raise exc_base.BadRequest(
-					data={
-						"detail": "All headers and/or header mappings must be"
-						" of type str and existing local attributes."
-					}
-				)
-
-		return index_map
-
-	def cleanup_empty_str_values(self, d: dict) -> dict:
-		_new_d = d.copy()
-		delete_keys = []
-		for k, v in d.items():
-			if isinstance(v, str) and not v:
-				delete_keys.append(k)
-		for k in delete_keys:
-			del _new_d[k]
-		return _new_d
-
 	def bulk_create_from_csv(
 		self,
 		request_user: User,
 		user_rows: list[list[Any]],
 		index_map: dict[str],
-	) -> int:
+	) -> tuple[list[str], list[dict]]:
 		"""Create Users from CSV Rows
 
 		Returns:
-			tuple: created_users (int), error_users (int)
+			tuple: created_users (list[str]), failed_users (list[dict])
 		"""
-		created_users = 0
-		error_users = 0
+		created_users = []
+		failed_users = []
 		for idx, row in enumerate(user_rows):
 			if not len(row) == len(index_map):
 				raise exc_user.UserBulkInsertLengthError(
@@ -211,18 +147,25 @@ class UserMixin(viewsets.ViewSetMixin):
 				)
 
 		with transaction.atomic():
-			for row in user_rows:
-				# Validate Data
+			for row_idx, row in enumerate(user_rows):
+				# Translate Data
 				user_attrs = {}
 				for col_idx, value in enumerate(row):
 					user_attrs[index_map[col_idx]] = value
+
+				# Validate Data
 				serializer = self.serializer_class(data=user_attrs)
-				try:
-					serializer.is_valid(raise_exception=True)
-				except Exception as e:
-					logger.exception(e)
-					error_users += 1
+				if not serializer.is_valid():
+					logger.error(serializer.errors)
+					failed_users.append({
+						LOCAL_ATTR_USERNAME: row_idx \
+							if LOCAL_ATTR_USERNAME in serializer.errors \
+							else user_attrs[LOCAL_ATTR_USERNAME],
+						"stage": "serializer",
+					})
 					continue
+
+				# Cleanup Data
 				cleaned_data = self.cleanup_empty_str_values(
 					serializer.validated_data
 				)
@@ -234,10 +177,13 @@ class UserMixin(viewsets.ViewSetMixin):
 					user_instance.save()
 				except Exception as e:
 					logger.exception(e)
-					error_users += 1
+					failed_users.append({
+						LOCAL_ATTR_USERNAME: user_attrs[LOCAL_ATTR_USERNAME],
+						"stage": "save",
+					})
 					continue
 
-				created_users += 1
+				created_users.append(user_attrs[LOCAL_ATTR_USERNAME])
 
 				# Log operation
 				DBLogMixin.log(
@@ -246,30 +192,38 @@ class UserMixin(viewsets.ViewSetMixin):
 					log_target_class=LOG_CLASS_USER,
 					log_target=user_instance.username,
 				)
-		return created_users, error_users
+		return created_users, failed_users
 
 	def bulk_create_from_dicts(
 		self,
 		request_user: User,
 		user_dicts: list[dict],
-	):
+	) -> tuple[list[str], list[dict]]:
 		"""Create Users from Dictionaries
 
 		Returns:
-			tuple: created_users (int), error_users (int)
+			tuple: created_users (list[str]), failed_users (list[dict])
 		"""
-		created_users = 0
-		error_users = 0
+		created_users = []
+		failed_users = []
+		user_nr = 0
 
 		with transaction.atomic():
 			for user in user_dicts:
+				# This is for front-end exception handling if a row
+				# has no username
+				user_nr += 1
+
 				# Validate Data
-				try:
-					serializer = self.serializer_class(data=user)
-					serializer.is_valid(raise_exception=True)
-				except Exception as e:
-					logger.exception(e)
-					error_users += 1
+				serializer: UserSerializer = self.serializer_class(data=user)
+				if not serializer.is_valid():
+					logger.error(serializer.errors)
+					failed_users.append({
+						LOCAL_ATTR_USERNAME: user_nr \
+							if LOCAL_ATTR_USERNAME in serializer.errors \
+							else user[LOCAL_ATTR_USERNAME],
+						"stage": "serializer",
+					})
 					continue
 				cleaned_data = self.cleanup_empty_str_values(
 					serializer.validated_data
@@ -282,10 +236,13 @@ class UserMixin(viewsets.ViewSetMixin):
 					user_instance.save()
 				except Exception as e:
 					logger.exception(e)
-					error_users += 1
+					failed_users.append({
+						LOCAL_ATTR_USERNAME: user[LOCAL_ATTR_USERNAME],
+						"stage": "save",
+					})
 					continue
 
-				created_users += 1
+				created_users.append(user[LOCAL_ATTR_USERNAME])
 
 				# Log operation
 				DBLogMixin.log(
@@ -295,32 +252,23 @@ class UserMixin(viewsets.ViewSetMixin):
 					log_target=user_instance.username,
 				)
 
-		return created_users, error_users
-
+		return created_users, failed_users
 
 class AllUserMixins(LDAPUserMixin, UserMixin):
-	ldap_backend_enabled = False
-
-	def get_ldap_backend_enabled(self):
-		"""Gets current LDAP Backend Enabled Setting"""
-		try:
-			self.ldap_backend_enabled = InterlockSetting.objects.get(
-				name=INTERLOCK_SETTING_ENABLE_LDAP
-			).value
-		except ObjectDoesNotExist:
-			self.ldap_backend_enabled = False
 
 	def check_user_exists(
 		self,
 		username: str = None,
 		email: str = None,
+		ignore_ldap: bool = False,
+		ignore_local: bool = False,
 		raise_exception: bool = True,
 	):
 		"""Checks if a user exists Locally and in LDAP if enabled."""
 		exists = False
 		self.get_ldap_backend_enabled()
 
-		if self.ldap_backend_enabled:
+		if self.ldap_backend_enabled and not ignore_ldap:
 			# Open LDAP Connection
 			with LDAPConnector(force_admin=True) as ldc:
 				self.ldap_connection = ldc.connection
@@ -332,22 +280,36 @@ class AllUserMixins(LDAPUserMixin, UserMixin):
 					)
 				except exc_ldap.LDAPObjectExists:
 					raise exc_user.UserExists
-		exists = self.local_user_exists(
-			username=username,
-			email=email,
-			raise_exception=raise_exception,
-		)
+		if not ignore_local:
+			exists = self.local_user_exists(
+				username=username,
+				email=email,
+				raise_exception=raise_exception,
+			)
 		return exists
 
 	def bulk_check_users(
 		self,
 		l: list[tuple[str, str]],
-		raise_exception=True,
-	) -> bool | exc_user.UserExists:
-		result = False
+		ignore_ldap: bool = False,
+		ignore_local: bool = False,
+		raise_exception: bool = True,
+	) -> list[str] | exc_user.UserExists:
+		"""Checks in bulk if users exist or not.
+
+		Raises:
+			exc_user.UserExists: When a user exists and raise_exception is True.
+		Returns:
+			list[str]: List containing existing usernames.
+		"""
+		result = []
 		for username, email in l:
 			if self.check_user_exists(
-				username=username, email=email, raise_exception=raise_exception
+				username=username,
+				email=email,
+				ignore_ldap=ignore_ldap,
+				ignore_local=ignore_local,
+				raise_exception=raise_exception,
 			):
-				result = True
+				result.append(username)
 		return result

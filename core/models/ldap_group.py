@@ -35,6 +35,18 @@ from core.ldap.types.group import LDAPGroupTypes
 ################################################################################
 logger = getLogger()
 
+DEFAULT_LOCAL_ATTRS = (
+	LOCAL_ATTR_DN,
+	LOCAL_ATTR_COMMON_NAME,
+	LOCAL_ATTR_GROUP_MEMBERS,
+	LOCAL_ATTR_GROUP_TYPE,
+	LOCAL_ATTR_SECURITY_ID,
+	LOCAL_ATTR_EMAIL,
+	LOCAL_ATTR_OBJECT_CLASS,
+	LOCAL_ATTR_OBJECT_CATEGORY,
+	LOCAL_ATTR_CREATED,
+	LOCAL_ATTR_MODIFIED,
+)
 
 class LDAPGroup(LDAPObject):
 	type = LDAPObjectTypes.GROUP
@@ -58,18 +70,7 @@ class LDAPGroup(LDAPObject):
 	def __init__(self, **kwargs):
 		self.search_attrs = {
 			RuntimeSettings.LDAP_FIELD_MAP.get(attr)
-			for attr in (
-				LOCAL_ATTR_DN,
-				LOCAL_ATTR_COMMON_NAME,
-				LOCAL_ATTR_GROUP_MEMBERS,
-				LOCAL_ATTR_GROUP_TYPE,
-				LOCAL_ATTR_SECURITY_ID,
-				LOCAL_ATTR_EMAIL,
-				LOCAL_ATTR_OBJECT_CLASS,
-				LOCAL_ATTR_OBJECT_CATEGORY,
-				LOCAL_ATTR_CREATED,
-				LOCAL_ATTR_MODIFIED,
-			)
+			for attr in DEFAULT_LOCAL_ATTRS
 			if RuntimeSettings.LDAP_FIELD_MAP.get(attr, None)
 		}
 		self.default_attrs = self.search_attrs

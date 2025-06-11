@@ -27,6 +27,7 @@ from interlock_backend.settings import (
 	DEFAULT_SUPERUSER_PASSWORD,
 )
 from django.core.validators import validate_email
+from core.serializers.ldap import ldap_user_validator_se
 from typing import TYPE_CHECKING
 from django.db.models.query import QuerySet
 from typing import ClassVar
@@ -103,6 +104,7 @@ class BaseUser(BaseModel, PermissionsMixin):
 		null=False,
 		blank=False,
 		db_index=True,
+		validators=[ldap_user_validator_se]
 	)
 	password = models.CharField(_("password"), max_length=128)
 	last_login = models.DateTimeField(_("last login"), blank=True, null=True)

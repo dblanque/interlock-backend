@@ -20,7 +20,7 @@ from core.models.user import (
 	USER_TYPE_LDAP,
 	USER_TYPE_LOCAL,
 )
-from core.models.ldap_user import LDAPUser
+from core.models.ldap_user import LDAPUser, DEFAULT_LOCAL_ATTRS
 from core.views.mixins.logs import LogMixin
 from core.models.choices.log import (
 	LOG_ACTION_UPDATE,
@@ -31,7 +31,7 @@ from core.models.choices.log import (
 )
 
 ### Mixins
-from core.views.mixins.ldap.user import LDAPUserMixin
+from core.views.mixins.user import AllUserMixins
 
 ### Serializers / Validators
 from core.serializers.user import LDAPUserSerializer
@@ -58,6 +58,7 @@ from core.decorators.intercept import ldap_backend_intercept
 from core.constants.user import LOCAL_PUBLIC_FIELDS
 from core.config.runtime import RuntimeSettings
 from datetime import datetime
+from typing import Any
 import logging
 ################################################################################
 
@@ -65,9 +66,9 @@ DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
 
-class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
+class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 	queryset = User.objects.all()
-	serializer_cls = LDAPUserSerializer
+	serializer_class = LDAPUserSerializer
 
 	@auth_required
 	@admin_required
@@ -156,7 +157,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			set_pwd = True
 
 		# Validate user data
-		serializer = self.serializer_cls(data=data)
+		serializer = self.serializer_class(data=data)
 		if not serializer.is_valid():
 			raise BadRequest(data={"errors": serializer.errors})
 		data = serializer.validated_data
@@ -218,7 +219,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				del data[k]
 
 		# Validate user data
-		serializer = self.serializer_cls(data=data)
+		serializer = self.serializer_class(data=data)
 		if not serializer.is_valid():
 			raise BadRequest(data={"errors": serializer.errors})
 		data = serializer.validated_data
@@ -454,186 +455,105 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			data={"code": code, "code_msg": code_msg, "data": response_result}
 		)
 
-	@auth_required
 	@admin_required
-	@ldap_backend_intercept
+	@auth_required
 	@action(detail=False, methods=["post"], url_path="bulk/create")
 	def bulk_create(self, request: Request):
-		user: User = request.user
+		request_user: User = request.user
 		code = 0
 		code_msg = "ok"
 		data = request.data
+		created_users = None
+		failed_users = None
+		skipped_users = None
 		DATA_KEYS = (
+			# CSV Keys
 			"headers",
 			"users",
 			LOCAL_ATTR_PATH,
 			"mapping",
 			"placeholder_password",
+			# Dict Keys
+			"dict_users",
 		)
-		imported_users = []
-		skipped_users = []
-		failed_users = []
+		# Purge unknown keys
+		for k in data.keys():
+			if not k in DATA_KEYS:
+				del data[k]
 
-		for k in (
-			"headers",
-			"users",
-		):
-			if k not in data or not data.get(k, None):
-				e = exc_base.MissingDataKey()
-				e.set_detail({"key": k})
-				raise e
+		create_path: str = data.get(LOCAL_ATTR_PATH, None)
+		user_rows: list[list[Any]] = data.pop("users", None)
+		user_dicts: list[dict[Any]] = data.pop("dict_users", None)
 
-		HEADERS: list = data["headers"]
-		USER_LIST: list[dict] = data["users"]
-		HEADER_COUNT = len(HEADERS)
-		HEADER_MAPPING: dict = data.get("mapping", {})
-		INSERTION_PATH: str = data.get(
-			LOCAL_ATTR_PATH,
-			f"CN=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}",
-		)
-		MAPPED_USER_KEY = HEADER_MAPPING.get(
-			LOCAL_ATTR_USERNAME, LOCAL_ATTR_USERNAME
-		)
-		MAPPED_EMAIL_KEY = HEADER_MAPPING.get(
-			LOCAL_ATTR_EMAIL, LOCAL_ATTR_EMAIL
-		)
-		# Map Password Key
-		MAPPED_PWD_KEY = HEADER_MAPPING.get(LOCAL_ATTR_PASSWORD, None)
-		if any(LOCAL_ATTR_PASSWORD in user for user in USER_LIST):
-			MAPPED_PWD_KEY = LOCAL_ATTR_PASSWORD
-		placeholder_password = data.get("placeholder_password", None)
+		if (not user_rows and not user_dicts) or (user_rows and user_dicts):
+			raise BadRequest(
+				data={
+					"detail": "To bulk insert users you must provide either the"
+					" users or dict_users fields."
+				}
+			)
 
-		# If all local aliases match with remote aliases, do not map
-		if all(a == b for a, b in HEADER_MAPPING.items()) or not HEADER_MAPPING:
-			HEADER_MAPPING = None
+		if user_rows:  # Insert from CSV
+			# Validate and Map indices for local attrs
+			index_map = self.validate_and_map_csv_headers(
+				headers=data.pop("headers", None),
+				csv_map=data.pop("mapping", None),
+				check_attrs=DEFAULT_LOCAL_ATTRS,
+			)
 
-		######################## Set LDAP Attributes ###########################
-		self.search_attrs = self.filter_attr_builder(
-			RuntimeSettings
-		).get_bulk_insert_attrs()
+			# Check that no username or email overlaps
+			username_col = None
+			email_col = None
+			for idx, local_alias in index_map.items():
+				if local_alias == LOCAL_ATTR_USERNAME:
+					username_col = idx
+				elif local_alias == LOCAL_ATTR_EMAIL:
+					email_col = idx
 
-		required_fields = [LOCAL_ATTR_USERNAME]
+			usernames_and_emails = [
+				(u[username_col], u[email_col]) if email_col
+				else (u[username_col], None)
+				for u in user_rows
+			]
+			skipped_users = self.bulk_check_users(
+				usernames_and_emails,
+				ignore_local=True, # Todo - make this change based on a setting
+				raise_exception=False,
+			)
 
-		# Key exclusion
-		exclude_keys = [
-			LOCAL_ATTR_DN,  # We don't want any front-end generated DN
-			LOCAL_ATTR_DN_SHORT,  # We don't want any front-end generated DN
-		]
-		if MAPPED_PWD_KEY:
-			exclude_keys.insert(0, MAPPED_PWD_KEY)
-		exclude_keys = tuple(exclude_keys)
-		########################################################################
-
-		_permissions = [ldap_adsi.LDAP_UF_NORMAL_ACCOUNT]
-		if not MAPPED_PWD_KEY and not placeholder_password:
-			_permissions.append(ldap_adsi.LDAP_UF_ACCOUNT_DISABLE)
-
-		# Validate Front-end mapping with CSV Headers
-		if HEADER_MAPPING:
-			for k in required_fields:
-				if k not in HEADER_MAPPING:
-					raise exc_user.UserBulkInsertMappingError(data={"key": k})
-
-		# Validate row lengths before opening connection
-		for row in USER_LIST:
-			if len(row) != HEADER_COUNT:
-				raise exc_user.UserBulkInsertLengthError(
-					data={"user": row[MAPPED_USER_KEY]}
-				)
-
-		# Open LDAP Connection
-		with LDAPConnector(user) as ldc:
-			self.ldap_connection = ldc.connection
-			for row in USER_LIST:
-				row: dict
-				user_search = row.get(MAPPED_USER_KEY)
-
-				# Check user existence
-				if self.ldap_user_exists(
-					username=user_search,
-					email=row.get(MAPPED_EMAIL_KEY, None),
-					return_exception=False,
-				):
-					skipped_users.append(row[MAPPED_USER_KEY])
-					continue
-
-				# Perform mapping if any header differs with local alias
-				mapped_row = {} if HEADER_MAPPING else row
-				if HEADER_MAPPING:
-					for key, mapped_key in HEADER_MAPPING.items():
-						mapped_row[key] = row[mapped_key]
-
-				mapped_row[LOCAL_ATTR_PATH] = INSERTION_PATH
-				mapped_row[LOCAL_ATTR_PERMISSIONS] = _permissions
-
-				# Set password
-				set_pwd = None
-				if placeholder_password and not set_pwd:
-					set_pwd = placeholder_password
-				elif MAPPED_PWD_KEY in mapped_row:
-					set_pwd = mapped_row[MAPPED_PWD_KEY]
-					mapped_row[LOCAL_ATTR_PASSWORD_CONFIRM] = set_pwd
-
-				# Serializer validation
-				serializer = self.serializer_cls(data=mapped_row)
-				if not serializer.is_valid():
-					failed_users.append(
-						{
-							LOCAL_ATTR_USERNAME: user_search
-							if isinstance(user_search, str)
-							else "unknown",
-							"stage": "serializer_validation",
-							"detail": serializer.errors,
-						}
+			# Perform creation operations
+			created_users, failed_users = self.ldap_bulk_create_from_csv(
+				request_user=request_user,
+				user_rows=user_rows,
+				index_map=index_map,
+				path=create_path,
+				placeholder_password=data.pop("placeholder_password", None),
+			)
+		elif user_dicts:  # Insert from list of dicts
+			skipped_users = self.bulk_check_users(
+				[
+					(
+						u.get(LOCAL_ATTR_USERNAME),
+						u.get(LOCAL_ATTR_EMAIL, None),
 					)
-					continue
-				_validated_row = serializer.validated_data
-				_validated_row.pop(LOCAL_ATTR_PASSWORD, None)
-
-				# Insert user
-				user_dn = self.ldap_user_insert(
-					data=_validated_row,
-					exclude_keys=exclude_keys,
-					return_exception=False,
-				)
-				if not user_dn:
-					failed_users.append(
-						{
-							LOCAL_ATTR_USERNAME: user_search,
-							"stage": "insert",
-						}
-					)
-					continue
-
-				if set_pwd:
-					try:
-						self.ldap_set_password(
-							user_dn=user_dn,
-							user_pwd_new=set_pwd,
-							set_by_admin=True,
-						)
-					except:
-						failed_users.append(
-							{
-								LOCAL_ATTR_USERNAME: user_search,
-								"stage": LOCAL_ATTR_PASSWORD,
-							}
-						)
-
-				imported_users.append(user_search)
-				DBLogMixin.log(
-					user=request.user.id,
-					operation_type=LOG_ACTION_CREATE,
-					log_target_class=LOG_CLASS_USER,
-					log_target=user_search,
-				)
+					for u in user_dicts
+				],
+				ignore_local=True, # Todo - make this change based on a setting
+				raise_exception=False,
+			)
+			created_users, failed_users = self.ldap_bulk_create_from_dicts(
+				request_user=request_user,
+				user_dicts=user_dicts,
+				path=create_path,
+				placeholder_password=data.pop("placeholder_password", None),
+			)
 
 		return Response(
 			status=status.HTTP_200_OK,
 			data={
 				"code": code,
 				"code_msg": code_msg,
-				"imported_users": imported_users,
+				"created_users": created_users,
 				"skipped_users": skipped_users,
 				"failed_users": failed_users,
 			},
@@ -690,7 +610,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				if permissions:
 					user_data[LOCAL_ATTR_PERMISSIONS] = permissions
 				user_data = user_data | values
-				serializer = self.serializer_cls(data=user_data)
+				serializer = self.serializer_class(data=user_data)
 				if not serializer.is_valid():
 					if not isinstance(user_to_update, str):
 						user_to_update = "unknown"
@@ -867,7 +787,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 				)
 				raise exc_base.BadRequest
 
-		serializer = self.serializer_cls(data=data)
+		serializer = self.serializer_class(data=data)
 		serializer.is_valid(raise_exception=True)
 		data = serializer.validated_data
 
@@ -956,7 +876,7 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 			if key in data:
 				del data[key]
 
-		serializer = self.serializer_cls(data=data)
+		serializer = self.serializer_class(data=data)
 		serializer.is_valid(raise_exception=True)
 		data = serializer.validated_data
 

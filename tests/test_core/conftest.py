@@ -7,7 +7,7 @@ from core.ldap import defaults as ldap_defaults
 from core.ldap.connector import LDAPConnector
 from typing import Protocol
 from tests.test_core.type_hints import LDAPConnectorMock
-from core.constants.attrs import LDAP_ATTR_DN
+from core.constants.attrs import LDAP_ATTR_DN, LOCAL_ATTR_PATH
 from ldap3 import Entry as LDAPEntry
 from core.models.interlock_settings import (
 	InterlockSetting,
@@ -15,7 +15,6 @@ from core.models.interlock_settings import (
 	TYPE_BOOL,
 )
 from core.models.ldap_settings import LDAPSetting
-from django.core.exceptions import ObjectDoesNotExist
 from copy import deepcopy
 
 
@@ -104,7 +103,7 @@ def g_ldap_connector(mocker: MockerFixture) -> ConnectorFactory:
 			raise exc_value
 
 	def maker(
-		patch_path: str = "core.ldap.connector.LDAPConnector",
+		patch_path: str | tuple[str] = "core.ldap.connector.LDAPConnector",
 		use_spec=False,
 		mock_enter: MockType = None,
 		mock_exit: MockType = None,
@@ -142,9 +141,15 @@ def g_ldap_connector(mocker: MockerFixture) -> ConnectorFactory:
 
 		# Patch Connector
 		if patch_path:
-			m_connector_cls = mocker.patch(
-				patch_path, return_value=m_cxt_manager
-			)
+			if isinstance(patch_path, tuple):
+				for p in patch_path:
+					m_connector_cls = mocker.patch(
+						patch_path, return_value=m_cxt_manager
+					)
+			else:
+				m_connector_cls = mocker.patch(
+					patch_path, return_value=m_cxt_manager
+				)
 		m_connector.cxt_manager = m_cxt_manager
 		m_connector.cls_mock = m_connector_cls
 		return m_connector
@@ -214,3 +219,10 @@ def fc_ldap_entry(
 		return mock
 
 	return maker
+
+@pytest.fixture
+def f_default_ldap_path(g_runtime_settings: RuntimeSettingsFactory):
+	m_runtime_settings: RuntimeSettingsSingleton = g_runtime_settings()
+	return {
+		LOCAL_ATTR_PATH: f"CN=Users,{m_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
+	}

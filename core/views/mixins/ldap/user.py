@@ -53,6 +53,7 @@ from rest_framework.serializers import ValidationError
 
 ### Mixins
 from core.views.mixins.ldap.group import GroupViewMixin
+from core.views.mixins.user.utils import UserUtilsMixin
 
 ### Exception Handling
 from core.exceptions import (
@@ -74,6 +75,7 @@ from core.utils.filetime import to_datetime
 from django.utils import timezone as tz
 
 ### Others
+from typing import Any
 from django.db import transaction
 from core.type_hints.connector import LDAPConnectionProtocol
 from core.ldap.filter import LDAPFilter, LDAPFilterType
@@ -85,13 +87,13 @@ DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
 
-class LDAPUserMixin(viewsets.ViewSetMixin):
+class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 	"""LDAP User Mixin
 
 	Methods in this mixin may be used in the local django users viewset, so
 	beware not to have any overlap with its' mixin (if any exists).
 	"""
-
+	serializer_class = LDAPUserSerializer
 	ldap_connection: LDAPConnectionProtocol = None
 	# LDAP Search Filter
 	search_filter = None
@@ -829,6 +831,183 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 
 		return self.ldap_connection
 
+	def ldap_bulk_create_from_csv(
+		self,
+		request_user: User,
+		user_rows: list[list[Any]],
+		index_map: dict[str],
+		path: str = None,
+		placeholder_password: str = None,
+	) -> tuple[list[str], list[dict]]:
+		"""Create LDAP Users from CSV Rows
+
+		Returns:
+			tuple: created_users (list[str]), error_users (list[dict])
+		"""
+		if not path:
+			path = f"CN=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}"
+		created_users = []
+		failed_users = []
+		user_pwd = None
+		for idx, row in enumerate(user_rows):
+			if not len(row) == len(index_map):
+				raise exc_user.UserBulkInsertLengthError(
+					data={"detail": f"Row number {idx} column count error."}
+				)
+		password_in_csv = True \
+			if LOCAL_ATTR_PASSWORD in index_map.values() else False
+
+		for row_idx, row in enumerate(user_rows):
+			# Translate Data
+			user_attrs = {}
+			for col_idx, value in enumerate(row):
+				user_attrs[index_map[col_idx]] = value
+
+			# Pop Credentials
+			if placeholder_password:
+				user_pwd = placeholder_password
+			elif password_in_csv:
+				user_pwd = user_attrs.pop(LOCAL_ATTR_PASSWORD)
+			
+			# Validate Data
+			serializer = LDAPUserSerializer(
+				data=user_attrs | {LOCAL_ATTR_PATH: path}
+			)
+			if not serializer.is_valid():
+				logger.error(serializer.errors)
+				failed_users.append({
+					LOCAL_ATTR_USERNAME: row_idx \
+						if LOCAL_ATTR_USERNAME in serializer.errors \
+						else user_attrs[LOCAL_ATTR_USERNAME],
+					"stage": "serializer",
+				})
+				continue
+
+			# Cleanup Data
+			cleaned_data = self.cleanup_empty_str_values(
+				serializer.validated_data
+			)
+
+			# Create User Instance
+			try:
+				user_dn = self.ldap_user_insert(data=cleaned_data)
+			except Exception as e:
+				logger.exception(e)
+				failed_users.append({
+					LOCAL_ATTR_USERNAME: user_attrs[LOCAL_ATTR_USERNAME],
+					"stage": "save",
+				})
+				continue
+
+			created_users.append(user_attrs[LOCAL_ATTR_USERNAME])
+
+			# Set Password if necessary
+			if user_pwd:
+				try:
+					self.ldap_set_password(
+						user_dn=user_dn,
+						user_pwd_new=user_pwd,
+						set_by_admin=True,
+					)
+				except Exception as e:
+					logger.exception(e)
+					failed_users.append({
+						LOCAL_ATTR_USERNAME: user_attrs[LOCAL_ATTR_USERNAME],
+						"stage": "password",
+					})
+
+			# Log operation
+			DBLogMixin.log(
+				user=request_user.id,
+				operation_type=LOG_ACTION_UPDATE,
+				log_target_class=LOG_CLASS_USER,
+				log_target=cleaned_data[LOCAL_ATTR_USERNAME],
+			)
+		return created_users, failed_users
+
+	def ldap_bulk_create_from_dicts(
+		self,
+		request_user: User,
+		user_dicts: list[dict],
+		path: str = None,
+		placeholder_password: str = None,
+	) -> tuple[list[str], list[dict]]:
+		"""Create LDAP Users from Dictionaries
+
+		Returns:
+			tuple: created_users (list[str]), failed_users (list[dict])
+		"""
+		if not path:
+			path = f"CN=Users,{RuntimeSettings.LDAP_AUTH_SEARCH_BASE}"
+		created_users = []
+		failed_users = []
+		user_pwd = None
+		user_nr = 0
+
+		for user_attrs in user_dicts:
+			# This is for front-end exception handling if a row has no username
+			user_nr += 1
+
+			# Pop Credentials
+			if placeholder_password:
+				user_pwd = placeholder_password
+			else:
+				user_pwd = user_attrs.pop(LOCAL_ATTR_PASSWORD, None)
+
+			# Validate Data
+			serializer = LDAPUserSerializer(
+				data=user_attrs | {LOCAL_ATTR_PATH: path}
+			)
+			if not serializer.is_valid():
+				logger.error(serializer.errors)
+				failed_users.append({
+					LOCAL_ATTR_USERNAME: user_nr \
+						if LOCAL_ATTR_USERNAME in serializer.errors \
+						else user_attrs[LOCAL_ATTR_USERNAME],
+					"stage": "serializer",
+				})
+				continue
+			cleaned_data = self.cleanup_empty_str_values(
+				serializer.validated_data
+			)
+
+			# Create User
+			try:
+				user_dn = self.ldap_user_insert(data=cleaned_data)
+			except Exception as e:
+				logger.exception(e)
+				failed_users.append({
+					LOCAL_ATTR_USERNAME: user_attrs[LOCAL_ATTR_USERNAME],
+					"stage": "save",
+				})
+				continue
+
+			created_users.append(user_attrs[LOCAL_ATTR_USERNAME])
+
+			# Set Password if necessary
+			if user_pwd:
+				try:
+					self.ldap_set_password(
+						user_dn=user_dn,
+						user_pwd_new=user_pwd,
+						set_by_admin=True,
+					)
+				except Exception as e:
+					logger.exception(e)
+					failed_users.append({
+						LOCAL_ATTR_USERNAME: user_nr,
+						"stage": "password",
+					})
+
+			# Log operation
+			DBLogMixin.log(
+				user=request_user.id,
+				operation_type=LOG_ACTION_UPDATE,
+				log_target_class=LOG_CLASS_USER,
+				log_target=cleaned_data[LOCAL_ATTR_USERNAME],
+			)
+
+		return created_users, failed_users
 
 class LDAPUserBaseMixin(LDAPUserMixin):
 	@transaction.atomic

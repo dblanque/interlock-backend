@@ -45,7 +45,9 @@ from core.views.user import UserViewSet
 
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector: ConnectorFactory):
-	return g_ldap_connector(patch_path="core.views.mixins.user.LDAPConnector")
+	return g_ldap_connector(
+		patch_path="core.views.mixins.user.main.LDAPConnector"
+	)
 
 
 @pytest.fixture
@@ -770,35 +772,20 @@ class TestBulkCreate(BaseViewTestClass):
 		admin_user: User,
 		admin_user_client: APIClient,
 	):
-		m_index_map = {0: LOCAL_ATTR_USERNAME, 1: LOCAL_ATTR_EMAIL}
-		m_index_map_fn = mocker.patch.object(
-			UserViewSet,
-			"map_bulk_create_attrs",
-			return_value=m_index_map,
-		)
-		m_bulk_check_users = mocker.patch.object(
-			UserViewSet,
-			"bulk_check_users",
-		)
-		m_bulk_create_from_csv = mocker.patch.object(
-			UserViewSet,
-			"bulk_create_from_csv",
-			return_value=(2, 0),
-		)
-		m_bulk_create_from_dicts = mocker.patch.object(
-			UserViewSet,
-			"bulk_create_from_dicts",
-		)
+		m_username_1 = "importeduser1"
+		m_username_2 = "importeduser2"
+		m_email_1 = "iu1@example.com"
+		m_email_2 = "iu2@example.com"
 		m_users = [
 			[
-				"importeduser1",
-				"iu1@example.com",
+				m_username_1,
+				m_email_1,
 				"First",
 				"Last",
 			],
 			[
-				"importeduser2",
-				"iu2@example.com",
+				m_username_2,
+				m_email_2,
 				"First",
 				"Last",
 			],
@@ -808,6 +795,26 @@ class TestBulkCreate(BaseViewTestClass):
 			"mapping": "mock_mapping",
 			"users": m_users,
 		}
+		m_index_map = {0: LOCAL_ATTR_USERNAME, 1: LOCAL_ATTR_EMAIL}
+		m_index_map_fn = mocker.patch.object(
+			UserViewSet,
+			"validate_and_map_csv_headers",
+			return_value=m_index_map,
+		)
+		m_bulk_check_users = mocker.patch.object(
+			UserViewSet,
+			"bulk_check_users",
+			return_value=[],
+		)
+		m_bulk_create_from_csv = mocker.patch.object(
+			UserViewSet,
+			"bulk_create_from_csv",
+			return_value=([m_username_1, m_username_2], []),
+		)
+		m_bulk_create_from_dicts = mocker.patch.object(
+			UserViewSet,
+			"bulk_create_from_dicts",
+		)
 
 		# Execution
 		response: Response = admin_user_client.post(
@@ -818,16 +825,22 @@ class TestBulkCreate(BaseViewTestClass):
 
 		# Assertions
 		assert response.status_code == status.HTTP_200_OK
-		assert response.data.get("count") == 2
+		assert response.data.get("created_users") == [
+			m_username_1,
+			m_username_2,
+		]
+		assert response.data.get("failed_users") == []
+		assert response.data.get("skipped_users") == []
 		m_index_map_fn.assert_called_once_with(
 			headers=m_data["headers"],
 			csv_map=m_data["mapping"],
 		)
 		m_bulk_check_users.assert_called_once_with(
 			[
-				(m_users[0][0], m_users[0][1]),
-				(m_users[1][0], m_users[1][1]),
-			]
+				(m_username_1, m_email_1),
+				(m_username_2, m_email_2),
+			],
+			raise_exception=False,
 		)
 		m_bulk_create_from_csv.assert_called_once_with(
 			request_user=admin_user,
@@ -842,13 +855,23 @@ class TestBulkCreate(BaseViewTestClass):
 		admin_user: User,
 		admin_user_client: APIClient,
 	):
+		m_username = "importeduser1"
+		m_email = "iu1@example.com"
+		m_users = [
+			{
+				LOCAL_ATTR_USERNAME: m_username,
+				LOCAL_ATTR_EMAIL: m_email,
+			}
+		]
+		m_data = {"dict_users": m_users}
 		m_index_map_fn = mocker.patch.object(
 			UserViewSet,
-			"map_bulk_create_attrs",
+			"validate_and_map_csv_headers",
 		)
 		m_bulk_check_users = mocker.patch.object(
 			UserViewSet,
 			"bulk_check_users",
+			return_value=[],
 		)
 		m_bulk_create_from_csv = mocker.patch.object(
 			UserViewSet,
@@ -857,15 +880,8 @@ class TestBulkCreate(BaseViewTestClass):
 		m_bulk_create_from_dicts = mocker.patch.object(
 			UserViewSet,
 			"bulk_create_from_dicts",
-			return_value=(1, 0),
+			return_value=([ m_username ], []),
 		)
-		m_users = [
-			{
-				LOCAL_ATTR_USERNAME: "importeduser1",
-				LOCAL_ATTR_EMAIL: "iu1@example.com",
-			}
-		]
-		m_data = {"dict_users": m_users}
 
 		# Execution
 		response: Response = admin_user_client.post(
@@ -876,11 +892,14 @@ class TestBulkCreate(BaseViewTestClass):
 
 		# Assertions
 		assert response.status_code == status.HTTP_200_OK
-		assert response.data.get("count") == 1
+		assert response.data.get("created_users") == [ m_username ]
+		assert response.data.get("failed_users") == []
+		assert response.data.get("skipped_users") == []
 		m_index_map_fn.assert_not_called()
 		m_bulk_create_from_csv.assert_not_called()
 		m_bulk_check_users.assert_called_once_with(
-			[(m_users[0][LOCAL_ATTR_USERNAME], m_users[0][LOCAL_ATTR_EMAIL])]
+			[(m_username, m_email)],
+			raise_exception=False,
 		)
 		m_bulk_create_from_dicts.assert_called_once_with(
 			request_user=admin_user, user_dicts=m_users
@@ -894,7 +913,7 @@ class TestBulkCreate(BaseViewTestClass):
 	):
 		m_index_map_fn = mocker.patch.object(
 			UserViewSet,
-			"map_bulk_create_attrs",
+			"validate_and_map_csv_headers",
 		)
 		m_bulk_check_users = mocker.patch.object(
 			UserViewSet,
@@ -1005,7 +1024,7 @@ class TestBulkUpdate(BaseViewTestClass):
 		)
 
 		assert response.status_code == status.HTTP_200_OK
-		assert response.data.get("count") == len(m_user_pks)
+		assert response.data.get("updated_users") == len(m_user_pks)
 		for u in m_users:
 			u.refresh_from_db()
 			assert getattr(u, LOCAL_ATTR_FIRST_NAME) == "Mock"
@@ -1069,7 +1088,7 @@ class TestBulkDestroy(BaseViewTestClass):
 			format="json",
 		)
 		assert response.status_code == status.HTTP_200_OK
-		assert response.data.get("count") == 1
+		assert response.data.get("deleted_users") == 1
 		assert not User.objects.filter(id=f_user_local.id).exists()
 
 
@@ -1174,7 +1193,7 @@ class TestBulkChangeStatus(BaseViewTestClass):
 		)
 
 		assert response.status_code == status.HTTP_200_OK
-		assert response.data.get("count") == 2
+		assert response.data.get("updated_users") == 2
 		f_user_local.refresh_from_db()
 		assert f_user_local.is_enabled == expected
 		f_user_test.refresh_from_db()

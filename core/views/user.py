@@ -24,6 +24,9 @@ from core.models.choices.log import (
 	LOG_EXTRA_USER_CHANGE_PASSWORD,
 )
 
+# Serializers
+from core.serializers.user import UserSerializer
+
 # Exceptions
 from django.core.exceptions import ObjectDoesNotExist
 from core.exceptions import users as exc_user
@@ -67,6 +70,8 @@ logger = logging.getLogger(__name__)
 
 
 class UserViewSet(BaseViewSet, AllUserMixins):
+	serializer_class = UserSerializer
+
 	@auth_required
 	@admin_required
 	def list(self, request: Request, pk=None):
@@ -443,8 +448,9 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 		code = 0
 		code_msg = "ok"
 		data = request.data
-		created_users = 0
-		error_users = 0
+		created_users = None
+		failed_users = None
+		skipped_users = None
 
 		# Do not pop this as it is later used/popped in each bulk method
 		user_rows: list[list[Any]] = data.pop("users", None)
@@ -459,8 +465,8 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 			)
 
 		if user_rows:  # Insert from CSV
-			# Map indices for local attrs
-			index_map = self.map_bulk_create_attrs(
+			# Validate and Map indices for local attrs
+			index_map = self.validate_and_map_csv_headers(
 				headers=data.pop("headers", None),
 				csv_map=data.pop("mapping", None),
 			)
@@ -477,25 +483,29 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 			usernames_and_emails = [
 				(u[username_col], u[email_col]) for u in user_rows
 			]
-			self.bulk_check_users(usernames_and_emails)
+			skipped_users = self.bulk_check_users(
+				usernames_and_emails,
+				raise_exception=False,
+			)
 
 			# Perform creation operations
-			created_users, error_users = self.bulk_create_from_csv(
+			created_users, failed_users = self.bulk_create_from_csv(
 				request_user=request_user,
 				user_rows=user_rows,
 				index_map=index_map,
 			)
 		elif user_dicts:  # Insert from list of dicts
-			self.bulk_check_users(
+			skipped_users = self.bulk_check_users(
 				[
 					(
 						u.get(LOCAL_ATTR_USERNAME),
 						u.get(LOCAL_ATTR_EMAIL, None),
 					)
 					for u in user_dicts
-				]
+				],
+				raise_exception=False,
 			)
-			created_users, error_users = self.bulk_create_from_dicts(
+			created_users, failed_users = self.bulk_create_from_dicts(
 				request_user=request_user,
 				user_dicts=user_dicts,
 			)
@@ -504,8 +514,9 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 			data={
 				"code": code,
 				"code_msg": code_msg,
-				"count": created_users,
-				"count_error": error_users,
+				"created_users": created_users,
+				"skipped_users": skipped_users,
+				"failed_users": failed_users,
 			}
 		)
 
@@ -572,7 +583,7 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 			data={
 				"code": code,
 				"code_msg": code_msg,
-				"count": updated_users,
+				"updated_users": updated_users,
 			}
 		)
 
@@ -586,7 +597,7 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 		data: dict = request.data
 		users: list[int] = self.validated_user_pk_list(data=data)
 		deleted_users = 0
-		error_users = 0
+		failed_users = 0
 
 		if req_user.id in users:
 			raise exc_user.UserAntiLockout(
@@ -614,14 +625,14 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 						"Could not delete non-existent user (Primary Key: %s)"
 						% (pk)
 					)
-					error_users += 1
+					failed_users += 1
 
 		return Response(
 			data={
 				"code": code,
 				"code_msg": code_msg,
-				"count": deleted_users,
-				"count_error": error_users,
+				"deleted_users": deleted_users,
+				"failed_users": failed_users,
 			}
 		)
 
@@ -677,6 +688,6 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 			data={
 				"code": code,
 				"code_msg": code_msg,
-				"count": updated_users,
+				"updated_users": updated_users,
 			}
 		)

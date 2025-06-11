@@ -1,11 +1,9 @@
 ########################### Standard Pytest Imports ############################
 import pytest
-from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
-
 ################################################################################
 from core.views.mixins.logs import LogMixin
-from core.views.mixins.ldap.user import LDAPUserMixin
+from core.views.mixins.user import LDAPUserMixin
 from core.ldap.defaults import LDAP_DOMAIN
 from rest_framework.serializers import ValidationError
 from core.models.user import User
@@ -28,7 +26,6 @@ from core.models.choices.log import (
 from core.ldap.types.account import LDAPAccountTypes
 from core.ldap.adsi import (
 	LDAP_PERMS,
-	LDAP_UF_LOCKOUT,
 	LDAP_UF_ACCOUNT_DISABLE,
 	LDAP_UF_DONT_EXPIRE_PASSWD,
 	LDAP_UF_NORMAL_ACCOUNT,
@@ -71,6 +68,9 @@ def f_log_mixin(mocker):
 	)
 	return mock
 
+@pytest.fixture
+def f_log(f_log_mixin):
+	return f_log_mixin.log
 
 @pytest.fixture(autouse=True)
 def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
@@ -132,7 +132,6 @@ def f_default_user_filter(f_runtime_settings: RuntimeSettingsSingleton):
 		return _filter
 
 	return maker
-
 
 class LDAPUserEntryFactory(Protocol):
 	@overload
@@ -1399,3 +1398,244 @@ class TestDelete:
 			log_target_class=LOG_CLASS_USER,
 			log_target="testuser",
 		)
+
+@pytest.fixture
+def f_index_map():
+	return {
+		0: LOCAL_ATTR_USERNAME,
+		1: LOCAL_ATTR_EMAIL,
+		2: LOCAL_ATTR_FIRST_NAME,
+		3: LOCAL_ATTR_LAST_NAME,
+	}
+
+@pytest.mark.django_db
+class TestLdapBulkCreateFromCsv:
+	@pytest.fixture
+	def m_user_data(self):
+		m_user_data = {
+			LOCAL_ATTR_USERNAME: "someuser",
+			LOCAL_ATTR_EMAIL: "someuser@example.com",
+			LOCAL_ATTR_FIRST_NAME: "Some",
+			LOCAL_ATTR_LAST_NAME: "User",
+		}
+		return m_user_data
+
+	def test_raises_row_length_mismatch(
+		self,
+		f_user_mixin: LDAPUserMixin,
+		admin_user: User,
+	):
+		with pytest.raises(exc_user.UserBulkInsertLengthError):
+			f_user_mixin.ldap_bulk_create_from_csv(
+				request_user=admin_user,
+				user_rows=["an", "extra", "column"],
+				index_map={0: LOCAL_ATTR_USERNAME, 1: LOCAL_ATTR_EMAIL},
+			)
+
+	def test_serializer_error(
+		self,
+		f_user_mixin: LDAPUserMixin,
+		admin_user: User,
+		f_index_map: dict,
+		m_user_data: dict,
+	):
+		m_user_data[LOCAL_ATTR_LAST_NAME] = False
+		created, error = f_user_mixin.ldap_bulk_create_from_csv(
+			request_user=admin_user,
+			user_rows=[ m_user_data.values() ],
+			index_map=f_index_map,
+		)
+		assert error == [{
+			LOCAL_ATTR_USERNAME: "someuser",
+			"stage": "serializer",
+		}]
+
+	def test_save_error(
+		self,
+		mocker: MockerFixture,
+		f_user_mixin: LDAPUserMixin,
+		f_default_ldap_path: dict,
+		admin_user: User,
+		f_index_map: dict,
+		f_log: MockType,
+		m_user_data: dict,
+	):
+		# Mocks
+		m_ldap_user_insert = mocker.patch.object(
+			LDAPUserMixin,
+			"ldap_user_insert",
+			side_effect=Exception,
+		)
+		m_ldap_set_password = mocker.patch.object(
+			LDAPUserMixin,
+			"ldap_set_password",
+		)
+
+		# Execution
+		created, error = f_user_mixin.ldap_bulk_create_from_csv(
+			request_user=admin_user,
+			user_rows=[ m_user_data.values() ],
+			index_map=f_index_map,
+		)
+
+		# Assertions
+		assert error == [{
+			LOCAL_ATTR_USERNAME: "someuser",
+			"stage": "save",
+		}]
+		m_ldap_user_insert.assert_called_once_with(
+			data={
+				k: v
+				for k, v in zip(f_index_map.values(), m_user_data.values())
+			} | f_default_ldap_path
+		)
+		m_ldap_set_password.assert_not_called()
+		f_log.assert_not_called()
+
+	def test_success(
+		self,
+		mocker: MockerFixture,
+		f_user_mixin: LDAPUserMixin,
+		admin_user: User,
+		f_index_map: dict,
+		f_log: MockType,
+		m_user_data: dict,
+		f_default_ldap_path: dict,
+	):
+		# Mocks
+		m_ldap_user_insert = mocker.patch.object(
+			LDAPUserMixin,
+			"ldap_user_insert",
+			return_value="mock_dn",
+		)
+		m_ldap_set_password = mocker.patch.object(
+			LDAPUserMixin,
+			"ldap_set_password",
+		)
+
+		# Execution
+		f_user_mixin.ldap_bulk_create_from_csv(
+			request_user=admin_user,
+			user_rows=[ m_user_data.values() ],
+			index_map=f_index_map,
+		)
+
+		# Assertions
+		m_ldap_user_insert.assert_called_once_with(
+			data={
+				k: v
+				for k, v in zip(f_index_map.values(), m_user_data.values())
+			} | f_default_ldap_path
+		)
+		m_ldap_set_password.assert_not_called()
+		f_log.assert_called_once_with(
+			user=admin_user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=m_user_data[LOCAL_ATTR_USERNAME],
+		)
+
+class TestLdapBulkCreateFromDicts:
+	def test_success(
+		self,
+		mocker: MockerFixture,
+		f_user_mixin: LDAPUserMixin,
+		f_default_ldap_path: dict,
+		admin_user: User,
+		f_log: MockType,
+	):
+		m_ldap_user_insert = mocker.patch.object(
+			LDAPUserMixin,
+			"ldap_user_insert",
+			return_value="mock_dn",
+		)
+		m_ldap_set_password = mocker.patch.object(
+			LDAPUserMixin,
+			"ldap_set_password",
+		)
+
+		m_user_success = "someuser#1234"
+		m_user_bad_email ="invaliduseremail"
+		m_users = [
+			{
+				LOCAL_ATTR_USERNAME: m_user_success,
+				LOCAL_ATTR_EMAIL: "someuser@example.com",
+				LOCAL_ATTR_FIRST_NAME: "Some",
+				LOCAL_ATTR_LAST_NAME: "User",
+			},
+			{
+				LOCAL_ATTR_USERNAME: m_user_bad_email,
+				LOCAL_ATTR_EMAIL: False,
+				LOCAL_ATTR_FIRST_NAME: "",
+				LOCAL_ATTR_LAST_NAME: "",
+			},
+			{
+				LOCAL_ATTR_USERNAME: "@-\\invalidusername",
+				LOCAL_ATTR_EMAIL: "invaliduser@example.com",
+				LOCAL_ATTR_FIRST_NAME: "",
+				LOCAL_ATTR_LAST_NAME: "",
+			},
+		]
+		created, error = f_user_mixin.ldap_bulk_create_from_dicts(
+			request_user=admin_user,
+			user_dicts=m_users,
+		)
+		assert created == [ m_user_success ]
+		assert error == [
+			{
+				LOCAL_ATTR_USERNAME: m_user_bad_email,
+				"stage": "serializer",
+			},
+			{
+				LOCAL_ATTR_USERNAME: 3,
+				"stage": "serializer",
+			},
+		]
+
+		m_ldap_user_insert.assert_called_once_with(
+			data=m_users[0] | f_default_ldap_path
+		)
+		m_ldap_set_password.assert_not_called()
+		f_log.assert_called_once_with(
+			user=admin_user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_USER,
+			log_target=m_user_success,
+		)
+
+	def test_save_error(
+		self,
+		mocker: MockerFixture,
+		f_user_mixin: LDAPUserMixin,
+		f_default_ldap_path: dict,
+		admin_user: User,
+		f_log: MockType,
+	):
+		m_ldap_user_insert = mocker.patch.object(
+			LDAPUserMixin,
+			"ldap_user_insert",
+			side_effect=Exception,
+		)
+		m_ldap_set_password = mocker.patch.object(
+			LDAPUserMixin,
+			"ldap_set_password",
+		)
+		m_user_data = {
+			LOCAL_ATTR_USERNAME: "someuser",
+			LOCAL_ATTR_EMAIL: "someuser@example.com",
+			LOCAL_ATTR_FIRST_NAME: "Some",
+			LOCAL_ATTR_LAST_NAME: "User",
+		}
+		created, error = f_user_mixin.ldap_bulk_create_from_dicts(
+			request_user=admin_user,
+			user_dicts=[ m_user_data ],
+		)
+		assert error == [{
+			LOCAL_ATTR_USERNAME: "someuser",
+			"stage": "save",
+		}]
+		m_ldap_user_insert.assert_called_once_with(
+			data=m_user_data | f_default_ldap_path
+		)
+		m_ldap_set_password.assert_not_called()
+		f_log.assert_not_called()

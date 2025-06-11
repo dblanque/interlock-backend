@@ -1,8 +1,6 @@
 ########################### Standard Pytest Imports ############################
 import pytest
-from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
-
 ################################################################################
 from core.views.mixins.user import UserMixin, AllUserMixins
 from core.models.user import User, USER_TYPE_LDAP
@@ -16,31 +14,27 @@ from tests.test_core.conftest import (
 	LDAPEntryFactoryProtocol,
 )
 from core.constants.attrs import *
-from core.exceptions import (
-	base as exc_base,
-	users as exc_users,
-)
+from core.exceptions import users as exc_users
 
 
 @pytest.fixture
 def f_log(mocker: MockerFixture):
-	return mocker.patch("core.views.mixins.user.DBLogMixin.log")
+	return mocker.patch("core.views.mixins.user.main.DBLogMixin.log")
 
 
 @pytest.fixture
 def f_mixin():
 	return UserMixin()
 
-
-@pytest.fixture(autouse=True)
-def f_ldap_connector(g_ldap_connector: ConnectorFactory):
-	return g_ldap_connector(patch_path="core.views.mixins.user.LDAPConnector")
-
-
 @pytest.fixture
 def f_all_users_mixin():
 	return AllUserMixins()
 
+@pytest.fixture(autouse=True)
+def f_ldap_connector(g_ldap_connector: ConnectorFactory):
+	return g_ldap_connector(
+		patch_path="core.views.mixins.user.main.LDAPConnector"
+	)
 
 class TestLocalUserExists:
 	def test_username(self, f_mixin: UserMixin, f_user_local: User):
@@ -175,68 +169,6 @@ class TestUserChangeStatus:
 		with pytest.raises(UserNotLocalType):
 			f_mixin.user_change_status(m_user.pk, target_status=True)
 
-
-class TestMapBulkCreateAttrs:
-	def test_raises_missing_headers(self, f_mixin: UserMixin):
-		with pytest.raises(exc_base.BadRequest) as e:
-			f_mixin.map_bulk_create_attrs(headers=[], csv_map=None)
-		assert "'headers' is required" in e.value.detail.get("detail")
-
-	def test_raises_bad_csv_map_type(self, f_mixin: UserMixin):
-		with pytest.raises(exc_base.BadRequest) as e:
-			f_mixin.map_bulk_create_attrs(
-				headers=[LOCAL_ATTR_USERNAME],
-				csv_map="some_string",
-			)
-		assert "'csv_map' must be of type" in e.value.detail.get("detail")
-
-	def test_raises_invalid_header_no_csv_map(self, f_mixin: UserMixin):
-		with pytest.raises(exc_base.BadRequest) as e:
-			f_mixin.map_bulk_create_attrs(["bad_header"])
-		assert "existing local attributes" in e.value.detail.get("detail")
-
-	def test_raises_invalid_header_with_csv_map(self, f_mixin: UserMixin):
-		with pytest.raises(exc_base.BadRequest) as e:
-			f_mixin.map_bulk_create_attrs(
-				headers=["bad_header"],
-				csv_map={"some_value": "bad_header"},
-			)
-		assert "existing local attributes" in e.value.detail.get("detail")
-
-	def test_success_no_csv_map(self, f_mixin: UserMixin):
-		result = f_mixin.map_bulk_create_attrs(
-			[
-				LOCAL_ATTR_USERNAME,
-				LOCAL_ATTR_EMAIL,
-			]
-		)
-		assert result == {0: LOCAL_ATTR_USERNAME, 1: LOCAL_ATTR_EMAIL}
-
-	def test_success_with_csv_map(self, f_mixin: UserMixin):
-		result = f_mixin.map_bulk_create_attrs(
-			headers=[
-				"nombreusuario",
-				"correo",
-			],
-			csv_map={
-				LOCAL_ATTR_USERNAME: "nombreusuario",
-				LOCAL_ATTR_EMAIL: "correo",
-			},
-		)
-		assert result == {0: LOCAL_ATTR_USERNAME, 1: LOCAL_ATTR_EMAIL}
-
-
-class TestCleanupEmptyStrValues:
-	def test_deletion(self, f_mixin: UserMixin):
-		m_dct = {
-			"a": "value",
-			"b": "",
-		}
-		expected = m_dct.copy()
-		expected.pop("b")
-		assert f_mixin.cleanup_empty_str_values(m_dct) == expected
-
-
 @pytest.fixture
 def f_index_map():
 	return {
@@ -245,7 +177,6 @@ def f_index_map():
 		2: LOCAL_ATTR_FIRST_NAME,
 		3: LOCAL_ATTR_LAST_NAME,
 	}
-
 
 class TestBulkCreateFromCsv:
 	def test_raises_row_length_mismatch(
@@ -280,7 +211,10 @@ class TestBulkCreateFromCsv:
 			],
 			index_map=f_index_map,
 		)
-		assert error == 1
+		assert error == [{
+			LOCAL_ATTR_USERNAME: "someuser",
+			"stage": "serializer",
+		}]
 		assert not User.objects.filter(username="someuser").exists()
 
 	@pytest.mark.django_db
@@ -305,7 +239,10 @@ class TestBulkCreateFromCsv:
 			index_map=f_index_map,
 		)
 		m_save.assert_called_once()
-		assert error == 1
+		assert error == [{
+			LOCAL_ATTR_USERNAME: "someuser",
+			"stage": "save",
+		}]
 		assert not User.objects.filter(username="someuser").exists()
 
 	@pytest.mark.django_db
@@ -350,28 +287,45 @@ class TestBulkCreateFromDicts:
 		admin_user: User,
 		f_log: MockType,
 	):
+		m_user_success = "someuser#1234"
+		m_user_bad_email ="invaliduseremail"
 		created, error = f_mixin.bulk_create_from_dicts(
 			request_user=admin_user,
 			user_dicts=[
 				{
-					LOCAL_ATTR_USERNAME: "someuser",
+					LOCAL_ATTR_USERNAME: m_user_success,
 					LOCAL_ATTR_EMAIL: "someuser@example.com",
 					LOCAL_ATTR_FIRST_NAME: "Some",
 					LOCAL_ATTR_LAST_NAME: "User",
 				},
 				{
-					LOCAL_ATTR_USERNAME: "invaliduseremail",
+					LOCAL_ATTR_USERNAME: m_user_bad_email,
 					LOCAL_ATTR_EMAIL: False,
+					LOCAL_ATTR_FIRST_NAME: "",
+					LOCAL_ATTR_LAST_NAME: "",
+				},
+				{
+					LOCAL_ATTR_USERNAME: "@-\\invalidusername",
+					LOCAL_ATTR_EMAIL: "invaliduser@example.com",
 					LOCAL_ATTR_FIRST_NAME: "",
 					LOCAL_ATTR_LAST_NAME: "",
 				},
 			],
 		)
-		assert created == 1
-		assert error == 1
+		assert created == [ m_user_success ]
+		assert error == [
+			{
+				LOCAL_ATTR_USERNAME: m_user_bad_email,
+				"stage": "serializer",
+			},
+			{
+				LOCAL_ATTR_USERNAME: 3,
+				"stage": "serializer",
+			},
+		]
 
-		assert User.objects.filter(username="someuser").exists()
-		user_instance: User = User.objects.get(username="someuser")
+		assert User.objects.filter(username=m_user_success).exists()
+		user_instance: User = User.objects.get(username=m_user_success)
 		assert user_instance.email == "someuser@example.com"
 		assert user_instance.first_name == "Some"
 		assert user_instance.last_name == "User"
@@ -403,28 +357,12 @@ class TestBulkCreateFromDicts:
 				},
 			],
 		)
-		assert error == 1
+		assert error == [{
+			LOCAL_ATTR_USERNAME: "someuser",
+			"stage": "save",
+		}]
 		m_save.assert_called_once()
 		f_log.assert_not_called()
-
-
-@pytest.mark.django_db
-class TestGetLdapBackendEnabled:
-	def test_enabled(
-		self, f_all_users_mixin: AllUserMixins, g_interlock_ldap_enabled
-	):
-		f_all_users_mixin.get_ldap_backend_enabled()
-		assert f_all_users_mixin.ldap_backend_enabled
-
-	def test_disabled(
-		self, f_all_users_mixin: AllUserMixins, g_interlock_ldap_disabled
-	):
-		f_all_users_mixin.get_ldap_backend_enabled()
-		assert not f_all_users_mixin.ldap_backend_enabled
-
-	def test_disabled_on_not_exists(self, f_all_users_mixin: AllUserMixins):
-		f_all_users_mixin.get_ldap_backend_enabled()
-		assert not f_all_users_mixin.ldap_backend_enabled
 
 
 @pytest.mark.django_db
@@ -464,6 +402,46 @@ class TestCheckUserExists:
 				username=f_user_ldap.username,
 				email=f_user_ldap.email,
 			)
+
+	def test_ignore_local(
+		self,
+		f_user_local: User,
+		g_interlock_ldap_enabled,
+		f_all_users_mixin: AllUserMixins,
+		f_ldap_connector: LDAPConnectorMock,
+	):
+		f_ldap_connector.connection.entries = []
+		assert not f_all_users_mixin.check_user_exists(
+			username=f_user_local.username,
+			email=f_user_local.email,
+			ignore_local=True,
+		)
+
+	def test_ignore_ldap(
+		self,
+		g_interlock_ldap_enabled,
+		f_all_users_mixin: AllUserMixins,
+		f_ldap_connector: LDAPConnectorMock,
+		fc_ldap_entry: LDAPEntryFactoryProtocol,
+	):
+		# Mock existing LDAP User
+		m_username = "someuser"
+		m_email = "someemail@example.com"
+		f_ldap_connector.connection.entries = [
+			fc_ldap_entry(
+				spec=False,
+				**{
+					LDAP_ATTR_USERNAME_SAMBA_ADDS: m_username,
+					LDAP_ATTR_EMAIL: m_email,
+				},
+			)
+		]
+
+		assert not f_all_users_mixin.check_user_exists(
+			username=m_username,
+			email=m_email,
+			ignore_ldap=True,
+		)
 
 
 class TestBulkCheckUsers:
@@ -536,7 +514,7 @@ class TestBulkCheckUsers:
 				)
 			],
 			raise_exception=False,
-		)
+		) == [ f_user_local.username ]
 
 	def test_returns_ldap_user_exists(
 		self,
@@ -563,7 +541,7 @@ class TestBulkCheckUsers:
 				)
 			],
 			raise_exception=False,
-		)
+		) == [ f_user_ldap.username ]
 
 	def test_not_exists_success(
 		self,
