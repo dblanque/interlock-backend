@@ -142,7 +142,9 @@ def g_ldap_connector(mocker: MockerFixture) -> ConnectorFactory:
 
 		# Patch Connector
 		if patch_path:
-			m_connector_cls = mocker.patch(patch_path, return_value=m_cxt_manager)
+			m_connector_cls = mocker.patch(
+				patch_path, return_value=m_cxt_manager
+			)
 		m_connector.cxt_manager = m_cxt_manager
 		m_connector.cls_mock = m_connector_cls
 		return m_connector

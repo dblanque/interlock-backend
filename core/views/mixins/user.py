@@ -50,6 +50,7 @@ from typing import Any
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
+
 class UserMixin(viewsets.ViewSetMixin):
 	serializer_class = UserSerializer
 
@@ -85,9 +86,11 @@ class UserMixin(viewsets.ViewSetMixin):
 			try:
 				int(pk)
 			except:
-				raise exc_base.BadRequest(data={
-					"detail": "Request data 'users' must contain integer PKs."
-				})
+				raise exc_base.BadRequest(
+					data={
+						"detail": "Request data 'users' must contain integer PKs."
+					}
+				)
 		return users
 
 	def user_change_status(
@@ -106,7 +109,7 @@ class UserMixin(viewsets.ViewSetMixin):
 				that is the question.
 
 		Raises:
-			UserDoesNotExist: When raise_exception is True.		
+			UserDoesNotExist: When raise_exception is True.
 			UserNotLocalType: When user type is not local.
 
 		Returns:
@@ -134,20 +137,20 @@ class UserMixin(viewsets.ViewSetMixin):
 		csv_map: dict[str] = None,
 	):
 		"""Map headers to local attributes
-		
+
 		Returns:
 			dict: Mapped attribute keys { index: local_attr }
 		"""
 		index_map = {}
 
 		if not headers:
-			raise exc_base.BadRequest(data={
-				"detail": f"Key 'headers' is required in request data."
-			})
+			raise exc_base.BadRequest(
+				data={"detail": f"Key 'headers' is required in request data."}
+			)
 		if csv_map and not isinstance(csv_map, dict):
-			raise exc_base.BadRequest(data={
-				"detail": f"Key 'csv_map' must be of type dict"
-			})
+			raise exc_base.BadRequest(
+				data={"detail": f"Key 'csv_map' must be of type dict"}
+			)
 
 		# Map Header Column Indexes
 		if csv_map:
@@ -155,8 +158,7 @@ class UserMixin(viewsets.ViewSetMixin):
 				index_map[headers.index(csv_alias)] = local_alias
 		else:
 			index_map = {
-				idx: local_alias
-				for idx, local_alias in enumerate(headers)
+				idx: local_alias for idx, local_alias in enumerate(headers)
 			}
 
 		_local_attrs = {
@@ -166,13 +168,16 @@ class UserMixin(viewsets.ViewSetMixin):
 		}
 		# Validate Headers / Mappings
 		for unvalidated_local_alias in index_map.values():
-			if (not isinstance(unvalidated_local_alias, str) or
-	   			not unvalidated_local_alias in _local_attrs.values()
+			if (
+				not isinstance(unvalidated_local_alias, str)
+				or not unvalidated_local_alias in _local_attrs.values()
 			):
-				raise exc_base.BadRequest(data={
-					"detail":	"All headers and/or header mappings must be"\
-								" of type str and existing local attributes."
-				})
+				raise exc_base.BadRequest(
+					data={
+						"detail": "All headers and/or header mappings must be"
+						" of type str and existing local attributes."
+					}
+				)
 
 		return index_map
 
@@ -193,7 +198,7 @@ class UserMixin(viewsets.ViewSetMixin):
 		index_map: dict[str],
 	) -> int:
 		"""Create Users from CSV Rows
-		
+
 		Returns:
 			tuple: created_users (int), error_users (int)
 		"""
@@ -201,9 +206,9 @@ class UserMixin(viewsets.ViewSetMixin):
 		error_users = 0
 		for idx, row in enumerate(user_rows):
 			if not len(row) == len(index_map):
-				raise exc_user.UserBulkInsertLengthError(data={
-					"detail": f"Row number {idx} column count error."
-				})
+				raise exc_user.UserBulkInsertLengthError(
+					data={"detail": f"Row number {idx} column count error."}
+				)
 
 		with transaction.atomic():
 			for row in user_rows:
@@ -242,14 +247,14 @@ class UserMixin(viewsets.ViewSetMixin):
 					log_target=user_instance.username,
 				)
 		return created_users, error_users
-	
+
 	def bulk_create_from_dicts(
 		self,
 		request_user: User,
 		user_dicts: list[dict],
 	):
 		"""Create Users from Dictionaries
-		
+
 		Returns:
 			tuple: created_users (int), error_users (int)
 		"""
@@ -291,6 +296,7 @@ class UserMixin(viewsets.ViewSetMixin):
 				)
 
 		return created_users, error_users
+
 
 class AllUserMixins(LDAPUserMixin, UserMixin):
 	ldap_backend_enabled = False
@@ -341,9 +347,7 @@ class AllUserMixins(LDAPUserMixin, UserMixin):
 		result = False
 		for username, email in l:
 			if self.check_user_exists(
-				username=username,
-				email=email,
-				raise_exception=raise_exception
+				username=username, email=email, raise_exception=raise_exception
 			):
 				result = True
 		return result

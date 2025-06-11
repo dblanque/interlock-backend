@@ -65,7 +65,7 @@ class LdapDirtreeViewSet(BaseViewSet, OrganizationalUnitMixin):
 		detail=False,
 		methods=["get"],
 		url_name="organizational-units",
-		url_path="organizational-units"
+		url_path="organizational-units",
 	)
 	def get_organizational_units(self, request: Request):
 		user: User = request.user

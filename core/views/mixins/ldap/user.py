@@ -725,20 +725,23 @@ class LDAPUserMixin(viewsets.ViewSetMixin):
 			# Try to fetch last login from LDAP Timestamp
 			if _v:
 				_result[fld] = to_datetime(_v)
-				_result[fld] = tz.make_aware(
-					_result[fld]
-				).strftime(DATE_FORMAT_ISO_8601_ALT)
+				_result[fld] = tz.make_aware(_result[fld]).strftime(
+					DATE_FORMAT_ISO_8601_ALT
+				)
 			else:
 				# Try to get last login from local django synced user
 				try:
-					local_instance: User = User.objects.get(username=user_search)
-					_result[fld] = \
-						local_instance.last_login.strftime(DATE_FORMAT_ISO_8601_ALT)
+					local_instance: User = User.objects.get(
+						username=user_search
+					)
+					_result[fld] = local_instance.last_login.strftime(
+						DATE_FORMAT_ISO_8601_ALT
+					)
 				except:
 					# Use datetime now if all else fails
-					_result[fld] = tz.make_aware(
-						datetime.now()
-					).strftime(DATE_FORMAT_ISO_8601_ALT)
+					_result[fld] = tz.make_aware(datetime.now()).strftime(
+						DATE_FORMAT_ISO_8601_ALT
+					)
 		return _result
 
 	def ldap_user_change_status(

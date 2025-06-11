@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from tests.test_core.test_views.conftest import BaseViewTestClass
 
+
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector) -> MockType:
 	"""Fixture to mock LDAPConnector and its context manager."""

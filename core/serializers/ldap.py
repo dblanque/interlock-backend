@@ -12,7 +12,10 @@ WEBSITE_RE = re.compile(
 
 def ldap_user_validator(v: str):
 	def has_invalid_chars(s: str):
-		return re.match(r'.*[\.\@\]\["\:\;\|\=\+\*\?\<\>\/\\\,\s]', s) is not None
+		return (
+			re.match(r'.*[\.\@\]\["\:\;\|\=\+\*\?\<\>\/\\\,\s]', s) is not None
+		)
+
 	return not has_invalid_chars(v)
 
 

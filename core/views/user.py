@@ -67,7 +67,6 @@ logger = logging.getLogger(__name__)
 
 
 class UserViewSet(BaseViewSet, AllUserMixins):
-
 	@auth_required
 	@admin_required
 	def list(self, request: Request, pk=None):
@@ -261,9 +260,8 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 		data: dict = request.data
 		pk = int(pk)
 
-		if (
-			not LOCAL_ATTR_ENABLED in data or
-			not isinstance(data[LOCAL_ATTR_ENABLED], bool)
+		if not LOCAL_ATTR_ENABLED in data or not isinstance(
+			data[LOCAL_ATTR_ENABLED], bool
 		):
 			raise BadRequest(
 				data={"detail": "Must contain field 'enabled' of type bool."}
@@ -343,7 +341,9 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 		)
 
 	@auth_required
-	@action(detail=False, methods=["post", "put"], url_path="self/change-password")
+	@action(
+		detail=False, methods=["post", "put"], url_path="self/change-password"
+	)
 	def self_change_password(self, request: Request):
 		user: User = request.user
 		code = 0
@@ -358,9 +358,9 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 			LOCAL_ATTR_ID,
 		):
 			if field in data:
-				raise BadRequest(data={
-					"detail":f"Field is not allowed ({field})."
-				})
+				raise BadRequest(
+					data={"detail": f"Field is not allowed ({field})."}
+				)
 
 		for field in (LOCAL_ATTR_PASSWORD, LOCAL_ATTR_PASSWORD_CONFIRM):
 			if not field in data:
@@ -451,12 +451,14 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 		user_dicts: list[dict[Any]] = data.pop("dict_users", None)
 
 		if (not user_rows and not user_dicts) or (user_rows and user_dicts):
-			raise BadRequest(data={
-				"detail":	"To bulk insert users you must provide either the "\
-							"users or dict_users fields."
-			})
+			raise BadRequest(
+				data={
+					"detail": "To bulk insert users you must provide either the "
+					"users or dict_users fields."
+				}
+			)
 
-		if user_rows: # Insert from CSV
+		if user_rows:  # Insert from CSV
 			# Map indices for local attrs
 			index_map = self.map_bulk_create_attrs(
 				headers=data.pop("headers", None),
@@ -473,8 +475,7 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 					email_col = idx
 
 			usernames_and_emails = [
-				(u[username_col], u[email_col])
-				for u in user_rows
+				(u[username_col], u[email_col]) for u in user_rows
 			]
 			self.bulk_check_users(usernames_and_emails)
 
@@ -484,13 +485,16 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 				user_rows=user_rows,
 				index_map=index_map,
 			)
-		elif user_dicts: # Insert from list of dicts
-			self.bulk_check_users([
-				(
-					u.get(LOCAL_ATTR_USERNAME),
-					u.get(LOCAL_ATTR_EMAIL, None),
-				) for u in user_dicts
-			])
+		elif user_dicts:  # Insert from list of dicts
+			self.bulk_check_users(
+				[
+					(
+						u.get(LOCAL_ATTR_USERNAME),
+						u.get(LOCAL_ATTR_EMAIL, None),
+					)
+					for u in user_dicts
+				]
+			)
 			created_users, error_users = self.bulk_create_from_dicts(
 				request_user=request_user,
 				user_dicts=user_dicts,
@@ -514,11 +518,14 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 		code_msg = "ok"
 		data = request.data
 		updated_users = 0
-		
+
 		# Validate data keys
 		if any(
 			v not in data
-			for v in ("users", "values",)
+			for v in (
+				"users",
+				"values",
+			)
 		):
 			raise BadRequest
 
@@ -532,11 +539,13 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 					user_instance: User = User.objects.get(id=pk)
 				except ObjectDoesNotExist:
 					raise exc_user.UserDoesNotExist
-				
+
 				if user_instance.user_type != USER_TYPE_LOCAL:
-					raise exc_user.UserNotLocalType(data={
-						"detail": f"User {user_instance.username} is not of Local Type."
-					})
+					raise exc_user.UserNotLocalType(
+						data={
+							"detail": f"User {user_instance.username} is not of Local Type."
+						}
+					)
 
 				# Validate Data
 				serializer = self.serializer_class(data=values, partial=True)
@@ -580,9 +589,9 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 		error_users = 0
 
 		if req_user.id in users:
-			raise exc_user.UserAntiLockout(data={
-				"detail": "Responsible user cannot be within selection."
-			})
+			raise exc_user.UserAntiLockout(
+				data={"detail": "Responsible user cannot be within selection."}
+			)
 
 		with transaction.atomic():
 			for pk in users:
@@ -601,7 +610,10 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 						log_target=user_instance.username,
 					)
 				except ObjectDoesNotExist:
-					logger.warning("Could not delete non-existent user (Primary Key: %s)" % (pk))
+					logger.warning(
+						"Could not delete non-existent user (Primary Key: %s)"
+						% (pk)
+					)
 					error_users += 1
 
 		return Response(
@@ -636,9 +648,9 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 			)
 
 		if req_user.id in users:
-			raise exc_user.UserAntiLockout(data={
-				"detail": "Responsible user cannot be within selection."
-			})
+			raise exc_user.UserAntiLockout(
+				data={"detail": "Responsible user cannot be within selection."}
+			)
 
 		with transaction.atomic():
 			for pk in users:

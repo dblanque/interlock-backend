@@ -1,5 +1,6 @@
 ########################### Standard Pytest Imports ############################
 import pytest
+
 ################################################################################
 from core.ldap.adsi import LDAP_PERMS
 from core.ldap.countries import LDAP_COUNTRIES
@@ -14,6 +15,7 @@ from core.serializers.ldap import (
 	ldap_permission_validator,
 	website_validator,
 )
+
 
 class TestLdapUserValidator:
 	@pytest.mark.parametrize(
@@ -30,7 +32,7 @@ class TestLdapUserValidator:
 	)
 	def test_success(self, username: str):
 		assert ldap_user_validator_se(username)
-	
+
 	@pytest.mark.parametrize(
 		"username",
 		(
@@ -57,20 +59,19 @@ class TestLdapUserValidator:
 		with pytest.raises(ValidationError):
 			ldap_user_validator_se(username)
 
+
 class TestLdapPermissionValidator:
-	@pytest.mark.parametrize(
-		"value",
-		[_k for _k in LDAP_PERMS.keys()]
-	)
+	@pytest.mark.parametrize("value", [_k for _k in LDAP_PERMS.keys()])
 	def test_success(
 		self,
 		value: str,
 	):
 		assert ldap_permission_validator(value) == value
-	
+
 	def test_raises(self):
 		with pytest.raises(ValidationError):
 			ldap_permission_validator("NON_EXISTING_PERMISSION")
+
 
 class TestLdapCountryValidator:
 	@pytest.mark.parametrize(
@@ -82,16 +83,17 @@ class TestLdapCountryValidator:
 		country: str,
 	):
 		assert country_validator(country) == country
-	
+
 	def test_raises(self):
 		with pytest.raises(ValidationError):
 			country_validator("Non Existing Country")
+
 
 class TestLdapCountryDCCValidator:
 	@pytest.mark.parametrize(
 		"country",
 		[country for country in LDAP_COUNTRIES.keys()],
-		ids=lambda x: f"{x} ({LDAP_COUNTRIES[x]['dccCode']})"
+		ids=lambda x: f"{x} ({LDAP_COUNTRIES[x]['dccCode']})",
 	)
 	def test_success(
 		self,
@@ -115,11 +117,12 @@ class TestLdapCountryDCCValidator:
 		with pytest.raises(ValidationError):
 			country_dcc_validator(value)
 
+
 class TestLdapCountryISOValidator:
 	@pytest.mark.parametrize(
 		"country",
 		[country for country in LDAP_COUNTRIES.keys()],
-		ids=lambda x: f"{x} ({LDAP_COUNTRIES[x]['isoCode']})"
+		ids=lambda x: f"{x} ({LDAP_COUNTRIES[x]['isoCode']})",
 	)
 	def test_success(
 		self,
@@ -135,6 +138,7 @@ class TestLdapCountryISOValidator:
 	def test_raises_on_bad_code(self):
 		with pytest.raises(ValidationError):
 			country_iso_validator("ZZ")
+
 
 class TestDistinguishedNameValidator:
 	def test_success(self):

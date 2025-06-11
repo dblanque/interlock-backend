@@ -14,6 +14,7 @@ from tests.test_core.test_views.conftest import (
 	BaseViewTestClassWithPk,
 )
 
+
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector) -> MockType:
 	"""Fixture to mock LDAPConnector and its context manager."""

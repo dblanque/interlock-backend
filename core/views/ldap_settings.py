@@ -184,9 +184,7 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
 		with transaction.atomic():
 			old_preset = self.get_active_settings_preset()
-			old_preset.active = (
-				None  # Don't set this to False, DB Constraints
-			)
+			old_preset.active = None  # Don't set this to False, DB Constraints
 			old_preset.save()
 			new_preset.active = True
 			new_preset.save()

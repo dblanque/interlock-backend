@@ -62,107 +62,124 @@ urlpatterns = [
 	# User Viewset Overrides
 	path(
 		"api/users/<int:pk>/",
-		UserViewSet.as_view({
-			"get": UserViewSet.retrieve.__name__,
-			"delete": UserViewSet.destroy.__name__,
-			"post": UserViewSet.update.__name__,
-			"put": UserViewSet.update.__name__,
-		}),
+		UserViewSet.as_view(
+			{
+				"get": UserViewSet.retrieve.__name__,
+				"delete": UserViewSet.destroy.__name__,
+				"post": UserViewSet.update.__name__,
+				"put": UserViewSet.update.__name__,
+			}
+		),
 		name="users-detail",
 	),
 	path(
 		"api/users/",
-		UserViewSet.as_view({
-			"get": UserViewSet.list.__name__,
-			"post": UserViewSet.create.__name__,
-		}),
+		UserViewSet.as_view(
+			{
+				"get": UserViewSet.list.__name__,
+				"post": UserViewSet.create.__name__,
+			}
+		),
 		name="users",
 	),
 	# LDAP User Viewset Overrides
 	path(
 		"api/ldap/users/",
-		LDAPUserViewSet.as_view({
-			"get": LDAPUserViewSet.list.__name__,
-			"post": LDAPUserViewSet.create.__name__,
-			"put": LDAPUserViewSet.update.__name__,
-			"patch": LDAPUserViewSet.destroy.__name__,
-		}),
+		LDAPUserViewSet.as_view(
+			{
+				"get": LDAPUserViewSet.list.__name__,
+				"post": LDAPUserViewSet.create.__name__,
+				"put": LDAPUserViewSet.update.__name__,
+				"patch": LDAPUserViewSet.destroy.__name__,
+			}
+		),
 		name="ldap/users",
 	),
 	# LDAP Group Viewset Overrides
 	path(
 		"api/ldap/groups/",
-		LDAPGroupsViewSet.as_view({
-			"get": LDAPGroupsViewSet.list.__name__,
-			"post": LDAPGroupsViewSet.create.__name__,
-			"put": LDAPGroupsViewSet.update.__name__,
-			"patch": LDAPGroupsViewSet.destroy.__name__,
-		}),
+		LDAPGroupsViewSet.as_view(
+			{
+				"get": LDAPGroupsViewSet.list.__name__,
+				"post": LDAPGroupsViewSet.create.__name__,
+				"put": LDAPGroupsViewSet.update.__name__,
+				"patch": LDAPGroupsViewSet.destroy.__name__,
+			}
+		),
 		name="ldap/groups",
 	),
 	# LDAP DNS Record Viewset Overrides
 	path(
 		"api/ldap/record/",
-		LDAPRecordViewSet.as_view({
-			"post": LDAPRecordViewSet.create.__name__,
-			"put": LDAPRecordViewSet.update.__name__,
-			"patch": LDAPRecordViewSet.destroy.__name__,
-		}),
+		LDAPRecordViewSet.as_view(
+			{
+				"post": LDAPRecordViewSet.create.__name__,
+				"put": LDAPRecordViewSet.update.__name__,
+				"patch": LDAPRecordViewSet.destroy.__name__,
+			}
+		),
 		name="ldap/record",
 	),
 	# LDAP DNS Domain Viewset Overrides
 	path(
 		"api/ldap/domain/",
-		LDAPDomainViewSet.as_view({
-			"get": LDAPDomainViewSet.get_details.__name__,
-			"post": LDAPDomainViewSet.create.__name__,
-			"patch": LDAPDomainViewSet.destroy.__name__,
-		}),
+		LDAPDomainViewSet.as_view(
+			{
+				"get": LDAPDomainViewSet.get_details.__name__,
+				"post": LDAPDomainViewSet.create.__name__,
+				"patch": LDAPDomainViewSet.destroy.__name__,
+			}
+		),
 		name="ldap/domain",
 	),
 	path(
 		"api/ldap/domain/zone/",
-		LDAPDomainViewSet.as_view({
-			"get": LDAPDomainViewSet.get_zone.__name__,
-			"post": LDAPDomainViewSet.get_zone.__name__,
-		}),
+		LDAPDomainViewSet.as_view(
+			{
+				"get": LDAPDomainViewSet.get_zone.__name__,
+				"post": LDAPDomainViewSet.get_zone.__name__,
+			}
+		),
 		name="ldap/domain-zone",
 	),
 	# Organizational Unit Viewset Overrides
 	path(
 		"api/ldap/dirtree/",
-		LdapDirtreeViewSet.as_view({
-			"get": LdapDirtreeViewSet.list.__name__,
-			"put": LdapDirtreeViewSet.list.__name__,
-			"post": LdapDirtreeViewSet.create.__name__,
-			"patch": LdapDirtreeViewSet.destroy.__name__,
-		}),
+		LdapDirtreeViewSet.as_view(
+			{
+				"get": LdapDirtreeViewSet.list.__name__,
+				"put": LdapDirtreeViewSet.list.__name__,
+				"post": LdapDirtreeViewSet.create.__name__,
+				"patch": LdapDirtreeViewSet.destroy.__name__,
+			}
+		),
 		name="ldap/dirtree",
 	),
 	# Settings Viewset Overrides
 	path(
 		"api/settings/",
-		SettingsViewSet.as_view({
-			"get": SettingsViewSet.list.__name__,
-			"post":SettingsViewSet.preset_create.__name__,
-		}),
+		SettingsViewSet.as_view(
+			{
+				"get": SettingsViewSet.list.__name__,
+				"post": SettingsViewSet.preset_create.__name__,
+			}
+		),
 		name="settings",
 	),
 	path(
 		"api/settings/<int:pk>/",
-		SettingsViewSet.as_view({
-			"get": SettingsViewSet.retrieve.__name__,
-			"delete":SettingsViewSet.preset_delete.__name__,
-		}),
+		SettingsViewSet.as_view(
+			{
+				"get": SettingsViewSet.retrieve.__name__,
+				"delete": SettingsViewSet.preset_delete.__name__,
+			}
+		),
 		name="settings-detail",
 	),
-
 	# Router Endpoints
 	path("", include(router.urls)),
-
 	# Admin Endpoints
 	path("admin/", admin.site.urls),
-
 	# JWT / Token Endpoints
 	path("api/token/", TokenObtainPairView.as_view(), name="token-obtain"),
 	path(
@@ -177,7 +194,9 @@ urlpatterns = [
 	),
 	# OIDC Endpoint overrides
 	re_path(
-		r"openid/authorize/?$", OidcAuthorizeView.as_view(), name="oidc-authorize"
+		r"openid/authorize/?$",
+		OidcAuthorizeView.as_view(),
+		name="oidc-authorize",
 	),
 	re_path(
 		r"openid/consent/?$",

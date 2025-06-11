@@ -64,6 +64,7 @@ from interlock_backend.settings import (
 	OIDC_INTERLOCK_LOGIN_COOKIE,
 	OIDC_SKIP_CONSENT_EXPIRE,
 )
+
 ################################################################################
 logger = logging.getLogger(__name__)
 

@@ -40,12 +40,10 @@ EMPTY_TOKEN = ""
 DATE_FMT_COOKIE = "%a, %d %b %Y %H:%M:%S GMT"
 BAD_LOGIN_LIMIT = 5
 
+
 class RemoveTokenResponse:
 	def __new__(
-		cls,
-		request: HttpRequest,
-		remove_refresh=False,
-		bad_login_count=False
+		cls, request: HttpRequest, remove_refresh=False, bad_login_count=False
 	):
 		response = Response(status=status.HTTP_401_UNAUTHORIZED)
 		response.set_cookie(
@@ -66,7 +64,9 @@ class RemoveTokenResponse:
 
 		if bad_login_count:
 			try:
-				bad_login_count = int(request.COOKIES.get(BAD_LOGIN_COOKIE_NAME))
+				bad_login_count = int(
+					request.COOKIES.get(BAD_LOGIN_COOKIE_NAME)
+				)
 			except:
 				bad_login_count = 0
 				pass
@@ -84,8 +84,11 @@ class RemoveTokenResponse:
 				)
 			except:
 				pass
-		response.data = {"remaining_login_count": BAD_LOGIN_LIMIT - bad_login_count}
+		response.data = {
+			"remaining_login_count": BAD_LOGIN_LIMIT - bad_login_count
+		}
 		return response
+
 
 class CookieJWTAuthentication(JWTAuthentication):
 	def authenticate(self, request: HttpRequest) -> tuple[User, AccessToken]:

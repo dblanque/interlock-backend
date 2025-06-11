@@ -30,20 +30,22 @@ from rest_framework import viewsets
 from django.db import transaction
 from typing import Iterable, TypedDict
 import logging
+
 ################################################################################
 logger = logging.getLogger()
 
 ResponseTypeIdsDict = TypedDict(
-    "Attributes",
-    {
-        "code": int,
-        "id_token": int,
-        "id_token token": int,
-        "code token": int,
-        "code id_token": int,
-        "code id_token token": int,
-    },
+	"Attributes",
+	{
+		"code": int,
+		"id_token": int,
+		"id_token token": int,
+		"code token": int,
+		"code id_token": int,
+		"code id_token token": int,
+	},
 )
+
 
 class ApplicationViewMixin(viewsets.ViewSetMixin):
 	application_serializer = ApplicationSerializer
@@ -79,9 +81,9 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 
 	@staticmethod
 	def get_response_type_id_map():
-		return ResponseTypeIdsDict({
-			rt.value: rt.id for rt in ResponseType.objects.all()
-		})
+		return ResponseTypeIdsDict(
+			{rt.value: rt.id for rt in ResponseType.objects.all()}
+		)
 
 	@staticmethod
 	def get_response_type_codes():

@@ -45,10 +45,12 @@ from tests.test_core.test_views.conftest import (
 from tests.test_core.conftest import ConnectorFactory
 from typing import Protocol
 
+
 @pytest.fixture(autouse=True)
 def reset_settings_and_presets():
 	LDAPPreset.objects.all().delete()
 	LDAPSetting.objects.all().delete()
+
 
 class LdapPresetFactory(Protocol):
 	def __call__(
@@ -300,6 +302,7 @@ class TestPresetDelete(BaseViewTestClassWithPk):
 		assert response.status_code == status.HTTP_404_NOT_FOUND
 		assert response.data.get("code") == "setting_preset_not_exists"
 
+
 class TestPresetEnable(BaseViewTestClassWithPk):
 	_endpoint = "settings-enable"
 
@@ -337,6 +340,7 @@ class TestPresetEnable(BaseViewTestClassWithPk):
 		assert response.status_code == status.HTTP_404_NOT_FOUND
 		assert not LDAPPreset.objects.all().exists()
 		assert response.data.get("code") == "setting_preset_not_exists"
+
 
 class TestPresetRename(BaseViewTestClassWithPk):
 	_endpoint = "settings-rename"

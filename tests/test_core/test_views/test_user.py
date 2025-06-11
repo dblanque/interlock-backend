@@ -2,6 +2,7 @@
 import pytest
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
+
 ################################################################################
 from tests.test_core.test_views.conftest import (
 	BaseViewTestClass,
@@ -41,9 +42,11 @@ from core.models.choices.log import (
 from core.constants.user import LOCAL_PUBLIC_FIELDS
 from core.views.user import UserViewSet
 
+
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector: ConnectorFactory):
 	return g_ldap_connector(patch_path="core.views.mixins.user.LDAPConnector")
+
 
 @pytest.fixture
 def f_user_test(user_factory: UserFactory) -> User:
@@ -52,9 +55,11 @@ def f_user_test(user_factory: UserFactory) -> User:
 		email="mockuser@example.com",
 	)
 
+
 @pytest.fixture
 def f_log(mocker: MockerFixture):
 	return mocker.patch("core.views.user.DBLogMixin.log")
+
 
 class TestList(BaseViewTestClass):
 	_endpoint = "users-list"
@@ -90,10 +95,7 @@ class TestCreate(BaseViewTestClass):
 
 	@pytest.mark.parametrize(
 		"with_password",
-		(
-			True,
-			False
-		),
+		(True, False),
 	)
 	def test_success(
 		self,
@@ -210,9 +212,7 @@ class TestCreate(BaseViewTestClass):
 			LOCAL_ATTR_EMAIL: "exists@example.com",
 		}
 		m_check_user_exists = mocker.patch.object(
-			UserViewSet,
-			"check_user_exists",
-			side_effect=exc_user.UserExists
+			UserViewSet, "check_user_exists", side_effect=exc_user.UserExists
 		)
 		response: Response = admin_user_client.post(self.endpoint, user_data)
 
@@ -226,6 +226,7 @@ class TestCreate(BaseViewTestClass):
 		assert not User.objects.filter(
 			username=user_data[LOCAL_ATTR_USERNAME]
 		).exists()
+
 
 class TestRetrieve(BaseViewTestClassWithPk):
 	_endpoint = "users-detail"
@@ -473,7 +474,7 @@ class TestChangeStatus(BaseViewTestClassWithPk):
 
 		# Mock opposite value
 		if mock_opposite:
-			f_user_test.is_enabled = (not enabled)
+			f_user_test.is_enabled = not enabled
 			f_user_test.save()
 
 		response: Response = admin_user_client.post(
@@ -497,7 +498,7 @@ class TestChangeStatus(BaseViewTestClassWithPk):
 		mocker: MockerFixture,
 		admin_user_client: APIClient,
 		f_user_ldap: User,
-		f_log: MockType,	
+		f_log: MockType,
 	):
 		m_save = mocker.patch.object(User, "save")
 		self._pk = f_user_ldap.id
@@ -515,7 +516,7 @@ class TestChangeStatus(BaseViewTestClassWithPk):
 		mocker: MockerFixture,
 		admin_user_client: APIClient,
 		admin_user: User,
-		f_log: MockType,	
+		f_log: MockType,
 	):
 		m_save = mocker.patch.object(User, "save")
 		self._pk = admin_user.id
@@ -532,7 +533,7 @@ class TestChangeStatus(BaseViewTestClassWithPk):
 		self,
 		mocker: MockerFixture,
 		admin_user_client: APIClient,
-		f_log: MockType,	
+		f_log: MockType,
 	):
 		m_save = mocker.patch.object(User, "save")
 		self._pk = 999
@@ -544,6 +545,7 @@ class TestChangeStatus(BaseViewTestClassWithPk):
 		assert response.status_code == status.HTTP_404_NOT_FOUND
 		m_save.assert_not_called()
 		f_log.assert_not_called()
+
 
 class TestChangePassword(BaseViewTestClassWithPk):
 	_endpoint = "users-change-password"
@@ -564,12 +566,14 @@ class TestChangePassword(BaseViewTestClassWithPk):
 			data={
 				LOCAL_ATTR_PASSWORD: m_password,
 				LOCAL_ATTR_PASSWORD_CONFIRM: m_password,
-			}
+			},
 		)
-		
+
 		assert response.status_code == status.HTTP_200_OK
-		assert response.data.get("data")\
-			.get(LOCAL_ATTR_USERNAME) == f_user_test.username
+		assert (
+			response.data.get("data").get(LOCAL_ATTR_USERNAME)
+			== f_user_test.username
+		)
 		f_user_test.refresh_from_db()
 		assert f_user_test.check_password(m_password)
 		f_log.assert_called_once_with(
@@ -585,7 +589,7 @@ class TestChangePassword(BaseViewTestClassWithPk):
 		mocker: MockerFixture,
 		admin_user_client: APIClient,
 		f_user_ldap: User,
-		f_log: MockType,	
+		f_log: MockType,
 	):
 		m_save = mocker.patch.object(User, "save")
 		self._pk = f_user_ldap.id
@@ -605,7 +609,7 @@ class TestChangePassword(BaseViewTestClassWithPk):
 		self,
 		mocker: MockerFixture,
 		admin_user_client: APIClient,
-		f_log: MockType,	
+		f_log: MockType,
 	):
 		m_save = mocker.patch.object(User, "save")
 		self._pk = 999
@@ -620,6 +624,7 @@ class TestChangePassword(BaseViewTestClassWithPk):
 		assert response.status_code == status.HTTP_404_NOT_FOUND
 		m_save.assert_not_called()
 		f_log.assert_not_called()
+
 
 class TestSelfChangePassword(BaseViewTestClass):
 	_endpoint = "users-self-change-password"
@@ -688,8 +693,10 @@ class TestSelfChangePassword(BaseViewTestClass):
 		)
 
 		assert response.status_code == status.HTTP_200_OK
-		assert response.data.get("data")\
-			.get(LOCAL_ATTR_USERNAME) == f_user_local.username
+		assert (
+			response.data.get("data").get(LOCAL_ATTR_USERNAME)
+			== f_user_local.username
+		)
 		f_user_local.refresh_from_db()
 		assert f_user_local.check_password(m_password)
 		f_log.assert_called_once_with(
@@ -699,6 +706,7 @@ class TestSelfChangePassword(BaseViewTestClass):
 			log_target=f_user_local.username,
 			message=LOG_EXTRA_USER_CHANGE_PASSWORD,
 		)
+
 
 class TestSelfUpdate(BaseViewTestClass):
 	_endpoint = "users-self-update"
@@ -775,20 +783,30 @@ class TestBulkCreate(BaseViewTestClass):
 		m_bulk_create_from_csv = mocker.patch.object(
 			UserViewSet,
 			"bulk_create_from_csv",
-			return_value = (2, 0),
+			return_value=(2, 0),
 		)
 		m_bulk_create_from_dicts = mocker.patch.object(
 			UserViewSet,
 			"bulk_create_from_dicts",
 		)
 		m_users = [
-			["importeduser1","iu1@example.com", "First", "Last",],
-			["importeduser2","iu2@example.com", "First", "Last",],
+			[
+				"importeduser1",
+				"iu1@example.com",
+				"First",
+				"Last",
+			],
+			[
+				"importeduser2",
+				"iu2@example.com",
+				"First",
+				"Last",
+			],
 		]
 		m_data = {
 			"headers": "mock_headers",
 			"mapping": "mock_mapping",
-			"users": m_users
+			"users": m_users,
 		}
 
 		# Execution
@@ -839,13 +857,15 @@ class TestBulkCreate(BaseViewTestClass):
 		m_bulk_create_from_dicts = mocker.patch.object(
 			UserViewSet,
 			"bulk_create_from_dicts",
-			return_value = (1, 0),
+			return_value=(1, 0),
 		)
-		m_users = [{
-			LOCAL_ATTR_USERNAME: "importeduser1",
-			LOCAL_ATTR_EMAIL: "iu1@example.com"
-		}]
-		m_data = { "dict_users": m_users }
+		m_users = [
+			{
+				LOCAL_ATTR_USERNAME: "importeduser1",
+				LOCAL_ATTR_EMAIL: "iu1@example.com",
+			}
+		]
+		m_data = {"dict_users": m_users}
 
 		# Execution
 		response: Response = admin_user_client.post(
@@ -863,8 +883,7 @@ class TestBulkCreate(BaseViewTestClass):
 			[(m_users[0][LOCAL_ATTR_USERNAME], m_users[0][LOCAL_ATTR_EMAIL])]
 		)
 		m_bulk_create_from_dicts.assert_called_once_with(
-			request_user=admin_user,
-			user_dicts=m_users
+			request_user=admin_user, user_dicts=m_users
 		)
 
 	def test_raises_overlapping_operations(
@@ -908,6 +927,7 @@ class TestBulkCreate(BaseViewTestClass):
 		m_bulk_check_users.assert_not_called()
 		m_bulk_create_from_dicts.assert_not_called()
 
+
 class TestBulkUpdate(BaseViewTestClass):
 	_endpoint = "users-bulk-update"
 
@@ -929,15 +949,13 @@ class TestBulkUpdate(BaseViewTestClass):
 			"validated_user_pk_list",
 		)
 		m_data = {
-			"users":["somelst"],
-			"values":["somelst"],
+			"users": ["somelst"],
+			"values": ["somelst"],
 		}
 		del m_data[delete_key]
 
 		response: Response = admin_user_client.put(
-			self.endpoint,
-			data=m_data,
-			format="json"
+			self.endpoint, data=m_data, format="json"
 		)
 
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -949,14 +967,12 @@ class TestBulkUpdate(BaseViewTestClass):
 		admin_user_client: APIClient,
 	):
 		m_data = {
-			"users":[999],
-			"values":["somelst"],
+			"users": [999],
+			"values": ["somelst"],
 		}
 
 		response: Response = admin_user_client.put(
-			self.endpoint,
-			data=m_data,
-			format="json"
+			self.endpoint, data=m_data, format="json"
 		)
 
 		assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -970,7 +986,11 @@ class TestBulkUpdate(BaseViewTestClass):
 		f_user_test: User,
 		f_log: MockType,
 	):
-		m_users = (admin_user, f_user_local, f_user_test,)
+		m_users = (
+			admin_user,
+			f_user_local,
+			f_user_test,
+		)
 		m_user_pks = [u.id for u in m_users]
 		response: Response = admin_user_client.put(
 			self.endpoint,
@@ -979,7 +999,7 @@ class TestBulkUpdate(BaseViewTestClass):
 				"values": {
 					LOCAL_ATTR_FIRST_NAME: "Mock",
 					LOCAL_ATTR_LAST_NAME: "Name",
-				}
+				},
 			},
 			format="json",
 		)
@@ -998,6 +1018,7 @@ class TestBulkUpdate(BaseViewTestClass):
 			)
 		f_log.call_count == len(m_user_pks)
 
+
 class TestBulkDestroy(BaseViewTestClass):
 	_endpoint = "users-bulk-destroy"
 
@@ -1013,7 +1034,7 @@ class TestBulkDestroy(BaseViewTestClass):
 		m_delete_permanently = mocker.patch.object(User, "delete_permanently")
 		response: Response = admin_user_client.delete(
 			self.endpoint,
-			data={"users":[admin_user.id, f_user_ldap.id, f_user_local.id]},
+			data={"users": [admin_user.id, f_user_ldap.id, f_user_local.id]},
 			format="json",
 		)
 
@@ -1030,7 +1051,7 @@ class TestBulkDestroy(BaseViewTestClass):
 		m_delete_permanently = mocker.patch.object(User, "delete_permanently")
 		response: Response = admin_user_client.delete(
 			self.endpoint,
-			data={"users":[999]},
+			data={"users": [999]},
 			format="json",
 		)
 		m_delete_permanently.assert_not_called()
@@ -1044,12 +1065,13 @@ class TestBulkDestroy(BaseViewTestClass):
 	):
 		response: Response = admin_user_client.delete(
 			self.endpoint,
-			data={"users":[f_user_local.id]},
+			data={"users": [f_user_local.id]},
 			format="json",
 		)
 		assert response.status_code == status.HTTP_200_OK
 		assert response.data.get("count") == 1
 		assert not User.objects.filter(id=f_user_local.id).exists()
+
 
 class TestBulkChangeStatus(BaseViewTestClass):
 	_endpoint = "users-bulk-change-status"
@@ -1061,7 +1083,9 @@ class TestBulkChangeStatus(BaseViewTestClass):
 		admin_user_client: APIClient,
 		f_log: MockType,
 	):
-		m_user_change_status = mocker.patch.object(UserViewSet, "user_change_status")
+		m_user_change_status = mocker.patch.object(
+			UserViewSet, "user_change_status"
+		)
 		response: Response = admin_user_client.put(
 			self.endpoint,
 			data={
@@ -1082,7 +1106,9 @@ class TestBulkChangeStatus(BaseViewTestClass):
 		admin_user_client: APIClient,
 		f_log: MockType,
 	):
-		m_user_change_status = mocker.patch.object(UserViewSet, "user_change_status")
+		m_user_change_status = mocker.patch.object(
+			UserViewSet, "user_change_status"
+		)
 		response: Response = admin_user_client.put(
 			self.endpoint,
 			data={
@@ -1100,10 +1126,26 @@ class TestBulkChangeStatus(BaseViewTestClass):
 	@pytest.mark.parametrize(
 		("previous", "target", "expected"),
 		(
-			(True, True, True,),
-			(False, False, False,),
-			(False, True, True,),
-			(True, False, False,),
+			(
+				True,
+				True,
+				True,
+			),
+			(
+				False,
+				False,
+				False,
+			),
+			(
+				False,
+				True,
+				True,
+			),
+			(
+				True,
+				False,
+				False,
+			),
 		),
 	)
 	def test_success(
@@ -1144,7 +1186,5 @@ class TestBulkChangeStatus(BaseViewTestClass):
 				operation_type=LOG_ACTION_UPDATE,
 				log_target_class=LOG_CLASS_USER,
 				log_target=user.username,
-				message=LOG_EXTRA_ENABLE
-				if target
-				else LOG_EXTRA_DISABLE,
+				message=LOG_EXTRA_ENABLE if target else LOG_EXTRA_DISABLE,
 			)

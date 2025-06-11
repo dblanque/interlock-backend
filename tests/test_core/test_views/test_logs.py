@@ -2,6 +2,7 @@
 import pytest
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
+
 ################################################################################
 from tests.test_core.test_views.conftest import BaseViewTestClass
 from rest_framework.test import APIClient
@@ -16,6 +17,7 @@ from core.models.choices.log import (
 	LOG_CLASS_DNSR,
 	LOG_TARGET_ALL,
 )
+
 
 @pytest.fixture
 def f_log_dataset(admin_user: User):
@@ -44,6 +46,7 @@ def f_log_dataset(admin_user: User):
 		logs.append(instance)
 	return logs
 
+
 class TestList(BaseViewTestClass):
 	_endpoint = "logs-list"
 
@@ -54,8 +57,7 @@ class TestList(BaseViewTestClass):
 		admin_user_client: APIClient,
 	):
 		m_log_objects_all = mocker.patch(
-			"core.views.logs.Log.objects.all",
-			return_value=[]
+			"core.views.logs.Log.objects.all", return_value=[]
 		)
 		response: Response = admin_user_client.get(self.endpoint)
 		m_log_objects_all.assert_called_once()
@@ -93,19 +95,14 @@ class TestList(BaseViewTestClass):
 		# Assertions
 		assert isinstance(response_logs, list)
 		assert len(response_logs) == len(f_log_dataset)
-		assert all(
-			l["actionType"] == LOG_ACTION_READ
-			for l in response_logs
-		)
+		assert all(l["actionType"] == LOG_ACTION_READ for l in response_logs)
 		assert response_logs[0]["objectClass"] == LOG_CLASS_USER
-		assert response_logs[0]["date"] == f_log_dataset[0].logged_at\
-			.strftime("%Y-%m-%dT%H:%M:%S.%f%z")
+		assert response_logs[0]["date"] == f_log_dataset[0].logged_at.strftime(
+			"%Y-%m-%dT%H:%M:%S.%f%z"
+		)
 		assert response_logs[1]["objectClass"] == LOG_CLASS_GROUP
 		assert response_logs[2]["objectClass"] == LOG_CLASS_DNSR
-		assert all(
-			set(l.keys()) == expected_headers
-			for l in response_logs
-		)
+		assert all(set(l.keys()) == expected_headers for l in response_logs)
 		assert set(response.data.get("headers")) == expected_headers
 
 	def test_success_no_logs(
@@ -141,6 +138,7 @@ class TestReset(BaseViewTestClass):
 		response: Response = admin_user_client.get(self.endpoint)
 		assert response.status_code == status.HTTP_200_OK
 		assert not Log.objects.all().exists()
+
 
 class TestTruncate(BaseViewTestClass):
 	_endpoint = "logs-truncate"

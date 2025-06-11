@@ -107,18 +107,23 @@ class LogsViewSet(BaseViewSet, LogMixin):
 		data: dict = request.data
 		code = 0
 
-		for fld in ("min","max",):
+		for fld in (
+			"min",
+			"max",
+		):
 			if data.get(fld, None) is None:
-				raise LogTruncateMinmaxNotFound(data={
-					"detail": f"Field '{fld}' is required."
-				})
+				raise LogTruncateMinmaxNotFound(
+					data={"detail": f"Field '{fld}' is required."}
+				)
 
 			try:
 				data[fld] = int(data[fld])
 			except ValueError:
-				raise exc_base.BadRequest(data={
-					"detail": f"{fld} must be of type int or a valid numeric string."
-				})
+				raise exc_base.BadRequest(
+					data={
+						"detail": f"{fld} must be of type int or a valid numeric string."
+					}
+				)
 
 		with transaction.atomic():
 			Log.objects.filter(

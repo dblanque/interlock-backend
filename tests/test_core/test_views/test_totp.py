@@ -2,6 +2,7 @@
 import pytest
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
+
 ################################################################################
 from tests.test_core.test_views.conftest import BaseViewTestClass, UserFactory
 from core.models.user import User
@@ -24,12 +25,15 @@ from core.models.choices.log import (
 )
 import binascii
 
+
 class TotpDeviceFactory(Protocol):
 	def __call__(self, user, **kwargs) -> tuple[TOTPDevice, str]: ...
+
 
 @pytest.fixture
 def f_log(mocker: MockerFixture):
 	return mocker.patch("core.views.totp.DBLogMixin.log")
+
 
 @pytest.fixture
 def fc_totp_device() -> TotpDeviceFactory:
@@ -46,7 +50,9 @@ def fc_totp_device() -> TotpDeviceFactory:
 		totp_device.save()
 
 		return totp_device, totp_uri
+
 	return maker
+
 
 class TestList(BaseViewTestClass):
 	_endpoint = "totp-list"
@@ -66,7 +72,7 @@ class TestList(BaseViewTestClass):
 		)
 		m_set_label_fn = mocker.patch(
 			"core.views.totp.set_interlock_otp_label",
-			return_value="mock_totp_uri"
+			return_value="mock_totp_uri",
 		)
 
 		response: Response = admin_user_client.get(self.endpoint)
@@ -88,7 +94,7 @@ class TestList(BaseViewTestClass):
 
 		m_set_label_fn = mocker.patch(
 			"core.views.totp.set_interlock_otp_label",
-			return_value="mock_totp_uri"
+			return_value="mock_totp_uri",
 		)
 
 		response: Response = admin_user_client.get(self.endpoint)
@@ -128,6 +134,7 @@ class TestList(BaseViewTestClass):
 		assert not response_data.get("totp_confirmed")[0]
 		assert not response_data.get("recovery_codes")
 
+
 class TestCreateDevice(BaseViewTestClass):
 	_endpoint = "totp-create-device"
 
@@ -139,8 +146,7 @@ class TestCreateDevice(BaseViewTestClass):
 	):
 		m_uri = "mock_uri"
 		m_create_device_fn = mocker.patch(
-			"core.views.totp.create_device_totp_for_user",
-			return_value=m_uri
+			"core.views.totp.create_device_totp_for_user", return_value=m_uri
 		)
 
 		response: Response = admin_user_client.get(self.endpoint)
@@ -149,7 +155,7 @@ class TestCreateDevice(BaseViewTestClass):
 		assert response.status_code == status.HTTP_200_OK
 		m_create_device_fn.assert_called_once_with(admin_user)
 		assert response_data.get("totp_uri") == m_uri
-	
+
 	def test_success(
 		self,
 		admin_user: User,
@@ -187,16 +193,16 @@ class TestValidateDevice(BaseViewTestClass):
 		# Generate a valid TOTP code
 		totp = TOTP(
 			key=binascii.unhexlify(totp_device.key),
-            step=totp_device.step,
-            digits=totp_device.digits,
-            drift=totp_device.tolerance
-        )
+			step=totp_device.step,
+			digits=totp_device.digits,
+			drift=totp_device.tolerance,
+		)
 		valid_code = totp.token()
 
 		response: Response = admin_user_client.post(
 			self.endpoint,
-			{'totp_code': valid_code},
-			format='json',
+			{"totp_code": valid_code},
+			format="json",
 		)
 		response_data: dict = response.data
 
@@ -215,16 +221,16 @@ class TestValidateDevice(BaseViewTestClass):
 		# Generate a valid TOTP code
 		totp = TOTP(
 			key=binascii.unhexlify(totp_device.key),
-            step=totp_device.step,
-            digits=totp_device.digits,
-            drift=totp_device.tolerance,
-        )
+			step=totp_device.step,
+			digits=totp_device.digits,
+			drift=totp_device.tolerance,
+		)
 		valid_code = totp.token()
 
 		response: Response = admin_user_client.post(
 			self.endpoint,
-			{'totp_code': valid_code},
-			format='json',
+			{"totp_code": valid_code},
+			format="json",
 		)
 
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -235,8 +241,8 @@ class TestValidateDevice(BaseViewTestClass):
 	):
 		response: Response = admin_user_client.post(
 			self.endpoint,
-			{'totp_code': '000000'},  # Invalid code
-			format='json',
+			{"totp_code": "000000"},  # Invalid code
+			format="json",
 		)
 
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
@@ -248,11 +254,12 @@ class TestValidateDevice(BaseViewTestClass):
 		response: Response = admin_user_client.post(
 			self.endpoint,
 			{},  # Missing token
-			format='json'
+			format="json",
 		)
 
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 		assert response.data.get("code") == "otp_no_device_registered"
+
 
 class TestDeleteDevice(BaseViewTestClass):
 	_endpoint = "totp-delete-device"
@@ -285,10 +292,13 @@ class TestDeleteDevice(BaseViewTestClass):
 		admin_user: User,
 		admin_user_client: APIClient,
 	):
-		m_delete_device_fn = mocker.patch("core.views.totp.delete_device_totp_for_user")
+		m_delete_device_fn = mocker.patch(
+			"core.views.totp.delete_device_totp_for_user"
+		)
 		response: Response = admin_user_client.post(self.endpoint)
 		assert response.status_code == status.HTTP_200_OK
 		m_delete_device_fn.assert_called_once_with(admin_user)
+
 
 class TestDeleteForUser(BaseViewTestClass):
 	_endpoint = "totp-delete-for-user"

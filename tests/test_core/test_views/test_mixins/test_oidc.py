@@ -489,12 +489,15 @@ class TestUserCanAccessApp:
 		fc_ldap_entry: LDAPEntryFactoryProtocol,
 	) -> None:
 		f_authorize_mixin.application = f_application
-		f_ldap_connector.connection.entries=[
-			fc_ldap_entry(spec=False, **{
-				LDAP_ATTR_DN: "some_group_dn",
-				LDAP_ATTR_GROUP_MEMBERS: [f_user_ldap.distinguished_name],
-				LDAP_ATTR_OBJECT_CLASS: ["top","group"]
-			})
+		f_ldap_connector.connection.entries = [
+			fc_ldap_entry(
+				spec=False,
+				**{
+					LDAP_ATTR_DN: "some_group_dn",
+					LDAP_ATTR_GROUP_MEMBERS: [f_user_ldap.distinguished_name],
+					LDAP_ATTR_OBJECT_CLASS: ["top", "group"],
+				},
+			)
 		]
 		mocker.patch(
 			"core.views.mixins.oidc.ApplicationSecurityGroup.objects.get",

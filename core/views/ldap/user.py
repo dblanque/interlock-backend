@@ -967,9 +967,9 @@ class LDAPUserViewSet(BaseViewSet, LDAPUserMixin):
 		with LDAPConnector(force_admin=True) as ldc:
 			self.ldap_connection = ldc.connection
 			ldap_user_search = user.username
-			self.ldap_user_update(data=data | {
-				LOCAL_ATTR_USERNAME: user.username
-			})
+			self.ldap_user_update(
+				data=data | {LOCAL_ATTR_USERNAME: user.username}
+			)
 
 		logger.debug(self.ldap_connection.result)
 

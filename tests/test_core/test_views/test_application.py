@@ -11,6 +11,7 @@ from tests.test_core.test_views.conftest import (
 	BaseViewTestClassWithPk,
 )
 
+
 class TestList(BaseViewTestClass):
 	_endpoint = "application-list"
 

@@ -203,6 +203,7 @@ def f_ldap_user_cls(mocker: MockerFixture, f_ldap_user_instance):
 		return_value=f_ldap_user_instance,
 	)
 
+
 class TestIsBuiltinUser:
 	@pytest.mark.parametrize(
 		"username, sid, ignore_admin, expected",
@@ -229,11 +230,15 @@ class TestIsBuiltinUser:
 		ignore_admin: bool,
 		expected: bool,
 	):
-		assert f_user_mixin.is_built_in_user(
-			username=username,
-			security_id=sid,
-			ignore_admin=ignore_admin,
-		) == expected
+		assert (
+			f_user_mixin.is_built_in_user(
+				username=username,
+				security_id=sid,
+				ignore_admin=ignore_admin,
+			)
+			== expected
+		)
+
 
 class TestGetUserObjectFilter:
 	def test_xor_raises(self, f_user_mixin: LDAPUserMixin):
@@ -1071,9 +1076,9 @@ class TestFetch:
 		)
 		m_group_mixin.get_group_by_rid.return_value = m_primary_group
 		m_group_objects = [m_primary_group] + m_member_of_objects
-		m_when_created = tz.make_aware(
-			datetime.today()
-		).strftime(DATE_FORMAT_ISO_8601_ALT)
+		m_when_created = tz.make_aware(datetime.today()).strftime(
+			DATE_FORMAT_ISO_8601_ALT
+		)
 
 		## UAC
 		expected_enabled = not (LDAP_UF_ACCOUNT_DISABLE in user_account_control)

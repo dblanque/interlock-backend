@@ -485,7 +485,9 @@ class LDAPObject:
 				if isinstance(entry_value, str):
 					entry_value = [entry_value]
 				elif not isinstance(entry_value, list):
-					logger.warning("Bad value type for local %s field", local_alias)
+					logger.warning(
+						"Bad value type for local %s field", local_alias
+					)
 				entry_value = set(entry_value)
 			else:
 				entry_value = {}
@@ -494,7 +496,9 @@ class LDAPObject:
 				if isinstance(local_value, str):
 					local_value = [local_value]
 				elif not isinstance(local_value, list):
-					logger.warning("Bad value type for ldap %s field", ldap_alias)
+					logger.warning(
+						"Bad value type for ldap %s field", ldap_alias
+					)
 				local_value = set(local_value)
 			else:
 				local_value = {}
@@ -590,9 +594,7 @@ class LDAPObject:
 			else:
 				if not isinstance(local_value, list):
 					local_value = [local_value]
-				replace_attrs[ldap_alias] = [
-					(MODIFY_REPLACE, local_value)
-				]
+				replace_attrs[ldap_alias] = [(MODIFY_REPLACE, local_value)]
 
 		attrs = replace_attrs | delete_attrs
 

@@ -1,5 +1,6 @@
 ########################### Standard Pytest Imports ############################
 import pytest
+
 ################################################################################
 from rest_framework.test import APIClient
 from rest_framework.response import Response
@@ -16,6 +17,7 @@ from tests.test_core.test_views.conftest import (
 	BaseViewTestClass,
 	BaseViewTestClassWithPk,
 )
+
 
 class TestCreateInfo(BaseViewTestClass):
 	_endpoint = "application/group-create-info"

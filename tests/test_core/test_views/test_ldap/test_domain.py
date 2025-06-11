@@ -18,6 +18,7 @@ from rest_framework import status
 from core.models.validators.ldap import domain_validator
 from tests.test_core.test_views.conftest import BaseViewTestClass
 
+
 @pytest.fixture
 def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
 	return g_runtime_settings(

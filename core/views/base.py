@@ -12,10 +12,12 @@ from rest_framework import viewsets
 from rest_framework.exceptions import NotFound
 ################################################################################
 
+
 class BaseViewSet(viewsets.ViewSet):  # pragma: no cover
 	"""
 	Base ViewSet that disables all default endpoints unless implemented.
 	"""
+
 	def not_found(self, request, pk=None):
 		raise NotFound
 

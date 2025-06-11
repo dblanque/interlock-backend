@@ -2,6 +2,7 @@
 import pytest
 from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
+
 ################################################################################
 from core.views.mixins.user import UserMixin, AllUserMixins
 from core.models.user import User, USER_TYPE_LDAP
@@ -20,21 +21,26 @@ from core.exceptions import (
 	users as exc_users,
 )
 
+
 @pytest.fixture
 def f_log(mocker: MockerFixture):
 	return mocker.patch("core.views.mixins.user.DBLogMixin.log")
+
 
 @pytest.fixture
 def f_mixin():
 	return UserMixin()
 
+
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector: ConnectorFactory):
 	return g_ldap_connector(patch_path="core.views.mixins.user.LDAPConnector")
 
+
 @pytest.fixture
 def f_all_users_mixin():
 	return AllUserMixins()
+
 
 class TestLocalUserExists:
 	def test_username(self, f_mixin: UserMixin, f_user_local: User):
@@ -71,20 +77,26 @@ class TestLocalUserExists:
 				raise_exception=False,
 			)
 
-
 	def test_raises_no_username_or_email(self, f_mixin: UserMixin):
 		with pytest.raises(Exception, match="required"):
 			f_mixin.local_user_exists(username=None, email=None)
 
-class TestValidatedUserPkList():
+
+class TestValidatedUserPkList:
 	def test_success(self, f_mixin: UserMixin):
-		m_users_pk_lst = [1,2,3,4,5]
+		m_users_pk_lst = [1, 2, 3, 4, 5]
 		m_initial_data = {"users": m_users_pk_lst}
-		assert f_mixin.validated_user_pk_list(
-			m_initial_data) == m_users_pk_lst
+		assert f_mixin.validated_user_pk_list(m_initial_data) == m_users_pk_lst
 
 	def test_raises_on_bad_inner_value(self, f_mixin: UserMixin):
-		m_initial_data = {"users": ["somevalue", 2, 3, 4,]}
+		m_initial_data = {
+			"users": [
+				"somevalue",
+				2,
+				3,
+				4,
+			]
+		}
 		with pytest.raises(BadRequest):
 			f_mixin.validated_user_pk_list(m_initial_data)
 
@@ -101,8 +113,9 @@ class TestValidatedUserPkList():
 		with pytest.raises(BadRequest):
 			f_mixin.validated_user_pk_list(m_initial_data)
 
+
 @pytest.mark.django_db
-class TestUserChangeStatus():
+class TestUserChangeStatus:
 	@pytest.mark.parametrize(
 		"previous_status, target_status, expected_status",
 		(
@@ -121,8 +134,7 @@ class TestUserChangeStatus():
 		expected_status: bool,
 	):
 		# Mock User
-		m_user: User = user_factory(
-			username="teststatuschange", email=None)
+		m_user: User = user_factory(username="teststatuschange", email=None)
 		m_user.is_enabled = previous_status
 		m_user.save()
 
@@ -140,11 +152,14 @@ class TestUserChangeStatus():
 			)
 
 	def test_returns_none_on_not_exists(self, f_mixin: UserMixin):
-		assert f_mixin.user_change_status(
-			user_pk=999,
-			target_status=True,
-			raise_exception=False,
-		) is None
+		assert (
+			f_mixin.user_change_status(
+				user_pk=999,
+				target_status=True,
+				raise_exception=False,
+			)
+			is None
+		)
 
 	def test_raises_not_local_user(
 		self,
@@ -160,8 +175,8 @@ class TestUserChangeStatus():
 		with pytest.raises(UserNotLocalType):
 			f_mixin.user_change_status(m_user.pk, target_status=True)
 
-class TestMapBulkCreateAttrs:
 
+class TestMapBulkCreateAttrs:
 	def test_raises_missing_headers(self, f_mixin: UserMixin):
 		with pytest.raises(exc_base.BadRequest) as e:
 			f_mixin.map_bulk_create_attrs(headers=[], csv_map=None)
@@ -189,11 +204,13 @@ class TestMapBulkCreateAttrs:
 		assert "existing local attributes" in e.value.detail.get("detail")
 
 	def test_success_no_csv_map(self, f_mixin: UserMixin):
-		result = f_mixin.map_bulk_create_attrs([
-			LOCAL_ATTR_USERNAME,
-			LOCAL_ATTR_EMAIL,
-		])
-		assert result == { 0: LOCAL_ATTR_USERNAME, 1: LOCAL_ATTR_EMAIL }
+		result = f_mixin.map_bulk_create_attrs(
+			[
+				LOCAL_ATTR_USERNAME,
+				LOCAL_ATTR_EMAIL,
+			]
+		)
+		assert result == {0: LOCAL_ATTR_USERNAME, 1: LOCAL_ATTR_EMAIL}
 
 	def test_success_with_csv_map(self, f_mixin: UserMixin):
 		result = f_mixin.map_bulk_create_attrs(
@@ -204,9 +221,10 @@ class TestMapBulkCreateAttrs:
 			csv_map={
 				LOCAL_ATTR_USERNAME: "nombreusuario",
 				LOCAL_ATTR_EMAIL: "correo",
-			}
+			},
 		)
-		assert result == { 0: LOCAL_ATTR_USERNAME, 1: LOCAL_ATTR_EMAIL }
+		assert result == {0: LOCAL_ATTR_USERNAME, 1: LOCAL_ATTR_EMAIL}
+
 
 class TestCleanupEmptyStrValues:
 	def test_deletion(self, f_mixin: UserMixin):
@@ -218,6 +236,7 @@ class TestCleanupEmptyStrValues:
 		expected.pop("b")
 		assert f_mixin.cleanup_empty_str_values(m_dct) == expected
 
+
 @pytest.fixture
 def f_index_map():
 	return {
@@ -226,6 +245,7 @@ def f_index_map():
 		2: LOCAL_ATTR_FIRST_NAME,
 		3: LOCAL_ATTR_LAST_NAME,
 	}
+
 
 class TestBulkCreateFromCsv:
 	def test_raises_row_length_mismatch(
@@ -237,11 +257,8 @@ class TestBulkCreateFromCsv:
 		with pytest.raises(exc_users.UserBulkInsertLengthError):
 			f_mixin.bulk_create_from_csv(
 				request_user=admin_user,
-				user_rows=["an","extra","column"],
-				index_map={
-					0: LOCAL_ATTR_USERNAME,
-					1: LOCAL_ATTR_EMAIL
-				},
+				user_rows=["an", "extra", "column"],
+				index_map={0: LOCAL_ATTR_USERNAME, 1: LOCAL_ATTR_EMAIL},
 			)
 
 	@pytest.mark.django_db
@@ -325,9 +342,10 @@ class TestBulkCreateFromCsv:
 			log_target=user_instance.username,
 		)
 
+
 class TestBulkCreateFromDicts:
 	def test_success(
-		self, 
+		self,
 		f_mixin: UserMixin,
 		admin_user: User,
 		f_log: MockType,
@@ -347,7 +365,7 @@ class TestBulkCreateFromDicts:
 					LOCAL_ATTR_FIRST_NAME: "",
 					LOCAL_ATTR_LAST_NAME: "",
 				},
-			]
+			],
 		)
 		assert created == 1
 		assert error == 1
@@ -383,25 +401,31 @@ class TestBulkCreateFromDicts:
 					LOCAL_ATTR_FIRST_NAME: "Some",
 					LOCAL_ATTR_LAST_NAME: "User",
 				},
-			]
+			],
 		)
 		assert error == 1
 		m_save.assert_called_once()
 		f_log.assert_not_called()
 
+
 @pytest.mark.django_db
 class TestGetLdapBackendEnabled:
-	def test_enabled(self, f_all_users_mixin: AllUserMixins, g_interlock_ldap_enabled):
+	def test_enabled(
+		self, f_all_users_mixin: AllUserMixins, g_interlock_ldap_enabled
+	):
 		f_all_users_mixin.get_ldap_backend_enabled()
 		assert f_all_users_mixin.ldap_backend_enabled
 
-	def test_disabled(self, f_all_users_mixin: AllUserMixins, g_interlock_ldap_disabled):
+	def test_disabled(
+		self, f_all_users_mixin: AllUserMixins, g_interlock_ldap_disabled
+	):
 		f_all_users_mixin.get_ldap_backend_enabled()
 		assert not f_all_users_mixin.ldap_backend_enabled
 
 	def test_disabled_on_not_exists(self, f_all_users_mixin: AllUserMixins):
 		f_all_users_mixin.get_ldap_backend_enabled()
 		assert not f_all_users_mixin.ldap_backend_enabled
+
 
 @pytest.mark.django_db
 class TestCheckUserExists:
@@ -427,16 +451,20 @@ class TestCheckUserExists:
 		fc_ldap_entry: LDAPEntryFactoryProtocol,
 	):
 		f_ldap_connector.connection.entries = [
-			fc_ldap_entry(spec=False, **{
-				LDAP_ATTR_USERNAME_SAMBA_ADDS: f_user_ldap.username,
-				LDAP_ATTR_EMAIL: f_user_ldap.email,
-			})	
+			fc_ldap_entry(
+				spec=False,
+				**{
+					LDAP_ATTR_USERNAME_SAMBA_ADDS: f_user_ldap.username,
+					LDAP_ATTR_EMAIL: f_user_ldap.email,
+				},
+			)
 		]
 		with pytest.raises(exc_users.UserExists):
 			assert f_all_users_mixin.check_user_exists(
 				username=f_user_ldap.username,
 				email=f_user_ldap.email,
 			)
+
 
 class TestBulkCheckUsers:
 	def test_raises_local_user(
@@ -449,14 +477,22 @@ class TestBulkCheckUsers:
 		fc_ldap_entry: LDAPEntryFactoryProtocol,
 	):
 		f_ldap_connector.connection.entries = [
-			fc_ldap_entry(spec=False, **{
-				LDAP_ATTR_USERNAME_SAMBA_ADDS: f_user_ldap.username,
-				LDAP_ATTR_EMAIL: f_user_ldap.email,
-			})	
+			fc_ldap_entry(
+				spec=False,
+				**{
+					LDAP_ATTR_USERNAME_SAMBA_ADDS: f_user_ldap.username,
+					LDAP_ATTR_EMAIL: f_user_ldap.email,
+				},
+			)
 		]
 		with pytest.raises(exc_users.UserExists):
 			f_all_users_mixin.bulk_check_users(
-				[(f_user_local.username, f_user_local.email,)]
+				[
+					(
+						f_user_local.username,
+						f_user_local.email,
+					)
+				]
 			)
 
 	def test_raises_ldap_user(
@@ -468,14 +504,22 @@ class TestBulkCheckUsers:
 		fc_ldap_entry: LDAPEntryFactoryProtocol,
 	):
 		f_ldap_connector.connection.entries = [
-			fc_ldap_entry(spec=False, **{
-				LDAP_ATTR_USERNAME_SAMBA_ADDS: f_user_ldap.username,
-				LDAP_ATTR_EMAIL: f_user_ldap.email,
-			})	
+			fc_ldap_entry(
+				spec=False,
+				**{
+					LDAP_ATTR_USERNAME_SAMBA_ADDS: f_user_ldap.username,
+					LDAP_ATTR_EMAIL: f_user_ldap.email,
+				},
+			)
 		]
 		with pytest.raises(exc_users.UserExists):
 			f_all_users_mixin.bulk_check_users(
-				[(f_user_ldap.username, f_user_ldap.email,)]
+				[
+					(
+						f_user_ldap.username,
+						f_user_ldap.email,
+					)
+				]
 			)
 
 	def test_returns_local_user_exists(
@@ -485,7 +529,12 @@ class TestBulkCheckUsers:
 		f_ldap_connector: LDAPConnectorMock,
 	):
 		assert f_all_users_mixin.bulk_check_users(
-			[(f_user_local.username, f_user_local.email,)],
+			[
+				(
+					f_user_local.username,
+					f_user_local.email,
+				)
+			],
 			raise_exception=False,
 		)
 
@@ -498,13 +547,21 @@ class TestBulkCheckUsers:
 		fc_ldap_entry: LDAPEntryFactoryProtocol,
 	):
 		f_ldap_connector.connection.entries = [
-			fc_ldap_entry(spec=False, **{
-				LDAP_ATTR_USERNAME_SAMBA_ADDS: f_user_ldap.username,
-				LDAP_ATTR_EMAIL: f_user_ldap.email,
-			})	
+			fc_ldap_entry(
+				spec=False,
+				**{
+					LDAP_ATTR_USERNAME_SAMBA_ADDS: f_user_ldap.username,
+					LDAP_ATTR_EMAIL: f_user_ldap.email,
+				},
+			)
 		]
 		assert f_all_users_mixin.bulk_check_users(
-			[(f_user_ldap.username, f_user_ldap.email,)],
+			[
+				(
+					f_user_ldap.username,
+					f_user_ldap.email,
+				)
+			],
 			raise_exception=False,
 		)
 
@@ -515,6 +572,9 @@ class TestBulkCheckUsers:
 	):
 		assert not f_all_users_mixin.bulk_check_users(
 			[
-				("someuser", "someuser@example.com",),
+				(
+					"someuser",
+					"someuser@example.com",
+				),
 			]
 		)

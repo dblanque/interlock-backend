@@ -64,6 +64,7 @@ class UserDoesNotExist(CoreException):
 	default_detail = "User does not exist"
 	default_code = "user_does_not_exist"
 
+
 class UserDnDoesNotExist(CoreException):
 	status_code = status.HTTP_404_NOT_FOUND
 	default_detail = "User Distinguished Name does not exist"
@@ -143,14 +144,11 @@ class UserNotSynced(CoreException):
 
 class UserNotLDAPType(CoreException):
 	status_code = status.HTTP_406_NOT_ACCEPTABLE
-	default_detail = (
-		"User is not of LDAP Type, cannot perform this operation."
-	)
+	default_detail = "User is not of LDAP Type, cannot perform this operation."
 	default_code = "user_not_ldap_type"
+
 
 class UserNotLocalType(CoreException):
 	status_code = status.HTTP_406_NOT_ACCEPTABLE
-	default_detail = (
-		"User is not of Local Type, cannot perform this operation."
-	)
+	default_detail = "User is not of Local Type, cannot perform this operation."
 	default_code = "user_not_local_type"

@@ -30,26 +30,26 @@ _JWT_SECURE = SIMPLE_JWT["AUTH_COOKIE_SECURE"]
 @pytest.fixture(
 	params=[
 		# LDAP Domain
-		("/api/ldap/domain/", HTTPMethod.GET), # Retrieve Main Domain Details
-		("/api/ldap/domain/zone/", HTTPMethod.POST), # Retrieve Specific Zone
-		("/api/ldap/domain/", HTTPMethod.POST), # Create
-		("/api/ldap/domain/", HTTPMethod.PATCH), # Delete
+		("/api/ldap/domain/", HTTPMethod.GET),  # Retrieve Main Domain Details
+		("/api/ldap/domain/zone/", HTTPMethod.POST),  # Retrieve Specific Zone
+		("/api/ldap/domain/", HTTPMethod.POST),  # Create
+		("/api/ldap/domain/", HTTPMethod.PATCH),  # Delete
 		# LDAP Record
-		("/api/ldap/record/", HTTPMethod.POST), # Create
-		("/api/ldap/record/", HTTPMethod.PUT), # Update
-		("/api/ldap/record/", HTTPMethod.PATCH), # Delete
+		("/api/ldap/record/", HTTPMethod.POST),  # Create
+		("/api/ldap/record/", HTTPMethod.PUT),  # Update
+		("/api/ldap/record/", HTTPMethod.PATCH),  # Delete
 		# LDAP Groups
 		("/api/ldap/groups/", HTTPMethod.GET),
-		("/api/ldap/groups/retrieve-dn/", HTTPMethod.POST), # Retrieve
-		("/api/ldap/groups/", HTTPMethod.POST), # Create
-		("/api/ldap/groups/", HTTPMethod.PUT), # Update
-		("/api/ldap/groups/", HTTPMethod.PATCH), # Destroy
+		("/api/ldap/groups/retrieve-dn/", HTTPMethod.POST),  # Retrieve
+		("/api/ldap/groups/", HTTPMethod.POST),  # Create
+		("/api/ldap/groups/", HTTPMethod.PUT),  # Update
+		("/api/ldap/groups/", HTTPMethod.PATCH),  # Destroy
 		# LDAP Users
 		("/api/ldap/users/", HTTPMethod.GET),
 		("/api/ldap/users/retrieve/", HTTPMethod.POST),
-		("/api/ldap/users/", HTTPMethod.POST), # Create
-		("/api/ldap/users/", HTTPMethod.PUT), # Update
-		("/api/ldap/users/", HTTPMethod.PATCH), # Destroy
+		("/api/ldap/users/", HTTPMethod.POST),  # Create
+		("/api/ldap/users/", HTTPMethod.PUT),  # Update
+		("/api/ldap/users/", HTTPMethod.PATCH),  # Destroy
 		("/api/ldap/users/change-status/", HTTPMethod.POST),
 		("/api/ldap/users/change-password/", HTTPMethod.POST),
 		("/api/ldap/users/unlock/", HTTPMethod.POST),
@@ -63,32 +63,32 @@ _JWT_SECURE = SIMPLE_JWT["AUTH_COOKIE_SECURE"]
 		("/api/ldap/users/self/info/", HTTPMethod.GET),
 		("/api/ldap/users/self/fetch/", HTTPMethod.GET),
 		# LDAP Directory Tree and OUs
-		("/api/ldap/dirtree/", HTTPMethod.GET), # Retrieve Dirtree
-		("/api/ldap/dirtree/", HTTPMethod.POST), # Create
-		("/api/ldap/dirtree/", HTTPMethod.PATCH), # Destroy
+		("/api/ldap/dirtree/", HTTPMethod.GET),  # Retrieve Dirtree
+		("/api/ldap/dirtree/", HTTPMethod.POST),  # Create
+		("/api/ldap/dirtree/", HTTPMethod.PATCH),  # Destroy
 		("/api/ldap/dirtree/rename/", HTTPMethod.POST),
 		("/api/ldap/dirtree/move/", HTTPMethod.POST),
 		("/api/ldap/dirtree/organizational-units/", HTTPMethod.GET),
 		# Application Groups
 		("/api/application/group/create-info/", HTTPMethod.GET),
-		("/api/application/group/", HTTPMethod.GET), # List
-		("/api/application/group/", HTTPMethod.POST), # Create
-		("/api/application/group/{pk}/", HTTPMethod.GET), # Retrieve
-		("/api/application/group/{pk}/", HTTPMethod.PUT), # Update
-		("/api/application/group/{pk}/", HTTPMethod.DELETE), # Delete
+		("/api/application/group/", HTTPMethod.GET),  # List
+		("/api/application/group/", HTTPMethod.POST),  # Create
+		("/api/application/group/{pk}/", HTTPMethod.GET),  # Retrieve
+		("/api/application/group/{pk}/", HTTPMethod.PUT),  # Update
+		("/api/application/group/{pk}/", HTTPMethod.DELETE),  # Delete
 		("/api/application/group/{pk}/change-status/", HTTPMethod.PATCH),
 		# Application
-		("/api/application/", HTTPMethod.GET), # List
-		("/api/application/", HTTPMethod.POST), # Create
-		("/api/application/{pk}/", HTTPMethod.GET), # Retrieve
-		("/api/application/{pk}/", HTTPMethod.DELETE), # Delete
-		("/api/application/{pk}/", HTTPMethod.PUT), # Update
+		("/api/application/", HTTPMethod.GET),  # List
+		("/api/application/", HTTPMethod.POST),  # Create
+		("/api/application/{pk}/", HTTPMethod.GET),  # Retrieve
+		("/api/application/{pk}/", HTTPMethod.DELETE),  # Delete
+		("/api/application/{pk}/", HTTPMethod.PUT),  # Update
 		# Local User
-		("/api/users/", HTTPMethod.GET), # List
-		("/api/users/", HTTPMethod.POST), # Create
-		("/api/users/{pk}/", HTTPMethod.GET), # Retrieve
-		("/api/users/{pk}/", HTTPMethod.PUT), # Update
-		("/api/users/{pk}/", HTTPMethod.DELETE), # Delete
+		("/api/users/", HTTPMethod.GET),  # List
+		("/api/users/", HTTPMethod.POST),  # Create
+		("/api/users/{pk}/", HTTPMethod.GET),  # Retrieve
+		("/api/users/{pk}/", HTTPMethod.PUT),  # Update
+		("/api/users/{pk}/", HTTPMethod.DELETE),  # Delete
 		("/api/users/{pk}/change-status/", HTTPMethod.POST),
 		("/api/users/{pk}/change-password/", HTTPMethod.POST),
 		("/api/users/self/update/", HTTPMethod.POST),
@@ -98,13 +98,13 @@ _JWT_SECURE = SIMPLE_JWT["AUTH_COOKIE_SECURE"]
 		("/api/logs/reset/", HTTPMethod.GET),
 		("/api/logs/truncate/", HTTPMethod.POST),
 		# Settings
-		("/api/settings/", HTTPMethod.GET), # List
-		("/api/settings/", HTTPMethod.POST), # Create
-		("/api/settings/{pk}/", HTTPMethod.GET), # Retrieve
-		("/api/settings/{pk}/", HTTPMethod.DELETE), # Delete
+		("/api/settings/", HTTPMethod.GET),  # List
+		("/api/settings/", HTTPMethod.POST),  # Create
+		("/api/settings/{pk}/", HTTPMethod.GET),  # Retrieve
+		("/api/settings/{pk}/", HTTPMethod.DELETE),  # Delete
 		("/api/settings/{pk}/enable/", HTTPMethod.POST),
 		("/api/settings/{pk}/rename/", HTTPMethod.POST),
-		("/api/settings/save/", HTTPMethod.POST), # Update
+		("/api/settings/save/", HTTPMethod.POST),  # Update
 		("/api/settings/reset/", HTTPMethod.GET),
 		("/api/settings/test/", HTTPMethod.POST),
 		("/api/settings/sync-users/", HTTPMethod.GET),
@@ -124,25 +124,25 @@ def g_all_endpoints(request: FixtureRequest):
 # Filtered fixture - only LDAP domain endpoints
 ldap_endpoints = (
 	# LDAP Domain
-	("/api/ldap/domain/zone/", HTTPMethod.POST), # Retrieve Specific Zone
-	("/api/ldap/domain/", HTTPMethod.POST), # Create
-	("/api/ldap/domain/", HTTPMethod.PATCH), # Delete
+	("/api/ldap/domain/zone/", HTTPMethod.POST),  # Retrieve Specific Zone
+	("/api/ldap/domain/", HTTPMethod.POST),  # Create
+	("/api/ldap/domain/", HTTPMethod.PATCH),  # Delete
 	# LDAP Record
-	("/api/ldap/record/", HTTPMethod.POST), # Create
-	("/api/ldap/record/", HTTPMethod.PUT), # Update
-	("/api/ldap/record/", HTTPMethod.PATCH), # Delete
+	("/api/ldap/record/", HTTPMethod.POST),  # Create
+	("/api/ldap/record/", HTTPMethod.PUT),  # Update
+	("/api/ldap/record/", HTTPMethod.PATCH),  # Delete
 	# LDAP Groups
 	("/api/ldap/groups/", HTTPMethod.GET),
-	("/api/ldap/groups/retrieve-dn/", HTTPMethod.POST), # Retrieve
-	("/api/ldap/groups/", HTTPMethod.POST), # Create
-	("/api/ldap/groups/", HTTPMethod.PUT), # Update
-	("/api/ldap/groups/", HTTPMethod.PATCH), # Destroy
+	("/api/ldap/groups/retrieve-dn/", HTTPMethod.POST),  # Retrieve
+	("/api/ldap/groups/", HTTPMethod.POST),  # Create
+	("/api/ldap/groups/", HTTPMethod.PUT),  # Update
+	("/api/ldap/groups/", HTTPMethod.PATCH),  # Destroy
 	# LDAP Users
 	("/api/ldap/users/", HTTPMethod.GET),
 	("/api/ldap/users/retrieve/", HTTPMethod.POST),
-	("/api/ldap/users/", HTTPMethod.POST), # Create
-	("/api/ldap/users/", HTTPMethod.PUT), # Update
-	("/api/ldap/users/", HTTPMethod.PATCH), # Destroy
+	("/api/ldap/users/", HTTPMethod.POST),  # Create
+	("/api/ldap/users/", HTTPMethod.PUT),  # Update
+	("/api/ldap/users/", HTTPMethod.PATCH),  # Destroy
 	("/api/ldap/users/change-status/", HTTPMethod.POST),
 	("/api/ldap/users/change-password/", HTTPMethod.POST),
 	("/api/ldap/users/unlock/", HTTPMethod.POST),
@@ -155,9 +155,9 @@ ldap_endpoints = (
 	("/api/ldap/users/self/update/", HTTPMethod.POST),
 	("/api/ldap/users/self/fetch/", HTTPMethod.GET),
 	# LDAP Directory Tree and OUs
-	("/api/ldap/dirtree/", HTTPMethod.GET), # Retrieve Dirtree
-	("/api/ldap/dirtree/", HTTPMethod.POST), # Create
-	("/api/ldap/dirtree/", HTTPMethod.PATCH), # Destroy
+	("/api/ldap/dirtree/", HTTPMethod.GET),  # Retrieve Dirtree
+	("/api/ldap/dirtree/", HTTPMethod.POST),  # Create
+	("/api/ldap/dirtree/", HTTPMethod.PATCH),  # Destroy
 	("/api/ldap/dirtree/rename/", HTTPMethod.POST),
 	("/api/ldap/dirtree/move/", HTTPMethod.POST),
 	("/api/ldap/dirtree/organizational-units/", HTTPMethod.GET),
@@ -197,7 +197,7 @@ def g_authenticated_endpoints(request: FixtureRequest):
 
 
 excluded_from_admin_only = (
-	("/api/ldap/domain/", HTTPMethod.GET), # Create
+	("/api/ldap/domain/", HTTPMethod.GET),  # Create
 	("/api/ldap/users/self/change-password/", HTTPMethod.POST),
 	("/api/ldap/users/self/update/", HTTPMethod.POST),
 	("/api/ldap/users/self/fetch/", HTTPMethod.GET),
@@ -412,6 +412,7 @@ def f_client(f_application: Application) -> Client:
 	)
 	return m_client
 
+
 class BaseViewTestClass:
 	_endpoint = None
 
@@ -424,6 +425,7 @@ class BaseViewTestClass:
 		resolver = get_resolver(urlconf)
 		#
 		return reverse(self._endpoint)
+
 
 class BaseViewTestClassWithPk:
 	_endpoint = None

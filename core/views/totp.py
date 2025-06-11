@@ -115,7 +115,9 @@ class TOTPViewSet(BaseViewSet):
 
 	@auth_required
 	@admin_required
-	@action(detail=False, methods=["post", "delete"], url_path="delete-for-user")
+	@action(
+		detail=False, methods=["post", "delete"], url_path="delete-for-user"
+	)
 	def delete_for_user(self, request: Request):
 		"""ADMIN ENDPOINT - Deletes TOTP Device for Specific User."""
 		user: User = request.user
