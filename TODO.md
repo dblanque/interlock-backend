@@ -62,8 +62,6 @@ Target Mid-June release
 	* Delete <d>
 	* Enable/Disable <d>
 * Add Local User Import (Backend and tests done, Front TBD)
-* Add Local User Export
-* Add LDAP User Export
 * Add logging to all Application Security Group model operations
 * Add logging to all TOTP operations
 
@@ -94,3 +92,5 @@ Target Mid-June release
 * Allow samba password policy change from Interlock (GPO Involved).
 * Test LDAP Server IPv6 Support.
 * Add *copy ldap dn* button in ldap dirtree section.
+* Add Local User Export
+* Add LDAP User Export
