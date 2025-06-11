@@ -437,7 +437,7 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 
 	@admin_required
 	@auth_required
-	@action(detail=False, methods=["post"], url_path="bulk/insert")
+	@action(detail=False, methods=["post"], url_path="bulk/create")
 	def bulk_create(self, request: Request):
 		request_user: User = request.user
 		code = 0
@@ -569,7 +569,7 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 
 	@admin_required
 	@auth_required
-	@action(detail=False, methods=["delete", "post"], url_path="bulk/delete")
+	@action(detail=False, methods=["delete", "post"], url_path="bulk/destroy")
 	def bulk_destroy(self, request: Request, pk=None):
 		req_user: User = request.user
 		code = 0
