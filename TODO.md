@@ -62,10 +62,12 @@ Target Mid-June release
 	* Delete <d>
 	* Enable/Disable <d>
 * Add Local User Import (Backend and tests done, Front TBD)
+* Fix LDAP User Import
 * Add logging to all Application Security Group model operations
 * Add logging to all TOTP operations
 
 ### Low Priority (Post Release)
+* Placeholder / CSV Password import for Local Users
 * Improve OIDC Exception Responses to frontend
 * Add OIDC Prompt Features?
 	* login <d>
