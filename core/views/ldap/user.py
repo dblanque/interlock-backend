@@ -455,8 +455,9 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 			data={"code": code, "code_msg": code_msg, "data": response_result}
 		)
 
-	@admin_required
 	@auth_required
+	@admin_required
+	@ldap_backend_intercept
 	@action(detail=False, methods=["post"], url_path="bulk/create")
 	def bulk_create(self, request: Request):
 		request_user: User = request.user
