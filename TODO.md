@@ -66,8 +66,8 @@ Target Mid-June release
 	* Update (To-do frontend)
 	* Delete <d>
 	* Enable/Disable <d>
-* Add Local User Import (Front TBD)
-* Fix LDAP User Import on Front-end post refactor
+* Add Local User Import <d>
+* Fix LDAP User Import on Front-end post refactor <d>
 * Add tests for user export endpoints
 * Add logging to all Application Security Group model operations
 * Add logging to all TOTP operations
