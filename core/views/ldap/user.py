@@ -24,10 +24,12 @@ from core.models.ldap_user import LDAPUser, DEFAULT_LOCAL_ATTRS
 from core.views.mixins.logs import LogMixin
 from core.models.choices.log import (
 	LOG_ACTION_UPDATE,
-	LOG_ACTION_CREATE,
+	LOG_ACTION_READ,
 	LOG_CLASS_USER,
 	LOG_EXTRA_USER_CHANGE_PASSWORD,
 	LOG_EXTRA_USER_END_USER_UPDATE,
+	LOG_EXTRA_EXPORT,
+	LOG_TARGET_ALL,
 )
 
 ### Mixins
@@ -51,13 +53,19 @@ from core.ldap import adsi as ldap_adsi
 from core.constants.attrs import *
 from core.ldap.connector import LDAPConnector
 
+### Django
+from django.utils import timezone as tz
+from django.http import StreamingHttpResponse
+
 ### Others
+from core.utils.main import getlocalkeyforldapattr
+from core.utils.csv import csv_iterator
+from datetime import datetime
 from core.constants.attrs.local import DATE_FORMAT_ISO_8601_ALT
 from core.ldap.filter import LDAPFilter
 from core.decorators.intercept import ldap_backend_intercept
 from core.constants.user import LOCAL_PUBLIC_FIELDS
 from core.config.runtime import RuntimeSettings
-from datetime import datetime
 from typing import Any
 import logging
 ################################################################################
@@ -962,4 +970,54 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 			del user_data[LOCAL_ATTR_ID]
 		return Response(
 			data={"code": code, "code_msg": code_msg, "data": user_data}
+		)
+
+	@auth_required
+	@admin_required
+	@ldap_backend_intercept
+	@action(detail=False, methods=["get"], url_path="bulk/export")
+	def export_csv(self, request: Request):
+		request_user: User = request.user
+		date = tz.make_aware(datetime.now())
+		filename = "interlock_ldap_users_export_%s.csv" % (
+			date.strftime(DATE_FORMAT_CSV)
+		)
+		self.search_filter = LDAPFilter.eq(
+			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
+			RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
+		)
+		self.search_attrs = self.filter_attr_builder(RuntimeSettings)\
+			.get_fetch_attrs()
+		self.search_attrs.remove(LDAP_ATTR_USER_GROUPS)
+
+		keys = [
+			getlocalkeyforldapattr(v)
+			for v in self.search_attrs if v
+		]
+
+		# Open LDAP Connection
+		with LDAPConnector(force_admin=True) as ldc:
+			self.ldap_connection = ldc.connection
+			data = self.ldap_user_list()
+
+		serialized_users = []
+		for user in data["users"]:
+			serialized_user = LDAPUserSerializer(data=user)
+			if serialized_user.is_valid():
+				serialized_users.append(serialized_user.validated_data)
+			else:
+				logger.error("Could not serialize user (Errors: %s)", str(serialized_user.errors))
+
+		DBLogMixin.log(
+			user=request_user.id,
+			operation_type=LOG_ACTION_READ,
+			log_target_class=LOG_CLASS_USER,
+			log_target=LOG_TARGET_ALL,
+			message=LOG_EXTRA_EXPORT,
+		)
+
+		return StreamingHttpResponse(
+			csv_iterator(data["users"], keys),
+			content_type='text/csv',
+			headers={'Content-Disposition': f'attachment; filename="{filename}"'}
 		)
