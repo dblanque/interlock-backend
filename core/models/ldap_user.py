@@ -9,7 +9,7 @@
 # ---------------------------------- IMPORTS ----------------------------------#
 
 ### Interlock
-from core.exceptions import users as exc_user
+from core.exceptions import base as exc_base, users as exc_user
 from core.constants.attrs import *
 from core.ldap.countries import LDAP_COUNTRIES
 from core.config.runtime import RuntimeSettings
@@ -28,8 +28,9 @@ from ldap3 import Entry as LDAPEntry
 from typing import overload
 from logging import getLogger
 from core.models.ldap_object import LDAPObject, LDAPObjectTypes
-
+from core.utils.main import getldapattrvalue
 ################################################################################
+
 logger = getLogger()
 
 DEFAULT_LOCAL_ATTRS = (
@@ -117,6 +118,11 @@ class LDAPUser(LDAPObject):
 			super().__validate_init__(**kwargs)
 
 	def parse_write_special_attributes(self):
+		self.parse_add_groups()
+		self.parse_remove_groups(
+			groups=self.attributes.get(LOCAL_ATTR_USER_GROUPS, None),
+			remove_group_dns=self.attributes.get(LOCAL_ATTR_USER_RM_GROUPS, None),
+		)
 		self.parse_write_country(self.attributes.get(LOCAL_ATTR_COUNTRY, None))
 		self.parse_write_permissions(
 			self.attributes.get(LOCAL_ATTR_PERMISSIONS, None)
@@ -130,6 +136,72 @@ class LDAPUser(LDAPObject):
 
 	def post_update(self):
 		self.post_create()
+
+	def save(self):
+		has_groups_to_modify = bool(
+			self.attributes.get(LOCAL_ATTR_USER_ADD_GROUPS, []) or
+			self.attributes.get(LOCAL_ATTR_USER_RM_GROUPS, [])
+		)
+		return super().save(update_kwargs={
+			"force_post_update": has_groups_to_modify,
+		})
+
+	def parse_add_groups(self):
+		if not LOCAL_ATTR_USER_ADD_GROUPS in self.parsed_specials:
+			self.parsed_specials.append(LOCAL_ATTR_USER_ADD_GROUPS)
+
+	def parse_remove_groups(
+		self,
+		groups: list[dict] = None,
+		remove_group_dns: list[str] = None,
+	) -> None:
+		if not remove_group_dns or not groups:
+			return
+
+		# Fetch Primary Group ID from Server-side Entry
+		primary_group_id = getldapattrvalue(
+			self.entry,
+			LDAP_ATTR_PRIMARY_GROUP_ID,
+			None,
+		)
+		if primary_group_id is not None:
+			primary_group_id = int(primary_group_id)
+
+		if remove_group_dns and not primary_group_id:
+			logger.warning(
+				"Cannot parse group removal without providing"
+				"the user's Primary Group ID"
+			)
+			raise exc_user.PrimaryGroupIDRequired
+
+		for g in groups:
+			distinguished_name: str = g.get(LOCAL_ATTR_DN, None)
+			relative_id: int = g.get(LOCAL_ATTR_RELATIVE_ID, None)
+			# Validate RID
+			if not isinstance(relative_id, int):
+				try:
+					relative_id = int(relative_id)
+				except:
+					raise exc_base.BadRequest(data={
+						"detail":"Group Relative ID is not a valid integer."
+					})
+			# Validate both DN and RID exist
+			if not distinguished_name or not relative_id:
+				raise exc_base.BadRequest(data={
+					"detail":"Full parsed groups must be sent along with removal operations."
+				})
+
+			if (
+				primary_group_id == relative_id and
+				(
+					distinguished_name in remove_group_dns or
+					distinguished_name.lower() in remove_group_dns
+				)
+			):
+				remove_group_dns.remove(distinguished_name)
+
+		if not LOCAL_ATTR_USER_RM_GROUPS in self.parsed_specials:
+			self.parsed_specials.append(LOCAL_ATTR_USER_RM_GROUPS)
 
 	def parse_write_country(self, value: str = None):
 		_COUNTRY_ATTRS = (
@@ -174,8 +246,12 @@ class LDAPUser(LDAPObject):
 	):
 		# De-duplicate group ops
 		if groups_to_add:
+			if not LOCAL_ATTR_USER_ADD_GROUPS in self.parsed_specials:
+				raise exc_user.CoreException
 			groups_to_add = set(groups_to_add)
 		if groups_to_remove:
+			if not LOCAL_ATTR_USER_RM_GROUPS in self.parsed_specials:
+				raise exc_user.CoreException
 			groups_to_remove = set(groups_to_remove)
 
 		if groups_to_add and groups_to_remove:

@@ -79,6 +79,7 @@ ATTRS_IMMUTABLE = {
 	LOCAL_ATTR_UPN,
 	LOCAL_ATTR_LAST_LOGIN_WIN32,
 	LOCAL_ATTR_PERMISSIONS,
+	LOCAL_ATTR_USER_GROUPS,
 	LOCAL_ATTR_USER_ADD_GROUPS,
 	LOCAL_ATTR_USER_RM_GROUPS,
 	LOCAL_ATTR_IS_ENABLED,
@@ -100,6 +101,7 @@ ATTRS_SPECIAL = {
 	LOCAL_ATTR_GROUP_TYPE,
 	LOCAL_ATTR_GROUP_SCOPE,
 	LOCAL_ATTR_OBJECT_CATEGORY,
+	LOCAL_ATTR_USER_GROUPS,
 }
 
 ATTRS_SPECIAL_LDAP = {
@@ -508,6 +510,7 @@ class LDAPObject:
 		return has_changed
 
 	def create(self):
+		"""Creates LDAP Object with current instance attributes."""
 		if self.entry:
 			raise Exception("There is already an existing LDAP Entry.")
 		attrs = {}
@@ -560,7 +563,13 @@ class LDAPObject:
 			== "success"
 		)
 
-	def update(self) -> bool:
+	def update(
+		self,
+		force_pre_update: bool = False,
+		force_update: bool = False,
+		force_post_update: bool = False,
+	) -> bool:
+		"""Updates LDAP Object with current instance attributes."""
 		if not self.entry:
 			raise ValueError(
 				"An existing LDAP Entry is required to perform an update"
@@ -599,17 +608,25 @@ class LDAPObject:
 		attrs = replace_attrs | delete_attrs
 
 		# Execute operations
-		if attrs:
+		result = True
+		## Pre-update
+		if attrs or force_update or force_pre_update:
 			self.pre_update()
+		## Update
+		if attrs or force_update:
 			self.connection.modify(dn=self.entry.entry_dn, changes=attrs)
-			self.post_update()
-			return (
+			result = (
 				getattr(self.connection.result, "description", "").lower()
 				== "success"
 			)
-		return True
+		## Post-update
+		if attrs or force_update or force_post_update:
+			self.post_update()
+
+		return result
 
 	def delete(self) -> bool:
+		"""Deletes LDAP Object from LDAP Server / Server Pool."""
 		if not self.entry and not self.distinguished_name:
 			raise Exception("Deletion requires a valid dn or entry.")
 		self.pre_delete()
@@ -623,13 +640,17 @@ class LDAPObject:
 			== "success"
 		)
 
-	def save(self) -> bool:
+	def save(self, create_kwargs: dict = {}, update_kwargs: dict = {}) -> bool:
+		"""Saves LDAP Object to LDAP Server / Server Pool."""
+		result = None
 		if not self.connection or not self.connection.bound:
 			raise Exception(
 				"LDAPObject requires a bound LDAP Connection to save modifications"
 			)
 
 		if not self.entry:
-			return self.create()
+			result = self.create(**create_kwargs)
 		else:
-			return self.update()
+			result = self.update(**update_kwargs)
+		self.parsed_specials = []
+		return result
