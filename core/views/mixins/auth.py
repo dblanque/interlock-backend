@@ -4,7 +4,9 @@
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
 # Module: core.views.mixins.auth
-# Contributors: Martín Vilche
+# Contributors:
+# 	- Martín Vilche
+# 	- Dylan Blanqué
 # Contains the ViewSet for Token Authentication related operations
 
 # ---------------------------------- IMPORTS --------------------------------- #
@@ -28,6 +30,7 @@ from rest_framework import status
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
+from rest_framework.renderers import BrowsableAPIRenderer
 
 ### Others
 from django.http.request import HttpRequest
@@ -41,9 +44,30 @@ DATE_FMT_COOKIE = "%a, %d %b %Y %H:%M:%S GMT"
 BAD_LOGIN_LIMIT = 5
 
 
+def is_axios_request(request: HttpRequest):
+	"""Determine if the request comes from Front-end"""
+	headers = request.headers
+	# Check for Axios-specific headers
+	is_xml = (
+		headers.get('X-Requested-With', "").lower() == 'XMLHttpRequest' or
+		headers.get('X-XHR-Requested-With', "").lower() == 'XMLHttpRequest'
+	)
+	# Check for content type (Axios mostly sends JSON)
+	is_json = request.content_type == 'application/json'
+	# Check if it's an API view (DRF adds this attribute)
+	renderer = getattr(request, 'accepted_renderer', None)
+	renderer_is_accepted = renderer is not None
+	return (
+		(is_xml or is_json or renderer_is_accepted) and
+		not isinstance(renderer, BrowsableAPIRenderer)
+	)
+
 class RemoveTokenResponse:
 	def __new__(
-		cls, request: HttpRequest, remove_refresh=False, bad_login_count=False
+		cls,
+		request: HttpRequest,
+		remove_refresh: bool = False,
+		bad_login_count: bool = False,
 	):
 		response = Response(status=status.HTTP_401_UNAUTHORIZED)
 		response.set_cookie(
@@ -84,9 +108,12 @@ class RemoveTokenResponse:
 				)
 			except:
 				pass
-		response.data = {
-			"remaining_login_count": BAD_LOGIN_LIMIT - bad_login_count
-		}
+
+		# If it's a front-end request, give a remaining login count
+		if is_axios_request(request=request):
+			response.data = {
+				"remaining_login_count": BAD_LOGIN_LIMIT - bad_login_count
+			}
 		return response
 
 
