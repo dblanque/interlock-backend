@@ -114,6 +114,15 @@ _JWT_SECURE = SIMPLE_JWT["AUTH_COOKIE_SECURE"]
 		("/api/settings/purge-users/", HTTPMethod.GET),
 		# Token
 		# TOTP
+		("/api/totp/", HTTPMethod.GET),
+		("/api/totp/create-device/", HTTPMethod.GET),
+		("/api/totp/create-device/", HTTPMethod.POST),
+		("/api/totp/validate-device/", HTTPMethod.POST),
+		("/api/totp/validate-device/", HTTPMethod.PUT),
+		("/api/totp/delete-device/", HTTPMethod.POST),
+		("/api/totp/delete-device/", HTTPMethod.DELETE),
+		("/api/totp/delete-for-user/", HTTPMethod.POST),
+		("/api/totp/delete-for-user/", HTTPMethod.DELETE),
 		# OIDC
 	],
 	ids=lambda x: f"{x[1]}: {x[0]}",
@@ -207,6 +216,15 @@ excluded_from_admin_only = (
 	("/api/ldap/users/self/info/", HTTPMethod.GET),
 	("/api/users/self/update/", HTTPMethod.POST),
 	("/api/users/self/change-password/", HTTPMethod.POST),
+	("/api/totp/", HTTPMethod.GET),
+	("/api/totp/create-device/", HTTPMethod.GET),
+	("/api/totp/create-device/", HTTPMethod.POST),
+	("/api/totp/validate-device/", HTTPMethod.POST),
+	("/api/totp/validate-device/", HTTPMethod.PUT),
+	("/api/totp/delete-device/", HTTPMethod.POST),
+	("/api/totp/delete-device/", HTTPMethod.DELETE),
+	("/api/totp/delete-for-user/", HTTPMethod.POST),
+	("/api/totp/delete-for-user/", HTTPMethod.DELETE),
 )
 
 
