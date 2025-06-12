@@ -855,11 +855,10 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 		created_users = []
 		failed_users = []
 		user_pwd = None
-		for idx, row in enumerate(user_rows):
-			if not len(row) == len(index_map):
-				raise exc_user.UserBulkInsertLengthError(
-					data={"detail": f"Row number {idx} column count error."}
-				)
+		self.validate_csv_row_length(
+			rows=user_rows,
+			headers=list(index_map.values()),
+		)
 		password_in_csv = (
 			True if LOCAL_ATTR_PASSWORD in index_map.values() else False
 		)
