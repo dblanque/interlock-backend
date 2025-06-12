@@ -20,19 +20,46 @@ import string as mod_string
 import re
 import logging
 
+from django.db import transaction
 from interlock_backend.settings import DEBUG as INTERLOCK_DEBUG
 ################################################################################
 
 logger = logging.getLogger(__name__)
-from django_otp import devices_for_user
+from django_otp import devices_for_user, user_has_device
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
+def get_all_user_totp_devices(user: User) -> list[TOTPDevice]:
+	has_conf = user_has_device(user, confirmed=True)
+	has_unconf = user_has_device(user, confirmed=False)
+	if has_conf or has_unconf:
+		result = []
+		for exists, confirmed in (
+			(has_conf, True),
+			(has_unconf, False)
+		):
+			if exists:
+				for d in devices_for_user(user, confirmed=confirmed):
+					if isinstance(d, TOTPDevice):
+						result.append(d)
+		return result
+	return []
 
-def get_user_totp_device(user: User, confirmed=False) -> TOTPDevice:
-	devices = devices_for_user(user, confirmed=confirmed)
-	for device in devices:
-		if isinstance(device, TOTPDevice):
-			return device
+def get_user_totp_device(
+	user: User,
+	confirmed=False,
+	for_verify=False,
+) -> TOTPDevice | None:
+	"""Fetches the first TOTP Device for a User"""
+	devices = devices_for_user(
+		user,
+		confirmed=confirmed,
+		for_verify=for_verify,
+	)
+	try:
+		return next(devices)
+	except StopIteration:
+		pass
+	return None
 
 
 TOTP_WITH_LABEL_RE = re.compile(r"^.*totp/.*:.*$")
@@ -103,23 +130,30 @@ def delete_device_totp_for_user(user: User) -> bool:
 		bool: True if a device is deleted,
 		False if no device to delete is found.
 	"""
-	device = get_user_totp_device(user)
-	if not device:
+	device = None
+	has_unconfirmed_device = user_has_device(user, confirmed=False)
+	has_confirmed_device = user_has_device(user, confirmed=True)
+	if not has_unconfirmed_device and not has_confirmed_device:
 		return False
+	
+	if has_confirmed_device:
+		device = get_user_totp_device(user, confirmed=True)
+	else:
+		device = get_user_totp_device(user, confirmed=False)
 	device.delete()
 	user.recovery_codes = []
 	user.save()
 	logger.info("TOTP Device deleted for user %s", user.username)
 	return True
 
-
+@transaction.atomic
 def validate_user_otp(
 	user: User, data: dict, raise_exc=True
 ) -> bool | Exception:
 	"""
 	Returns an Exception on validation failure unless specified.
 	"""
-	device = get_user_totp_device(user)
+	device = get_user_totp_device(user, confirmed=True)
 
 	if device is None and raise_exc is True:
 		logger.warning(

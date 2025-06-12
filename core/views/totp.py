@@ -22,8 +22,8 @@ from core.models.choices.log import (
 from core.serializers.token import OTPTokenSerializer
 from core.views.mixins.totp import (
 	create_device_totp_for_user,
+	get_all_user_totp_devices,
 	validate_user_otp,
-	get_user_totp_device,
 	delete_device_totp_for_user,
 	set_interlock_otp_label,
 )
@@ -50,8 +50,9 @@ class TOTPViewSet(BaseViewSet):
 		code_msg = "ok"
 		data = {"code": code, "code_msg": code_msg}
 
-		totp_device = get_user_totp_device(user)
+		totp_device = get_all_user_totp_devices(user)
 		if totp_device:
+			totp_device = totp_device[0]
 			data["totp_uri"] = set_interlock_otp_label(
 				url=totp_device.config_url,
 				user=user,

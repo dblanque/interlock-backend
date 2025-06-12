@@ -6,8 +6,9 @@ from core.models.user import User
 from core.exceptions import otp as exc_otp
 from core.views.mixins.logs import LogMixin
 from rest_framework.exceptions import AuthenticationFailed
-from core.views.mixins.totp import get_user_totp_device, validate_user_otp
+from core.views.mixins.totp import validate_user_otp
 from interlock_backend.settings import DEFAULT_SUPERUSER_USERNAME
+from django_otp import user_has_device
 import re
 
 DBLogMixin = LogMixin()
@@ -37,7 +38,7 @@ class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
 			raise AuthenticationFailed
 
 		# TOTP
-		if get_user_totp_device(user=self.user, confirmed=True):
+		if user_has_device(self.user, confirmed=True):
 			if "recovery_code" in attrs:
 				r_code = attrs["recovery_code"]
 				if r_code not in self.user.recovery_codes:
