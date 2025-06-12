@@ -16,7 +16,11 @@ def csv_iterator(queryset: list[dict] | QuerySet, fields):
 		for item in queryset:
 			if not isinstance(item, dict):
 				raise TypeError("item in list should be a dictionary")
-			yield writer.writerow(item)
+			yield writer.writerow({
+				k: v
+				for k, v in item.items()
+				if k in fields
+			})
 	# If its a django queryset
 	elif isinstance(queryset, QuerySet):
 		for item in queryset.values(*fields):
