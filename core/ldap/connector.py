@@ -49,10 +49,7 @@ from core.models.user import (
 )
 
 # Settings
-from interlock_backend.settings import (
-	DEFAULT_SUPERUSER_USERNAME,
-	DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS,
-)
+from interlock_backend.settings import DEFAULT_SUPERUSER_USERNAME
 from core.config.runtime import RuntimeSettings
 
 # Auth
@@ -464,6 +461,13 @@ class LDAPConnector(object):
 				"receive_timeout": RuntimeSettings.LDAP_AUTH_RECEIVE_TIMEOUT,
 				"check_names": True,
 			}
+
+			try:
+				DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS = settings\
+					.DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS
+			except:
+				DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS = False
+				pass
 			# Do not use this in production or testing
 			# It can leak sensitive data such as decrypted credentials
 			if (
