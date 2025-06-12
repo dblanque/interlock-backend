@@ -29,7 +29,12 @@ from core.exceptions import (
 from core.serializers.user import UserSerializer
 
 ### Constants
-from core.constants.attrs.local import LOCAL_ATTR_USERNAME, LOCAL_ATTR_EMAIL
+from core.constants.attrs.local import (
+	LOCAL_ATTR_USERNAME,
+	LOCAL_ATTR_EMAIL,
+	LOCAL_ATTR_PASSWORD,
+	LOCAL_ATTR_PASSWORD_CONFIRM,
+)
 from core.models.choices.log import (
 	LOG_ACTION_UPDATE,
 	LOG_CLASS_USER,
@@ -132,6 +137,7 @@ class UserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 		request_user: User,
 		user_rows: list[list[Any]],
 		index_map: dict[str],
+		placeholder_password: str = None,
 	) -> tuple[list[str], list[dict]]:
 		"""Create Users from CSV Rows
 
@@ -140,11 +146,14 @@ class UserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 		"""
 		created_users = []
 		failed_users = []
-		for idx, row in enumerate(user_rows):
-			if not len(row) == len(index_map):
-				raise exc_user.UserBulkInsertLengthError(
-					data={"detail": f"Row number {idx} column count error."}
-				)
+		user_pwd = None
+		self.validate_csv_row_length(
+			rows=user_rows,
+			headers=list(index_map.values()),
+		)
+		password_in_csv = (
+			True if LOCAL_ATTR_PASSWORD in index_map.values() else False
+		)
 
 		with transaction.atomic():
 			for row_idx, row in enumerate(user_rows):
@@ -152,6 +161,12 @@ class UserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 				user_attrs = {}
 				for col_idx, value in enumerate(row):
 					user_attrs[index_map[col_idx]] = value
+
+				# Pop Credentials
+				if placeholder_password:
+					user_pwd = placeholder_password
+				elif password_in_csv:
+					user_pwd = user_attrs.pop(LOCAL_ATTR_PASSWORD)
 
 				# Validate Data
 				serializer = self.serializer_class(data=user_attrs)
@@ -175,7 +190,11 @@ class UserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 				# Create User Instance
 				try:
 					user_instance = User(**cleaned_data)
-					user_instance.set_unusable_password()
+					# Set Password if necessary
+					if user_pwd:
+						user_instance.set_password(user_pwd)
+					else:
+						user_instance.set_unusable_password()
 					user_instance.save()
 				except Exception as e:
 					logger.exception(e)
@@ -204,6 +223,7 @@ class UserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 		self,
 		request_user: User,
 		user_dicts: list[dict],
+		placeholder_password: str = None,
 	) -> tuple[list[str], list[dict]]:
 		"""Create Users from Dictionaries
 
@@ -212,6 +232,7 @@ class UserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 		"""
 		created_users = []
 		failed_users = []
+		user_pwd = None
 		user_nr = 0
 
 		with transaction.atomic():
@@ -219,6 +240,12 @@ class UserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 				# This is for front-end exception handling if a row
 				# has no username
 				user_nr += 1
+
+				# Pop Credentials
+				if placeholder_password:
+					user_pwd = placeholder_password
+				else:
+					user_pwd = user.pop(LOCAL_ATTR_PASSWORD, None)
 
 				# Validate Data
 				serializer: UserSerializer = self.serializer_class(data=user)
@@ -240,7 +267,11 @@ class UserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 				# Create User
 				try:
 					user_instance = User(**cleaned_data)
-					user_instance.set_unusable_password()
+					# Set Password if necessary
+					if user_pwd:
+						user_instance.set_password(user_pwd)
+					else:
+						user_instance.set_unusable_password()
 					user_instance.save()
 				except Exception as e:
 					logger.exception(e)
