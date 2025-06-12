@@ -13,6 +13,7 @@ from inspect import getmembers, isroutine
 # Teardown singleton for each test.
 @pytest.fixture(autouse=True)
 def reset_singleton():
+	RuntimeSettingsSingleton._instance = None
 	yield
 	RuntimeSettingsSingleton._instance = None
 
@@ -41,6 +42,11 @@ def f_db_exists(mocker: MockerFixture):
 	"""Mocks db_table_exists"""
 	return mocker.patch("core.models.ldap_settings_runtime.db_table_exists")
 
+@pytest.fixture(autouse=True)
+def f_django_apps(mocker: MockerFixture):
+	m_apps = mocker.patch("core.models.ldap_settings_runtime.apps")
+	m_apps.ready = True
+	return m_apps
 
 def test_singleton_creates_only_one_instance():
 	"""Verify only one instance exists even with multiple instantiations"""
@@ -122,10 +128,8 @@ def test_singleton_uuid_behavior():
 
 def test_all_properties_initialized():
 	instance = RuntimeSettingsSingleton()
-	for prop in dir(ldap_defaults):
-		if not prop.startswith("__") and not prop.endswith("__"):
-			assert hasattr(instance, prop)
-
+	for key in LDAP_SETTING_MAP.keys:
+		assert hasattr(instance, key)
 
 def test_init_calls_newuuid_and_resync(mocker: MockerFixture):
 	"""Test that __init__ calls __new_uuid__ and resync()"""
@@ -134,15 +138,16 @@ def test_init_calls_newuuid_and_resync(mocker: MockerFixture):
 		RuntimeSettingsSingleton, "__new_uuid__", autospec=True
 	)
 	mock_resync = mocker.patch.object(
-		RuntimeSettingsSingleton, "resync", autospec=True, return_value=True
+		RuntimeSettingsSingleton, "resync", autospec=True
 	)
 
 	# Instantiate
+	RuntimeSettingsSingleton._instance = None
 	instance = RuntimeSettingsSingleton()
 
 	# Verify mocks were called
 	mock_new_uuid.assert_called_once_with(instance)
-	mock_resync.assert_called_once_with(instance)
+	mock_resync.assert_called_once_with(instance, raise_exc=True)
 
 
 def test_init_sets_default_values(mocker: MockerFixture):
@@ -152,13 +157,13 @@ def test_init_sets_default_values(mocker: MockerFixture):
 	mocker.patch.object(RuntimeSettingsSingleton, "resync", return_value=True)
 
 	# Instantiate
+	RuntimeSettingsSingleton._instance = None
 	instance = RuntimeSettingsSingleton()
 
 	# Verify default values are set
-	for attr in dir(ldap_defaults):
-		if not attr.startswith("_"):
-			assert hasattr(instance, attr)
-			assert getattr(instance, attr) == getattr(ldap_defaults, attr)
+	for attr in LDAP_SETTING_MAP.keys():
+		assert hasattr(instance, attr)
+		assert getattr(instance, attr) == getattr(ldap_defaults, attr)
 
 
 def test_init_handles_resync_failure(mocker: MockerFixture):
@@ -252,23 +257,27 @@ def test_resync_with_defaults(mocker: MockerFixture):
 
 def test_resync_raises_exception(mocker: MockerFixture):
 	mocker.patch.object(RuntimeSettingsSingleton, "__init__", return_value=None)
-	instance = RuntimeSettingsSingleton()
 
 	m_new_uuid: MockType = mocker.patch.object(
 		RuntimeSettingsSingleton, "__new_uuid__"
 	)
-	m_get_settings: MockType = mocker.patch.object(
+	m_get_settings = mocker.Mock()
+	mocker.patch.object(
 		RuntimeSettingsSingleton,
 		"get_settings",
-		side_effect=Exception,
+		m_get_settings,
 	)
 	m_postsync: MockType = mocker.patch.object(
 		RuntimeSettingsSingleton, "postsync"
 	)
+
+	RuntimeSettingsSingleton._instance = None
+	instance = RuntimeSettingsSingleton()
+	instance.uuid = "mock-uuid"
 	with pytest.raises(Exception):
 		instance.resync(raise_exc=True)
 	m_new_uuid.assert_called_once()
-	m_get_settings.assert_called_once()
+	m_get_settings.assert_called_once_with(instance.uuid)
 	m_postsync.assert_not_called()
 
 
