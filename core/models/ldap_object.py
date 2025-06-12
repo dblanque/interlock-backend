@@ -90,13 +90,16 @@ ATTRS_IMMUTABLE = {
 	LOCAL_ATTR_GROUP_MEMBERS,
 	LOCAL_ATTR_NAME,
 }
+ATTRS_DELETE_PROTECTED = {
+	LOCAL_ATTR_COUNTRY_DCC,
+}
 
 # Special Attributes, these will not be processed unless specified
 ATTRS_SPECIAL = {
 	LOCAL_ATTR_UAC,
 	LOCAL_ATTR_COUNTRY,
 	LOCAL_ATTR_COUNTRY_ISO,
-	LOCAL_ATTR_COUNTRY_ISO,
+	LOCAL_ATTR_COUNTRY_DCC,
 	LOCAL_ATTR_NAME,
 	LOCAL_ATTR_GROUP_TYPE,
 	LOCAL_ATTR_GROUP_SCOPE,
@@ -599,7 +602,13 @@ class LDAPObject:
 
 			# If local value empty
 			if not local_value:
-				delete_attrs[ldap_alias] = [(MODIFY_DELETE, [])]
+				if (
+					local_alias in self.int_fields and
+					local_alias in ATTRS_DELETE_PROTECTED
+				):
+					delete_attrs[ldap_alias] = [(MODIFY_REPLACE, [0])]
+				else:
+					delete_attrs[ldap_alias] = [(MODIFY_DELETE, [])]
 			else:
 				if not isinstance(local_value, list):
 					local_value = [local_value]
