@@ -40,6 +40,11 @@ Target Mid-June release
 	* oidc - friday <d>
 	* totp - thursday? <d>
 	* user - wednesday <d>
+* core.decorators.login.is_axios_request
+* tests for ldap user imports with placeholder password, path, no path
+* implement placeholder password usage onto local user import
+* tests for local user import with password
+
 
 ## Issues
 ### High Priority
