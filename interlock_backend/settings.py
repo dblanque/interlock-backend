@@ -339,8 +339,11 @@ AUTH_PASSWORD_VALIDATORS = [
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Set-up Renderer Classes
 DEFAULT_RENDERER_CLASSES = ("rest_framework.renderers.JSONRenderer",)
-if DEBUG:
+ALLOW_BROWSABLE_API = True if DEBUG else False
+load_override(globals(), "ALLOW_BROWSABLE_API")
+if ALLOW_BROWSABLE_API:
 	DEFAULT_RENDERER_CLASSES = DEFAULT_RENDERER_CLASSES + (
 		"rest_framework.renderers.BrowsableAPIRenderer",
 	)
