@@ -975,7 +975,12 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 	@auth_required
 	@admin_required
 	@ldap_backend_intercept
-	@action(detail=False, methods=["get"], url_path="bulk/export")
+	@action(
+		detail=False,
+		methods=["get"],
+		url_name="bulk-export",
+		url_path="bulk/export",
+	)
 	def export_csv(self, request: Request):
 		request_user: User = request.user
 		date = tz.make_aware(datetime.now())

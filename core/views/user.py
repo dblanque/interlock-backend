@@ -707,7 +707,12 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 
 	@auth_required
 	@admin_required
-	@action(detail=False, methods=["get"], url_path="bulk/export")
+	@action(
+		detail=False,
+		methods=["get"],
+		url_name="bulk-export",
+		url_path="bulk/export",
+	)
 	def export_csv(self, request: Request):
 		request_user: User = request.user
 		date = tz.make_aware(datetime.now())

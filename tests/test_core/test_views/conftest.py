@@ -53,6 +53,7 @@ _JWT_SECURE = SIMPLE_JWT["AUTH_COOKIE_SECURE"]
 		("/api/ldap/users/change-status/", HTTPMethod.POST),
 		("/api/ldap/users/change-password/", HTTPMethod.POST),
 		("/api/ldap/users/unlock/", HTTPMethod.POST),
+		("/api/ldap/users/bulk/export/", HTTPMethod.GET),
 		("/api/ldap/users/bulk/create/", HTTPMethod.POST),
 		("/api/ldap/users/bulk/update/", HTTPMethod.POST),
 		("/api/ldap/users/bulk/destroy/", HTTPMethod.POST),
@@ -91,6 +92,7 @@ _JWT_SECURE = SIMPLE_JWT["AUTH_COOKIE_SECURE"]
 		("/api/users/{pk}/", HTTPMethod.DELETE),  # Delete
 		("/api/users/{pk}/change-status/", HTTPMethod.POST),
 		("/api/users/{pk}/change-password/", HTTPMethod.POST),
+		("/api/users/bulk/export/", HTTPMethod.GET),
 		("/api/users/self/update/", HTTPMethod.POST),
 		("/api/users/self/change-password/", HTTPMethod.POST),
 		# Logs
@@ -146,6 +148,7 @@ ldap_endpoints = (
 	("/api/ldap/users/change-status/", HTTPMethod.POST),
 	("/api/ldap/users/change-password/", HTTPMethod.POST),
 	("/api/ldap/users/unlock/", HTTPMethod.POST),
+	("/api/ldap/users/bulk/export/", HTTPMethod.GET),
 	("/api/ldap/users/bulk/create/", HTTPMethod.POST),
 	("/api/ldap/users/bulk/update/", HTTPMethod.POST),
 	("/api/ldap/users/bulk/destroy/", HTTPMethod.POST),
