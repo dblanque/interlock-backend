@@ -107,6 +107,14 @@ class CannotDeleteUserPrimaryGroup(CoreException):
 	default_code = "user_group_primary_err"
 
 
+class PrimaryGroupIDRequired(CoreException):
+	status_code = status.HTTP_400_BAD_REQUEST
+	default_detail = (
+		"Group removal requires Primary Group ID to verify integrity"
+	)
+	default_code = "user_removal_requires_pgid"
+
+
 class BadGroupSelection(CoreException):
 	status_code = status.HTTP_400_BAD_REQUEST
 	default_detail = (
