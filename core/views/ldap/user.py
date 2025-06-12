@@ -520,13 +520,14 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 					email_col = idx
 
 			usernames_and_emails = [
-				(u[username_col], u[email_col]) if email_col
+				(u[username_col], u[email_col])
+				if email_col
 				else (u[username_col], None)
 				for u in user_rows
 			]
 			skipped_users = self.bulk_check_users(
 				usernames_and_emails,
-				ignore_local=True, # Todo - make this change based on a setting
+				ignore_local=True,  # Todo - make this change based on a setting
 				raise_exception=False,
 			)
 
@@ -547,7 +548,7 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 					)
 					for u in user_dicts
 				],
-				ignore_local=True, # Todo - make this change based on a setting
+				ignore_local=True,  # Todo - make this change based on a setting
 				raise_exception=False,
 			)
 			created_users, failed_users = self.ldap_bulk_create_from_dicts(
@@ -991,14 +992,12 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
 			RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
 		)
-		self.search_attrs = self.filter_attr_builder(RuntimeSettings)\
-			.get_fetch_attrs()
+		self.search_attrs = self.filter_attr_builder(
+			RuntimeSettings
+		).get_fetch_attrs()
 		self.search_attrs.remove(LDAP_ATTR_USER_GROUPS)
 
-		keys = [
-			getlocalkeyforldapattr(v)
-			for v in self.search_attrs if v
-		]
+		keys = [getlocalkeyforldapattr(v) for v in self.search_attrs if v]
 
 		# Open LDAP Connection
 		with LDAPConnector(force_admin=True) as ldc:
@@ -1011,7 +1010,10 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 			if serialized_user.is_valid():
 				serialized_users.append(serialized_user.validated_data)
 			else:
-				logger.error("Could not serialize user (Errors: %s)", str(serialized_user.errors))
+				logger.error(
+					"Could not serialize user (Errors: %s)",
+					str(serialized_user.errors),
+				)
 
 		DBLogMixin.log(
 			user=request_user.id,
@@ -1023,6 +1025,8 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 
 		return StreamingHttpResponse(
 			csv_iterator(data["users"], keys),
-			content_type='text/csv',
-			headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+			content_type="text/csv",
+			headers={
+				"Content-Disposition": f'attachment; filename="{filename}"'
+			},
 		)

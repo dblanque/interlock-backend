@@ -48,6 +48,7 @@ DEFAULT_LOCAL_ATTRS = (
 	LOCAL_ATTR_MODIFIED,
 )
 
+
 class LDAPGroup(LDAPObject):
 	type = LDAPObjectTypes.GROUP
 	search_attrs = None

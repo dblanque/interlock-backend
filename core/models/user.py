@@ -104,7 +104,7 @@ class BaseUser(BaseModel, PermissionsMixin):
 		null=False,
 		blank=False,
 		db_index=True,
-		validators=[ldap_user_validator_se]
+		validators=[ldap_user_validator_se],
 	)
 	password = models.CharField(_("password"), max_length=128)
 	last_login = models.DateTimeField(_("last login"), blank=True, null=True)

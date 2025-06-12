@@ -880,7 +880,7 @@ class TestBulkCreate(BaseViewTestClass):
 		m_bulk_create_from_dicts = mocker.patch.object(
 			UserViewSet,
 			"bulk_create_from_dicts",
-			return_value=([ m_username ], []),
+			return_value=([m_username], []),
 		)
 
 		# Execution
@@ -892,7 +892,7 @@ class TestBulkCreate(BaseViewTestClass):
 
 		# Assertions
 		assert response.status_code == status.HTTP_200_OK
-		assert response.data.get("created_users") == [ m_username ]
+		assert response.data.get("created_users") == [m_username]
 		assert response.data.get("failed_users") == []
 		assert response.data.get("skipped_users") == []
 		m_index_map_fn.assert_not_called()

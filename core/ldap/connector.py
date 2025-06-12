@@ -287,19 +287,24 @@ class LDAPConnector(object):
 			pass
 
 		if not self._pytest:
-			if RuntimeSettings.LDAP_DOMAIN in ("example.com", "example.org",):
-				raise exc_base.ImproperlyConfigured(data={
-					"detail":"LDAP Domain cannot be %s" % (
-						RuntimeSettings.LDAP_DOMAIN
-					)
-				})
+			if RuntimeSettings.LDAP_DOMAIN in (
+				"example.com",
+				"example.org",
+			):
+				raise exc_base.ImproperlyConfigured(
+					data={
+						"detail": "LDAP Domain cannot be %s"
+						% (RuntimeSettings.LDAP_DOMAIN)
+					}
+				)
 
 			if RuntimeSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN == "EXAMPLE":
-				raise exc_base.ImproperlyConfigured(data={
-					"detail":"LDAP Realm cannot be %s" % (
-						RuntimeSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN
-					)
-				})
+				raise exc_base.ImproperlyConfigured(
+					data={
+						"detail": "LDAP Realm cannot be %s"
+						% (RuntimeSettings.LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN)
+					}
+				)
 
 		is_local_superuser = hasattr(user, "username") and (
 			user.username == DEFAULT_SUPERUSER_USERNAME

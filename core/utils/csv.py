@@ -2,9 +2,11 @@
 import csv
 from rest_framework.generics import QuerySet
 
+
 class PseudoBuffer:
 	def write(self, value):
 		return value
+
 
 def csv_iterator(queryset: list[dict] | QuerySet, fields):
 	pseudo_buffer = PseudoBuffer()
@@ -16,11 +18,9 @@ def csv_iterator(queryset: list[dict] | QuerySet, fields):
 		for item in queryset:
 			if not isinstance(item, dict):
 				raise TypeError("item in list should be a dictionary")
-			yield writer.writerow({
-				k: v
-				for k, v in item.items()
-				if k in fields
-			})
+			yield writer.writerow(
+				{k: v for k, v in item.items() if k in fields}
+			)
 	# If its a django queryset
 	elif isinstance(queryset, QuerySet):
 		for item in queryset.values(*fields):

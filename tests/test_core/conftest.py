@@ -220,6 +220,7 @@ def fc_ldap_entry(
 
 	return maker
 
+
 @pytest.fixture
 def f_default_ldap_path(g_runtime_settings: RuntimeSettingsFactory):
 	m_runtime_settings: RuntimeSettingsSingleton = g_runtime_settings()

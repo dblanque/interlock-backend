@@ -1,6 +1,7 @@
 ########################### Standard Pytest Imports ############################
 import pytest
 from pytest_mock import MockerFixture, MockType
+
 ################################################################################
 from core.views.mixins.user import UserMixin, AllUserMixins
 from core.models.user import User, USER_TYPE_LDAP
@@ -26,15 +27,18 @@ def f_log(mocker: MockerFixture):
 def f_mixin():
 	return UserMixin()
 
+
 @pytest.fixture
 def f_all_users_mixin():
 	return AllUserMixins()
+
 
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector: ConnectorFactory):
 	return g_ldap_connector(
 		patch_path="core.views.mixins.user.main.LDAPConnector"
 	)
+
 
 class TestLocalUserExists:
 	def test_username(self, f_mixin: UserMixin, f_user_local: User):
@@ -169,6 +173,7 @@ class TestUserChangeStatus:
 		with pytest.raises(UserNotLocalType):
 			f_mixin.user_change_status(m_user.pk, target_status=True)
 
+
 @pytest.fixture
 def f_index_map():
 	return {
@@ -177,6 +182,7 @@ def f_index_map():
 		2: LOCAL_ATTR_FIRST_NAME,
 		3: LOCAL_ATTR_LAST_NAME,
 	}
+
 
 class TestBulkCreateFromCsv:
 	def test_raises_row_length_mismatch(
@@ -211,10 +217,12 @@ class TestBulkCreateFromCsv:
 			],
 			index_map=f_index_map,
 		)
-		assert error == [{
-			LOCAL_ATTR_USERNAME: "someuser",
-			"stage": "serializer",
-		}]
+		assert error == [
+			{
+				LOCAL_ATTR_USERNAME: "someuser",
+				"stage": "serializer",
+			}
+		]
 		assert not User.objects.filter(username="someuser").exists()
 
 	@pytest.mark.django_db
@@ -239,10 +247,12 @@ class TestBulkCreateFromCsv:
 			index_map=f_index_map,
 		)
 		m_save.assert_called_once()
-		assert error == [{
-			LOCAL_ATTR_USERNAME: "someuser",
-			"stage": "save",
-		}]
+		assert error == [
+			{
+				LOCAL_ATTR_USERNAME: "someuser",
+				"stage": "save",
+			}
+		]
 		assert not User.objects.filter(username="someuser").exists()
 
 	@pytest.mark.django_db
@@ -288,7 +298,7 @@ class TestBulkCreateFromDicts:
 		f_log: MockType,
 	):
 		m_user_success = "someuser#1234"
-		m_user_bad_email ="invaliduseremail"
+		m_user_bad_email = "invaliduseremail"
 		created, error = f_mixin.bulk_create_from_dicts(
 			request_user=admin_user,
 			user_dicts=[
@@ -312,7 +322,7 @@ class TestBulkCreateFromDicts:
 				},
 			],
 		)
-		assert created == [ m_user_success ]
+		assert created == [m_user_success]
 		assert error == [
 			{
 				LOCAL_ATTR_USERNAME: m_user_bad_email,
@@ -357,10 +367,12 @@ class TestBulkCreateFromDicts:
 				},
 			],
 		)
-		assert error == [{
-			LOCAL_ATTR_USERNAME: "someuser",
-			"stage": "save",
-		}]
+		assert error == [
+			{
+				LOCAL_ATTR_USERNAME: "someuser",
+				"stage": "save",
+			}
+		]
 		m_save.assert_called_once()
 		f_log.assert_not_called()
 
@@ -514,7 +526,7 @@ class TestBulkCheckUsers:
 				)
 			],
 			raise_exception=False,
-		) == [ f_user_local.username ]
+		) == [f_user_local.username]
 
 	def test_returns_ldap_user_exists(
 		self,
@@ -541,7 +553,7 @@ class TestBulkCheckUsers:
 				)
 			],
 			raise_exception=False,
-		) == [ f_user_ldap.username ]
+		) == [f_user_ldap.username]
 
 	def test_not_exists_success(
 		self,

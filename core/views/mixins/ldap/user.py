@@ -86,9 +86,11 @@ import re
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
+
 class LdapListResult(TypedDict):
 	headers: list[str]
 	users: list[dict[Any]]
+
 
 class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 	"""LDAP User Mixin
@@ -96,6 +98,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 	Methods in this mixin may be used in the local django users viewset, so
 	beware not to have any overlap with its' mixin (if any exists).
 	"""
+
 	serializer_class = LDAPUserSerializer
 	ldap_connection: LDAPConnectionProtocol = None
 	# LDAP Search Filter
@@ -857,8 +860,9 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 				raise exc_user.UserBulkInsertLengthError(
 					data={"detail": f"Row number {idx} column count error."}
 				)
-		password_in_csv = True \
-			if LOCAL_ATTR_PASSWORD in index_map.values() else False
+		password_in_csv = (
+			True if LOCAL_ATTR_PASSWORD in index_map.values() else False
+		)
 
 		for row_idx, row in enumerate(user_rows):
 			# Translate Data
@@ -871,19 +875,21 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 				user_pwd = placeholder_password
 			elif password_in_csv:
 				user_pwd = user_attrs.pop(LOCAL_ATTR_PASSWORD)
-			
+
 			# Validate Data
 			serializer = LDAPUserSerializer(
 				data=user_attrs | {LOCAL_ATTR_PATH: path}
 			)
 			if not serializer.is_valid():
 				logger.error(serializer.errors)
-				failed_users.append({
-					LOCAL_ATTR_USERNAME: row_idx \
-						if LOCAL_ATTR_USERNAME in serializer.errors \
+				failed_users.append(
+					{
+						LOCAL_ATTR_USERNAME: row_idx
+						if LOCAL_ATTR_USERNAME in serializer.errors
 						else user_attrs[LOCAL_ATTR_USERNAME],
-					"stage": "serializer",
-				})
+						"stage": "serializer",
+					}
+				)
 				continue
 
 			# Cleanup Data
@@ -896,10 +902,12 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 				user_dn = self.ldap_user_insert(data=cleaned_data)
 			except Exception as e:
 				logger.exception(e)
-				failed_users.append({
-					LOCAL_ATTR_USERNAME: user_attrs[LOCAL_ATTR_USERNAME],
-					"stage": "save",
-				})
+				failed_users.append(
+					{
+						LOCAL_ATTR_USERNAME: user_attrs[LOCAL_ATTR_USERNAME],
+						"stage": "save",
+					}
+				)
 				continue
 
 			created_users.append(user_attrs[LOCAL_ATTR_USERNAME])
@@ -914,10 +922,14 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 					)
 				except Exception as e:
 					logger.exception(e)
-					failed_users.append({
-						LOCAL_ATTR_USERNAME: user_attrs[LOCAL_ATTR_USERNAME],
-						"stage": "password",
-					})
+					failed_users.append(
+						{
+							LOCAL_ATTR_USERNAME: user_attrs[
+								LOCAL_ATTR_USERNAME
+							],
+							"stage": "password",
+						}
+					)
 
 			# Log operation
 			DBLogMixin.log(
@@ -963,12 +975,14 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 			)
 			if not serializer.is_valid():
 				logger.error(serializer.errors)
-				failed_users.append({
-					LOCAL_ATTR_USERNAME: user_nr \
-						if LOCAL_ATTR_USERNAME in serializer.errors \
+				failed_users.append(
+					{
+						LOCAL_ATTR_USERNAME: user_nr
+						if LOCAL_ATTR_USERNAME in serializer.errors
 						else user_attrs[LOCAL_ATTR_USERNAME],
-					"stage": "serializer",
-				})
+						"stage": "serializer",
+					}
+				)
 				continue
 			cleaned_data = self.cleanup_empty_str_values(
 				serializer.validated_data
@@ -979,10 +993,12 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 				user_dn = self.ldap_user_insert(data=cleaned_data)
 			except Exception as e:
 				logger.exception(e)
-				failed_users.append({
-					LOCAL_ATTR_USERNAME: user_attrs[LOCAL_ATTR_USERNAME],
-					"stage": "save",
-				})
+				failed_users.append(
+					{
+						LOCAL_ATTR_USERNAME: user_attrs[LOCAL_ATTR_USERNAME],
+						"stage": "save",
+					}
+				)
 				continue
 
 			created_users.append(user_attrs[LOCAL_ATTR_USERNAME])
@@ -997,10 +1013,12 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 					)
 				except Exception as e:
 					logger.exception(e)
-					failed_users.append({
-						LOCAL_ATTR_USERNAME: user_nr,
-						"stage": "password",
-					})
+					failed_users.append(
+						{
+							LOCAL_ATTR_USERNAME: user_nr,
+							"stage": "password",
+						}
+					)
 
 			# Log operation
 			DBLogMixin.log(
@@ -1011,6 +1029,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 			)
 
 		return created_users, failed_users
+
 
 class LDAPUserBaseMixin(LDAPUserMixin):
 	@transaction.atomic

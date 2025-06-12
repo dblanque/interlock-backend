@@ -744,6 +744,8 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 
 		return StreamingHttpResponse(
 			csv_iterator(result, keys),
-			content_type='text/csv',
-			headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+			content_type="text/csv",
+			headers={
+				"Content-Disposition": f'attachment; filename="{filename}"'
+			},
 		)

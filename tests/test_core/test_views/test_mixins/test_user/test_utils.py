@@ -1,26 +1,25 @@
 ########################### Standard Pytest Imports ############################
 import pytest
+
 ################################################################################
 from core.views.mixins.user.utils import UserUtilsMixin, ALL_LOCAL_ATTRS
 from core.constants.attrs import *
 from core.exceptions import base as exc_base, users as exc_user
 from core.models.ldap_user import DEFAULT_LOCAL_ATTRS
 
+
 @pytest.fixture
 def f_mixin():
 	return UserUtilsMixin()
 
+
 @pytest.mark.django_db
 class TestGetLdapBackendEnabled:
-	def test_enabled(
-		self, f_mixin: UserUtilsMixin, g_interlock_ldap_enabled
-	):
+	def test_enabled(self, f_mixin: UserUtilsMixin, g_interlock_ldap_enabled):
 		f_mixin.get_ldap_backend_enabled()
 		assert f_mixin.ldap_backend_enabled
 
-	def test_disabled(
-		self, f_mixin: UserUtilsMixin, g_interlock_ldap_disabled
-	):
+	def test_disabled(self, f_mixin: UserUtilsMixin, g_interlock_ldap_disabled):
 		f_mixin.get_ldap_backend_enabled()
 		assert not f_mixin.ldap_backend_enabled
 
@@ -28,28 +27,35 @@ class TestGetLdapBackendEnabled:
 		f_mixin.get_ldap_backend_enabled()
 		assert not f_mixin.ldap_backend_enabled
 
+
 class TestValidateLocalAttrs:
 	def test_with_defaults(self, f_mixin: UserUtilsMixin):
-		assert f_mixin.validate_local_attrs([
-			LOCAL_ATTR_USERNAME, # User Attr
-			LOCAL_ATTR_CAN_CHANGE_PWD, # User Property Attr
-			LOCAL_ATTR_GROUP_MEMBERS, # Group Attr
-		]) is None
-	
+		assert (
+			f_mixin.validate_local_attrs(
+				[
+					LOCAL_ATTR_USERNAME,  # User Attr
+					LOCAL_ATTR_CAN_CHANGE_PWD,  # User Property Attr
+					LOCAL_ATTR_GROUP_MEMBERS,  # Group Attr
+				]
+			)
+			is None
+		)
+
 	def test_invalid_attr_raises(self, f_mixin: UserUtilsMixin):
 		with pytest.raises(exc_base.BadRequest):
 			f_mixin.validate_local_attrs(["some_bad_attr"])
-	
+
 	def test_with_user_attrs_raises(self, f_mixin: UserUtilsMixin):
 		with pytest.raises(exc_base.BadRequest):
 			f_mixin.validate_local_attrs(
 				[
-					LOCAL_ATTR_USERNAME, # User Attr
-					LOCAL_ATTR_CAN_CHANGE_PWD, # User Property Attr
-					LOCAL_ATTR_GROUP_MEMBERS, # Group Attr
+					LOCAL_ATTR_USERNAME,  # User Attr
+					LOCAL_ATTR_CAN_CHANGE_PWD,  # User Property Attr
+					LOCAL_ATTR_GROUP_MEMBERS,  # Group Attr
 				],
-				check_attrs=DEFAULT_LOCAL_ATTRS
+				check_attrs=DEFAULT_LOCAL_ATTRS,
 			)
+
 
 class TestValidateCsvHeaders:
 	@pytest.fixture
@@ -76,9 +82,16 @@ class TestValidateCsvHeaders:
 		assert "must be of type dict" in e.value.detail.get("detail")
 
 	def test_with_headers_only(self, f_mixin: UserUtilsMixin):
-		assert f_mixin.validate_csv_headers(
-			headers=[LOCAL_ATTR_USERNAME, LOCAL_ATTR_EMAIL, LOCAL_ATTR_ADDRESS]
-		) is None
+		assert (
+			f_mixin.validate_csv_headers(
+				headers=[
+					LOCAL_ATTR_USERNAME,
+					LOCAL_ATTR_EMAIL,
+					LOCAL_ATTR_ADDRESS,
+				]
+			)
+			is None
+		)
 
 	def test_raises_no_username_with_headers_only(
 		self,
@@ -91,10 +104,13 @@ class TestValidateCsvHeaders:
 		assert "is required in mapping" in e.value.detail.get("detail")
 
 	def test_with_mapping(self, f_mixin: UserUtilsMixin, m_csv_map: dict):
-		assert f_mixin.validate_csv_headers(
-			headers=list(m_csv_map.values()),
-			csv_map=m_csv_map,
-		) is None
+		assert (
+			f_mixin.validate_csv_headers(
+				headers=list(m_csv_map.values()),
+				csv_map=m_csv_map,
+			)
+			is None
+		)
 
 	def test_mapping_length_conflict_raises(
 		self,
@@ -137,6 +153,7 @@ class TestValidateCsvHeaders:
 				csv_map=m_csv_map,
 			)
 		assert "Unmapped key" in e.value.detail.get("detail")
+
 
 class TestValidateAndMapCsvHeaders:
 	def test_success_no_csv_map(self, f_mixin: UserUtilsMixin):

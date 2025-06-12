@@ -33,6 +33,7 @@ from random import getrandbits
 logger = logging.getLogger(__name__)
 this_module = sys.modules[__name__]
 
+
 # ! You also have to add the settings to the following files:
 # core.models.ldap_settings
 # core.models.ldap_settings_runtime <--- You're Here
@@ -129,8 +130,8 @@ class RuntimeSettingsSingleton:
 	def get_settings(self, uuid, quiet=False) -> dict:
 		if not quiet:
 			logger.info(
-				"Re-synchronizing settings for %s (Configuration Instance %s)" %
-				( this_module, uuid )
+				"Re-synchronizing settings for %s (Configuration Instance %s)"
+				% (this_module, uuid)
 			)
 		active_preset = None
 		r = {}

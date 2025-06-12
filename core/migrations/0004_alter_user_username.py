@@ -5,20 +5,20 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    dependencies = [
-        ("core", "0003_applicationsecuritygroup_uuid"),
-    ]
+	dependencies = [
+		("core", "0003_applicationsecuritygroup_uuid"),
+	]
 
-    operations = [
-        migrations.AlterField(
-            model_name="user",
-            name="username",
-            field=models.CharField(
-                db_index=True,
-                max_length=128,
-                unique=True,
-                validators=[core.serializers.ldap.ldap_user_validator_se],
-                verbose_name="username",
-            ),
-        ),
-    ]
+	operations = [
+		migrations.AlterField(
+			model_name="user",
+			name="username",
+			field=models.CharField(
+				db_index=True,
+				max_length=128,
+				unique=True,
+				validators=[core.serializers.ldap.ldap_user_validator_se],
+				verbose_name="username",
+			),
+		),
+	]

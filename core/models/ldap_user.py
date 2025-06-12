@@ -64,6 +64,7 @@ DEFAULT_LOCAL_ATTRS = (
 	LOCAL_ATTR_INITIALS,
 )
 
+
 class LDAPUser(LDAPObject):
 	type = LDAPObjectTypes.USER
 	search_attrs = None

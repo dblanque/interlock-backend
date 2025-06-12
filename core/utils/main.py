@@ -11,6 +11,7 @@ from core.ldap.defaults import LDAP_LDIF_IDENTIFIERS
 from typing import Iterable, Any, overload
 from ldap3 import Entry as LDAPEntry, Attribute as LDAPAttribute
 
+
 @overload
 def getlocalkeyforldapattr(v: str, default: str = None): ...
 

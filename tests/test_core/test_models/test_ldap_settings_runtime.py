@@ -42,11 +42,13 @@ def f_db_exists(mocker: MockerFixture):
 	"""Mocks db_table_exists"""
 	return mocker.patch("core.models.ldap_settings_runtime.db_table_exists")
 
+
 @pytest.fixture(autouse=True)
 def f_django_apps(mocker: MockerFixture):
 	m_apps = mocker.patch("core.models.ldap_settings_runtime.apps")
 	m_apps.ready = True
 	return m_apps
+
 
 def test_singleton_creates_only_one_instance():
 	"""Verify only one instance exists even with multiple instantiations"""
@@ -130,6 +132,7 @@ def test_all_properties_initialized():
 	instance = RuntimeSettingsSingleton()
 	for key in LDAP_SETTING_MAP.keys():
 		assert hasattr(instance, key)
+
 
 def test_init_calls_newuuid_and_resync(mocker: MockerFixture):
 	"""Test that __init__ calls __new_uuid__ and resync()"""
@@ -391,12 +394,18 @@ class TestLDAPSettingsWithDB:
 			preset=f_ldap_settings_preset,
 		)
 
-		m_settings = f_runtime_settings.get_settings("non-existing-uuid", quiet=True)
+		m_settings = f_runtime_settings.get_settings(
+			"non-existing-uuid", quiet=True
+		)
 		assert m_settings.get(test_key) == expected_result
 		if test_key == "LDAP_AUTH_CONNECTION_PASSWORD":
 			m_aes_decrypt.assert_called_once()
 
-	def test_get_settings_decrypt(self, f_ldap_settings_preset, f_runtime_settings: RuntimeSettingsSingleton):
+	def test_get_settings_decrypt(
+		self,
+		f_ldap_settings_preset,
+		f_runtime_settings: RuntimeSettingsSingleton,
+	):
 		m_key = "LDAP_AUTH_CONNECTION_PASSWORD"
 		m_value = "mockPassword1234"
 		LDAPSetting.objects.create(
@@ -406,5 +415,7 @@ class TestLDAPSettingsWithDB:
 			preset=f_ldap_settings_preset,
 		)
 
-		m_settings = f_runtime_settings.get_settings("non-existing-uuid", quiet=True)
+		m_settings = f_runtime_settings.get_settings(
+			"non-existing-uuid", quiet=True
+		)
 		assert m_settings.get(m_key) == m_value

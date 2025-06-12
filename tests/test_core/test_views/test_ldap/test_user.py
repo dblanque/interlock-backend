@@ -964,6 +964,7 @@ def f_bulk_insert_data(f_runtime_settings: RuntimeSettingsSingleton):
 	}
 	return result
 
+
 class TestBulkCreate(BaseViewTestClass):
 	_endpoint = "ldap/users-bulk-create"
 
@@ -1100,7 +1101,7 @@ class TestBulkCreate(BaseViewTestClass):
 
 		# Assertions
 		assert response.status_code == status.HTTP_200_OK
-		assert response.data.get("created_users") == [ m_username ]
+		assert response.data.get("created_users") == [m_username]
 		assert response.data.get("failed_users") == []
 		assert response.data.get("skipped_users") == []
 		m_index_map_fn.assert_not_called()
@@ -1157,6 +1158,7 @@ class TestBulkCreate(BaseViewTestClass):
 		m_bulk_create_from_csv.assert_not_called()
 		m_bulk_check_users.assert_not_called()
 		m_bulk_create_from_dicts.assert_not_called()
+
 
 @pytest.fixture
 def f_bulk_update_data():

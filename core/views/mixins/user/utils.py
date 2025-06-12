@@ -36,6 +36,7 @@ ALL_LOCAL_ATTRS = {
 	if k.startswith("LOCAL_")
 }
 
+
 class UserUtilsMixin:
 	ldap_backend_enabled = False
 
@@ -62,8 +63,8 @@ class UserUtilsMixin:
 				raise exc_base.BadRequest(
 					data={
 						"detail": "All headers and/or header mappings must"
-							"be of type str and existing local attributes "
-							"(Offending key: %s)." % (str(v))
+						"be of type str and existing local attributes "
+						"(Offending key: %s)." % (str(v))
 					}
 				)
 
@@ -86,17 +87,21 @@ class UserUtilsMixin:
 			csv_map_keys = list(csv_map.keys())
 			# Compare length with headers
 			if len(csv_map_keys) != len(headers):
-				raise exc_user.UserBulkInsertMappingError(data={
-					"detail": "Header mapping length mismatch with CSV headers."
-				})
-			
+				raise exc_user.UserBulkInsertMappingError(
+					data={
+						"detail": "Header mapping length mismatch with CSV headers."
+					}
+				)
+
 			# Ensure local username key exists
 			if not local_attrs.LOCAL_ATTR_USERNAME in csv_map_keys:
-				raise exc_user.UserBulkInsertMappingError(data={
-					"detail":"{h} header is required in mapping".format(
-						h=local_attrs.LOCAL_ATTR_USERNAME
-					)
-				})
+				raise exc_user.UserBulkInsertMappingError(
+					data={
+						"detail": "{h} header is required in mapping".format(
+							h=local_attrs.LOCAL_ATTR_USERNAME
+						)
+					}
+				)
 
 			# Validate csv_map keys with local attributes
 			self.validate_local_attrs(csv_map_keys, check_attrs)
@@ -105,17 +110,17 @@ class UserUtilsMixin:
 			for v in csv_map.values():
 				if v not in headers:
 					raise exc_user.UserBulkInsertMappingError(
-						data={
-							"detail": "Unmapped key detected (%s)" % (v)
-						}
+						data={"detail": "Unmapped key detected (%s)" % (v)}
 					)
 		else:
 			if not local_attrs.LOCAL_ATTR_USERNAME in headers:
-				raise exc_user.UserBulkInsertMappingError(data={
-					"detail":"{h} header is required in mapping".format(
-						h=local_attrs.LOCAL_ATTR_USERNAME
-					)
-				})
+				raise exc_user.UserBulkInsertMappingError(
+					data={
+						"detail": "{h} header is required in mapping".format(
+							h=local_attrs.LOCAL_ATTR_USERNAME
+						)
+					}
+				)
 
 			self.validate_local_attrs(headers, check_attrs)
 

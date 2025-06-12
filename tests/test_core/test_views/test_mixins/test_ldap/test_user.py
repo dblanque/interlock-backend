@@ -1,6 +1,7 @@
 ########################### Standard Pytest Imports ############################
 import pytest
 from pytest_mock import MockerFixture, MockType
+
 ################################################################################
 from core.views.mixins.logs import LogMixin
 from core.views.mixins.user import LDAPUserMixin
@@ -68,9 +69,11 @@ def f_log_mixin(mocker):
 	)
 	return mock
 
+
 @pytest.fixture
 def f_log(f_log_mixin):
 	return f_log_mixin.log
+
 
 @pytest.fixture(autouse=True)
 def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
@@ -132,6 +135,7 @@ def f_default_user_filter(f_runtime_settings: RuntimeSettingsSingleton):
 		return _filter
 
 	return maker
+
 
 class LDAPUserEntryFactory(Protocol):
 	@overload
@@ -1399,6 +1403,7 @@ class TestDelete:
 			log_target="testuser",
 		)
 
+
 @pytest.fixture
 def f_index_map():
 	return {
@@ -1407,6 +1412,7 @@ def f_index_map():
 		2: LOCAL_ATTR_FIRST_NAME,
 		3: LOCAL_ATTR_LAST_NAME,
 	}
+
 
 @pytest.mark.django_db
 class TestLdapBulkCreateFromCsv:
@@ -1442,13 +1448,15 @@ class TestLdapBulkCreateFromCsv:
 		m_user_data[LOCAL_ATTR_LAST_NAME] = False
 		created, error = f_user_mixin.ldap_bulk_create_from_csv(
 			request_user=admin_user,
-			user_rows=[ m_user_data.values() ],
+			user_rows=[m_user_data.values()],
 			index_map=f_index_map,
 		)
-		assert error == [{
-			LOCAL_ATTR_USERNAME: "someuser",
-			"stage": "serializer",
-		}]
+		assert error == [
+			{
+				LOCAL_ATTR_USERNAME: "someuser",
+				"stage": "serializer",
+			}
+		]
 
 	def test_save_error(
 		self,
@@ -1474,20 +1482,22 @@ class TestLdapBulkCreateFromCsv:
 		# Execution
 		created, error = f_user_mixin.ldap_bulk_create_from_csv(
 			request_user=admin_user,
-			user_rows=[ m_user_data.values() ],
+			user_rows=[m_user_data.values()],
 			index_map=f_index_map,
 		)
 
 		# Assertions
-		assert error == [{
-			LOCAL_ATTR_USERNAME: "someuser",
-			"stage": "save",
-		}]
+		assert error == [
+			{
+				LOCAL_ATTR_USERNAME: "someuser",
+				"stage": "save",
+			}
+		]
 		m_ldap_user_insert.assert_called_once_with(
 			data={
-				k: v
-				for k, v in zip(f_index_map.values(), m_user_data.values())
-			} | f_default_ldap_path
+				k: v for k, v in zip(f_index_map.values(), m_user_data.values())
+			}
+			| f_default_ldap_path
 		)
 		m_ldap_set_password.assert_not_called()
 		f_log.assert_not_called()
@@ -1516,16 +1526,16 @@ class TestLdapBulkCreateFromCsv:
 		# Execution
 		f_user_mixin.ldap_bulk_create_from_csv(
 			request_user=admin_user,
-			user_rows=[ m_user_data.values() ],
+			user_rows=[m_user_data.values()],
 			index_map=f_index_map,
 		)
 
 		# Assertions
 		m_ldap_user_insert.assert_called_once_with(
 			data={
-				k: v
-				for k, v in zip(f_index_map.values(), m_user_data.values())
-			} | f_default_ldap_path
+				k: v for k, v in zip(f_index_map.values(), m_user_data.values())
+			}
+			| f_default_ldap_path
 		)
 		m_ldap_set_password.assert_not_called()
 		f_log.assert_called_once_with(
@@ -1534,6 +1544,7 @@ class TestLdapBulkCreateFromCsv:
 			log_target_class=LOG_CLASS_USER,
 			log_target=m_user_data[LOCAL_ATTR_USERNAME],
 		)
+
 
 class TestLdapBulkCreateFromDicts:
 	def test_success(
@@ -1555,7 +1566,7 @@ class TestLdapBulkCreateFromDicts:
 		)
 
 		m_user_success = "someuser#1234"
-		m_user_bad_email ="invaliduseremail"
+		m_user_bad_email = "invaliduseremail"
 		m_users = [
 			{
 				LOCAL_ATTR_USERNAME: m_user_success,
@@ -1580,7 +1591,7 @@ class TestLdapBulkCreateFromDicts:
 			request_user=admin_user,
 			user_dicts=m_users,
 		)
-		assert created == [ m_user_success ]
+		assert created == [m_user_success]
 		assert error == [
 			{
 				LOCAL_ATTR_USERNAME: m_user_bad_email,
@@ -1628,12 +1639,14 @@ class TestLdapBulkCreateFromDicts:
 		}
 		created, error = f_user_mixin.ldap_bulk_create_from_dicts(
 			request_user=admin_user,
-			user_dicts=[ m_user_data ],
+			user_dicts=[m_user_data],
 		)
-		assert error == [{
-			LOCAL_ATTR_USERNAME: "someuser",
-			"stage": "save",
-		}]
+		assert error == [
+			{
+				LOCAL_ATTR_USERNAME: "someuser",
+				"stage": "save",
+			}
+		]
 		m_ldap_user_insert.assert_called_once_with(
 			data=m_user_data | f_default_ldap_path
 		)

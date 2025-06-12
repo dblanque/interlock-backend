@@ -66,7 +66,7 @@ class TOTPViewSet(BaseViewSet):
 		return Response(data=data)
 
 	@auth_required
-	@action(detail=False, methods=["get","post"], url_path="create-device")
+	@action(detail=False, methods=["get", "post"], url_path="create-device")
 	def create_device(self, request: Request):
 		"""Creates TOTP Device for request user"""
 		user: User = request.user

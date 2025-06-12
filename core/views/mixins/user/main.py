@@ -157,12 +157,14 @@ class UserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 				serializer = self.serializer_class(data=user_attrs)
 				if not serializer.is_valid():
 					logger.error(serializer.errors)
-					failed_users.append({
-						LOCAL_ATTR_USERNAME: row_idx \
-							if LOCAL_ATTR_USERNAME in serializer.errors \
+					failed_users.append(
+						{
+							LOCAL_ATTR_USERNAME: row_idx
+							if LOCAL_ATTR_USERNAME in serializer.errors
 							else user_attrs[LOCAL_ATTR_USERNAME],
-						"stage": "serializer",
-					})
+							"stage": "serializer",
+						}
+					)
 					continue
 
 				# Cleanup Data
@@ -177,10 +179,14 @@ class UserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 					user_instance.save()
 				except Exception as e:
 					logger.exception(e)
-					failed_users.append({
-						LOCAL_ATTR_USERNAME: user_attrs[LOCAL_ATTR_USERNAME],
-						"stage": "save",
-					})
+					failed_users.append(
+						{
+							LOCAL_ATTR_USERNAME: user_attrs[
+								LOCAL_ATTR_USERNAME
+							],
+							"stage": "save",
+						}
+					)
 					continue
 
 				created_users.append(user_attrs[LOCAL_ATTR_USERNAME])
@@ -218,12 +224,14 @@ class UserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 				serializer: UserSerializer = self.serializer_class(data=user)
 				if not serializer.is_valid():
 					logger.error(serializer.errors)
-					failed_users.append({
-						LOCAL_ATTR_USERNAME: user_nr \
-							if LOCAL_ATTR_USERNAME in serializer.errors \
+					failed_users.append(
+						{
+							LOCAL_ATTR_USERNAME: user_nr
+							if LOCAL_ATTR_USERNAME in serializer.errors
 							else user[LOCAL_ATTR_USERNAME],
-						"stage": "serializer",
-					})
+							"stage": "serializer",
+						}
+					)
 					continue
 				cleaned_data = self.cleanup_empty_str_values(
 					serializer.validated_data
@@ -236,10 +244,12 @@ class UserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 					user_instance.save()
 				except Exception as e:
 					logger.exception(e)
-					failed_users.append({
-						LOCAL_ATTR_USERNAME: user[LOCAL_ATTR_USERNAME],
-						"stage": "save",
-					})
+					failed_users.append(
+						{
+							LOCAL_ATTR_USERNAME: user[LOCAL_ATTR_USERNAME],
+							"stage": "save",
+						}
+					)
 					continue
 
 				created_users.append(user[LOCAL_ATTR_USERNAME])
@@ -254,8 +264,8 @@ class UserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 
 		return created_users, failed_users
 
-class AllUserMixins(LDAPUserMixin, UserMixin):
 
+class AllUserMixins(LDAPUserMixin, UserMixin):
 	def check_user_exists(
 		self,
 		username: str = None,

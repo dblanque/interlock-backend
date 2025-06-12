@@ -49,18 +49,18 @@ def is_axios_request(request: HttpRequest):
 	headers = request.headers
 	# Check for Axios-specific headers
 	is_xml = (
-		headers.get('X-Requested-With', "").lower() == 'XMLHttpRequest' or
-		headers.get('X-XHR-Requested-With', "").lower() == 'XMLHttpRequest'
+		headers.get("X-Requested-With", "").lower() == "XMLHttpRequest"
+		or headers.get("X-XHR-Requested-With", "").lower() == "XMLHttpRequest"
 	)
 	# Check for content type (Axios mostly sends JSON)
-	is_json = request.content_type == 'application/json'
+	is_json = request.content_type == "application/json"
 	# Check if it's an API view (DRF adds this attribute)
-	renderer = getattr(request, 'accepted_renderer', None)
+	renderer = getattr(request, "accepted_renderer", None)
 	renderer_is_accepted = renderer is not None
-	return (
-		(is_xml or is_json or renderer_is_accepted) and
-		not isinstance(renderer, BrowsableAPIRenderer)
+	return (is_xml or is_json or renderer_is_accepted) and not isinstance(
+		renderer, BrowsableAPIRenderer
 	)
+
 
 class RemoveTokenResponse:
 	def __new__(
