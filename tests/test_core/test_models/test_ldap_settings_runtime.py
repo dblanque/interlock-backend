@@ -128,7 +128,7 @@ def test_singleton_uuid_behavior():
 
 def test_all_properties_initialized():
 	instance = RuntimeSettingsSingleton()
-	for key in LDAP_SETTING_MAP.keys:
+	for key in LDAP_SETTING_MAP.keys():
 		assert hasattr(instance, key)
 
 def test_init_calls_newuuid_and_resync(mocker: MockerFixture):
