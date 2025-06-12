@@ -503,11 +503,18 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 			)
 
 		if user_rows:  # Insert from CSV
+			headers = data.pop("headers", None)
+
+			# Add Password attr to valid attrs if necessary
+			check_attrs = list(DEFAULT_LOCAL_ATTRS)
+			if LOCAL_ATTR_PASSWORD in headers:
+				check_attrs.append(LOCAL_ATTR_PASSWORD)
+
 			# Validate and Map indices for local attrs
 			index_map = self.validate_and_map_csv_headers(
-				headers=data.pop("headers", None),
+				headers=headers,
 				csv_map=data.pop("mapping", None),
-				check_attrs=DEFAULT_LOCAL_ATTRS,
+				check_attrs=tuple(check_attrs),
 			)
 
 			# Check that no username or email overlaps
@@ -641,7 +648,8 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 				try:
 					self.ldap_user_update(data=validated_data)
 					updated_users.append(user_to_update)
-				except:
+				except Exception as e:
+					logger.exception(e)
 					failed_users.append(
 						{
 							LOCAL_ATTR_USERNAME: user_to_update,
