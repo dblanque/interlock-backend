@@ -430,6 +430,8 @@ def list_user_perms(
 		username = getldapattrvalue(user, _username_field, "")
 	else:
 		user: dict
+		if LOCAL_ATTR_UAC in user:
+			_uac_field = LOCAL_ATTR_UAC
 		if not _uac_field in user:
 			raise ValueError(
 				f"User dictionary does not contain a {_uac_field} key."
