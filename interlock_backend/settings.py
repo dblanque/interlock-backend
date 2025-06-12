@@ -207,7 +207,7 @@ AUTHENTICATION_BACKENDS = (
 AUTH_USER_MODEL = "core.User"
 
 LOG_FILE_FOLDER = f"{BASE_DIR}/logs"
-LOG_FILE_PATH = f"{LOG_FILE_FOLDER}/interlock.drf.log"
+LOG_FILE_PATH = f"{LOG_FILE_FOLDER}/interlock.log"
 
 ################################################################################
 ################################ OPEN ID CONNECT ###############################
@@ -234,12 +234,6 @@ if not os.path.exists(LOG_FILE_PATH):
 if not LOG_FILE_PATH:
 	raise ImproperlyConfigured("No LOG_FILE_PATH found.")
 
-########### ! DO NOT EVER, FOR ANY REASON, USE THIS IN PRODUCTION ! ############
-############# ! NO MATTER WHAT, NO MATTER WHERE, FOR ANY REASON ! ##############
-############################# ! - Michael Scott ! ##############################
-DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS = False
-# ! ######################################################################## ! #
-
 # Defaults
 LOG_LEVEL = "INFO"
 LDAP3_MODULE_LOG_LEVEL = "WARNING"
@@ -257,7 +251,6 @@ for k in (
 	"PERF_LOGGING_ROUND",
 	"AES_RSA_PERF_LOGGING",
 	"DIRTREE_PERF_LOGGING",
-	"DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS",
 ):
 	load_override(globals(), k)
 
