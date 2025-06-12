@@ -16,6 +16,7 @@ from django.utils.translation import gettext_lazy as _
 from datetime import timedelta
 from django.core.management.utils import get_random_secret_key
 from interlock_backend.utils import load_override
+from interlock_backend.server_timezone import get_server_timezone
 import mimetypes
 
 mimetypes.add_type("text/css", ".css", True)
@@ -401,11 +402,7 @@ SIMPLE_JWT = {
 LANGUAGE_CODE = "en-us"
 
 # Get current System Olson Timezone
-try:
-	TIME_ZONE = "/".join(os.readlink("/etc/timezone").split("/")[-2:])
-except:
-	TIME_ZONE = "UTC"
-
+TIME_ZONE = get_server_timezone()
 USE_I18N = True
 USE_TZ = True
 
