@@ -1,4 +1,3 @@
-from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from core.models.application import User
 from django.core.validators import validate_email
