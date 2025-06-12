@@ -532,13 +532,15 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 			)
 
 			# Perform creation operations
-			created_users, failed_users = self.ldap_bulk_create_from_csv(
-				request_user=request_user,
-				user_rows=user_rows,
-				index_map=index_map,
-				path=create_path,
-				placeholder_password=data.pop("placeholder_password", None),
-			)
+			with LDAPConnector(request_user) as ldc:
+				self.ldap_connection = ldc.connection
+				created_users, failed_users = self.ldap_bulk_create_from_csv(
+					request_user=request_user,
+					user_rows=user_rows,
+					index_map=index_map,
+					path=create_path,
+					placeholder_password=data.pop("placeholder_password", None),
+				)
 		elif user_dicts:  # Insert from list of dicts
 			skipped_users = self.bulk_check_users(
 				[
@@ -551,12 +553,14 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 				ignore_local=True,  # Todo - make this change based on a setting
 				raise_exception=False,
 			)
-			created_users, failed_users = self.ldap_bulk_create_from_dicts(
-				request_user=request_user,
-				user_dicts=user_dicts,
-				path=create_path,
-				placeholder_password=data.pop("placeholder_password", None),
-			)
+			with LDAPConnector(request_user) as ldc:
+				self.ldap_connection = ldc.connection
+				created_users, failed_users = self.ldap_bulk_create_from_dicts(
+					request_user=request_user,
+					user_dicts=user_dicts,
+					path=create_path,
+					placeholder_password=data.pop("placeholder_password", None),
+				)
 
 		return Response(
 			status=status.HTTP_200_OK,
