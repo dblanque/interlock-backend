@@ -20,7 +20,6 @@ def f_runtime_settings(
 	mocker.patch("core.models.ldap_object.RuntimeSettings", mock)
 	mocker.patch("core.models.ldap_user.RuntimeSettings", mock)
 	mocker.patch("core.models.ldap_group.RuntimeSettings", mock)
-	mocker.patch("core.utils.main.RuntimeSettings", mock)
 	return mock
 
 
