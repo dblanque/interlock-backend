@@ -49,7 +49,11 @@ class UserUtilsMixin:
 		except ObjectDoesNotExist:
 			self.ldap_backend_enabled = False
 
-	def validate_local_attrs(self, l: list, check_attrs: list[str] = None):
+	def validate_local_attrs(
+		self,
+		l: list,
+		check_attrs: list[str] | tuple[str] | set[str] = None
+	):
 		"""Validates list of keys against local system attributes
 
 		Raises:
@@ -64,8 +68,18 @@ class UserUtilsMixin:
 					data={
 						"detail": "All headers and/or header mappings must"
 						"be of type str and existing local attributes "
-						"(Offending key: %s)." % (str(v))
+						"(Offending key: %s is of type %s)." % (
+							str(v),
+							type(v).__name__
+						)
 					}
+				)
+
+	def validate_csv_row_length(self, rows: list[list], headers: list[str]):
+		for index, row in enumerate(rows):
+			if not len(row) == len(headers):
+				raise exc_user.UserBulkInsertLengthError(
+					data={"detail": f"Row number {index} column count error."}
 				)
 
 	def validate_csv_headers(
