@@ -611,7 +611,12 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 					return True
 		return False
 
-	def ldap_user_fetch(self, user_search, return_entry=False) -> dict:
+	def ldap_user_fetch(
+		self,
+		user_search,
+		return_entry=False,
+		log_operation: bool = True
+	) -> dict:
 		"""Returns Serialized LDAP User attributes or Entry."""
 		self.search_filter = self.get_user_object_filter(username=user_search)
 		if not self.search_attrs:
@@ -627,12 +632,13 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 
 		user_dict = user_obj.attributes
 
-		DBLogMixin.log(
-			user=self.request.user.id,
-			operation_type=LOG_ACTION_READ,
-			log_target_class=LOG_CLASS_USER,
-			log_target=user_search,
-		)
+		if log_operation:
+			DBLogMixin.log(
+				user=self.request.user.id,
+				operation_type=LOG_ACTION_READ,
+				log_target_class=LOG_CLASS_USER,
+				log_target=user_search,
+			)
 
 		# Expand Groups from DN to Objects
 		member_of_objects: list[dict] = []

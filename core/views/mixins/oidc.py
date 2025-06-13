@@ -84,7 +84,8 @@ def get_user_groups(user: User) -> list:
 			]
 			user_mixin.ldap_connection = ldc.connection
 			ldap_user: dict = user_mixin.ldap_user_fetch(
-				user_search=user.username
+				user_search=user.username,
+				log_operation=False,
 			)
 			for group in ldap_user[LOCAL_ATTR_USER_GROUPS]:
 				groups.append(group[LOCAL_ATTR_DN])
