@@ -62,8 +62,12 @@ def f_user_mixin(mocker):
 	return mixin
 
 
+@pytest.fixture
+def f_logger(mocker: MockerFixture):
+	return mocker.patch("core.views.mixins.ldap.user.logger")
+
 @pytest.fixture(autouse=True)
-def f_log_mixin(mocker):
+def f_log_mixin(mocker: MockerFixture):
 	mock = mocker.patch(
 		"core.views.mixins.ldap.user.DBLogMixin", mocker.MagicMock()
 	)
@@ -1502,6 +1506,16 @@ class TestLdapBulkCreateFromCsv:
 		m_ldap_set_password.assert_not_called()
 		f_log.assert_not_called()
 
+	@pytest.mark.parametrize(
+		"placeholder_password, csv_password, password_exc",
+		(
+			("MockPassword", None, None),
+			("MockPassword", None, Exception),
+			("MockPassword", "MockCSVPassword", None),
+			(None, "MockCSVPassword", None),
+			(None, None, None),
+		),
+	)
 	def test_success(
 		self,
 		mocker: MockerFixture,
@@ -1511,6 +1525,10 @@ class TestLdapBulkCreateFromCsv:
 		f_log: MockType,
 		m_user_data: dict,
 		f_default_ldap_path: dict,
+		f_logger: MockType,
+		placeholder_password: str,
+		csv_password: str,
+		password_exc: Exception,
 	):
 		# Mocks
 		m_ldap_user_insert = mocker.patch.object(
@@ -1521,32 +1539,67 @@ class TestLdapBulkCreateFromCsv:
 		m_ldap_set_password = mocker.patch.object(
 			LDAPUserMixin,
 			"ldap_set_password",
+			side_effect=password_exc if password_exc else None
 		)
+		# Insert should always be attr: value dict,
+		# adding the path attr and excluding for password attr.
+		expected_insert_data = {
+			k: v
+			for k, v in zip(f_index_map.values(), m_user_data.values())
+			if k != LOCAL_ATTR_PASSWORD
+		} | f_default_ldap_path
+
+		m_user_rows: list[list] = [list(m_user_data.values())]
+		if csv_password:
+			new_headers = list(f_index_map.values())
+			new_headers.insert(1, LOCAL_ATTR_PASSWORD)
+			f_index_map = { i: v for i, v in enumerate(new_headers) }
+			for row in m_user_rows:
+				row.insert(1, csv_password)
 
 		# Execution
-		f_user_mixin.ldap_bulk_create_from_csv(
+		created, failed = f_user_mixin.ldap_bulk_create_from_csv(
 			request_user=admin_user,
-			user_rows=[m_user_data.values()],
+			user_rows=m_user_rows,
 			index_map=f_index_map,
+			placeholder_password=placeholder_password,
 		)
 
 		# Assertions
-		m_ldap_user_insert.assert_called_once_with(
-			data={
-				k: v for k, v in zip(f_index_map.values(), m_user_data.values())
-			}
-			| f_default_ldap_path
-		)
-		m_ldap_set_password.assert_not_called()
+		m_ldap_user_insert.assert_called_once_with(data=expected_insert_data)
+		if not placeholder_password and not csv_password:
+			m_ldap_set_password.assert_not_called()
+		else:
+			m_ldap_set_password.assert_called_once_with(
+				user_dn="mock_dn",
+				user_pwd_new=(csv_password or placeholder_password),
+				set_by_admin=True,
+			)
 		f_log.assert_called_once_with(
 			user=admin_user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_USER,
 			log_target=m_user_data[LOCAL_ATTR_USERNAME],
 		)
+		assert created
+		if password_exc:
+			f_logger.exception.assert_called_once()
+			assert failed == [{'username': 'someuser', 'stage': 'password'}]
+		else:
+			assert not failed
 
 
 class TestLdapBulkCreateFromDicts:
+	@pytest.mark.parametrize(
+		"placeholder_password, dict_password, password_exc",
+		(
+			("MockPassword", None, None),
+			("MockPassword", None, Exception),
+			("MockPassword", "MockCSVPassword", None),
+			(None, "MockCSVPassword", None),
+			(None, None, None),
+		),
+	)
 	def test_success(
 		self,
 		mocker: MockerFixture,
@@ -1554,6 +1607,9 @@ class TestLdapBulkCreateFromDicts:
 		f_default_ldap_path: dict,
 		admin_user: User,
 		f_log: MockType,
+		placeholder_password: str,
+		dict_password: str,
+		password_exc: Exception,
 	):
 		m_ldap_user_insert = mocker.patch.object(
 			LDAPUserMixin,
@@ -1563,6 +1619,7 @@ class TestLdapBulkCreateFromDicts:
 		m_ldap_set_password = mocker.patch.object(
 			LDAPUserMixin,
 			"ldap_set_password",
+			side_effect=password_exc if password_exc else None
 		)
 
 		m_user_success = "someuser#1234"
@@ -1587,12 +1644,13 @@ class TestLdapBulkCreateFromDicts:
 				LOCAL_ATTR_LAST_NAME: "",
 			},
 		]
-		created, error = f_user_mixin.ldap_bulk_create_from_dicts(
-			request_user=admin_user,
-			user_dicts=m_users,
-		)
-		assert created == [m_user_success]
-		assert error == [
+		# Set password if mocked
+		if dict_password:
+			m_users[0][LOCAL_ATTR_PASSWORD] = dict_password
+
+		expected_insert_data = m_users[0] | f_default_ldap_path
+		expected_insert_data.pop(LOCAL_ATTR_PASSWORD, None)
+		expected_failed = [
 			{
 				LOCAL_ATTR_USERNAME: m_user_bad_email,
 				"stage": "serializer",
@@ -1602,11 +1660,36 @@ class TestLdapBulkCreateFromDicts:
 				"stage": "serializer",
 			},
 		]
+		if password_exc:
+			expected_failed.insert(0,
+				{
+					LOCAL_ATTR_USERNAME: m_user_success,
+					"stage": "password",
+				},
+			)
+
+		# Execution
+		created, failed = f_user_mixin.ldap_bulk_create_from_dicts(
+			request_user=admin_user,
+			user_dicts=m_users,
+			placeholder_password=placeholder_password,
+		)
+
+		# Assertions
+		assert created == [m_user_success]
+		assert failed == expected_failed
 
 		m_ldap_user_insert.assert_called_once_with(
-			data=m_users[0] | f_default_ldap_path
+			data=expected_insert_data
 		)
-		m_ldap_set_password.assert_not_called()
+		if not placeholder_password and not dict_password:
+			m_ldap_set_password.assert_not_called()
+		else:
+			m_ldap_set_password.assert_called_once_with(
+				user_dn="mock_dn",
+				user_pwd_new=(dict_password or placeholder_password),
+				set_by_admin=True,
+			)
 		f_log.assert_called_once_with(
 			user=admin_user.id,
 			operation_type=LOG_ACTION_UPDATE,

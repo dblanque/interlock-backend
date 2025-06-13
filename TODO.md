@@ -13,7 +13,7 @@ Target Mid-June release
 # Tasks
 * Finish generic endpoint tests (unauthorized, ldap disabled, etc.).
 * User is_built_in <d>
-* core.constants.search_attrs_builder
+* core.constants.search_attrs_builder <d>
 * core.serializers.ldap <d>
 * core.serializers.token
 	* validate -> get_user_totp_device block
@@ -40,8 +40,9 @@ Target Mid-June release
 	* oidc - friday <d>
 	* totp - thursday? <d>
 	* user - wednesday <d>
-* core.decorators.login.is_axios_request
-* tests for ldap user imports with placeholder password, path, no path
+* core.decorators.login.is_axios_request <d>
+* interlock_backend.server_timezone <d>
+* tests for ldap user imports with placeholder password, path, no path <d>
 * implement placeholder password usage onto local user import
 * tests for local user import with password
 

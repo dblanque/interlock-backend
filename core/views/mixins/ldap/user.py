@@ -881,7 +881,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 			# Pop Credentials
 			if placeholder_password:
 				user_pwd = placeholder_password
-			elif password_in_csv:
+			if password_in_csv:
 				user_pwd = user_attrs.pop(LOCAL_ATTR_PASSWORD)
 
 			# Validate Data
@@ -974,8 +974,8 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 			# Pop Credentials
 			if placeholder_password:
 				user_pwd = placeholder_password
-			else:
-				user_pwd = user_attrs.pop(LOCAL_ATTR_PASSWORD, None)
+			if LOCAL_ATTR_PASSWORD in user_attrs:
+				user_pwd = user_attrs.pop(LOCAL_ATTR_PASSWORD)
 
 			# Validate Data
 			serializer = LDAPUserSerializer(
@@ -1023,7 +1023,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 					logger.exception(e)
 					failed_users.append(
 						{
-							LOCAL_ATTR_USERNAME: user_nr,
+							LOCAL_ATTR_USERNAME:user_attrs[LOCAL_ATTR_USERNAME],
 							"stage": "password",
 						}
 					)
