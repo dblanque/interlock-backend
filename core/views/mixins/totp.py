@@ -148,17 +148,18 @@ def delete_device_totp_for_user(user: User) -> bool:
 
 @transaction.atomic
 def validate_user_otp(
-	user: User, data: dict, raise_exc=True
+	user: User, data: dict, confirmed=True, raise_exc=True
 ) -> bool | Exception:
 	"""
 	Returns an Exception on validation failure unless specified.
 	"""
-	device = get_user_totp_device(user, confirmed=True)
+	device = get_user_totp_device(user, confirmed=confirmed)
 
 	if device is None and raise_exc is True:
 		logger.warning(
-			"User %s attempted to validate non-existing TOTP Device.",
+			"User %s attempted to validate non-existing %s TOTP Device.",
 			user.username,
+			"confirmed" if confirmed else "unconfirmed",
 		)
 		raise exc_otp.OTPNoDeviceRegistered
 	elif device and device.verify_token(data["totp_code"]):

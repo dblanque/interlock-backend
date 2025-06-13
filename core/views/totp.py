@@ -96,7 +96,7 @@ class TOTPViewSet(BaseViewSet):
 		if not OTPTokenSerializer(data=data):
 			raise exc_otp.OTPInvalidData
 
-		validate_user_otp(user, data)
+		validate_user_otp(user, data, confirmed=False)
 		return Response(data={"code": code, "code_msg": code_msg})
 
 	@auth_required
