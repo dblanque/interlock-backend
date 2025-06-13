@@ -29,13 +29,13 @@ from django_otp import devices_for_user, user_has_device
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
 def get_all_user_totp_devices(user: User) -> list[TOTPDevice]:
-	has_conf = user_has_device(user, confirmed=True)
-	has_unconf = user_has_device(user, confirmed=False)
-	if has_conf or has_unconf:
+	has_confirmed_device = user_has_device(user, confirmed=True)
+	has_unconfirmed_device = user_has_device(user, confirmed=False)
+	if has_confirmed_device or has_unconfirmed_device:
 		result = []
 		for exists, confirmed in (
-			(has_conf, True),
-			(has_unconf, False)
+			(has_confirmed_device, True),
+			(has_unconfirmed_device, False)
 		):
 			if exists:
 				for d in devices_for_user(user, confirmed=confirmed):
@@ -131,8 +131,8 @@ def delete_device_totp_for_user(user: User) -> bool:
 		False if no device to delete is found.
 	"""
 	device = None
-	has_unconfirmed_device = user_has_device(user, confirmed=False)
 	has_confirmed_device = user_has_device(user, confirmed=True)
+	has_unconfirmed_device = user_has_device(user, confirmed=False)
 	if not has_unconfirmed_device and not has_confirmed_device:
 		return False
 	
