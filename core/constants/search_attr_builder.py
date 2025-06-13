@@ -3,7 +3,13 @@ from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 
 class SearchAttrBuilder:
 	def _to_ldap(self, k: str) -> str:
-		"""Returns corresponding LDAP mapped field for Local Attribute Key"""
+		"""Convert Local Attribute Key to LDAP Attribute Key
+		Args:
+			k (str): Local Attribute Constant Key (LOCAL_ATTR_*)
+		
+		Returns:
+			str: Corresponding LDAP mapped field for Local Attribute Key
+		"""
 		try:
 			return self.RuntimeSettings.LDAP_FIELD_MAP[k]
 		except:
