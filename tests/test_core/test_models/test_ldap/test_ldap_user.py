@@ -8,7 +8,7 @@ from core.constants.attrs import *
 from core.ldap.filter import LDAPFilter, LDAPFilterType
 from .test_ldap_object import TestDunderValidateInit as SuperDunderValidateInit
 from core.type_hints.connector import LDAPConnectionProtocol
-from core.exceptions import users as exc_user
+from core.exceptions import users as exc_user, base as exc_base
 from typing import Protocol
 from core.ldap.adsi import (
 	calc_permissions,
@@ -60,10 +60,18 @@ class TestParseWriteSpecialAttributes:
 		m_ldap_user = f_ldap_user_no_init(
 			**{
 				"attributes": {
+					LOCAL_ATTR_USER_GROUPS: ["group_a", "group_b"],
+					LOCAL_ATTR_USER_RM_GROUPS: ["group_b_dn"],
 					LOCAL_ATTR_COUNTRY: "some_country",
 					LOCAL_ATTR_PERMISSIONS: ["some_permissions"],
 				}
 			}
+		)
+		m_parse_add_groups = mocker.patch.object(
+			LDAPUser, "parse_add_groups"
+		)
+		m_parse_remove_groups = mocker.patch.object(
+			LDAPUser, "parse_remove_groups"
 		)
 		m_parse_write_country = mocker.patch.object(
 			LDAPUser, "parse_write_country"
@@ -72,6 +80,11 @@ class TestParseWriteSpecialAttributes:
 			LDAPUser, "parse_write_permissions"
 		)
 		m_ldap_user.parse_write_special_attributes()
+		m_parse_add_groups.assert_called_once()
+		m_parse_remove_groups.assert_called_once_with(
+			groups=["group_a", "group_b"],
+			remove_group_dns=["group_b_dn"],
+		)
 		m_parse_write_country.assert_called_once_with("some_country")
 		m_parse_write_permissions.assert_called_once_with(["some_permissions"])
 
@@ -268,7 +281,10 @@ class TestPerformGroupOperations:
 				LOCAL_ATTR_USER_ADD_GROUPS: add_groups,
 				LOCAL_ATTR_USER_RM_GROUPS: rm_groups,
 			},
-			parsed_specials=[],
+			parsed_specials=[
+				LOCAL_ATTR_USER_ADD_GROUPS,
+				LOCAL_ATTR_USER_RM_GROUPS,
+			],
 		)
 		m_ldap_user.connection = f_connection
 		m_ldap_user.perform_group_operations(
@@ -323,10 +339,67 @@ class TestPerformGroupOperations:
 				LOCAL_ATTR_USER_ADD_GROUPS: add_groups,
 				LOCAL_ATTR_USER_RM_GROUPS: rm_groups,
 			},
-			parsed_specials=[],
+			parsed_specials=[
+				LOCAL_ATTR_USER_ADD_GROUPS,
+				LOCAL_ATTR_USER_RM_GROUPS,
+			],
 		)
 		m_ldap_user.connection = f_connection
 		with pytest.raises(exc_user.BadGroupSelection):
+			m_ldap_user.perform_group_operations(
+				groups_to_add=add_groups,
+				groups_to_remove=rm_groups,
+			)
+
+		m_add_members_to_groups: MockType = (
+			f_connection.extend.microsoft.add_members_to_groups
+		)
+		m_add_members_to_groups.assert_not_called()
+		m_remove_members_from_groups: MockType = (
+			f_connection.extend.microsoft.remove_members_from_groups
+		)
+		m_remove_members_from_groups.assert_not_called()
+		assert m_ldap_user.parsed_specials == [
+			LOCAL_ATTR_USER_ADD_GROUPS,
+			LOCAL_ATTR_USER_RM_GROUPS,
+		]
+
+	@pytest.mark.parametrize(
+		"add_groups, rm_groups",
+		(
+			(
+				["mock_group_1", "mock_group_2"],
+				["mock_group_2"],
+			),
+			(
+				["mock_group_1"],
+				["mock_group_1"],
+			),
+			(
+				["mock_group_1"],
+				["mock_group_1", "mock_group_2"],
+			),
+		),
+	)
+	def test_raises_core_exc(
+		self,
+		add_groups: list,
+		rm_groups: list,
+		f_connection: LDAPConnectionProtocol,
+		mocker: MockerFixture,
+		f_ldap_user_no_init: InitlessLDAPUserFactory,
+	):
+		mocker.patch.object(LDAPUser, "__init__", return_value=None)
+		m_ldap_user = f_ldap_user_no_init(
+			distinguished_name="mock_dn",
+			attributes={
+				LOCAL_ATTR_USER_ADD_GROUPS: add_groups,
+				LOCAL_ATTR_USER_RM_GROUPS: rm_groups,
+			},
+			parsed_specials=[],
+		)
+		m_ldap_user.connection = f_connection
+		with pytest.raises(exc_base.CoreException):
 			m_ldap_user.perform_group_operations(
 				groups_to_add=add_groups,
 				groups_to_remove=rm_groups,

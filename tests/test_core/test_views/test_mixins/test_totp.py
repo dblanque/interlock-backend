@@ -260,18 +260,33 @@ class TestValidateUserOtp:
 			"TOTP Device already confirmed for user %s", f_user.username
 		)
 
-	@staticmethod
+	@pytest.mark.parametrize(
+		"confirmed",
+		(
+			True,
+			False,
+		),
+	)
 	def test_raises_when_no_device(
-		mocker: MockerFixture, f_user: MockType, f_logger: MockType
+		self,
+		mocker: MockerFixture,
+		f_user: MockType,
+		f_logger: MockType,
+		confirmed: bool,
 	) -> None:
 		mocker.patch(
 			"core.views.mixins.totp.get_user_totp_device", return_value=None
 		)
 		with pytest.raises(exc_otp.OTPNoDeviceRegistered):
-			validate_user_otp(f_user, {"totp_code": "123456"})
+			validate_user_otp(
+				f_user,
+				{"totp_code": "123456"},
+				confirmed=confirmed,
+			)
 		f_logger.warning.assert_called_once_with(
-			"User %s attempted to validate non-existing TOTP Device.",
+			"User %s attempted to validate non-existing %s TOTP Device.",
 			f_user.username,
+			"confirmed" if confirmed else "unconfirmed",
 		)
 
 	@staticmethod
@@ -282,8 +297,10 @@ class TestValidateUserOtp:
 		mocker.patch(
 			"core.views.mixins.totp.get_user_totp_device", return_value=None
 		)
-		assert (
-			validate_user_otp(f_user, {"totp_code": "123456"}, False) is False
+		assert not validate_user_otp(
+			user=f_user,
+			data={"totp_code": "123456"},
+			raise_exc=False,
 		)
 
 	@staticmethod

@@ -67,8 +67,8 @@ class TestList(BaseViewTestClass):
 		m_totp_device.config_url = "mock_url"
 		m_totp_device.confirmed = True
 		m_get_totp_fn = mocker.patch(
-			"core.views.totp.get_user_totp_device",
-			return_value=m_totp_device,
+			"core.views.totp.get_all_user_totp_devices",
+			return_value=[m_totp_device],
 		)
 		m_set_label_fn = mocker.patch(
 			"core.views.totp.set_interlock_otp_label",
