@@ -124,8 +124,10 @@ _JWT_SECURE = SIMPLE_JWT["AUTH_COOKIE_SECURE"]
 		("/api/totp/delete-for-user/", HTTPMethod.POST),
 		("/api/totp/delete-for-user/", HTTPMethod.DELETE),
 		# OIDC
+		("/openid/consent", HTTPMethod.POST),
 	],
 	ids=lambda x: f"{x[1]}: {x[0]}",
+	scope="session",
 )
 def g_all_endpoints(request: FixtureRequest):
 	"""Returns tuple of (endpoint, method)"""
@@ -185,6 +187,7 @@ ldap_endpoints = (
 		if p in ldap_endpoints
 	],
 	ids=lambda x: f"{x[1].upper()}: {x[0]} (LDAP Required)",
+	scope="session",
 )
 def g_ldap_domain_endpoints(request: FixtureRequest):
 	return request.param
@@ -203,6 +206,7 @@ excluded_from_auth_required = ("/api/ldap/domain/details/",)
 		if p[0] not in excluded_from_auth_required
 	],
 	ids=lambda x: f"{x[1].upper()}: {x[0]} (Auth. Required)",
+	scope="session",
 )
 def g_authenticated_endpoints(request: FixtureRequest):
 	return request.param
@@ -225,6 +229,7 @@ excluded_from_admin_only = (
 	("/api/totp/delete-device/", HTTPMethod.DELETE),
 	("/api/totp/delete-for-user/", HTTPMethod.POST),
 	("/api/totp/delete-for-user/", HTTPMethod.DELETE),
+	("/openid/consent", HTTPMethod.POST),
 )
 
 
@@ -237,6 +242,7 @@ excluded_from_admin_only = (
 		if p not in excluded_from_admin_only
 	],
 	ids=lambda x: f"{x[1].upper()}: {x[0]} (Admin Required)",
+	scope="session",
 )
 def g_admin_endpoints(request: FixtureRequest):
 	return request.param
