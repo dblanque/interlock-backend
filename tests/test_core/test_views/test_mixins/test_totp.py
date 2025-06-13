@@ -8,6 +8,7 @@
 import pytest
 import re
 from core.views.mixins.totp import (
+	get_all_user_totp_devices,
 	get_user_totp_device,
 	set_interlock_otp_label,
 	generate_recovery_codes,
@@ -60,6 +61,65 @@ def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
 
 # -------------------------------- TEST CLASSES --------------------------------#
 
+class TestGetAllUserTotpDevices:
+	def test_returns_unconfirmed_device(
+		self,
+		mocker: MockerFixture,
+		f_user: MockType,
+		f_device: MockType,
+	):
+		m_has_device = mocker.patch(
+			"core.views.mixins.totp.user_has_device",
+			side_effect=[False, True],
+		)
+		m_devices_for_user = mocker.patch(
+			"core.views.mixins.totp.devices_for_user",
+			return_value=iter([f_device]),
+		)
+		result = get_all_user_totp_devices(f_user)
+		m_has_device.call_count == 2
+		m_devices_for_user.assert_called_once_with(f_user, confirmed=False)
+		assert result == [f_device]
+
+	def test_returns_confirmed_device(
+		self,
+		mocker: MockerFixture,
+		f_user: MockType,
+		f_device: MockType,
+	):
+		m_has_device = mocker.patch(
+			"core.views.mixins.totp.user_has_device",
+			side_effect=[True, False],
+		)
+		m_devices_for_user = mocker.patch(
+			"core.views.mixins.totp.devices_for_user",
+			return_value=iter([f_device]),
+		)
+		result = get_all_user_totp_devices(f_user)
+		m_has_device.call_count == 2
+		m_devices_for_user.assert_called_once_with(f_user, confirmed=True)
+		assert result == [f_device]
+
+	def test_returns_empty_list(
+		self,
+		mocker: MockerFixture,
+		f_user: MockType,
+		f_device: MockType,
+	):
+		m_has_device = mocker.patch(
+			"core.views.mixins.totp.user_has_device",
+			side_effect=[False, False],
+		)
+		m_devices_for_user = mocker.patch(
+			"core.views.mixins.totp.devices_for_user",
+			return_value=iter([f_device]),
+		)
+		result = get_all_user_totp_devices(f_user)
+		m_has_device.call_count == 2
+		m_devices_for_user.assert_not_called()
+		assert result == []
+	
+		
 
 class TestGetUserTotpDevice:
 	@staticmethod
@@ -67,7 +127,7 @@ class TestGetUserTotpDevice:
 		mocker: MockerFixture, f_user: MockType, f_device: MockType
 	) -> None:
 		mocker.patch(
-			"core.views.mixins.totp.devices_for_user", return_value=[f_device]
+			"core.views.mixins.totp.devices_for_user", return_value=iter([f_device])
 		)
 		result = get_user_totp_device(f_user)
 		assert result == f_device
@@ -76,7 +136,7 @@ class TestGetUserTotpDevice:
 	def test_returns_none_when_no_devices(
 		mocker: MockerFixture, f_user: MockType
 	) -> None:
-		mocker.patch("core.views.mixins.totp.devices_for_user", return_value=[])
+		mocker.patch("core.views.mixins.totp.devices_for_user", return_value=iter([]))
 		result = get_user_totp_device(f_user)
 		assert result is None
 
@@ -246,14 +306,27 @@ class TestValidateUserOtp:
 
 class TestDeleteDeviceTotpForUser:
 	@staticmethod
+	@pytest.mark.parametrize(
+		"has_device_side_effect",
+		(
+			(True, False),
+			(False, True),
+		),
+	)
 	def test_deletes_existing_device(
 		mocker: MockerFixture,
+		has_device_side_effect: tuple,
 		f_user: MockType,
 		f_device: MockType,
 		f_logger: MockType,
 	) -> None:
 		mocker.patch(
-			"core.views.mixins.totp.get_user_totp_device", return_value=f_device
+			"core.views.mixins.totp.user_has_device",
+			side_effect=has_device_side_effect,
+		)
+		mocker.patch(
+			"core.views.mixins.totp.get_user_totp_device",
+			return_value=f_device,
 		)
 
 		result = delete_device_totp_for_user(f_user)
@@ -271,6 +344,10 @@ class TestDeleteDeviceTotpForUser:
 		mocker: MockerFixture,
 		f_user: MockType,
 	) -> None:
+		mocker.patch(
+			"core.views.mixins.totp.user_has_device",
+			side_effect=[False, False],
+		)
 		mocker.patch(
 			"core.views.mixins.totp.get_user_totp_device", return_value=None
 		)
