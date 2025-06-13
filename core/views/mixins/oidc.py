@@ -39,7 +39,7 @@ from oidc_provider.models import Client, UserConsent
 from oidc_provider.lib.claims import ScopeClaims, STANDARD_CLAIMS
 
 # Mixins
-from core.views.mixins.ldap.user import LDAPUserMixin
+from core.views.mixins.user import LDAPUserMixin
 
 # Time
 from datetime import datetime, timedelta
