@@ -65,8 +65,11 @@ import logging
 
 ### Constants
 from core.constants.attrs import *
-from core.constants.user import LDAPUserSearchAttrBuilder
-from core.constants.user import BUILTIN_USERS, BUILTIN_ADMIN
+from core.constants.user import (
+	BUILTIN_USERS,
+	BUILTIN_ADMIN,
+	LDAPUserSearchAttrBuilder,
+)
 
 ### Utils
 from core.utils.main import getldapattrvalue
