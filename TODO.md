@@ -49,7 +49,7 @@ Target Mid-June release
 
 ## Issues
 ### High Priority
-* Add throttling?
+* Add throttling? <d>
 * Move Interlock RSA Key to class instances as a singleton. <d>
 * Normalize in and out for Settings, DEFAULT_ADMIN_ENABLED and DEFAULT_ADMIN_PWD
 	should be within LOCAL instead of LDAP settings in both fetch and save.
