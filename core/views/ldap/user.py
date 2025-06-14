@@ -948,6 +948,7 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 		data[LOCAL_ATTR_FIRST_NAME] = user.first_name or ""
 		data[LOCAL_ATTR_LAST_NAME] = user.last_name or ""
 		data[LOCAL_ATTR_EMAIL] = user.email or ""
+		data[LOCAL_ATTR_USERTYPE] = user.user_type or ""
 		# This only informs the front-end it is admin capable
 		# Validation is done on the back-end
 		if user.is_superuser:
