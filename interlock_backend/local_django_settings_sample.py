@@ -1,3 +1,4 @@
+# pragma: no cover
 # File: interlock_backend/local_django_settings_sample.py
 # Any option in interlock_backend.settings can be overridden here.
 
