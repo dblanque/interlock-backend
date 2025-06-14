@@ -341,6 +341,24 @@ if ALLOW_BROWSABLE_API:
 		"rest_framework.renderers.BrowsableAPIRenderer",
 	)
 
+# Throttling Options
+ENABLE_THROTTLING = True
+load_override(globals(), "ENABLE_THROTTLING")
+
+THROTTLE_OPTS = {}
+if ENABLE_THROTTLING:
+	THROTTLE_OPTS = {
+		"DEFAULT_THROTTLE_CLASSES": [
+			"rest_framework.throttling.AnonRateThrottle",
+			"rest_framework.throttling.UserRateThrottle",
+		],
+		"DEFAULT_THROTTLE_RATES": {
+			"anon": "25/minute",
+			"user": "1000/hour",
+		}
+	}
+load_override(globals(), "THROTTLE_OPTS")
+
 REST_FRAMEWORK = {
 	"COERCE_DECIMAL_TO_STRING": False,
 	"EXCEPTION_HANDLER": "core.system.exceptionhandler.custom_exception_handler",
@@ -350,6 +368,7 @@ REST_FRAMEWORK = {
 	"DEFAULT_RENDERER_CLASSES": DEFAULT_RENDERER_CLASSES,
 	"DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
 	"PAGE_SIZE": 10,
+	**THROTTLE_OPTS,
 }
 
 DATE_INPUT_FORMATS = ["%Y-%m-%d"]
