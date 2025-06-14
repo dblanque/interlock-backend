@@ -1,7 +1,10 @@
 Target Mid-June release
 * Finish High-Medium Priority items.
 * Finish all automated tests
-* Do manual testing of all systems
+* Do manual testing of all systems with the following installations
+	* Standalone
+	* Samba LDAP
+	* Microsoft ADDS
 * Create new pgp/gpg for apt repo (with expiry)
 * Create .deb for apt repo key installation and updating
 * Update and fix .deb package installer
