@@ -1929,6 +1929,7 @@ class TestSelfInfo(BaseViewTestClass):
 			LOCAL_ATTR_FIRST_NAME,
 			LOCAL_ATTR_LAST_NAME,
 			LOCAL_ATTR_EMAIL,
+			LOCAL_ATTR_USERTYPE,
 		)
 		for attr in _ATTRS_TO_CHECK:
 			assert data.get(attr) == getattr(_user, attr)
