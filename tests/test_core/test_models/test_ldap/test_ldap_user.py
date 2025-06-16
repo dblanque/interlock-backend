@@ -67,9 +67,7 @@ class TestParseWriteSpecialAttributes:
 				}
 			}
 		)
-		m_parse_add_groups = mocker.patch.object(
-			LDAPUser, "parse_add_groups"
-		)
+		m_parse_add_groups = mocker.patch.object(LDAPUser, "parse_add_groups")
 		m_parse_remove_groups = mocker.patch.object(
 			LDAPUser, "parse_remove_groups"
 		)

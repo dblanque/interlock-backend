@@ -50,8 +50,7 @@ def is_axios_request(request: HttpRequest):
 	# Check for Axios-specific headers
 	is_xml = (
 		headers.get("X-Requested-With", "").lower() == "xmlhttprequest"
-		or
-		headers.get("X-XHR-Requested-With", "").lower() == "xmlhttprequest"
+		or headers.get("X-XHR-Requested-With", "").lower() == "xmlhttprequest"
 	)
 	# Check for content type (Axios mostly sends JSON)
 	is_json = request.content_type == "application/json"
@@ -90,9 +89,7 @@ class RemoveTokenResponse:
 		# If not a front-end request return without bad login count logic
 		if is_axios_request(request=request) and bad_login_count:
 			try:
-				_count = int(
-					request.COOKIES.get(BAD_LOGIN_COOKIE_NAME)
-				)
+				_count = int(request.COOKIES.get(BAD_LOGIN_COOKIE_NAME))
 			except:
 				_count = 0
 				pass
@@ -108,9 +105,7 @@ class RemoveTokenResponse:
 				domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
 			)
 
-			response.data = {
-				"remaining_login_count": BAD_LOGIN_LIMIT - _count
-			}
+			response.data = {"remaining_login_count": BAD_LOGIN_LIMIT - _count}
 		return response
 
 

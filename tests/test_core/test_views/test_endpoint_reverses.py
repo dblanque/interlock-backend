@@ -3,12 +3,8 @@ import re
 
 RE_IS_DETAIL = re.compile(r".*\-\@\-$")
 
-REVERSE_EXCEPTIONS = {
-	url: url for url in
-	(
-		reverse("oidc-consent"),
-	)
-}
+REVERSE_EXCEPTIONS = {url: url for url in (reverse("oidc-consent"),)}
+
 
 def test_reverse_matches_endpoint(g_all_endpoints: tuple[str, str]):
 	url, method = g_all_endpoints

@@ -2,10 +2,12 @@ import os
 import pytz
 import subprocess
 from logging import getLogger
+
 logger = getLogger()
 
 # Local Time Path
 _LTP = "/etc/localtime"
+
 
 def get_server_timezone():
 	"""Gets server localtime timezone."""

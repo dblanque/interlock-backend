@@ -21,22 +21,28 @@ from core.views.mixins.auth import (
 ################################### Fixtures ###################################
 ################################################################################
 
+
 def set_request_headers(request, headers):
-    for header, value in headers.items():
-        if not header.startswith('HTTP_'):
-            header = f"HTTP_{header}"
-        request.META[header.upper().replace('-', '_')] = value
+	for header, value in headers.items():
+		if not header.startswith("HTTP_"):
+			header = f"HTTP_{header}"
+		request.META[header.upper().replace("-", "_")] = value
+
 
 @pytest.fixture
 def mock_request_xml():
 	"""Fixture providing a Mock XML HttpRequest"""
 	request = HttpRequest()
 	request.COOKIES = {}
-	set_request_headers(request, {
-        "X-Requested-With": "XMLHttpRequest",
-        "X-XHR-Requested-With": "XMLHttpRequest",
-    })
+	set_request_headers(
+		request,
+		{
+			"X-Requested-With": "XMLHttpRequest",
+			"X-XHR-Requested-With": "XMLHttpRequest",
+		},
+	)
 	return request
+
 
 @pytest.fixture
 def mock_request_json():
@@ -45,6 +51,7 @@ def mock_request_json():
 	request.COOKIES = {}
 	request.content_type = "application/json"
 	return request
+
 
 @pytest.fixture
 def mock_request_normal():
@@ -108,9 +115,11 @@ class TestIsAxiosRequest:
 	def test_returns_false(self, mock_request_normal: HttpRequest):
 		assert not is_axios_request(mock_request_normal)
 
+
 ################################################################################
 ######################## Tests for RemoveTokenResponse #########################
 ################################################################################
+
 
 @pytest.mark.parametrize(
 	"bad_login_count",
@@ -125,8 +134,7 @@ def test_remove_token_response_basic(
 	bad_login_count,
 ):
 	response = RemoveTokenResponse(
-		mock_request_json,
-		bad_login_count=bad_login_count
+		mock_request_json, bad_login_count=bad_login_count
 	)
 
 	assert isinstance(response, Response)
@@ -226,7 +234,9 @@ def test_cookie_jwt_authenticate_valid_token(
 	valid_access_token,
 	test_user,
 ):
-	mock_request_json.COOKIES[jwt_settings["AUTH_COOKIE_NAME"]] = valid_access_token
+	mock_request_json.COOKIES[jwt_settings["AUTH_COOKIE_NAME"]] = (
+		valid_access_token
+	)
 	user, token = cookie_auth.authenticate(mock_request_json)
 
 	assert user.id == test_user.id
@@ -316,7 +326,10 @@ def test_cookie_jwt_refresh_token_error_handling(
 
 
 def test_cookie_jwt_authenticate_generic_error_handling(
-	mocker, cookie_auth: CookieJWTAuthentication, mock_request_json, jwt_settings
+	mocker,
+	cookie_auth: CookieJWTAuthentication,
+	mock_request_json,
+	jwt_settings,
 ):
 	mock_request_json.COOKIES[jwt_settings["AUTH_COOKIE_NAME"]] = "valid.token"
 	mocker.patch.object(

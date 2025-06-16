@@ -121,7 +121,9 @@ class LDAPUser(LDAPObject):
 		self.parse_add_groups()
 		self.parse_remove_groups(
 			groups=self.attributes.get(LOCAL_ATTR_USER_GROUPS, None),
-			remove_group_dns=self.attributes.get(LOCAL_ATTR_USER_RM_GROUPS, None),
+			remove_group_dns=self.attributes.get(
+				LOCAL_ATTR_USER_RM_GROUPS, None
+			),
 		)
 		self.parse_write_country(self.attributes.get(LOCAL_ATTR_COUNTRY, None))
 		self.parse_write_permissions(
@@ -139,12 +141,14 @@ class LDAPUser(LDAPObject):
 
 	def save(self):
 		has_groups_to_modify = bool(
-			self.attributes.get(LOCAL_ATTR_USER_ADD_GROUPS, []) or
-			self.attributes.get(LOCAL_ATTR_USER_RM_GROUPS, [])
+			self.attributes.get(LOCAL_ATTR_USER_ADD_GROUPS, [])
+			or self.attributes.get(LOCAL_ATTR_USER_RM_GROUPS, [])
 		)
-		return super().save(update_kwargs={
-			"force_post_update": has_groups_to_modify,
-		})
+		return super().save(
+			update_kwargs={
+				"force_post_update": has_groups_to_modify,
+			}
+		)
 
 	def parse_add_groups(self):
 		if not LOCAL_ATTR_USER_ADD_GROUPS in self.parsed_specials:
@@ -182,21 +186,22 @@ class LDAPUser(LDAPObject):
 				try:
 					relative_id = int(relative_id)
 				except:
-					raise exc_base.BadRequest(data={
-						"detail":"Group Relative ID is not a valid integer."
-					})
+					raise exc_base.BadRequest(
+						data={
+							"detail": "Group Relative ID is not a valid integer."
+						}
+					)
 			# Validate both DN and RID exist
 			if not distinguished_name or not relative_id:
-				raise exc_base.BadRequest(data={
-					"detail":"Full parsed groups must be sent along with removal operations."
-				})
-
-			if (
-				primary_group_id == relative_id and
-				(
-					distinguished_name in remove_group_dns or
-					distinguished_name.lower() in remove_group_dns
+				raise exc_base.BadRequest(
+					data={
+						"detail": "Full parsed groups must be sent along with removal operations."
+					}
 				)
+
+			if primary_group_id == relative_id and (
+				distinguished_name in remove_group_dns
+				or distinguished_name.lower() in remove_group_dns
 			):
 				remove_group_dns.remove(distinguished_name)
 

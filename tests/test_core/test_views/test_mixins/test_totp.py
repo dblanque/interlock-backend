@@ -61,6 +61,7 @@ def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
 
 # -------------------------------- TEST CLASSES --------------------------------#
 
+
 class TestGetAllUserTotpDevices:
 	def test_returns_unconfirmed_device(
 		self,
@@ -118,8 +119,7 @@ class TestGetAllUserTotpDevices:
 		m_has_device.call_count == 2
 		m_devices_for_user.assert_not_called()
 		assert result == []
-	
-		
+
 
 class TestGetUserTotpDevice:
 	@staticmethod
@@ -127,7 +127,8 @@ class TestGetUserTotpDevice:
 		mocker: MockerFixture, f_user: MockType, f_device: MockType
 	) -> None:
 		mocker.patch(
-			"core.views.mixins.totp.devices_for_user", return_value=iter([f_device])
+			"core.views.mixins.totp.devices_for_user",
+			return_value=iter([f_device]),
 		)
 		result = get_user_totp_device(f_user)
 		assert result == f_device
@@ -136,7 +137,9 @@ class TestGetUserTotpDevice:
 	def test_returns_none_when_no_devices(
 		mocker: MockerFixture, f_user: MockType
 	) -> None:
-		mocker.patch("core.views.mixins.totp.devices_for_user", return_value=iter([]))
+		mocker.patch(
+			"core.views.mixins.totp.devices_for_user", return_value=iter([])
+		)
 		result = get_user_totp_device(f_user)
 		assert result is None
 

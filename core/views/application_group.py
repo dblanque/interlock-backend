@@ -50,9 +50,9 @@ class ApplicationGroupViewSet(BaseViewSet, ApplicationSecurityGroupViewMixin):
 			if not self.queryset.filter(application=app["id"]).exists():
 				data["applications"].append(app)
 
-		for user in self.user_queryset.filter(
-			user_type=USER_TYPE_LOCAL
-		).values(*("id", "username", "first_name", "last_name")):
+		for user in self.user_queryset.filter(user_type=USER_TYPE_LOCAL).values(
+			*("id", "username", "first_name", "last_name")
+		):
 			data["users"].append(user)
 		return Response(data={"code": code, "code_msg": code_msg, "data": data})
 

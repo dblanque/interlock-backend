@@ -8,14 +8,19 @@ from logging import Logger
 
 MockLogger = Union[MockType, Logger]
 
+
 @pytest.fixture
 def f_pytz_timezones(mocker: MockerFixture) -> None:
 	"""Fixture to mock pytz.all_timezones for all tests."""
-	mocker.patch.object(pytz, "all_timezones", ["UTC", "America/Buenos_Aires", "Europe/London"])
+	mocker.patch.object(
+		pytz, "all_timezones", ["UTC", "America/Buenos_Aires", "Europe/London"]
+	)
+
 
 @pytest.fixture
 def f_logger(mocker: MockerFixture):
 	return mocker.patch("interlock_backend.server_timezone.logger")
+
 
 def test_get_server_timezone_timedatectl_success(
 	mocker: MockerFixture,
@@ -39,6 +44,7 @@ def test_get_server_timezone_timedatectl_success(
 	f_logger.info.assert_called_with("Configured timezone: Europe/London")
 	assert result == "Europe/London"
 
+
 @pytest.mark.parametrize(
 	"value",
 	(
@@ -57,17 +63,17 @@ def test_get_server_timezone_timedatectl_fallback_to_localtime(
 		"interlock_backend.server_timezone.subprocess.check_output",
 		side_effect=subprocess.CalledProcessError(1, "cmd"),
 	)
-	m_os = mocker.patch(
-		"os.path.realpath",
-		return_value=value
-	)
+	m_os = mocker.patch("os.path.realpath", return_value=value)
 
 	result = get_server_timezone()
 
 	m_subprocess.assert_called_once()
 	m_os.assert_called_once_with("/etc/localtime")
-	f_logger.info.assert_called_with("Configured timezone: America/Buenos_Aires")
+	f_logger.info.assert_called_with(
+		"Configured timezone: America/Buenos_Aires"
+	)
 	assert result == "America/Buenos_Aires"
+
 
 def test_get_server_timezone_localtime_fallback_to_utc(
 	mocker: MockerFixture,
@@ -88,6 +94,7 @@ def test_get_server_timezone_localtime_fallback_to_utc(
 	f_logger.info.assert_called_with("Configured timezone: UTC")
 	assert result == "UTC"
 
+
 def test_get_server_timezone_invalid_timezone_fallback(
 	mocker: MockerFixture,
 	f_pytz_timezones: None,
@@ -99,7 +106,7 @@ def test_get_server_timezone_invalid_timezone_fallback(
 	m_success_output.decode.return_value = m_timezone
 	mocker.patch(
 		"interlock_backend.server_timezone.subprocess.check_output",
-		return_value=m_success_output
+		return_value=m_success_output,
 	)
 
 	result = get_server_timezone()
@@ -108,7 +115,5 @@ def test_get_server_timezone_invalid_timezone_fallback(
 		f"Warning: Detected timezone '{m_timezone.strip()}' is invalid. "
 		"Falling back to UTC."
 	)
-	f_logger.info.assert_called_once_with(
-		"Configured timezone: UTC"
-	)
+	f_logger.info.assert_called_once_with("Configured timezone: UTC")
 	assert result == "UTC"

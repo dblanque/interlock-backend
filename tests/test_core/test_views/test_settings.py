@@ -190,8 +190,10 @@ class TestFetch(BaseViewTestClassWithPk):
 		assert "local" in response_data["settings"]
 		assert "ldap" in response_data["settings"]
 		assert (
-			response_data["settings"]["local"]["DEFAULT_ADMIN_ENABLED"]\
-				[LOCAL_ATTR_VALUE] == superadmin_enabled
+			response_data["settings"]["local"]["DEFAULT_ADMIN_ENABLED"][
+				LOCAL_ATTR_VALUE
+			]
+			== superadmin_enabled
 		)
 		assert isinstance(response_data["settings"]["local"], dict)
 		assert isinstance(response_data["settings"]["ldap"], dict)
@@ -443,7 +445,7 @@ class TestSave(BaseViewTestClass):
 			"DEFAULT_ADMIN_PWD": {
 				LOCAL_ATTR_TYPE: TYPE_STRING,
 				LOCAL_ATTR_VALUE: m_admin_password,
-			}
+			},
 		}
 		response: Response = admin_user_client.post(
 			self.endpoint,
@@ -528,7 +530,7 @@ class TestSave(BaseViewTestClass):
 						"DEFAULT_ADMIN_PWD": {
 							LOCAL_ATTR_TYPE: TYPE_STRING,
 							LOCAL_ATTR_VALUE: m_password,
-						}
+						},
 					},
 					"ldap": {},
 				},

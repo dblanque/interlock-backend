@@ -483,9 +483,7 @@ class TestLDAPSettingsMixin:
 			setting_instance.save()
 
 			mixin.save_local_settings(
-				local_settings={
-					setting_key: { LOCAL_ATTR_VALUE: setting_value }
-				}
+				local_settings={setting_key: {LOCAL_ATTR_VALUE: setting_value}}
 			)
 
 			setting_instance = InterlockSetting.objects.get(name=setting_key)

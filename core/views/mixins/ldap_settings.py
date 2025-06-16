@@ -232,7 +232,6 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 	def get_local_settings(
 		self, preset_id=1, public_fields_only=True
 	) -> dict[dict]:
-
 		fields_to_retrieve = None
 		if public_fields_only:
 			fields_to_retrieve = INTERLOCK_SETTING_PUBLIC

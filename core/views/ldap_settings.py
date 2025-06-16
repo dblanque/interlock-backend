@@ -251,24 +251,28 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		# Pop Admin Settings
 		admin_enabled_dct: dict = local_settings.pop(
 			"DEFAULT_ADMIN_ENABLED",
-			{LOCAL_ATTR_VALUE: True, LOCAL_ATTR_TYPE: TYPE_BOOL}
+			{LOCAL_ATTR_VALUE: True, LOCAL_ATTR_TYPE: TYPE_BOOL},
 		)
 		admin_enabled = admin_enabled_dct.get(LOCAL_ATTR_VALUE)
 		admin_password_dct: dict = local_settings.pop(
 			"DEFAULT_ADMIN_PWD",
-			{LOCAL_ATTR_VALUE: "", LOCAL_ATTR_TYPE: TYPE_STRING}
+			{LOCAL_ATTR_VALUE: "", LOCAL_ATTR_TYPE: TYPE_STRING},
 		)
 		admin_password = admin_password_dct.get(LOCAL_ATTR_VALUE)
 
 		if not isinstance(admin_enabled, bool):
-			raise exc_base.BadRequest(data={
-				"detail": "Local Setting admin_enabled must be of type bool."
-			})
+			raise exc_base.BadRequest(
+				data={
+					"detail": "Local Setting admin_enabled must be of type bool."
+				}
+			)
 		if not isinstance(admin_password, str) and admin_password is not None:
-			raise exc_base.BadRequest(data={
-				"detail":	"Local Setting admin_password must be of type str"
-							" or None."
-			})
+			raise exc_base.BadRequest(
+				data={
+					"detail": "Local Setting admin_password must be of type str"
+					" or None."
+				}
+			)
 
 		# LDAP Settings
 		ldap_settings: dict = data_settings.pop("ldap")

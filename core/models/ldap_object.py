@@ -603,8 +603,8 @@ class LDAPObject:
 			# If local value empty
 			if not local_value:
 				if (
-					local_alias in self.int_fields and
-					local_alias in ATTRS_DELETE_PROTECTED
+					local_alias in self.int_fields
+					and local_alias in ATTRS_DELETE_PROTECTED
 				):
 					delete_attrs[ldap_alias] = [(MODIFY_REPLACE, [0])]
 				else:

@@ -6,7 +6,7 @@ class SearchAttrBuilder:
 		"""Convert Local Attribute Key to LDAP Attribute Key
 		Args:
 			k (str): Local Attribute Constant Key (LOCAL_ATTR_*)
-		
+
 		Returns:
 			str: Corresponding LDAP mapped field for Local Attribute Key
 		"""

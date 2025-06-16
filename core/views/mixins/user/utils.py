@@ -50,9 +50,7 @@ class UserUtilsMixin:
 			self.ldap_backend_enabled = False
 
 	def validate_local_attrs(
-		self,
-		l: list,
-		check_attrs: list[str] | tuple[str] | set[str] = None
+		self, l: list, check_attrs: list[str] | tuple[str] | set[str] = None
 	):
 		"""Validates list of keys against local system attributes
 
@@ -68,10 +66,8 @@ class UserUtilsMixin:
 					data={
 						"detail": "All headers and/or header mappings must"
 						"be of type str and existing local attributes "
-						"(Offending key: %s is of type %s)." % (
-							str(v),
-							type(v).__name__
-						)
+						"(Offending key: %s is of type %s)."
+						% (str(v), type(v).__name__)
 					}
 				)
 

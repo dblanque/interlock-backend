@@ -19,6 +19,7 @@ from core.models.interlock_settings import (
 	INTERLOCK_SETTINGS_LOG_MAX,
 )
 
+
 @pytest.fixture
 def log_mixin():
 	return LogMixin()
@@ -30,10 +31,13 @@ def test_user():
 		username="testuser", password="testpass", email="test@example.com"
 	)
 
+
 @pytest.fixture(autouse=True)
 def f_create_default_settings():
 	from core.setup.interlock_setting import create_default_interlock_settings
+
 	create_default_interlock_settings()
+
 
 @pytest.fixture(autouse=True)
 def f_patch_log_max():
@@ -45,10 +49,11 @@ def f_patch_log_max():
 		name=INTERLOCK_SETTINGS_LOG_MAX,
 	)
 	# Corroborate effective change.
-	assert InterlockSetting.objects.get(
-		name=INTERLOCK_SETTINGS_LOG_MAX
-	).value == 5
+	assert (
+		InterlockSetting.objects.get(name=INTERLOCK_SETTINGS_LOG_MAX).value == 5
+	)
 	return m_log_max
+
 
 @pytest.mark.django_db
 class TestLogMixin:
@@ -72,7 +77,7 @@ class TestLogMixin:
 		assert result is None
 		m_logger.warning.assert_called_once_with(
 			"%s log option does not exist in InterlockSettings Model.",
-			"ILCK_LOG_TEST_OPERATION"
+			"ILCK_LOG_TEST_OPERATION",
 		)
 
 	def test_log_with_invalid_user_type(self, log_mixin: LogMixin):

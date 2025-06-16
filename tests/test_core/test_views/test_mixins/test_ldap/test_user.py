@@ -66,6 +66,7 @@ def f_user_mixin(mocker):
 def f_logger(mocker: MockerFixture):
 	return mocker.patch("core.views.mixins.ldap.user.logger")
 
+
 @pytest.fixture(autouse=True)
 def f_log_mixin(mocker: MockerFixture):
 	mock = mocker.patch(
@@ -1539,7 +1540,7 @@ class TestLdapBulkCreateFromCsv:
 		m_ldap_set_password = mocker.patch.object(
 			LDAPUserMixin,
 			"ldap_set_password",
-			side_effect=password_exc if password_exc else None
+			side_effect=password_exc if password_exc else None,
 		)
 		# Insert should always be attr: value dict,
 		# adding the path attr and excluding for password attr.
@@ -1553,7 +1554,7 @@ class TestLdapBulkCreateFromCsv:
 		if csv_password:
 			new_headers = list(f_index_map.values())
 			new_headers.insert(1, LOCAL_ATTR_PASSWORD)
-			f_index_map = { i: v for i, v in enumerate(new_headers) }
+			f_index_map = {i: v for i, v in enumerate(new_headers)}
 			for row in m_user_rows:
 				row.insert(1, csv_password)
 
@@ -1584,7 +1585,7 @@ class TestLdapBulkCreateFromCsv:
 		assert created
 		if password_exc:
 			f_logger.exception.assert_called_once()
-			assert failed == [{'username': 'someuser', 'stage': 'password'}]
+			assert failed == [{"username": "someuser", "stage": "password"}]
 		else:
 			assert not failed
 
@@ -1619,7 +1620,7 @@ class TestLdapBulkCreateFromDicts:
 		m_ldap_set_password = mocker.patch.object(
 			LDAPUserMixin,
 			"ldap_set_password",
-			side_effect=password_exc if password_exc else None
+			side_effect=password_exc if password_exc else None,
 		)
 
 		m_user_success = "someuser#1234"
@@ -1661,7 +1662,8 @@ class TestLdapBulkCreateFromDicts:
 			},
 		]
 		if password_exc:
-			expected_failed.insert(0,
+			expected_failed.insert(
+				0,
 				{
 					LOCAL_ATTR_USERNAME: m_user_success,
 					"stage": "password",
@@ -1679,9 +1681,7 @@ class TestLdapBulkCreateFromDicts:
 		assert created == [m_user_success]
 		assert failed == expected_failed
 
-		m_ldap_user_insert.assert_called_once_with(
-			data=expected_insert_data
-		)
+		m_ldap_user_insert.assert_called_once_with(data=expected_insert_data)
 		if not placeholder_password and not dict_password:
 			m_ldap_set_password.assert_not_called()
 		else:

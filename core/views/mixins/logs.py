@@ -48,7 +48,7 @@ class LogMixin(viewsets.ViewSetMixin):
 		if not LOG_OPTION in set(INTERLOCK_SETTING_MAP.keys()):
 			logger.warning(
 				"%s log option does not exist in InterlockSettings Model.",
-				LOG_OPTION
+				LOG_OPTION,
 			)
 			return None
 
@@ -99,14 +99,13 @@ class LogMixin(viewsets.ViewSetMixin):
 		"""Handle log rotation using bulk ops."""
 
 		# Calculate how many logs to remove
-		remove_count = (
-			current_count - log_limit + 1
-		)
+		remove_count = current_count - log_limit + 1
 
 		# Get IDs of oldest logs to remove
-		old_log_ids = (Log.objects
-			.order_by("id")
-			.values_list("id", flat=True)[:remove_count+1] # Sum 1 to index
+		old_log_ids = (
+			Log.objects.order_by("id").values_list("id", flat=True)[
+				: remove_count + 1
+			]  # Sum 1 to index
 		)
 
 		# Bulk delete old logs

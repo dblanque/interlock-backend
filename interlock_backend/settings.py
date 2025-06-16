@@ -355,7 +355,7 @@ if ENABLE_THROTTLING:
 		"DEFAULT_THROTTLE_RATES": {
 			"anon": "25/minute",
 			"user": "1000/hour",
-		}
+		},
 	}
 load_override(globals(), "THROTTLE_OPTS")
 

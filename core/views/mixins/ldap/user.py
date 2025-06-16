@@ -615,10 +615,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 		return False
 
 	def ldap_user_fetch(
-		self,
-		user_search,
-		return_entry=False,
-		log_operation: bool = True
+		self, user_search, return_entry=False, log_operation: bool = True
 	) -> dict:
 		"""Returns Serialized LDAP User attributes or Entry."""
 		self.search_filter = self.get_user_object_filter(username=user_search)
@@ -1023,7 +1020,9 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 					logger.exception(e)
 					failed_users.append(
 						{
-							LOCAL_ATTR_USERNAME:user_attrs[LOCAL_ATTR_USERNAME],
+							LOCAL_ATTR_USERNAME: user_attrs[
+								LOCAL_ATTR_USERNAME
+							],
 							"stage": "password",
 						}
 					)

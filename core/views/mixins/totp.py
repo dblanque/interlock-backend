@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 from django_otp import devices_for_user, user_has_device
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
+
 def get_all_user_totp_devices(user: User) -> list[TOTPDevice]:
 	has_confirmed_device = user_has_device(user, confirmed=True)
 	has_unconfirmed_device = user_has_device(user, confirmed=False)
@@ -35,7 +36,7 @@ def get_all_user_totp_devices(user: User) -> list[TOTPDevice]:
 		result = []
 		for exists, confirmed in (
 			(has_confirmed_device, True),
-			(has_unconfirmed_device, False)
+			(has_unconfirmed_device, False),
 		):
 			if exists:
 				for d in devices_for_user(user, confirmed=confirmed):
@@ -43,6 +44,7 @@ def get_all_user_totp_devices(user: User) -> list[TOTPDevice]:
 						result.append(d)
 		return result
 	return []
+
 
 def get_user_totp_device(
 	user: User,
@@ -135,7 +137,7 @@ def delete_device_totp_for_user(user: User) -> bool:
 	has_unconfirmed_device = user_has_device(user, confirmed=False)
 	if not has_unconfirmed_device and not has_confirmed_device:
 		return False
-	
+
 	if has_confirmed_device:
 		device = get_user_totp_device(user, confirmed=True)
 	else:
@@ -145,6 +147,7 @@ def delete_device_totp_for_user(user: User) -> bool:
 	user.save()
 	logger.info("TOTP Device deleted for user %s", user.username)
 	return True
+
 
 @transaction.atomic
 def validate_user_otp(
