@@ -12,7 +12,7 @@ from core.models.choices.log import (
 	LOG_CLASS_SET,
 	LOG_TARGET_ALL,
 )
-from core.models.types.settings import TYPE_LDAP_URI
+from core.models.types.settings import TYPE_LDAP_URI, TYPE_BOOL, TYPE_STRING
 
 ### Constants
 from core.constants.attrs.local import (
@@ -190,8 +190,8 @@ class TestFetch(BaseViewTestClassWithPk):
 		assert "local" in response_data["settings"]
 		assert "ldap" in response_data["settings"]
 		assert (
-			response_data["settings"]["ldap"]["DEFAULT_ADMIN_ENABLED"]
-			== superadmin_enabled
+			response_data["settings"]["local"]["DEFAULT_ADMIN_ENABLED"]\
+				[LOCAL_ATTR_VALUE] == superadmin_enabled
 		)
 		assert isinstance(response_data["settings"]["local"], dict)
 		assert isinstance(response_data["settings"]["ldap"], dict)
@@ -435,14 +435,22 @@ class TestSave(BaseViewTestClass):
 		)
 		m_admin_enabled = True
 		m_admin_password = "mock_password"
+		m_local_dict = {
+			"DEFAULT_ADMIN_ENABLED": {
+				LOCAL_ATTR_TYPE: TYPE_BOOL,
+				LOCAL_ATTR_VALUE: m_admin_enabled,
+			},
+			"DEFAULT_ADMIN_PWD": {
+				LOCAL_ATTR_TYPE: TYPE_STRING,
+				LOCAL_ATTR_VALUE: m_admin_password,
+			}
+		}
 		response: Response = admin_user_client.post(
 			self.endpoint,
 			data={
 				"preset": {"id": m_ldap_preset.id},
 				"settings": {
-					"DEFAULT_ADMIN_ENABLED": m_admin_enabled,
-					"DEFAULT_ADMIN_PWD": m_admin_password,
-					"local": "mock_local_dict",
+					"local": m_local_dict,
 					"ldap": "mock_ldap_dict",
 				},
 			},
@@ -453,7 +461,7 @@ class TestSave(BaseViewTestClass):
 			status=m_admin_enabled,
 			password=m_admin_password,
 		)
-		m_save_local_settings.assert_called_once_with("mock_local_dict")
+		m_save_local_settings.assert_called_once_with({})
 		m_save_ldap_settings.assert_called_once_with(
 			"mock_ldap_dict",
 			m_ldap_preset,
@@ -512,9 +520,16 @@ class TestSave(BaseViewTestClass):
 			data={
 				"preset": {"id": ldap_preset.id},
 				"settings": {
-					"DEFAULT_ADMIN_ENABLED": m_status,
-					"DEFAULT_ADMIN_PWD": m_password,
-					"local": {},
+					"local": {
+						"DEFAULT_ADMIN_ENABLED": {
+							LOCAL_ATTR_TYPE: TYPE_BOOL,
+							LOCAL_ATTR_VALUE: m_status,
+						},
+						"DEFAULT_ADMIN_PWD": {
+							LOCAL_ATTR_TYPE: TYPE_STRING,
+							LOCAL_ATTR_VALUE: m_password,
+						}
+					},
 					"ldap": {},
 				},
 			},
@@ -583,9 +598,6 @@ class TestLdapTestEndpoint(BaseViewTestClass):
 		m_data = SettingsViewMixin().get_ldap_settings(
 			preset_id=m_ldap_preset.id
 		)
-		for _k in ("DEFAULT_ADMIN_ENABLED", "DEFAULT_ADMIN_PWD"):
-			if _k in m_data:
-				del m_data[_k]
 		m_data["some_bad_key"] = True
 
 		response: Response = admin_user_client.post(
@@ -610,9 +622,6 @@ class TestLdapTestEndpoint(BaseViewTestClass):
 		m_data = SettingsViewMixin().get_ldap_settings(
 			preset_id=m_ldap_preset.id
 		)
-		for _k in ("DEFAULT_ADMIN_ENABLED", "DEFAULT_ADMIN_PWD"):
-			if _k in m_data:
-				del m_data[_k]
 		m_data[K_LDAP_AUTH_USE_SSL][LOCAL_ATTR_TYPE] = TYPE_LDAP_URI
 
 		response: Response = admin_user_client.post(
@@ -637,9 +646,6 @@ class TestLdapTestEndpoint(BaseViewTestClass):
 		m_data = SettingsViewMixin().get_ldap_settings(
 			preset_id=m_ldap_preset.id
 		)
-		for _k in ("DEFAULT_ADMIN_ENABLED", "DEFAULT_ADMIN_PWD"):
-			if _k in m_data:
-				del m_data[_k]
 		m_data[K_LDAP_AUTH_TLS_VERSION][LOCAL_ATTR_VALUE] = "some_bad_value"
 
 		response: Response = admin_user_client.post(
@@ -664,9 +670,6 @@ class TestLdapTestEndpoint(BaseViewTestClass):
 		m_data = SettingsViewMixin().get_ldap_settings(
 			preset_id=m_ldap_preset.id
 		)
-		for _k in ("DEFAULT_ADMIN_ENABLED", "DEFAULT_ADMIN_PWD"):
-			if _k in m_data:
-				del m_data[_k]
 
 		response: Response = admin_user_client.post(
 			self.endpoint, data=m_data, format="json"
@@ -690,9 +693,6 @@ class TestLdapTestEndpoint(BaseViewTestClass):
 		m_data = SettingsViewMixin().get_ldap_settings(
 			preset_id=m_ldap_preset.id
 		)
-		for _k in ("DEFAULT_ADMIN_ENABLED", "DEFAULT_ADMIN_PWD"):
-			if _k in m_data:
-				del m_data[_k]
 
 		response: Response = admin_user_client.post(
 			self.endpoint, data=m_data, format="json"

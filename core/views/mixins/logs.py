@@ -8,10 +8,15 @@
 
 # ---------------------------------- IMPORTS --------------------------------- #
 from rest_framework import viewsets
-from core.config.runtime import RuntimeSettings
+from core.models.interlock_settings import (
+	InterlockSetting,
+	INTERLOCK_SETTINGS_LOG_MAX,
+	INTERLOCK_SETTING_MAP,
+)
 from core.models.user import User
 from core.models.log import Log
 from django.db import transaction
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Count, Max
 import logging
 
@@ -39,14 +44,29 @@ class LogMixin(viewsets.ViewSetMixin):
 		):
 			raise TypeError("user must be of type int | User")
 
-		LOG_OPTION = f"LDAP_LOG_{operation_type}"
-		if not hasattr(RuntimeSettings, LOG_OPTION):
+		LOG_OPTION = f"ILCK_LOG_{operation_type}"
+		if not LOG_OPTION in set(INTERLOCK_SETTING_MAP.keys()):
 			logger.warning(
-				"RuntimeSettings does not have the %s attribute.", LOG_OPTION
+				"%s log option does not exist in InterlockSettings Model.",
+				LOG_OPTION
 			)
-		if not getattr(RuntimeSettings, LOG_OPTION, False):
 			return None
-		log_limit = RuntimeSettings.LDAP_LOG_MAX
+
+		try:
+			log_enabled_for_opt = InterlockSetting.objects.get(name=LOG_OPTION)
+			if not log_enabled_for_opt.value:
+				return None
+		except ObjectDoesNotExist:
+			return None
+
+		log_limit = None
+		try:
+			log_limit = InterlockSetting.objects.get(
+				name=INTERLOCK_SETTINGS_LOG_MAX,
+			).value
+			log_limit = int(log_limit)
+		except (ObjectDoesNotExist, ValueError):
+			log_limit = 100
 
 		if isinstance(user, int):
 			kwargs["user_id"] = user
@@ -81,12 +101,13 @@ class LogMixin(viewsets.ViewSetMixin):
 		# Calculate how many logs to remove
 		remove_count = (
 			current_count - log_limit + 1
-		)  # +1 to make space for new log
+		)
 
 		# Get IDs of oldest logs to remove
-		old_log_ids = Log.objects.order_by("id").values_list("id", flat=True)[
-			:remove_count
-		]
+		old_log_ids = (Log.objects
+			.order_by("id")
+			.values_list("id", flat=True)[:remove_count+1] # Sum 1 to index
+		)
 
 		# Bulk delete old logs
 		Log.objects.filter(id__in=old_log_ids).delete()

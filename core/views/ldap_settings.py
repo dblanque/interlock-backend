@@ -15,6 +15,7 @@ from core.exceptions import (
 )
 
 ### Models
+from core.models.types.settings import TYPE_BOOL, TYPE_STRING
 from core.views.mixins.logs import LogMixin
 from core.models.choices.log import (
 	LOG_ACTION_READ,
@@ -53,7 +54,6 @@ from core.constants.attrs import (
 	LOCAL_ATTR_ACTIVE,
 	LOCAL_ATTR_TYPE,
 )
-from core.constants.settings import K_LDAP_LOG_MAX
 from core.decorators.login import auth_required, admin_required
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
@@ -245,17 +245,39 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		else:
 			raise exc_base.MissingDataKey(data={"key": "data.preset.id"})
 
-		if K_LDAP_LOG_MAX in data_settings:
-			if int(data_settings[K_LDAP_LOG_MAX][LOCAL_ATTR_VALUE]) > 10000:
-				raise exc_set.SettingLogMaxLimit
-
-		admin_enabled = data_settings.pop("DEFAULT_ADMIN_ENABLED", None)
-		admin_password = data_settings.pop("DEFAULT_ADMIN_PWD", None)
+		# Local Settings
 		local_settings: dict = data_settings.pop("local")
+
+		# Pop Admin Settings
+		admin_enabled_dct: dict = local_settings.pop(
+			"DEFAULT_ADMIN_ENABLED",
+			{LOCAL_ATTR_VALUE: True, LOCAL_ATTR_TYPE: TYPE_BOOL}
+		)
+		admin_enabled = admin_enabled_dct.get(LOCAL_ATTR_VALUE)
+		admin_password_dct: dict = local_settings.pop(
+			"DEFAULT_ADMIN_PWD",
+			{LOCAL_ATTR_VALUE: "", LOCAL_ATTR_TYPE: TYPE_STRING}
+		)
+		admin_password = admin_password_dct.get(LOCAL_ATTR_VALUE)
+
+		if not isinstance(admin_enabled, bool):
+			raise exc_base.BadRequest(data={
+				"detail": "Local Setting admin_enabled must be of type bool."
+			})
+		if not isinstance(admin_password, str) and admin_password is not None:
+			raise exc_base.BadRequest(data={
+				"detail":	"Local Setting admin_password must be of type str"
+							" or None."
+			})
+
+		# LDAP Settings
 		ldap_settings: dict = data_settings.pop("ldap")
 
 		with transaction.atomic():
-			self.set_admin_status(status=admin_enabled, password=admin_password)
+			self.set_admin_status(
+				status=admin_enabled,
+				password=admin_password,
+			)
 			self.save_local_settings(local_settings)
 			self.save_ldap_settings(ldap_settings, settings_preset)
 

@@ -1,5 +1,5 @@
 import pytest
-from pytest_mock import MockType
+from pytest_mock import MockType, MockerFixture
 from django.db import transaction
 from core.models.user import User
 from core.models.log import Log
@@ -12,8 +12,12 @@ from core.models.choices.log import (
 	LOG_CLASS_USER,
 	LOG_EXTRA_USER_END_USER_UPDATE,
 )
-from tests.test_core.conftest import RuntimeSettingsFactory
-
+from core.models.types.settings import TYPE_INTEGER
+from core.constants.attrs.local import LOCAL_ATTR_TYPE, LOCAL_ATTR_VALUE
+from core.models.interlock_settings import (
+	InterlockSetting,
+	INTERLOCK_SETTINGS_LOG_MAX,
+)
 
 @pytest.fixture
 def log_mixin():
@@ -26,18 +30,33 @@ def test_user():
 		username="testuser", password="testpass", email="test@example.com"
 	)
 
+@pytest.fixture(autouse=True)
+def f_create_default_settings():
+	from core.setup.interlock_setting import create_default_interlock_settings
+	create_default_interlock_settings()
 
-@pytest.fixture
-def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
-	mock = g_runtime_settings("core.views.mixins.logs.RuntimeSettings")
-	mock.LDAP_LOG_MAX = 5
-	return mock
-
+@pytest.fixture(autouse=True)
+def f_patch_log_max():
+	m_log_max = InterlockSetting.objects.update_or_create(
+		defaults={
+			LOCAL_ATTR_TYPE: TYPE_INTEGER,
+			LOCAL_ATTR_VALUE: 5,
+		},
+		name=INTERLOCK_SETTINGS_LOG_MAX,
+	)
+	# Corroborate effective change.
+	assert InterlockSetting.objects.get(
+		name=INTERLOCK_SETTINGS_LOG_MAX
+	).value == 5
+	return m_log_max
 
 @pytest.mark.django_db
 class TestLogMixin:
 	def test_log_with_invalid_operation_type(
-		self, log_mixin: LogMixin, test_user, f_runtime_settings, mocker
+		self,
+		mocker: MockerFixture,
+		log_mixin: LogMixin,
+		test_user,
 	):
 		# Setup
 		m_logger = mocker.patch("core.views.mixins.logs.logger")
@@ -52,13 +71,11 @@ class TestLogMixin:
 		# Verify
 		assert result is None
 		m_logger.warning.assert_called_once_with(
-			"RuntimeSettings does not have the %s attribute.",
-			"LDAP_LOG_TEST_OPERATION",
+			"%s log option does not exist in InterlockSettings Model.",
+			"ILCK_LOG_TEST_OPERATION"
 		)
 
-	def test_log_with_invalid_user_type(
-		self, log_mixin: LogMixin, f_runtime_settings
-	):
+	def test_log_with_invalid_user_type(self, log_mixin: LogMixin):
 		# Execute & Verify
 		with pytest.raises(TypeError, match="user must be of type int | User"):
 			log_mixin.log(
@@ -68,7 +85,10 @@ class TestLogMixin:
 			)
 
 	def test_log_with_user_object(
-		self, log_mixin: LogMixin, test_user, f_runtime_settings, mocker
+		self,
+		mocker: MockerFixture,
+		log_mixin: LogMixin,
+		test_user,
 	):
 		# Setup
 		mocker.patch.object(
@@ -92,7 +112,10 @@ class TestLogMixin:
 		m_save.assert_called_once()
 
 	def test_log_with_user_id(
-		self, log_mixin: LogMixin, test_user, f_runtime_settings, mocker
+		self,
+		mocker: MockerFixture,
+		log_mixin: LogMixin,
+		test_user,
 	):
 		# Setup
 		mocker.patch.object(
@@ -115,18 +138,22 @@ class TestLogMixin:
 		assert m_save.called
 
 	def test_log_rotation_needed(
-		self, log_mixin: LogMixin, test_user, f_runtime_settings, mocker
+		self,
+		mocker: MockerFixture,
+		log_mixin: LogMixin,
+		test_user,
 	):
 		# Setup
-		f_runtime_settings.LDAP_LOG_MAX = 3
 		mocker.patch.object(
 			Log.objects,
 			"aggregate",
 			return_value={"total_logs": 5, "max_id": 5},
 		)
 
+		m_order_result = mocker.Mock()
+		m_order_result.values_list.return_value = [1, 2]
 		m_order = mocker.patch.object(Log.objects, "order_by")
-		m_order.return_value.values_list.return_value = [1, 2]
+		m_order.return_value = m_order_result
 
 		m_filter = mocker.patch.object(Log.objects, "filter")
 
@@ -143,7 +170,10 @@ class TestLogMixin:
 		m_filter.return_value.delete.assert_called_once()
 
 	def test_log_rotation_not_needed(
-		self, log_mixin: LogMixin, test_user, f_runtime_settings, mocker
+		self,
+		mocker: MockerFixture,
+		log_mixin: LogMixin,
+		test_user,
 	):
 		# Setup
 		mocker.patch.object(
@@ -167,7 +197,10 @@ class TestLogMixin:
 		m_filter.assert_not_called()
 
 	def test_log_atomic_transaction(
-		self, log_mixin: LogMixin, test_user, f_runtime_settings, mocker
+		self,
+		mocker: MockerFixture,
+		log_mixin: LogMixin,
+		test_user,
 	):
 		# Setup
 		mocker.patch.object(
@@ -183,7 +216,11 @@ class TestLogMixin:
 				log_target_class=LOG_CLASS_USER,
 			)
 
-	def test_rotate_logs_method(self, log_mixin: LogMixin, mocker):
+	def test_rotate_logs_method(
+		self,
+		mocker: MockerFixture,
+		log_mixin: LogMixin,
+	):
 		# Setup
 		m_order = mocker.patch.object(Log.objects, "order_by")
 		m_order.return_value.values_list.return_value = [1, 2, 3]

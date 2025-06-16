@@ -9,6 +9,15 @@ from django.db import transaction
 from core.models.interlock_settings import (
 	InterlockSetting,
 	INTERLOCK_SETTING_ENABLE_LDAP,
+	INTERLOCK_SETTINGS_LOG_MAX,
+	INTERLOCK_SETTINGS_LOG_READ,
+	INTERLOCK_SETTINGS_LOG_CREATE,
+	INTERLOCK_SETTINGS_LOG_UPDATE,
+	INTERLOCK_SETTINGS_LOG_DELETE,
+	INTERLOCK_SETTINGS_LOG_OPEN_CONNECTION,
+	INTERLOCK_SETTINGS_LOG_CLOSE_CONNECTION,
+	INTERLOCK_SETTINGS_LOG_LOGIN,
+	INTERLOCK_SETTINGS_LOG_LOGOUT,
 	INTERLOCK_SETTING_MAP,
 )
 from core.models.types.settings import TYPE_BOOL
@@ -435,31 +444,47 @@ class TestLDAPSettingsMixin:
 
 	class TestSaveLocalSettings:
 		@pytest.mark.parametrize(
-			"setting_key, setting_value",
+			"setting_key, previous_value, setting_value",
 			(
-				(INTERLOCK_SETTING_ENABLE_LDAP, True),
-				(INTERLOCK_SETTING_ENABLE_LDAP, False),
+				(INTERLOCK_SETTINGS_LOG_MAX, 100, 9999),
+				(INTERLOCK_SETTING_ENABLE_LDAP, False, True),
+				(INTERLOCK_SETTING_ENABLE_LDAP, True, False),
+				(INTERLOCK_SETTINGS_LOG_MAX, 100, 999),
+				(INTERLOCK_SETTINGS_LOG_READ, True, False),
+				(INTERLOCK_SETTINGS_LOG_READ, False, True),
+				(INTERLOCK_SETTINGS_LOG_CREATE, True, False),
+				(INTERLOCK_SETTINGS_LOG_CREATE, False, True),
+				(INTERLOCK_SETTINGS_LOG_UPDATE, True, False),
+				(INTERLOCK_SETTINGS_LOG_UPDATE, False, True),
+				(INTERLOCK_SETTINGS_LOG_DELETE, True, False),
+				(INTERLOCK_SETTINGS_LOG_DELETE, False, True),
+				(INTERLOCK_SETTINGS_LOG_OPEN_CONNECTION, True, False),
+				(INTERLOCK_SETTINGS_LOG_OPEN_CONNECTION, False, True),
+				(INTERLOCK_SETTINGS_LOG_CLOSE_CONNECTION, True, False),
+				(INTERLOCK_SETTINGS_LOG_CLOSE_CONNECTION, False, True),
+				(INTERLOCK_SETTINGS_LOG_LOGIN, True, False),
+				(INTERLOCK_SETTINGS_LOG_LOGIN, False, True),
+				(INTERLOCK_SETTINGS_LOG_LOGOUT, True, False),
+				(INTERLOCK_SETTINGS_LOG_LOGOUT, False, True),
 			),
 		)
 		def test_success_adding_local_override(
 			self,
 			setting_key: str,
+			previous_value,
 			setting_value,
 			mixin: SettingsViewMixin,
-			ldap_preset: LDAPPreset,
 		):
 			setting_instance = InterlockSetting(
 				name=setting_key,
 				type=INTERLOCK_SETTING_MAP[setting_key],
-				value=(not setting_value),
+				value=previous_value,
 			)
 			setting_instance.save()
 
 			mixin.save_local_settings(
 				local_settings={
-					INTERLOCK_SETTING_ENABLE_LDAP: {
-						LOCAL_ATTR_VALUE: setting_value
-					}
+					setting_key: { LOCAL_ATTR_VALUE: setting_value }
 				}
 			)
 
@@ -471,22 +496,6 @@ class TestLDAPSettingsMixin:
 			"setting_key, setting_value, test_removal_on_default",
 			(
 				# Adding overrides
-				(K_LDAP_LOG_CREATE, (not defaults.LDAP_LOG_CREATE), False),
-				(K_LDAP_LOG_READ, (not defaults.LDAP_LOG_READ), False),
-				(K_LDAP_LOG_UPDATE, (not defaults.LDAP_LOG_UPDATE), False),
-				(K_LDAP_LOG_DELETE, (not defaults.LDAP_LOG_DELETE), False),
-				(
-					K_LDAP_LOG_OPEN_CONNECTION,
-					(not defaults.LDAP_LOG_OPEN_CONNECTION),
-					False,
-				),
-				(
-					K_LDAP_LOG_CLOSE_CONNECTION,
-					(not defaults.LDAP_LOG_CLOSE_CONNECTION),
-					False,
-				),
-				(K_LDAP_LOG_LOGIN, (not defaults.LDAP_LOG_LOGIN), False),
-				(K_LDAP_LOG_LOGOUT, (not defaults.LDAP_LOG_LOGOUT), False),
 				(K_LDAP_DNS_LEGACY, (not defaults.LDAP_DNS_LEGACY), False),
 				(K_LDAP_AUTH_CONNECTION_USER_DN, "mock_dn", False),
 				(K_LDAP_AUTH_CONNECTION_USERNAME, "mock_user", False),
@@ -510,22 +519,6 @@ class TestLDAPSettingsMixin:
 					False,
 				),
 				# Deleting overrides
-				(K_LDAP_LOG_CREATE, (not defaults.LDAP_LOG_CREATE), True),
-				(K_LDAP_LOG_READ, (not defaults.LDAP_LOG_READ), True),
-				(K_LDAP_LOG_UPDATE, (not defaults.LDAP_LOG_UPDATE), True),
-				(K_LDAP_LOG_DELETE, (not defaults.LDAP_LOG_DELETE), True),
-				(
-					K_LDAP_LOG_OPEN_CONNECTION,
-					(not defaults.LDAP_LOG_OPEN_CONNECTION),
-					True,
-				),
-				(
-					K_LDAP_LOG_CLOSE_CONNECTION,
-					(not defaults.LDAP_LOG_CLOSE_CONNECTION),
-					True,
-				),
-				(K_LDAP_LOG_LOGIN, (not defaults.LDAP_LOG_LOGIN), True),
-				(K_LDAP_LOG_LOGOUT, (not defaults.LDAP_LOG_LOGOUT), True),
 				(K_LDAP_DNS_LEGACY, (not defaults.LDAP_DNS_LEGACY), True),
 				(K_LDAP_AUTH_CONNECTION_USER_DN, "mock_dn", True),
 				(K_LDAP_AUTH_CONNECTION_USERNAME, "mock_user", True),
@@ -601,39 +594,6 @@ class TestLDAPSettingsMixin:
 		@pytest.mark.parametrize(
 			"setting_key, setting_value",
 			(
-				# Booleans with wrong types
-				(
-					K_LDAP_LOG_CREATE,
-					"string",
-				),
-				(
-					K_LDAP_LOG_READ,
-					"string",
-				),
-				(
-					K_LDAP_LOG_UPDATE,
-					"string",
-				),
-				(
-					K_LDAP_LOG_DELETE,
-					"string",
-				),
-				(
-					K_LDAP_LOG_OPEN_CONNECTION,
-					"string",
-				),
-				(
-					K_LDAP_LOG_CLOSE_CONNECTION,
-					"string",
-				),
-				(
-					K_LDAP_LOG_LOGIN,
-					"string",
-				),
-				(
-					K_LDAP_LOG_LOGOUT,
-					"string",
-				),
 				(
 					K_LDAP_DNS_LEGACY,
 					"string",

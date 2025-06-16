@@ -52,7 +52,11 @@ from core.constants.attrs.local import (
 	LOCAL_ATTR_PRESET,
 	LOCAL_ATTR_DN,
 )
-from core.models.types.settings import make_field_db_name, TYPE_AES_ENCRYPT
+from core.models.types.settings import (
+	make_field_db_name,
+	TYPE_AES_ENCRYPT,
+	TYPE_BOOL,
+)
 from core.constants.settings import (
 	K_LDAP_AUTH_TLS_VERSION,
 	K_LDAP_AUTH_CONNECTION_PASSWORD,
@@ -185,7 +189,6 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 	def get_ldap_settings(self, preset_id: int = 1) -> dict[dict]:
 		"""Returns a Dictionary with the current setting values in the system"""
 		data = {}
-		data["DEFAULT_ADMIN_ENABLED"] = self.get_admin_status()
 
 		# Loop for each constant in the ldap_constants.py file
 		for setting_key, setting_type in LDAP_SETTING_MAP.items():
@@ -229,6 +232,7 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 	def get_local_settings(
 		self, preset_id=1, public_fields_only=True
 	) -> dict[dict]:
+
 		fields_to_retrieve = None
 		if public_fields_only:
 			fields_to_retrieve = INTERLOCK_SETTING_PUBLIC
@@ -236,6 +240,10 @@ class SettingsViewMixin(viewsets.ViewSetMixin):
 			fields_to_retrieve = INTERLOCK_SETTING_MAP.keys()
 
 		interlock_settings = {}
+		interlock_settings["DEFAULT_ADMIN_ENABLED"] = {
+			"value": self.get_admin_status(),
+			"type": TYPE_BOOL,
+		}
 		if public_fields_only:
 			for setting_key in fields_to_retrieve:
 				setting_instance = InterlockSetting.objects.get(

@@ -33,7 +33,7 @@ from core.models.choices.log import (
 )
 
 ### Mixins
-from core.views.mixins.user import AllUserMixins
+from core.views.mixins.user.main import AllUserMixins
 
 ### Serializers / Validators
 from core.serializers.user import LDAPUserSerializer

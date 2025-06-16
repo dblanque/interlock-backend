@@ -4,7 +4,7 @@ from pytest_mock import MockerFixture, MockType
 
 ################################################################################
 from core.views.mixins.logs import LogMixin
-from core.views.mixins.user import LDAPUserMixin
+from core.views.mixins.ldap.user import LDAPUserMixin
 from core.ldap.defaults import LDAP_DOMAIN
 from rest_framework.serializers import ValidationError
 from core.models.user import User

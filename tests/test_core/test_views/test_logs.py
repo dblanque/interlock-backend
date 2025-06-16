@@ -17,6 +17,7 @@ from core.models.choices.log import (
 	LOG_CLASS_DNSR,
 	LOG_TARGET_ALL,
 )
+from core.models.interlock_settings import InterlockSetting
 
 
 @pytest.fixture
@@ -111,7 +112,7 @@ class TestList(BaseViewTestClass):
 	):
 		response: Response = admin_user_client.get(self.endpoint)
 		assert response.status_code == status.HTTP_200_OK
-		assert not Log.objects.exists()
+		assert not Log.objects.all().exists()
 		assert not len(response.data.get("logs"))
 		assert isinstance(response.data.get("logs"), list)
 		assert set(response.data.get("headers")) == {

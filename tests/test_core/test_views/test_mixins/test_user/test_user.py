@@ -3,7 +3,7 @@ import pytest
 from pytest_mock import MockerFixture, MockType
 
 ################################################################################
-from core.views.mixins.user import UserMixin, AllUserMixins
+from core.views.mixins.user.main import UserMixin, AllUserMixins
 from core.models.user import User, USER_TYPE_LDAP
 from core.models.choices.log import LOG_CLASS_USER, LOG_ACTION_UPDATE
 from core.exceptions.base import BadRequest

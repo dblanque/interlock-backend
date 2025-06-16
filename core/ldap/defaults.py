@@ -174,14 +174,3 @@ LDAP_OPERATIONS = list(
 		"EXTENDED",
 	}
 )
-
-################################## Logging #####################################
-LDAP_LOG_READ = False
-LDAP_LOG_CREATE = True
-LDAP_LOG_UPDATE = True
-LDAP_LOG_DELETE = True
-LDAP_LOG_OPEN_CONNECTION = False
-LDAP_LOG_CLOSE_CONNECTION = False
-LDAP_LOG_LOGIN = False
-LDAP_LOG_LOGOUT = False
-LDAP_LOG_MAX = 100

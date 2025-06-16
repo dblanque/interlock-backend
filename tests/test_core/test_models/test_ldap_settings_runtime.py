@@ -364,11 +364,6 @@ class TestLDAPSettingsWithDB:
 				"PROTOCOL_TLSv1",
 				None,
 			),
-			(  # TYPE_INTEGER
-				"LDAP_LOG_MAX",
-				99,
-				None,
-			),
 		),
 	)
 	def test_get_settings_mock_db_overrides(

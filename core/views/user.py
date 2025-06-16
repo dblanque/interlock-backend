@@ -46,7 +46,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 # Mixins
-from core.views.mixins.user import AllUserMixins
+from core.views.mixins.user.main import AllUserMixins
 from core.views.mixins.logs import LogMixin
 
 # Constants

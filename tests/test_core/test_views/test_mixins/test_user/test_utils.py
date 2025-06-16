@@ -2,7 +2,7 @@
 import pytest
 
 ################################################################################
-from core.views.mixins.user.utils import UserUtilsMixin, ALL_LOCAL_ATTRS
+from core.views.mixins.user.utils import UserUtilsMixin
 from core.constants.attrs import *
 from core.exceptions import base as exc_base, users as exc_user
 from core.models.ldap_user import DEFAULT_LOCAL_ATTRS
