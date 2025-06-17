@@ -5,6 +5,7 @@ Target Mid-June release
 	* Standalone
 	* Samba LDAP
 	* Microsoft ADDS
+	* OpenLDAP (Low Priority, not for release)
 * Create new pgp/gpg for apt repo (with expiry)
 * Create .deb for apt repo key installation and updating
 * Update and fix .deb package installer
