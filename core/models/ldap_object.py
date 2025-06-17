@@ -31,14 +31,8 @@ from typing import overload
 from enum import Enum
 from logging import getLogger
 from core.utils.main import getldapattrvalue
-
 ################################################################################
 logger = getLogger()
-
-# TODO
-# Add save method to LDAPObject
-# Add Immutable or always excluded keys tuple
-
 
 class LDAPObjectTypes(Enum):
 	GENERIC = "generic"

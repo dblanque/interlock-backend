@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.views.domain
+# Module: core.views.ldap.domain
 # Contains the ViewSet for Domain related operations
 
 # ---------------------------------- IMPORTS --------------------------------- #

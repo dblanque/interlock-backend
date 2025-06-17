@@ -1,6 +1,16 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.ldap.filter
+# Contains the LDAP Filter utilities and classes.
+
+#---------------------------------- IMPORTS -----------------------------------#
 from enum import Enum
 from typing import List, Optional
 import re
+################################################################################
 
 
 def is_encapsulated(v: str, raise_exception=False) -> bool:

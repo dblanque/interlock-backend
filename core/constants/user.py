@@ -1,6 +1,16 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.constants.user
+# Contains constants for User classes
+
+#---------------------------------- IMPORTS -----------------------------------#
 from .search_attr_builder import SearchAttrBuilder
 from core.constants.attrs.local import *
 from core.utils.main import getlocalkeyforldapattr
+################################################################################
 
 LOCAL_PUBLIC_FIELDS_BASIC = (
 	LOCAL_ATTR_ID,

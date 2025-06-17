@@ -1,6 +1,16 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.models.validators.networking
+# Contains networking related validators.
+
+#---------------------------------- IMPORTS -----------------------------------#
 from core.utils.network import ipv6_to_integer
 import socket
 from rest_framework.serializers import ValidationError
+################################################################################
 
 
 def ipv4_validator(value: str):

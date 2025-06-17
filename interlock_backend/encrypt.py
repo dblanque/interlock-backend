@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: interlock_backend.ldap.accountTypes
+# Module: interlock_backend.encrypt
 
 # ---------------------------------- IMPORTS --------------------------------- #
 import os

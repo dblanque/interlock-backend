@@ -1,3 +1,12 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.serializers.ldap_settings
+# Contains the serializer classes for LDAPPreset and LDAPSetting models
+
+#---------------------------------- IMPORTS -----------------------------------#
 from rest_framework import serializers
 from django.core.validators import RegexValidator
 from core.models.ldap_settings import (
@@ -9,6 +18,7 @@ from core.models.types.settings import TYPE_AES_ENCRYPT
 from core.constants.attrs.local import LOCAL_ATTR_TYPE
 from rest_framework.exceptions import ValidationError
 from core.models.types.settings import make_field_db_name
+################################################################################
 
 
 class LDAPPresetSerializer(serializers.ModelSerializer):

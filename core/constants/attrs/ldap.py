@@ -4,6 +4,8 @@
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
 # Module: core.constants.attrs.ldap
+# Contains system LDAP Attribute related constants.
+################################################################################
 
 # Global
 LDAP_DATE_FORMAT = "%Y%m%d%H%M%S.%fZ"

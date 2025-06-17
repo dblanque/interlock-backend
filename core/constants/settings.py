@@ -4,6 +4,8 @@
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
 # Module: core.constants.settings
+# Contains constants for LDAP Setting Keys
+################################################################################
 
 K_LDAP_AUTH_URL = "LDAP_AUTH_URL"
 K_LDAP_DOMAIN = "LDAP_DOMAIN"

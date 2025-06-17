@@ -4,13 +4,16 @@
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
 # Module: core.constants.dns
+# Contains LDAP DNS Related Constants
 
+#---------------------------------- IMPORTS -----------------------------------#
 from core.constants.attrs import (
 	LDAP_ATTR_DN,
 	LDAP_ATTR_FULL_NAME,
 	LOCAL_ATTR_ID,
 	LOCAL_ATTR_NAME,
 )
+################################################################################
 
 LDNS_CLASS_DNS_NODE = "dnsNode"
 

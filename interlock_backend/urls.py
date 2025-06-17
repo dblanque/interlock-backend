@@ -1,5 +1,12 @@
-"""Interlock API URL Configuration"""
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: interlock_backend.urls
+# Interlock API URL Configuration file
 
+#---------------------------------- IMPORTS -----------------------------------#
 #  Django
 from django.contrib import admin
 from django.urls import path, include
@@ -29,6 +36,7 @@ from core.views.application import ApplicationViewSet
 from core.views.oidc import OidcAuthorizeView, CustomOidcViewSet
 from interlock_backend.settings import DEBUG
 from django.urls import re_path
+################################################################################
 
 # Initalizes Router
 router = routers.DefaultRouter()

@@ -1,5 +1,15 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: interlock_backend.middleware
+# Contains Middleware classes
+
+#---------------------------------- IMPORTS -----------------------------------#
 from core.models.user import User
 from core.exceptions.base import PermissionDenied
+################################################################################
 
 
 def AccountStatusMiddleware(get_response):

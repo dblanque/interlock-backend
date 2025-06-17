@@ -1,13 +1,9 @@
 ################################## IMPORTS #####################################
-### Exceptions
-from core.exceptions.test import TestError
-
 ### ViewSets
 from core.views.base import BaseViewSet
 
 ### REST Framework
 from rest_framework.response import Response
-from rest_framework.decorators import action
 
 ### Others
 from core.decorators.login import auth_required, admin_required

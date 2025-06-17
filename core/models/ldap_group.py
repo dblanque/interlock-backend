@@ -7,7 +7,6 @@
 # Contains the Models for generic LDAP Objects
 #
 # ---------------------------------- IMPORTS ----------------------------------#
-
 ### Interlock
 from core.exceptions import (
 	groups as exc_group,

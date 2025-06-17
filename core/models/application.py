@@ -1,3 +1,12 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.models.application
+# Contains the Application Model.
+
+#---------------------------------- IMPORTS -----------------------------------#
 from core.models.base import BaseModel
 from core.models.user import User
 from django.db import models
@@ -6,6 +15,7 @@ from django.contrib.postgres.fields import ArrayField
 import secrets
 from uuid import uuid5
 from interlock_backend.settings import INTERLOCK_NAMESPACE, SECRET_KEY
+################################################################################
 
 
 def generate_client_id() -> str:

@@ -66,7 +66,7 @@ import sys
 from typing import Iterable
 from uuid import uuid4
 from django.conf import settings
-###############################################################################
+################################################################################
 
 this_module = sys.modules[__name__]
 DBLogMixin = LogMixin()

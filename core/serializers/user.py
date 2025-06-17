@@ -1,3 +1,12 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.serializers.user
+# Contains Local and LDAP User serializer classes
+
+#---------------------------------- IMPORTS -----------------------------------#
 from rest_framework import serializers
 from core.models.application import User
 from django.core.validators import validate_email
@@ -19,6 +28,7 @@ from core.serializers.ldap import (
 	ldap_permission_validator,
 	website_validator,
 )
+################################################################################
 
 
 def validate_password_match(password: str, password_confirm: str) -> str:

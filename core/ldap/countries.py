@@ -7,6 +7,7 @@
 # ISO 3166-1 Countries
 # Source: https://ldapwiki.com/wiki/Wiki.jsp?page=Country%20Code
 # Transcription / Conversion by Dylan Blanqué
+################################################################################
 
 LDAP_COUNTRIES = {
 	"Afghanistan": {"isoCode": "AF", "dccCode": "4"},

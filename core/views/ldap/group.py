@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.views.groups
+# Module: core.views.ldap.groups
 # Contains the ViewSet for Group related operations
 
 # ---------------------------------- IMPORTS --------------------------------- #

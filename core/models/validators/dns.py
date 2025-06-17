@@ -1,5 +1,15 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.models.validators.dns
+# Contains validators for DNS related fields.
+
+#---------------------------------- IMPORTS -----------------------------------#
 import re
 from rest_framework.serializers import ValidationError
+################################################################################
 
 
 def canonical_hostname_validator(

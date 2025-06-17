@@ -4,8 +4,9 @@
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
 # Module: core.decorators.intercept
-# Contains Interception related decorators
-# ONLY FOR BUILDING TESTS FROM REAL DATA
+# Contains Request interception decorators for DEVELOPMENT
+
+#---------------------------------- IMPORTS -----------------------------------#
 from core.models.user import User
 from core.models.interlock_settings import (
 	InterlockSetting,
@@ -16,7 +17,7 @@ from rest_framework.request import Request
 from core.exceptions.base import LDAPBackendDisabled
 from functools import wraps
 from logging import getLogger
-
+################################################################################
 logger = getLogger()
 
 

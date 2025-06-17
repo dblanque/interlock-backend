@@ -1,7 +1,17 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: interlock_backend.server_timezone
+# Contains utilities to fetch local timezone from the server
+
+#---------------------------------- IMPORTS -----------------------------------#
 import os
 import pytz
 import subprocess
 from logging import getLogger
+################################################################################
 
 logger = getLogger()
 

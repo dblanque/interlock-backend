@@ -20,7 +20,6 @@ from core.type_hints.connector import LDAPConnectionProtocol
 from typing import overload
 from ldap3 import LEVEL, Entry as LDAPEntry
 import logging
-
 ################################################################################
 logger = logging.getLogger()
 

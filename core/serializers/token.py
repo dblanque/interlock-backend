@@ -1,3 +1,12 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.serializers.token
+# Contains token/auth serializer classes and utilities
+
+#---------------------------------- IMPORTS -----------------------------------#
 from rest_framework import serializers as serializers
 from rest_framework_simplejwt import serializers as jwt_serializers
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -10,9 +19,8 @@ from core.views.mixins.totp import validate_user_otp
 from interlock_backend.settings import DEFAULT_SUPERUSER_USERNAME
 from django_otp import user_has_device
 import re
-
+################################################################################
 DBLogMixin = LogMixin()
-
 
 def user_auth_fail_conditions(user: User):
 	if not user.is_anonymous and user.is_enabled:

@@ -1,5 +1,15 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.constants.group
+# Contains the attribute builder class for LDAP Groups
+
+#---------------------------------- IMPORTS -----------------------------------#
 from core.constants.attrs import *
 from .search_attr_builder import SearchAttrBuilder
+################################################################################
 
 
 class LDAPGroupSearchAttrBuilder(SearchAttrBuilder):

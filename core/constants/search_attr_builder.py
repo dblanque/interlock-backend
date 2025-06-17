@@ -1,4 +1,14 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.constants.search_attr_builder
+# Contains the search attribute builder base class for LDAP Queries.
+
+#---------------------------------- IMPORTS -----------------------------------#
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
+################################################################################
 
 
 class SearchAttrBuilder:

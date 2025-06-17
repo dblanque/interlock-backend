@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.views.record
+# Module: core.views.ldap.record
 # Contains the ViewSet for DNS Record related operations
 
 # ---------------------------------- IMPORTS --------------------------------- #

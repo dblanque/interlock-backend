@@ -1,8 +1,17 @@
-# core/apps.py
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.apps
+# Contains the Core App initialization class
+
+#---------------------------------- IMPORTS -----------------------------------#
 from django.apps import AppConfig
 from core.utils.apps_ready import ensure_apps_ready
 from logging import getLogger
 import threading
+################################################################################
 
 logger = getLogger()
 

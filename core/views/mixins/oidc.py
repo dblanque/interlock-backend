@@ -46,11 +46,7 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 
 # Others
-from core.constants.attrs import (
-	LOCAL_ATTR_UUID,
-	LOCAL_ATTR_USER_GROUPS,
-	LOCAL_ATTR_DN,
-)
+from core.constants.attrs import LOCAL_ATTR_USER_GROUPS, LOCAL_ATTR_DN
 import logging
 from interlock_backend.settings import LOGIN_URL
 from oidc_provider.lib.endpoints.authorize import AuthorizeEndpoint

@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.models.ilck_settings
+# Module: core.models.interlock_settings
 # Description:	Contains default LDAP Setting definitions
 #
 # ---------------------------------- IMPORTS --------------------------------- #

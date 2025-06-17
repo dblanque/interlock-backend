@@ -1,3 +1,12 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.constants.oidc
+# Contains OIDC Related Constants
+################################################################################
+
 QK_ERROR = "error"
 QK_ERROR_DETAIL = "error_detail"
 QK_NEXT = "next"

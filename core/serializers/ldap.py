@@ -1,9 +1,19 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.serializers.ldap
+# Contains LDAP Serializer validator functions and REGEXs
+
+#---------------------------------- IMPORTS -----------------------------------#
 from rest_framework import serializers
 from rest_framework.serializers import ValidationError
 import re
 from ldap3.utils.dn import parse_dn
 from core.ldap.adsi import LDAP_PERMS
 from core.ldap.countries import LDAP_COUNTRIES
+################################################################################
 
 WEBSITE_RE = re.compile(
 	r"^((?:http(?:s){0,5}(:\/\/){0,1}){0,1}(?:[a-zA-Z0-9-_.]){2,61}(?:\.[a-zA-Z]{2,})+)?/?$"

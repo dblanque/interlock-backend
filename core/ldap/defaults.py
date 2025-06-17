@@ -5,6 +5,7 @@
 ################################################################################
 # Module: core.ldap.defaults
 from core.constants.attrs import *
+################################################################################
 
 ### LDAP SETTINGS
 # ! You also have to add the settings to the following files:

@@ -17,9 +17,9 @@ from core.models.base import BaseManager
 
 ### Choices
 from core.models.choices.log import ACTION_CHOICES, CLASS_CHOICES
-
-
 # ---------------------------------------------------------------------------- #
+
+
 class BaseLogModel(models.Model):
 	logged_at = models.DateTimeField(_("logged at"), auto_now_add=True)
 	rotated = models.BooleanField(_("rotated"), default=False)

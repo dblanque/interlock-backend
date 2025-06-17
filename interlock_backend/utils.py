@@ -1,4 +1,12 @@
-# interlock_backend/utils.py
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: interlock_backend.utils
+# Contains generic utilities for Interlock
+
+#---------------------------------- IMPORTS -----------------------------------#
 from typing import overload, Any
 
 _local_django_settings = None
@@ -8,7 +16,7 @@ try:
 	)
 except ImportError:
 	pass
-
+################################################################################
 
 @overload
 def load_override(target_globals, key: str) -> None: ...

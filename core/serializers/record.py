@@ -1,3 +1,12 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.serializers.record
+# Contains the LDAP DNS Record Serializer classes
+
+#---------------------------------- IMPORTS -----------------------------------#
 from rest_framework import serializers
 from core.models.structs.ldap_dns_record import RECORD_MAPPINGS, RecordMapping
 from core.models.validators.dns import (
@@ -7,6 +16,7 @@ from core.models.validators.dns import (
 )
 from core.models.validators.ldap import record_type_validator
 from core.models.validators.common import ascii_validator, int32_validator
+################################################################################
 
 MAX_16_BIT = 65535
 MAX_TTL_RFC_2181 = 2147483647

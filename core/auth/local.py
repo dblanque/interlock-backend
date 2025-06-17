@@ -1,5 +1,15 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.auth.local
+# Contains E-Mail authentication related operations
+
+#---------------------------------- IMPORTS -----------------------------------#
 from django.contrib.auth.backends import ModelBackend
 from django.contrib.auth import get_user_model
+################################################################################
 
 
 class EmailAuthBackend(ModelBackend):

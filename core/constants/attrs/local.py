@@ -4,6 +4,8 @@
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
 # Module: core.constants.attrs.local
+# Contains system Local Attribute constants
+################################################################################
 
 DATE_FORMAT_ISO_8601 = "%Y-%m-%dT%H:%M:%S%Z"
 DATE_FORMAT_ISO_8601_ALT = "%Y-%m-%d %H:%M:%S %z"

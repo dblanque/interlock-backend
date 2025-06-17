@@ -3,7 +3,7 @@
 ################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
 ########################## AND BR CONSULTING S.R.L. ############################
 ################################################################################
-# Module: core.views.organizational_unit
+# Module: core.views.ldap.organizational_unit
 # Contains the ViewSet for Directory Tree and Organizational Unit
 # related operations
 

@@ -1,3 +1,12 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.models.settings.base
+# Contains the base model for database driven setting overrides.
+
+#---------------------------------- IMPORTS -----------------------------------#
 from core.models.base import BaseModel
 from django.utils.translation import gettext_lazy as _
 from django.db import models
@@ -11,10 +20,9 @@ from core.models.types.settings import (
 from typing import Type, TypeVar, overload
 from copy import deepcopy
 from rest_framework.serializers import ValidationError
+################################################################################
 
-T = TypeVar(
-	"T", bound="BaseSetting"
-)  # Replace 'YourBaseClass' with the actual base class
+T = TypeVar("T", bound="BaseSetting")
 
 
 def add_fields_from_dict(
