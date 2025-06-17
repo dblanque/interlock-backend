@@ -6,7 +6,7 @@
 # Module: core.apps
 # Contains the Core App initialization class
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 from django.apps import AppConfig
 from core.utils.apps_ready import ensure_apps_ready
 from logging import getLogger

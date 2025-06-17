@@ -6,13 +6,14 @@
 # Module: core.decorators.login
 # Contains Login and Authentication related decorators
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 from core.models.user import User
 from rest_framework.request import Request
 from core.exceptions.base import PermissionDenied
 from core.views.mixins.auth import RemoveTokenResponse
 from functools import wraps
 ################################################################################
+
 
 def auth_required(func=None):
 	def decorator(view_func):

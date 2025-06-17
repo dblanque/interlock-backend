@@ -6,7 +6,7 @@
 # Module: core.models.validators.common
 # Contains commonly used validators.
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 import re
 from rest_framework.serializers import ValidationError
 ################################################################################

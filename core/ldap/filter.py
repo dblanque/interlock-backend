@@ -6,7 +6,7 @@
 # Module: core.ldap.filter
 # Contains the LDAP Filter utilities and classes.
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 from enum import Enum
 from typing import List, Optional
 import re

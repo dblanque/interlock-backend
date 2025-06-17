@@ -6,7 +6,7 @@
 # Module: core.serializers.application_group
 # Contains the Application Security Group Serializer
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 from rest_framework import serializers
 from core.models.application import ApplicationSecurityGroup
 ################################################################################

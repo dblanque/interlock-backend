@@ -6,7 +6,7 @@
 # Module: interlock_backend.utils
 # Contains generic utilities for Interlock
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 from typing import overload, Any
 
 _local_django_settings = None
@@ -17,6 +17,7 @@ try:
 except ImportError:
 	pass
 ################################################################################
+
 
 @overload
 def load_override(target_globals, key: str) -> None: ...

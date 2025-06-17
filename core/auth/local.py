@@ -6,7 +6,7 @@
 # Module: core.auth.local
 # Contains E-Mail authentication related operations
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 from django.contrib.auth.backends import ModelBackend
 from django.contrib.auth import get_user_model
 ################################################################################

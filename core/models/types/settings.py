@@ -6,7 +6,7 @@
 # Module: core.models.types.settings
 # Contains the types for settings
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 ################################################################################

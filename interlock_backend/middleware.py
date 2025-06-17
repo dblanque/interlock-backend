@@ -6,7 +6,7 @@
 # Module: interlock_backend.middleware
 # Contains Middleware classes
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 from core.models.user import User
 from core.exceptions.base import PermissionDenied
 ################################################################################

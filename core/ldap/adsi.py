@@ -17,6 +17,7 @@ from ldap3 import Entry as LDAPEntry
 from core.utils.main import getldapattrvalue
 from core.ldap.filter import encapsulate
 import logging
+
 ################################################################################
 logger = logging.getLogger(__name__)
 

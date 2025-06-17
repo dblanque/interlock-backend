@@ -6,7 +6,7 @@
 # Module: core.serializers.group
 # Contains the LDAP Group Serializer class and utilities
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 from rest_framework import serializers
 from core.serializers.ldap import DistinguishedNameField
 from django.core.validators import validate_email

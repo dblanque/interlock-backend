@@ -6,7 +6,7 @@
 # Module: core.serializers.record
 # Contains the LDAP DNS Record Serializer classes
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 from rest_framework import serializers
 from core.models.structs.ldap_dns_record import RECORD_MAPPINGS, RecordMapping
 from core.models.validators.dns import (

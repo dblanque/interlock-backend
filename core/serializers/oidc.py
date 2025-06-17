@@ -6,10 +6,11 @@
 # Module: core.serializers.oidc
 # Contains the OIDC Client Serializer class
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 from rest_framework import serializers
 from oidc_provider.models import Client
 ################################################################################
+
 
 class ClientSerializer(serializers.ModelSerializer):
 	class Meta:

@@ -6,7 +6,7 @@
 # Module: core.serializers.interlock_settings
 # Contains the Interlock Settings Serializer class
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 from rest_framework import serializers
 from core.models.interlock_settings import (
 	InterlockSetting,

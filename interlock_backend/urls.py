@@ -6,7 +6,7 @@
 # Module: interlock_backend.urls
 # Interlock API URL Configuration file
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 #  Django
 from django.contrib import admin
 from django.urls import path, include

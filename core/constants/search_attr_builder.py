@@ -6,7 +6,7 @@
 # Module: core.constants.search_attr_builder
 # Contains the search attribute builder base class for LDAP Queries.
 
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS -----------------------------------#
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 ################################################################################
 
