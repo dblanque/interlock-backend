@@ -17,6 +17,7 @@
 # Post-release roadmap
 * Fully fledged API Documentation
 * OpenLDAP Support
+* Add session management for OIDC (if possible)
 
 # Tests
 * core.serializers.token
