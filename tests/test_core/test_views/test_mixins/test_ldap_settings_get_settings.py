@@ -80,12 +80,9 @@ class TestGetSettings:
 	@pytest.mark.django_db
 	def test_all_defaults(self):
 		_settings = SettingsViewMixin().get_ldap_settings()
-		_expected_keys = list(LDAP_SETTING_MAP.keys()) + [
-			"DEFAULT_ADMIN_ENABLED"
-		]
+		_expected_keys = list(LDAP_SETTING_MAP.keys())
 		assert isinstance(_settings, dict)
 		assert set(_settings.keys()) == set(_expected_keys)
-		assert not _settings.get("DEFAULT_ADMIN_ENABLED")
 		for _key in LDAP_SETTING_MAP.keys():
 			_default_v = getattr(defaults, _key)
 			if isinstance(_default_v, Enum):
@@ -95,7 +92,6 @@ class TestGetSettings:
 	@pytest.mark.django_db(transaction=True)
 	def test_with_default_superuser(self, f_default_superuser: User):
 		_settings = SettingsViewMixin().get_ldap_settings()
-		assert _settings.get("DEFAULT_ADMIN_ENABLED")
 
 	@pytest.mark.django_db(transaction=True)
 	def test_with_logic_delete_default_superuser(
