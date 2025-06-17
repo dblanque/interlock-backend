@@ -5,7 +5,6 @@
 	* Standalone
 	* Samba LDAP
 	* Microsoft ADDS
-	* OpenLDAP (Low Priority, not for release)
 * Create new pgp/gpg for apt repo (with expiry).
 * Create .deb for apt repo key installation and updating.
 * Update and fix .deb package installer.
@@ -14,6 +13,10 @@
 * Create general video summary.
 * Create video summary of features as LDAP Manager.
 * Create video summary of features as IdP.
+
+# Post-release roadmap
+* Fully fledged API Documentation
+* OpenLDAP Support
 
 # Tests
 * core.serializers.token
