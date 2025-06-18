@@ -20,6 +20,11 @@
 * Add session management for OIDC (if possible)
 
 # Tests
+* core.views.mixins.ldap.user.ldap_user_insert
+	* Create disabled user
+	* Create disabled user with non expirable password
+	* Create enabled user
+	* Create enabled user with non expirable password
 * core.serializers.token
 	* validate -> get_user_totp_device block
 	* TokenRefreshSerializer -> validate
