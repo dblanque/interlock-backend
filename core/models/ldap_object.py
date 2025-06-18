@@ -31,7 +31,6 @@ from typing import overload
 from enum import Enum
 from logging import getLogger
 from core.utils.main import getldapattrvalue
-
 ################################################################################
 logger = getLogger()
 
@@ -116,6 +115,7 @@ class LDAPObject:
 	use_in_migrations: bool = False
 
 	# Type Hints
+	context: dict = None
 	type = LDAPObjectTypes.GENERIC
 	fetched: bool = False
 	distinguished_name: str = None
@@ -150,6 +150,7 @@ class LDAPObject:
 		excluded_ldap_attributes: list[str] = None,
 		attributes: dict = None,
 		skip_fetch: bool = False,
+		context: dict = None,
 	) -> None: ...
 
 	def __init__(self, **kwargs) -> None:
