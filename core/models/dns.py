@@ -185,8 +185,6 @@ class LDAPRecordMixin:
 			)
 
 		self.get_soa()
-		if self.soa["dwSerialNo"] != self.soa["serial"]:
-			raise exc_dns.DNSRecordDataMalformed
 		try:
 			if "dwSerialNo" in self.soa:
 				serial = int(self.soa["dwSerialNo"])
