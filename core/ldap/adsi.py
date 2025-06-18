@@ -458,7 +458,7 @@ def list_user_perms(
 
 
 def calc_permissions(
-	permission_list: list,
+	permission_list: list | set,
 	perm_add: Union[list, str] = None,
 	perm_remove: Union[list, str] = None,
 ):
