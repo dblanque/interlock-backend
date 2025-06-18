@@ -9,6 +9,12 @@ class UserPermissionError(CoreException):
 	default_code = "user_permission_malformed"
 
 
+class UserPasswordOverPlainLDAP(CoreException):
+	status_code = status.HTTP_406_NOT_ACCEPTABLE
+	default_detail = "User passwords cannot be changed over Plain LDAP (Use LDAPS)"
+	default_code = "user_password_over_plain_ldap"
+
+
 class UserPasswordsDontMatch(CoreException):
 	status_code = status.HTTP_400_BAD_REQUEST
 	default_detail = "User passwords do not match"
