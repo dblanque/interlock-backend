@@ -26,6 +26,11 @@
 	* Create disabled user with non expirable password
 	* Create enabled user
 	* Create enabled user with non expirable password
+* core.models.ldap_user.remove_primary_group
+* core.models.ldap_user.parse_add_groups
+* core.models.ldap_user.parse_remove_groups
+* core.views.mixins.ldap.group.save
+* core.views.mixins.ldap.group.perform_member_operations
 * core.serializers.token
 	* validate -> get_user_totp_device block
 	* TokenRefreshSerializer -> validate
