@@ -154,15 +154,9 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 		code_msg = "ok"
 		data: dict = request.data
 
-		user_username = data.get(LOCAL_ATTR_USERNAME, None)
-		if not user_username:
+		username = data.get(LOCAL_ATTR_USERNAME, None)
+		if not username:
 			raise exc_base.MissingDataKey(data={"key": LOCAL_ATTR_USERNAME})
-
-		set_pwd = False
-		user_pwd = data.get(LOCAL_ATTR_PASSWORD, None)
-		user_pwd_confirm = data.get(LOCAL_ATTR_PASSWORD_CONFIRM, None)
-		if user_pwd and user_pwd_confirm:
-			set_pwd = True
 
 		# Validate user data
 		serializer = self.serializer_class(data=data)
@@ -176,24 +170,13 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 
 			# User Exists check
 			self.ldap_user_exists(
-				username=user_username,
+				username=username,
 				email=data.get(
 					RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_EMAIL],
 					None,
 				),
 			)
-
-			if not set_pwd:
-				permissions: list = data.get(LOCAL_ATTR_PERMISSIONS, [])
-				permissions.append(ldap_adsi.LDAP_UF_ACCOUNT_DISABLE)
-				data[LOCAL_ATTR_PERMISSIONS] = permissions
-			user_dn = self.ldap_user_insert(data=data)
-			if set_pwd:
-				self.ldap_set_password(
-					user_dn=user_dn,
-					user_pwd_new=user_pwd,
-					set_by_admin=True,
-				)
+			self.ldap_user_insert(data=data)
 
 		return Response(
 			data={
@@ -281,16 +264,6 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 				)
 		username = data.pop(LOCAL_ATTR_USERNAME)
 		enabled = data.pop(LOCAL_ATTR_ENABLED)
-
-		######################## Set LDAP Attributes ###########################
-		self.search_filter = LDAPFilter.eq(
-			RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_OBJECT_CLASS],
-			RuntimeSettings.LDAP_AUTH_OBJECT_CLASS,
-		).to_string()
-		self.search_attrs = self.filter_attr_builder(
-			RuntimeSettings
-		).get_update_attrs()
-		########################################################################
 
 		if username == user.username:
 			raise exc_user.UserAntiLockout
