@@ -78,6 +78,7 @@ from core.utils.filetime import to_datetime
 from django.utils import timezone as tz
 
 ### Others
+from ldap3.core.exceptions import LDAPException
 from typing import Any, TypedDict
 from django.db import transaction
 from core.type_hints.connector import LDAPConnectionProtocol
@@ -425,6 +426,21 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 				if key in data:
 					del data[key]
 
+		# ADDS requires password and status change to be separated from creation
+		set_pwd = False
+		user_pwd = data.pop(LOCAL_ATTR_PASSWORD, None)
+		if user_pwd:
+			set_pwd = True
+
+		# ADDS Requires permission changes to be separate from creation
+		user_perms = data.pop(LOCAL_ATTR_PERMISSIONS, [])
+		user_perms = set(user_perms)
+		user_should_be_enabled = (
+			ldap_adsi.LDAP_UF_ACCOUNT_DISABLE not in user_perms
+		)
+		user_perms.add(ldap_adsi.LDAP_UF_NORMAL_ACCOUNT)
+		data[LOCAL_ATTR_PERMISSIONS] = {}
+
 		username: str = data.get(LOCAL_ATTR_USERNAME).lower()
 		try:
 			user_path: str = data.pop(LOCAL_ATTR_PATH, None)
@@ -443,8 +459,39 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 				distinguished_name=user_dn,
 				attributes=data,
 			)
+			# Set Account to Disabled on create (ADDS Requirement). =_=
+			user_perms.add(ldap_adsi.LDAP_UF_ACCOUNT_DISABLE)
+			user_obj.attributes[LOCAL_ATTR_PERMISSIONS] = user_perms
+
+			# Save User
 			user_obj.save()
-		except Exception as e:
+
+			# ADDS requires password and status change to be POST-CREATE.
+			# Garbage, I know.
+			if set_pwd:
+				self.ldap_set_password(
+					user_dn=user_dn,
+					user_pwd_new=user_pwd,
+					set_by_admin=True,
+				)
+				self.ldap_user_change_status(
+					username=username,
+					enabled=True,
+				)
+			# ADDS also requires permission changes to be POST-CREATE.
+			# UNLIKE SAMBA LDAP, garbage, I know!
+			if user_perms:
+				if (
+					ldap_adsi.LDAP_UF_ACCOUNT_DISABLE in user_perms and
+					user_should_be_enabled and set_pwd
+				):
+					user_perms.remove(ldap_adsi.LDAP_UF_ACCOUNT_DISABLE)
+				self.ldap_user_update(data={
+					LOCAL_ATTR_USERNAME: username,
+					LOCAL_ATTR_DN: user_dn,
+					LOCAL_ATTR_PERMISSIONS: user_perms,
+				})
+		except LDAPException as e:
 			logger.error(e)
 			logger.error(f"Could not create User: {user_dn}")
 			if return_exception:
@@ -452,6 +499,9 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 					data={"ldap_response": self.ldap_connection.result}
 				)
 			return None
+		except Exception as e:
+			logger.exception(e)
+			raise exc_base.InternalServerError(data={"detail": str(e)})
 
 		DBLogMixin.log(
 			user=self.request.user.id,
@@ -482,7 +532,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 		)
 
 		try:
-			django_user = User.objects.get(username=username)
+			django_user: User = User.objects.get(username=username)
 		except ObjectDoesNotExist:
 			django_user = None
 			pass
@@ -551,14 +601,23 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 			):
 				return eo_standard.modify_password(user=user_dn, **pwd_kwargs)
 			else:
-				# Otherwise attempt to change password directly with Microsoft Extended Op.
+				# Otherwise attempt to change password directly with
+				# Microsoft Extended Operations
 				return eo_microsoft.modify_password(user=user_dn, **pwd_kwargs)
 		except Exception as e:
 			logger.exception(e)
 			logger.error(f"Could not update password for User DN: {user_dn}")
-			raise exc_user.UserUpdateError(
-				data={"ldap_response": self.ldap_connection.result}
-			)
+			if hasattr(self.ldap_connection, "result"):
+				try:
+					_message = self.ldap_connection.result.get("message", "")
+					# If unwillingToPerform Password over Plain LDAP (ADDS)
+					if "0000052D" in _message:
+						raise exc_user.UserPasswordOverPlainLDAP
+				except:
+					pass
+				raise exc_user.UserUpdateError(
+					data={"ldap_response": self.ldap_connection.result}
+				)
 
 	def ldap_user_exists(
 		self,
@@ -761,6 +820,10 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 	def ldap_user_change_status(
 		self, username: str, enabled: bool
 	) -> Connection:
+		if not self.search_attrs:
+			self.search_attrs = self.filter_attr_builder(
+				RuntimeSettings
+			).get_update_attrs()
 		self.search_filter = self.get_user_object_filter(username=username)
 		user_entry = self.get_user_object(
 			username=username, attributes=self.search_attrs
