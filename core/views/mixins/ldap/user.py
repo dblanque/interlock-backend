@@ -545,6 +545,10 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 
 		if django_user:
 			for _key in data.keys():
+				if _key in (
+					LOCAL_ATTR_USER_GROUPS,
+				): continue
+
 				if _key in data:
 					setattr(django_user, _key, data[_key])
 			django_user.save()
