@@ -120,13 +120,11 @@ class LDAPUser(LDAPObject):
 
 	def parse_write_special_attributes(self):
 		self.parse_add_groups(
-			groups=self.attributes.get(LOCAL_ATTR_USER_GROUPS, None),
 			add_group_dns=self.attributes.get(
 				LOCAL_ATTR_USER_ADD_GROUPS, None
 			),
 		)
 		self.parse_remove_groups(
-			groups=self.attributes.get(LOCAL_ATTR_USER_GROUPS, None),
 			remove_group_dns=self.attributes.get(
 				LOCAL_ATTR_USER_RM_GROUPS, None
 			),
@@ -156,87 +154,95 @@ class LDAPUser(LDAPObject):
 			}
 		)
 
+	def remove_primary_group(self, group_dns: list[str]) -> tuple[list[str], bool]:
+		"""
+		Finds Primary Group by Relative ID and removes its Distinguished Name
+		from list of strings.
+		"""
+		found_id = False
+		if not group_dns:
+			return
+		if not isinstance(group_dns, list|set):
+			raise TypeError("group_dns must be of types list, set")
+		if not isinstance(group_dns, set):
+			group_dns = set(group_dns)
+		user_primary_group_id = int(
+			getldapattrvalue(
+				self.entry,
+				LDAP_ATTR_PRIMARY_GROUP_ID,
+				None,
+			)
+		)
+
+		if not "LDAPGroup" in globals().keys():
+			from core.models.ldap_group import LDAPGroup
+		group_objects = [
+			LDAPGroup(
+				distinguished_name=distinguished_name,
+				connection=self.connection,
+			) for distinguished_name in group_dns
+		]
+		for group in group_objects:
+			# Fetch Primary Group ID from Server-side Entry
+			group_relative_id = group.attributes.get(LOCAL_ATTR_RELATIVE_ID)
+			if group_relative_id == user_primary_group_id:
+				found_id = True
+				group_dns.remove(group.distinguished_name)
+		return group_dns, found_id
+
 	def parse_add_groups(
 		self,
-		groups: list[dict] = None,
-		add_group_dns: list[str] = None,
-	):
-		if not add_group_dns or not groups:
+		add_group_dns: list[str] | set[str] | str = None,
+	):			
+		if not add_group_dns:
 			return
+		if isinstance(add_group_dns, str):
+			add_group_dns = { add_group_dns }
+		if not isinstance(add_group_dns, (list, set)):
+			raise TypeError("add_group_dns must be of types list, set")
 
 		# Remove groups that the user is already a member of
-		group_dns = {g.get(LOCAL_ATTR_DN) for g in groups}
-		ignore_dns = set()
-		for distinguished_name in add_group_dns:
-			if distinguished_name in group_dns:
-				ignore_dns.add(distinguished_name)
-		for distinguished_name in ignore_dns:
-			add_group_dns.remove(distinguished_name)
+		previous_groups = getldapattrvalue(self.entry, LDAP_ATTR_USER_GROUPS, [])
+		if previous_groups:
+			ignore_dns = set()
+			for distinguished_name in add_group_dns:
+				if distinguished_name in previous_groups:
+					ignore_dns.add(distinguished_name)
+			for distinguished_name in ignore_dns:
+				add_group_dns.remove(distinguished_name)
+			self.attributes[LOCAL_ATTR_USER_ADD_GROUPS] = add_group_dns
 
+		add_group_dns, was_removed = self.remove_primary_group(
+			group_dns=add_group_dns
+		)
 		if not LOCAL_ATTR_USER_ADD_GROUPS in self.parsed_specials:
 			self.parsed_specials.append(LOCAL_ATTR_USER_ADD_GROUPS)
 
 	def parse_remove_groups(
 		self,
-		groups: list[dict] = None,
-		remove_group_dns: list[str] = None,
+		remove_group_dns: list[str] | set[str] | str = None,
 	) -> None:
-		if not remove_group_dns or not groups:
+		if not remove_group_dns:
 			return
+		if isinstance(remove_group_dns, str):
+			remove_group_dns = { remove_group_dns }
+		if not isinstance(remove_group_dns, (list, set)):
+			raise TypeError("remove_group_dns must be of types list, set")
 
-		# Fetch Primary Group ID from Server-side Entry
-		primary_group_id = getldapattrvalue(
-			self.entry,
-			LDAP_ATTR_PRIMARY_GROUP_ID,
-			None,
-		)
-		if primary_group_id is not None:
-			primary_group_id = int(primary_group_id)
-
-		if remove_group_dns and not primary_group_id:
-			logger.warning(
-				"Cannot parse group removal without providing"
-				"the user's Primary Group ID"
-			)
-			raise exc_user.PrimaryGroupIDRequired
-		
 		# Remove groups that the user is not a member of
-		group_dns = {g.get(LOCAL_ATTR_DN) for g in groups}
-		ignore_dns = set()
-		for distinguished_name in remove_group_dns:
-			if distinguished_name not in group_dns:
-				ignore_dns.add(distinguished_name)
-		for distinguished_name in ignore_dns:
-			remove_group_dns.remove(distinguished_name)
-
-		for g in groups:
-			distinguished_name: str = g.get(LOCAL_ATTR_DN, None)
-			relative_id: int = g.get(LOCAL_ATTR_RELATIVE_ID, None)
-
-			# Validate RID
-			if not isinstance(relative_id, int):
-				try:
-					relative_id = int(relative_id)
-				except:
-					raise exc_base.BadRequest(
-						data={
-							"detail": "Group Relative ID is not a valid integer."
-						}
-					)
-			# Validate both DN and RID exist
-			if not distinguished_name or not relative_id:
-				raise exc_base.BadRequest(
-					data={
-						"detail": "Full parsed groups must be sent along with removal operations."
-					}
-				)
-
-			if primary_group_id == relative_id and (
-				distinguished_name in remove_group_dns
-				or distinguished_name.lower() in remove_group_dns
-			):
+		previous_groups = getldapattrvalue(self.entry, LDAP_ATTR_USER_GROUPS, [])
+		if previous_groups:
+			ignore_dns = set()
+			for distinguished_name in remove_group_dns:
+				if distinguished_name not in previous_groups:
+					ignore_dns.add(distinguished_name)
+			for distinguished_name in ignore_dns:
 				remove_group_dns.remove(distinguished_name)
+			self.attributes[LOCAL_ATTR_USER_RM_GROUPS] = remove_group_dns
 
+		remove_group_dns, was_removed = self.remove_primary_group(
+			group_dns=remove_group_dns
+		)
 		if not LOCAL_ATTR_USER_RM_GROUPS in self.parsed_specials:
 			self.parsed_specials.append(LOCAL_ATTR_USER_RM_GROUPS)
 
