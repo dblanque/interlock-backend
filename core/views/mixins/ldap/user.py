@@ -469,11 +469,17 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 			# ADDS requires password and status change to be POST-CREATE.
 			# Garbage, I know.
 			if set_pwd:
-				self.ldap_set_password(
-					user_dn=user_dn,
-					user_pwd_new=user_pwd,
-					set_by_admin=True,
-				)
+				# Set Password
+				try:
+					self.ldap_set_password(
+						user_dn=user_dn,
+						user_pwd_new=user_pwd,
+						set_by_admin=True,
+					)
+				except Exception as e:
+					logger.error(e)
+					pass
+				# Change Status
 				self.ldap_user_change_status(
 					username=username,
 					enabled=True,
