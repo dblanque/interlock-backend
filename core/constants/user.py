@@ -89,6 +89,7 @@ class LDAPUserSearchAttrBuilder(SearchAttrBuilder):
 			self._to_ldap(LOCAL_ATTR_DN),
 			self._to_ldap(LOCAL_ATTR_UPN),
 			self._to_ldap(LOCAL_ATTR_UAC),
+			self._to_ldap(LOCAL_ATTR_GROUP_MEMBERS),
 		]
 
 	def get_bulk_insert_attrs(self):
