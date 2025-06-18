@@ -235,14 +235,15 @@ class LDAPUser(LDAPObject):
 		if value is None:
 			return
 
-		if value and isinstance(value, list):
-			self.attributes[LOCAL_ATTR_UAC] = calc_permissions(
-				permission_list=value
-			)
-		else:
-			self.attributes[LOCAL_ATTR_UAC] = calc_permissions(
-				[LDAP_UF_NORMAL_ACCOUNT]
-			)
+		if isinstance(value, tuple):
+			value = set(value)
+		if not value or not isinstance(value, (list, set)):
+			value = [
+				LDAP_UF_NORMAL_ACCOUNT,
+				LDAP_UF_ACCOUNT_DISABLE,
+			]
+		self.attributes[LOCAL_ATTR_UAC] = calc_permissions(value)
+		self.attributes[LOCAL_ATTR_PERMISSIONS] = value
 		if not LOCAL_ATTR_UAC in self.parsed_specials:
 			self.parsed_specials.append(LOCAL_ATTR_UAC)
 
