@@ -92,6 +92,7 @@ ATTRS_DELETE_PROTECTED = {
 
 # Special Attributes, these will not be processed unless specified
 ATTRS_SPECIAL = {
+	LOCAL_ATTR_PASSWORD,
 	LOCAL_ATTR_UAC,
 	LOCAL_ATTR_COUNTRY,
 	LOCAL_ATTR_COUNTRY_ISO,
