@@ -81,6 +81,7 @@ class LDAPUser(LDAPObject):
 		excluded_ldap_attributes: list[str] = None,
 		attributes: dict = None,
 		skip_fetch: bool = False,
+		context: dict = None,
 		username: str = None,
 	) -> None: ...
 
@@ -118,7 +119,12 @@ class LDAPUser(LDAPObject):
 			super().__validate_init__(**kwargs)
 
 	def parse_write_special_attributes(self):
-		self.parse_add_groups()
+		self.parse_add_groups(
+			groups=self.attributes.get(LOCAL_ATTR_USER_GROUPS, None),
+			add_group_dns=self.attributes.get(
+				LOCAL_ATTR_USER_ADD_GROUPS, None
+			),
+		)
 		self.parse_remove_groups(
 			groups=self.attributes.get(LOCAL_ATTR_USER_GROUPS, None),
 			remove_group_dns=self.attributes.get(
@@ -150,7 +156,23 @@ class LDAPUser(LDAPObject):
 			}
 		)
 
-	def parse_add_groups(self):
+	def parse_add_groups(
+		self,
+		groups: list[dict] = None,
+		add_group_dns: list[str] = None,
+	):
+		if not add_group_dns or not groups:
+			return
+
+		# Remove groups that the user is already a member of
+		group_dns = {g.get(LOCAL_ATTR_DN) for g in groups}
+		ignore_dns = set()
+		for distinguished_name in add_group_dns:
+			if distinguished_name in group_dns:
+				ignore_dns.add(distinguished_name)
+		for distinguished_name in ignore_dns:
+			add_group_dns.remove(distinguished_name)
+
 		if not LOCAL_ATTR_USER_ADD_GROUPS in self.parsed_specials:
 			self.parsed_specials.append(LOCAL_ATTR_USER_ADD_GROUPS)
 
@@ -177,10 +199,20 @@ class LDAPUser(LDAPObject):
 				"the user's Primary Group ID"
 			)
 			raise exc_user.PrimaryGroupIDRequired
+		
+		# Remove groups that the user is not a member of
+		group_dns = {g.get(LOCAL_ATTR_DN) for g in groups}
+		ignore_dns = set()
+		for distinguished_name in remove_group_dns:
+			if distinguished_name not in group_dns:
+				ignore_dns.add(distinguished_name)
+		for distinguished_name in ignore_dns:
+			remove_group_dns.remove(distinguished_name)
 
 		for g in groups:
 			distinguished_name: str = g.get(LOCAL_ATTR_DN, None)
 			relative_id: int = g.get(LOCAL_ATTR_RELATIVE_ID, None)
+
 			# Validate RID
 			if not isinstance(relative_id, int):
 				try:

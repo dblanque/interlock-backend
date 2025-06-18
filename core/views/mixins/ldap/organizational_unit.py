@@ -322,6 +322,7 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 		distinguished_name: str,
 		target_rdn: str = None,
 		target_path: str = None,
+		responsible_user: User = None,
 	) -> str:
 		"""Performs Move/Rename on LDAP Entry / Object with specified DN.
 
@@ -440,16 +441,17 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 				}
 			)
 
-		responsible_user = None
-		try:
-			responsible_user = self.request.user
-		except:
-			responsible_user = User.objects.get(
-				_distinguished_name=self.ldap_connection.user
-			)
+		if not responsible_user:
+			try:
+				responsible_user = self.request.user
+			except:
+				responsible_user = User.objects.get(
+					_distinguished_name=self.ldap_connection.user
+				)
+
 		DBLogMixin.log(
 			user=responsible_user.id,
-			operation_type=LOG_ACTION_UPDATE,
+			operation_type=operation,
 			log_target_class=LOG_CLASS_LDAP,
 			log_target=f"{distinguished_name} to {new_dn}",
 			message=operation,

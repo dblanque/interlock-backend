@@ -19,6 +19,11 @@ from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Count, Max
 import logging
+from core.models.choices.log import (
+	ACTION_CHOICES,
+	LOG_ACTION_MOVE,
+	LOG_ACTION_RENAME,
+)
 
 #################################################################################
 logger = logging.getLogger()
@@ -28,10 +33,10 @@ class LogMixin(viewsets.ViewSetMixin):
 	def log(
 		self,
 		user: int | User,
-		operation_type,
-		log_target_class,
-		log_target=None,
-		message=None,
+		operation_type: str,
+		log_target_class: str,
+		log_target: str = None,
+		message: str = None,
 		**kwargs,
 	):
 		"""Maintains log rotation while ensuring atomic operations."""
@@ -44,19 +49,31 @@ class LogMixin(viewsets.ViewSetMixin):
 		):
 			raise TypeError("user must be of type int | User")
 
-		LOG_OPTION = f"ILCK_LOG_{operation_type}"
-		if not LOG_OPTION in set(INTERLOCK_SETTING_MAP.keys()):
+		LOG_OPTION = None
+		if operation_type.upper() in (LOG_ACTION_MOVE, LOG_ACTION_RENAME):
+			LOG_OPTION = "ILCK_LOG_UPDATE"
+		else:
+			LOG_OPTION = f"ILCK_LOG_{operation_type}"
+		if LOG_OPTION not in list(INTERLOCK_SETTING_MAP.keys()):
 			logger.warning(
 				"%s log option does not exist in InterlockSettings Model.",
 				LOG_OPTION,
 			)
 			return None
-
 		try:
 			log_enabled_for_opt = InterlockSetting.objects.get(name=LOG_OPTION)
 			if not log_enabled_for_opt.value:
 				return None
 		except ObjectDoesNotExist:
+			return None
+
+		if not any(
+			operation_type.lower() == v.lower() for v, m in ACTION_CHOICES
+		):
+			logger.warning(
+				"%s log operation does not exist in Action Choices for Model.",
+				operation_type,
+			)
 			return None
 
 		log_limit = None

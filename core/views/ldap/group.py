@@ -179,7 +179,9 @@ class LDAPGroupsViewSet(BaseViewSet, GroupViewMixin):
 		group_data = data.get("group", None)
 		if not group_data or not isinstance(group_data, dict):
 			raise exc_base.BadRequest(data={"detail": "group dict is required"})
-		self.search_attrs = list(group_data.keys())
+		self.search_attrs = self.filter_attr_builder(
+			RuntimeSettings
+		).get_fetch_filter()
 
 		# Open LDAP Connection
 		with LDAPConnector(user) as ldc:

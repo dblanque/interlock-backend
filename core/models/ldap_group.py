@@ -30,7 +30,7 @@ from core.models.ldap_object import (
 )
 from core.config.runtime import RuntimeSettings
 from core.ldap.types.group import LDAPGroupTypes
-
+from rest_framework.request import Request
 ################################################################################
 logger = getLogger()
 
@@ -63,6 +63,7 @@ class LDAPGroup(LDAPObject):
 		excluded_ldap_attributes: list[str] = None,
 		attributes: dict = None,
 		skip_fetch: bool = False,
+		context: dict = None,
 		groupname: str = None,
 	) -> None: ...
 
@@ -181,7 +182,7 @@ class LDAPGroup(LDAPObject):
 		original_cn = original_cn.split("=")[-1]
 		group_cn: str = self.attributes.get(LOCAL_ATTR_NAME, None)
 		# If Group CN is present and has changed
-		if group_cn.lower() != original_cn.lower():
+		if group_cn and group_cn.lower() != original_cn.lower():
 			# Validate CN Identifier
 			if group_cn.lower().startswith("cn="):
 				split_cn = group_cn.split("=")
@@ -189,17 +190,49 @@ class LDAPGroup(LDAPObject):
 					raise exc_ldap.DistinguishedNameValidationError
 				group_cn = f"CN={split_cn[-1]}"
 			# Rename Group
+			context_request: Request = self.context.get("request", None)
+			context_user = context_request.user if context_request else None
 			self.distinguished_name = (
 				OrganizationalUnitMixin.move_or_rename_object(
 					self,
 					distinguished_name=self.distinguished_name,
 					target_rdn=group_cn,
+					responsible_user=context_user
 				)
 			)
 
 	def perform_member_operations(
-		self, members_to_add=None, members_to_remove=None
+		self,
+		members_to_add: list | set = None,
+		members_to_remove: list | set = None,
 	):
+		if not hasattr(self.entry, LDAP_ATTR_GROUP_MEMBERS):
+			logger.error("Missing Attribute required for "
+				"perform_member_operations call (%s)", LDAP_ATTR_GROUP_MEMBERS)
+			return
+
+		members = getldapattrvalue(self.entry, LDAP_ATTR_GROUP_MEMBERS)
+		# Clean-up DNs to add
+		ignore_add = set()
+		if members_to_add:
+			members_to_add = set(members_to_add)
+			for m in members_to_add:
+				if m in members:
+					ignore_add.add(m)
+		for dn in ignore_add:
+			members_to_add.remove(dn)
+
+		# Clean-up DNs to remove
+		ignore_rm = set()
+		if members_to_remove:
+			members_to_remove = set(members_to_remove)
+			for m in members_to_remove:
+				if m not in members:
+					ignore_rm.add(m)
+		for dn in ignore_rm:
+			members_to_remove.remove(dn)
+
+		# Execute operations
 		try:
 			self.connection.extend.microsoft.add_members_to_groups(
 				members=members_to_add,
@@ -258,3 +291,14 @@ class LDAPGroup(LDAPObject):
 	def post_update(self):
 		self.post_create()
 		self.parse_write_common_name()
+
+	def save(self):
+		has_members_to_modify = bool(
+			self.attributes.get(LOCAL_ATTR_GROUP_ADD_MEMBERS, [])
+			or self.attributes.get(LOCAL_ATTR_GROUP_RM_MEMBERS, [])
+		)
+		return super().save(
+			update_kwargs={
+				"force_post_update": has_members_to_modify,
+			}
+		)

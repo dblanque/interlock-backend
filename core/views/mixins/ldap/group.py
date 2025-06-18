@@ -79,6 +79,9 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 	search_attrs = None
 	request: Request
 
+	def is_built_in(self, group_dn: str):
+		return "cn=builtin" in group_dn.lower()
+
 	@staticmethod
 	def get_group_by_rid(
 		rid: int = None, attributes: List[str] = None
@@ -247,6 +250,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			connection=self.ldap_connection,
 			attributes=group_data,
 			distinguished_name=distinguished_name,
+			context={"request": self.request}
 		)
 		group_obj.save()
 
@@ -264,6 +268,14 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 		if not distinguished_name:
 			raise exc_groups.GroupDistinguishedNameMissing
 
+		if self.is_built_in(data[LOCAL_ATTR_DN]):
+			for k in (
+				LOCAL_ATTR_OBJECT_CLASS,
+				LOCAL_ATTR_OBJECT_CATEGORY,
+				LOCAL_ATTR_GROUP_TYPE,
+				LOCAL_ATTR_GROUP_SCOPE,
+			): data.pop(k, None)
+
 		# !!! CHECK IF GROUP EXISTS AND FETCH ATTRS !!! #
 		# We need to fetch the existing LDAP group object to know what
 		# kind of operation to apply when updating attributes
@@ -271,18 +283,23 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			connection=self.ldap_connection,
 			distinguished_name=distinguished_name,
 			search_attrs=self.search_attrs,
+			context={"request": self.request}
 		)
 		if not group_obj.exists:
 			raise exc_groups.GroupDoesNotExist
 
 		group_types = group_obj.attributes.get(LOCAL_ATTR_GROUP_TYPE, [])
-		if LDAPGroupTypes.TYPE_SYSTEM.name in group_types:
+		if (
+			LOCAL_ATTR_GROUP_TYPE in data and
+			LDAPGroupTypes.TYPE_SYSTEM.name in group_types
+		):
 			if not LDAPGroupTypes.TYPE_SYSTEM.name in data.get(
 				LOCAL_ATTR_GROUP_TYPE
 			):
 				raise serializers.ValidationError(
 					{
-						LOCAL_ATTR_GROUP_TYPE: "System Group cannot have its SYSTEM flag removed."
+						LOCAL_ATTR_GROUP_TYPE: "System Group cannot have its "
+							"SYSTEM flag removed."
 					}
 				)
 
