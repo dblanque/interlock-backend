@@ -20,6 +20,7 @@
 * Add session management for OIDC (if possible)
 
 # Tests
+* Fix core.views.ldap.user.create tests
 * core.views.mixins.ldap.user.ldap_user_insert
 	* Create disabled user
 	* Create disabled user with non expirable password
