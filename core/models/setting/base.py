@@ -203,7 +203,8 @@ class BaseSetting(BaseModel):
 		self._value_setter(value)
 
 	def __str__(self):
-		return f"{getattr(self, self.type, None)} - {self.value}"
+		s = f"{getattr(self, "type", None)} - {self.value}"
+		return s
 
 	def __setattr__(self, name, value):
 		if name == "value":
