@@ -44,6 +44,9 @@
 
 ## Issues
 ### High Priority
+* Add re-openable disclaimer in DNS View:
+	* Wait for ttl of zone to check dns resolution
+	* Beware of enabling Legacy LDAP DNS if using an older Active Directory
 * Implement LDAP Group Serializer usage.
 * Add LDAP_DEFAULT_USER_CLASSES, LDAP_DEFAULT_GROUP_CLASSES to ldap settings.
 * Check TOTP support for non admin users.
