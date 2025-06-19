@@ -608,7 +608,7 @@ class TestInsert:
 			),
 			(
 				None,
-				None,
+				"mock_password",
 				[
 					LDAP_UF_DONT_EXPIRE_PASSWD,
 					LDAP_UF_ACCOUNT_DISABLE,
@@ -631,7 +631,7 @@ class TestInsert:
 		ids=[
 			"Default Path, No Password, Default Permissions, No Excluded Keys",
 			"Default Path, With Password, Custom Permissions, No Excluded Keys",
-			"Default Path, No Password, Custom Permissions, No Excluded Keys",
+			"Default Path, With Password, Custom Permissions, No Excluded Keys",
 			"Custom Path, No Password, Default Permissions, With Exclude Keys",
 		]
 	)
