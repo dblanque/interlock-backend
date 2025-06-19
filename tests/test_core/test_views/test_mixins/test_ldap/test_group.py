@@ -471,10 +471,11 @@ class TestGroupMixinCRUD:
 			connection=f_group_mixin.ldap_connection,
 			attributes=group_data,
 			distinguished_name=expected_dn,
+			context={"request": f_group_mixin.request}
 		)
 		m_ldap_group_instance.save.assert_called_once()
 		f_log_mixin.log.assert_called_once_with(
-			user=1,
+			user=f_group_mixin.request.user.id,
 			operation_type=LOG_ACTION_CREATE,
 			log_target_class=LOG_CLASS_GROUP,
 			log_target=m_common_name,
@@ -544,11 +545,12 @@ class TestGroupMixinCRUD:
 			connection=f_group_mixin.ldap_connection,
 			distinguished_name=f_distinguished_name,
 			search_attrs=f_group_mixin.search_attrs,
+			context={"request": f_group_mixin.request}
 		)
 		assert m_ldap_group_instance.attributes == mock_data
 		m_ldap_group_instance.save.assert_called_once()
 		f_log_mixin.log.assert_called_once_with(
-			user=1,
+			user=f_group_mixin.request.user.id,
 			operation_type=LOG_ACTION_UPDATE,
 			log_target_class=LOG_CLASS_GROUP,
 			log_target="test",
@@ -596,6 +598,7 @@ class TestGroupMixinCRUD:
 			connection=f_group_mixin.ldap_connection,
 			distinguished_name=f_distinguished_name,
 			search_attrs=f_group_mixin.search_attrs,
+			context={"request": f_group_mixin.request}
 		)
 		m_ldap_group_instance.save.assert_not_called()
 		m_get_common_name.assert_not_called()

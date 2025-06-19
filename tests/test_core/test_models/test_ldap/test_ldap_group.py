@@ -16,7 +16,10 @@ from core.exceptions import (
 	ldap as exc_ldap,
 	groups as exc_group,
 )
-
+from tests.test_core.conftest import (
+	LDAPAttributeFactoryProtocol,
+	LDAPEntryFactoryProtocol,
+)
 
 class TestDunderValidateInit(SuperDunderValidateInit):
 	test_cls = LDAPGroup
@@ -381,6 +384,8 @@ class TestParseWriteCommonName:
 			return_value=m_new_dn,
 		)
 		m_ldap_group = LDAPGroup()
+		m_request = mocker.Mock()
+		m_ldap_group.context = {"request": m_request}
 		m_ldap_group.distinguished_name = m_old_dn
 		m_ldap_group.attributes = {
 			LOCAL_ATTR_NAME: m_name,
@@ -391,6 +396,7 @@ class TestParseWriteCommonName:
 			m_ldap_group,
 			distinguished_name=m_old_dn,
 			target_rdn=m_name,
+			responsible_user=m_request.user
 		)
 		assert m_ldap_group.distinguished_name == m_new_dn
 
@@ -423,6 +429,7 @@ class TestPerformMemberOperations:
 	def test_success(
 		self,
 		mocker: MockerFixture,
+		fc_ldap_entry: LDAPEntryFactoryProtocol,
 		f_connection: LDAPConnectionProtocol,
 	):
 		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
@@ -430,6 +437,9 @@ class TestPerformMemberOperations:
 		m_rm_members = ["mock_member_3", "mock_member_4"]
 
 		m_ldap_group = LDAPGroup()
+		m_ldap_group.entry = fc_ldap_entry(spec=False, **{
+			LDAP_ATTR_GROUP_MEMBERS: ["mock_member_1", "mock_member_3"]
+		})
 		m_ldap_group.connection = f_connection
 		m_ldap_group.distinguished_name = "mock_dn"
 		m_ldap_group.parsed_specials = []
@@ -439,11 +449,11 @@ class TestPerformMemberOperations:
 			members_to_remove=m_rm_members,
 		)
 		f_connection.extend.microsoft.add_members_to_groups.assert_called_once_with(
-			members=m_add_members,
+			members={"mock_member_2"},
 			groups="mock_dn",
 		)
 		f_connection.extend.microsoft.remove_members_from_groups.assert_called_once_with(
-			members=m_rm_members,
+			members={"mock_member_3"},
 			groups="mock_dn",
 		)
 		assert set(m_ldap_group.parsed_specials) == {
@@ -451,9 +461,17 @@ class TestPerformMemberOperations:
 			LOCAL_ATTR_GROUP_RM_MEMBERS,
 		}
 
+	def test_logs_and_returns_none(self, mocker: MockerFixture, fc_ldap_attr: LDAPAttributeFactoryProtocol):
+		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
+		m_ldap_group = LDAPGroup()
+		m_ldap_group.entry = mocker.Mock()
+		delattr(m_ldap_group.entry, LDAP_ATTR_GROUP_MEMBERS)
+		assert m_ldap_group.perform_member_operations() is None
+
 	def test_add_members_raises(
 		self,
 		mocker: MockerFixture,
+		fc_ldap_entry: LDAPEntryFactoryProtocol,
 		f_connection: LDAPConnectionProtocol,
 	):
 		m_logger = mocker.patch("core.models.ldap_group.logger")
@@ -466,6 +484,9 @@ class TestPerformMemberOperations:
 		m_rm_members = ["mock_member_3", "mock_member_4"]
 
 		m_ldap_group = LDAPGroup()
+		m_ldap_group.entry = fc_ldap_entry(spec=False, **{
+			LDAP_ATTR_GROUP_MEMBERS: []
+		})
 		m_ldap_group.connection = f_connection
 		m_ldap_group.distinguished_name = "mock_dn"
 		m_ldap_group.parsed_specials = []
@@ -477,7 +498,7 @@ class TestPerformMemberOperations:
 			)
 		m_logger.exception.assert_called_once()
 		f_connection.extend.microsoft.add_members_to_groups.assert_called_once_with(
-			members=m_add_members,
+			members=set(m_add_members),
 			groups="mock_dn",
 		)
 		f_connection.extend.microsoft.remove_members_from_groups.assert_not_called()
@@ -486,6 +507,7 @@ class TestPerformMemberOperations:
 	def test_remove_members_raises(
 		self,
 		mocker: MockerFixture,
+		fc_ldap_entry: LDAPEntryFactoryProtocol,
 		f_connection: LDAPConnectionProtocol,
 	):
 		m_logger = mocker.patch("core.models.ldap_group.logger")
@@ -498,6 +520,9 @@ class TestPerformMemberOperations:
 		m_rm_members = ["mock_member_3", "mock_member_4"]
 
 		m_ldap_group = LDAPGroup()
+		m_ldap_group.entry = fc_ldap_entry(spec=False, **{
+			LDAP_ATTR_GROUP_MEMBERS: m_rm_members
+		})
 		m_ldap_group.connection = f_connection
 		m_ldap_group.distinguished_name = "mock_dn"
 		m_ldap_group.parsed_specials = []
@@ -509,11 +534,11 @@ class TestPerformMemberOperations:
 			)
 		m_logger.exception.assert_called_once()
 		f_connection.extend.microsoft.add_members_to_groups.assert_called_once_with(
-			members=m_add_members,
+			members=set(m_add_members),
 			groups="mock_dn",
 		)
 		f_connection.extend.microsoft.remove_members_from_groups.assert_called_once_with(
-			members=m_rm_members,
+			members=set(m_rm_members),
 			groups="mock_dn",
 		)
 		assert set(m_ldap_group.parsed_specials) == {
