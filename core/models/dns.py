@@ -183,12 +183,12 @@ class LDAPRecordMixin:
 				][index]
 				self.soa = record
 
-	def get_soa_serial(self: "LDAPRecord") -> int:
+	def get_soa_serial(self: "LDAPRecord") -> int | None:
 		"""
 		Gets the current Start of Authority Serial
 
 		Returns:
-			int
+			int: If epoch date is same as today or is an int.
 		"""
 		if self.type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
 			raise exc_base.CoreException(
@@ -738,10 +738,10 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 				]
 				# Additional Operations based on special case type
 				for field in self.mapping["fields"]:
-					if self.mapping["class"] in [
+					if self.mapping["class"] in (
 						"DNS_RPC_RECORD_A",
 						"DNS_RPC_RECORD_AAAA",
-					]:
+					):
 						record_data.fromCanonical(values[field])
 
 					elif self.mapping["class"] == "DNS_RPC_RECORD_NODE_NAME":

@@ -146,7 +146,7 @@ class DNSRecordMixin(DomainViewMixin):
 		record_name: str = record_data["name"].lower()
 		record_type: RecordTypes = record_data["type"]
 		record_zone: str = record_data["zone"].lower()
-		record_data.pop("serial", None)
+		record_serial: int = record_data.pop("serial", None)
 
 		dns_record = LDAPRecord(
 			connection=self.ldap_connection,
@@ -162,9 +162,11 @@ class DNSRecordMixin(DomainViewMixin):
 		# Update Start of Authority Record Serial
 		if record_type != RecordTypes.DNS_RECORD_TYPE_SOA.value:
 			try:
-				self.increment_soa_serial(
-					dns_record.soa_object, dns_record.serial
-				)
+				# Only auto-increment SOA if no serial is set.
+				if not record_serial:
+					self.increment_soa_serial(
+						dns_record.soa_object, dns_record.serial
+					)
 			except Exception as e:
 				logger.exception(e)
 				raise exc_dns.DNSCouldNotIncrementSOA
@@ -210,7 +212,9 @@ class DNSRecordMixin(DomainViewMixin):
 		record_name: str = record_data.get("name").lower()
 		old_record_name: str = old_record_data.get("name").lower()
 
-		if record_data["serial"] == old_record_data["serial"]:
+		# If serial remains same, remove for auto-increment
+		serial_changed = record_data["serial"] != old_record_data["serial"]
+		if not serial_changed:
 			record_data.pop("serial")
 
 		dns_record = LDAPRecord(
@@ -247,9 +251,11 @@ class DNSRecordMixin(DomainViewMixin):
 		# Update Start of Authority Record Serial
 		if record_type != RecordTypes.DNS_RECORD_TYPE_SOA.value:
 			try:
-				self.increment_soa_serial(
-					dns_record.soa_object, dns_record.serial
-				)
+				# Only auto-increment SOA if no serial is set.
+				if not serial_changed:
+					self.increment_soa_serial(
+						dns_record.soa_object, dns_record.serial
+					)
 			except Exception as e:
 				logger.exception(e)
 				raise exc_dns.DNSCouldNotIncrementSOA
