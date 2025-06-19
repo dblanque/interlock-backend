@@ -61,6 +61,7 @@ class TestParseWriteSpecialAttributes:
 			**{
 				"attributes": {
 					LOCAL_ATTR_USER_GROUPS: ["group_a", "group_b"],
+					LOCAL_ATTR_USER_ADD_GROUPS: ["group_c_dn"],
 					LOCAL_ATTR_USER_RM_GROUPS: ["group_b_dn"],
 					LOCAL_ATTR_COUNTRY: "some_country",
 					LOCAL_ATTR_PERMISSIONS: ["some_permissions"],
@@ -78,9 +79,10 @@ class TestParseWriteSpecialAttributes:
 			LDAPUser, "parse_write_permissions"
 		)
 		m_ldap_user.parse_write_special_attributes()
-		m_parse_add_groups.assert_called_once()
+		m_parse_add_groups.assert_called_once_with(
+			add_group_dns=["group_c_dn"]
+		)
 		m_parse_remove_groups.assert_called_once_with(
-			groups=["group_a", "group_b"],
 			remove_group_dns=["group_b_dn"],
 		)
 		m_parse_write_country.assert_called_once_with("some_country")
@@ -191,7 +193,12 @@ class TestParseWritePermissions:
 		"permissions, expected",
 		(
 			(None, None),
-			([], LDAP_PERMS[LDAP_UF_NORMAL_ACCOUNT]["value"]),
+			# Empty permissions returns default disabled + normal acc
+			(
+				[],
+				LDAP_PERMS[LDAP_UF_NORMAL_ACCOUNT]["value"]
+				+ LDAP_PERMS[LDAP_UF_ACCOUNT_DISABLE]["value"],
+			),
 			(
 				[LDAP_UF_NORMAL_ACCOUNT],
 				LDAP_PERMS[LDAP_UF_NORMAL_ACCOUNT]["value"],

@@ -34,6 +34,7 @@ from core.ldap.adsi import (
 )
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from core.exceptions import (
+	base as exc_base,
 	users as exc_user,
 	ldap as exc_ldap,
 )
@@ -589,54 +590,134 @@ class TestList:
 
 class TestInsert:
 	@pytest.mark.parametrize(
-		"path, exclude_keys",
+		"m_path, m_password, m_perms, expected_perms, exclude_keys",
 		(
 			(
 				None,
+				None,
+				None,
+				{LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_NORMAL_ACCOUNT},
+				[],
+			),
+			(
+				None,
+				"mock_password",
+				[LDAP_UF_DONT_EXPIRE_PASSWD],
+				{LDAP_UF_NORMAL_ACCOUNT, LDAP_UF_DONT_EXPIRE_PASSWD},
+				[],
+			),
+			(
+				None,
+				None,
+				[
+					LDAP_UF_DONT_EXPIRE_PASSWD,
+					LDAP_UF_ACCOUNT_DISABLE,
+				],
+				{
+					LDAP_UF_ACCOUNT_DISABLE,
+					LDAP_UF_NORMAL_ACCOUNT,
+					LDAP_UF_DONT_EXPIRE_PASSWD
+				},
 				[],
 			),
 			(
 				"OU=Test,DC=example,DC=com",
+				None,
+				None,
+				{LDAP_UF_ACCOUNT_DISABLE, LDAP_UF_NORMAL_ACCOUNT},
 				[LOCAL_ATTR_ADDRESS],
 			),
 		),
+		ids=[
+			"Default Path, No Password, Default Permissions, No Excluded Keys",
+			"Default Path, With Password, Custom Permissions, No Excluded Keys",
+			"Default Path, No Password, Custom Permissions, No Excluded Keys",
+			"Custom Path, No Password, Default Permissions, With Exclude Keys",
+		]
 	)
 	def test_success(
 		self,
-		path,
+		m_path,
+		m_password: str,
+		m_perms: list[str],
+		expected_perms: set[str],
 		exclude_keys: list[str],
 		mocker: MockerFixture,
 		f_runtime_settings: RuntimeSettingsSingleton,
 		f_user_mixin: LDAPUserMixin,
 		f_log_mixin: LogMixin,
 	):
+		# Mock Methods
+		m_ldap_set_password = mocker.patch.object(
+			LDAPUserMixin,
+			"ldap_set_password",
+		)
+		m_ldap_user_change_status = mocker.patch.object(
+			LDAPUserMixin,
+			"ldap_user_change_status",
+		)
+		m_ldap_user_update = mocker.patch.object(
+			LDAPUserMixin,
+			"ldap_user_update",
+		)
+
 		# Mock LDAPUser class
+		m_distinguished_name = "CN=testuser,CN=Users,%s" % (
+			f_runtime_settings.LDAP_AUTH_SEARCH_BASE
+		) if not m_path else "CN=testuser,%s" % (m_path)
 		m_ldap_user = mocker.Mock()
+		m_ldap_user.attributes = {}
 		m_ldap_user_cls = mocker.Mock(return_value=m_ldap_user)
 		mocker.patch("core.views.mixins.ldap.user.LDAPUser", m_ldap_user_cls)
 		m_data = {
 			LOCAL_ATTR_USERNAME: "testuser",
 			LOCAL_ATTR_ADDRESS: "some_address",
-			LOCAL_ATTR_PATH: path,
+			LOCAL_ATTR_PATH: m_path,
+			LOCAL_ATTR_PERMISSIONS: {} if not m_perms else m_perms,
 		}
-		expected_data = m_data.copy()
-		expected_data.pop(LOCAL_ATTR_PATH, None)
+		if m_password:
+			m_data[LOCAL_ATTR_PASSWORD] = m_password
+		expected_save_data = m_data.copy()
+		expected_save_data[LOCAL_ATTR_PERMISSIONS] = {}
+		expected_save_data.pop(LOCAL_ATTR_PASSWORD, None)
+		expected_save_data.pop(LOCAL_ATTR_PATH, None)
 		for ek in exclude_keys:
-			expected_data.pop(ek, None)
+			expected_save_data.pop(ek, None)
 
+		# Execution
 		f_user_mixin.ldap_user_insert(
 			data=m_data,
 			exclude_keys=exclude_keys,
 		)
+
+		# Assertions
 		m_ldap_user_cls.assert_called_once_with(
 			connection=f_user_mixin.ldap_connection,
-			distinguished_name="CN=testuser,CN=Users,%s"
-			% (f_runtime_settings.LDAP_AUTH_SEARCH_BASE)
-			if not path
-			else "CN=testuser,%s" % (path),
-			attributes=expected_data,
+			distinguished_name=m_distinguished_name,
+			attributes=expected_save_data,
 		)
+		# Save
 		m_ldap_user.save.assert_called_once()
+		# Pwd and status change
+		if m_password:
+			m_ldap_set_password.assert_called_once_with(
+				user_dn=m_distinguished_name,
+				user_pwd_new=m_password,
+				set_by_admin=True,
+			)
+			m_ldap_user_change_status.assert_called_once_with(
+				username=m_data[LOCAL_ATTR_USERNAME],
+				enabled=True,
+			)
+		# Permissions
+		if m_perms:
+			m_ldap_user_update.assert_called_once_with(
+				data={
+					LOCAL_ATTR_USERNAME: m_data[LOCAL_ATTR_USERNAME],
+					LOCAL_ATTR_DN: m_distinguished_name,
+					LOCAL_ATTR_PERMISSIONS: expected_perms,
+				}
+			)
 		f_log_mixin.log.assert_called_once_with(
 			user=1,
 			operation_type=LOG_ACTION_CREATE,
@@ -681,15 +762,28 @@ class TestInsert:
 			return_value=m_ldap_user,
 			side_effect=Exception,
 		)
+		m_ldap_set_password = mocker.patch.object(
+			LDAPUserMixin,
+			"ldap_set_password",
+		)
+		m_ldap_user_change_status = mocker.patch.object(
+			LDAPUserMixin,
+			"ldap_user_change_status",
+		)
+		m_ldap_user_update = mocker.patch.object(
+			LDAPUserMixin,
+			"ldap_user_update",
+		)
 		mocker.patch("core.views.mixins.ldap.user.LDAPUser", m_ldap_user_cls)
 		m_data = {
 			LOCAL_ATTR_USERNAME: "testuser",
 			LOCAL_ATTR_ADDRESS: "some_address",
 		}
 		expected_data = m_data.copy()
+		expected_data[LOCAL_ATTR_PERMISSIONS] = {}
 		expected_data.pop(LOCAL_ATTR_PATH, None)
 
-		with pytest.raises(exc_user.UserCreate):
+		with pytest.raises(exc_base.InternalServerError):
 			f_user_mixin.ldap_user_insert(data=m_data, return_exception=True)
 		m_ldap_user_cls.assert_called_once_with(
 			connection=f_user_mixin.ldap_connection,
@@ -698,6 +792,9 @@ class TestInsert:
 			attributes=expected_data,
 		)
 		m_ldap_user.save.assert_not_called()
+		m_ldap_set_password.assert_not_called()
+		m_ldap_user_change_status.assert_not_called()
+		m_ldap_user_update.assert_not_called()
 		f_log_mixin.log.assert_not_called()
 
 
