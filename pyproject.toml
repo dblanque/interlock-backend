@@ -127,6 +127,7 @@ omit = [
     "manage.py",
     "interlock_backend/asgi.py",
     "interlock_backend/wsgi.py",
+    "interlock_backend/local_django_settings_sample.py",
 
     # Exception Sub-classes
     # They have no behavior changes and coverage is irrelevant
