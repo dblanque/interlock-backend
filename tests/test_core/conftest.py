@@ -170,7 +170,11 @@ def fc_ldap_attr(mocker: MockerFixture) -> LDAPAttributeFactoryProtocol:
 			set,
 		)
 		mock_attr = mocker.Mock(name=f"m_{attr}")
-		if not type(v) in _SEQUENCE_TYPES:
+		if v is None:
+			mock_attr.value = None
+			mock_attr.values = []
+			mock_attr.raw_values = []
+		elif not type(v) in _SEQUENCE_TYPES:
 			mock_attr.value = v
 			mock_attr.values = [v]
 			mock_attr.raw_values = [v]
