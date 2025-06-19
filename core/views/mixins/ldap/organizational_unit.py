@@ -365,7 +365,9 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 
 		new_dn = None
 		operation = LOG_ACTION_RENAME
-		if target_path:
+		if target_path and target_rdn:
+			operation = LOG_ACTION_UPDATE
+		elif target_path:
 			operation = LOG_ACTION_MOVE
 
 		# If relative_dn is passed, namechange will be executed.
@@ -454,6 +456,5 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 			operation_type=operation,
 			log_target_class=LOG_CLASS_LDAP,
 			log_target=f"{distinguished_name} to {new_dn}",
-			message=operation,
 		)
 		return new_dn

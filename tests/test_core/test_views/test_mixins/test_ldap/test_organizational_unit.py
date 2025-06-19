@@ -518,10 +518,9 @@ def test_move_or_rename_object_rename_only(
 	)
 	f_log_mixin.log.assert_called_once_with(
 		user=f_ou_mixin.request.user.id,
-		operation_type=LOG_ACTION_UPDATE,
+		operation_type=LOG_ACTION_RENAME,
 		log_target_class=LOG_CLASS_LDAP,
 		log_target=f"{f_distinguished_name} to {expected_rdn},{expected_path}",
-		message=LOG_ACTION_RENAME,
 	)
 
 
@@ -542,10 +541,9 @@ def test_move_or_rename_object_move_only(
 	)
 	f_log_mixin.log.assert_called_once_with(
 		user=f_ou_mixin.request.user.id,
-		operation_type=LOG_ACTION_UPDATE,
+		operation_type=LOG_ACTION_MOVE,
 		log_target_class=LOG_CLASS_LDAP,
 		log_target=f"{f_distinguished_name} to {expected_dn}",
-		message=LOG_ACTION_MOVE,
 	)
 
 
@@ -583,7 +581,6 @@ def test_move_or_rename_object_both_ops(
 		operation_type=LOG_ACTION_UPDATE,
 		log_target_class=LOG_CLASS_LDAP,
 		log_target=f"{f_distinguished_name} to {expected_dn}",
-		message=LOG_ACTION_MOVE,
 	)
 
 
