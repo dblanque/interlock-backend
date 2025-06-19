@@ -252,6 +252,10 @@ class LDAPObject:
 		for kw in kwargs:
 			setattr(self, kw, kwargs[kw])
 
+		self.context = kwargs.pop("context", None)
+		if self.context is None:
+			self.context = {}
+
 		self.__set_search_attrs__(
 			kwargs.pop(
 				"search_attrs",
