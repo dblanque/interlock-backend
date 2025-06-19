@@ -36,14 +36,21 @@ from core.models.types.ldap_dns_record import RecordTypes
 from core.ldap.filter import LDAPFilter
 
 ### Utils
+from core.constants.dns import (
+	LDNS_ATTR_STRUCT_TYPE,
+	LDNS_ATTR_STRUCT_TTL_SECONDS,
+	LDNS_ATTR_STRUCT_SERIAL,
+	LDNS_ATTR_STRUCT_RANK,
+	RANK_ZONE,
+)
 from core.constants.attrs import LDAP_ATTR_OBJECT_CLASS, LDAP_ATTR_DN
 from core.utils.dnstool import (
-	new_record,
 	record_to_dict,
 	get_dns_zones,
 	DNS_RECORD,
 )
-from ldap3 import MODIFY_ADD, MODIFY_DELETE, Connection
+from ldap3 import MODIFY_ADD, MODIFY_DELETE
+from core.type_hints.connector import LDAPConnectionProtocol
 import logging
 from typing import TypedDict, Iterable
 from datetime import datetime
@@ -55,28 +62,32 @@ logger = logging.getLogger(__name__)
 
 
 class LDAPDNS:
-	connection: Connection
-	dns_zones: list[str]
-	forest_zones: list[str]
-	dns_root: str
-	forest_root: str
+	connection: LDAPConnectionProtocol = None
+	dns_zones: list[str] = None
+	forest_zones: list[str] = None
+	dns_root: str = None
+	forest_root: str = None
 
-	def __init__(self, connection):
-		if RuntimeSettings.LDAP_DNS_LEGACY:
-			self.dns_root = (
-				"CN=MicrosoftDNS,CN=System,%s"
+	def __init__(self, connection: LDAPConnectionProtocol, **kwargs):
+		for kw, kw_v in kwargs.items():
+			setattr(self, kw, kw_v)
+
+		if not self.dns_root:
+			if RuntimeSettings.LDAP_DNS_LEGACY:
+				self.dns_root = (
+					"CN=MicrosoftDNS,CN=System,%s"
+					% RuntimeSettings.LDAP_AUTH_SEARCH_BASE
+				)
+			else:
+				self.dns_root = (
+					"CN=MicrosoftDNS,DC=DomainDnsZones,%s"
+					% RuntimeSettings.LDAP_AUTH_SEARCH_BASE
+				)
+		if not self.forest_root:
+			self.forest_root = (
+				"CN=MicrosoftDNS,DC=ForestDnsZones,%s"
 				% RuntimeSettings.LDAP_AUTH_SEARCH_BASE
 			)
-		else:
-			self.dns_root = (
-				"CN=MicrosoftDNS,DC=DomainDnsZones,%s"
-				% RuntimeSettings.LDAP_AUTH_SEARCH_BASE
-			)
-
-		self.forest_root = (
-			"CN=MicrosoftDNS,DC=ForestDnsZones,%s"
-			% RuntimeSettings.LDAP_AUTH_SEARCH_BASE
-		)
 		self.connection = connection
 		self.list_dns_zones()
 		self.list_forest_zones()
@@ -688,11 +699,19 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 		Returns:
 			DNS_RECORD: DNS Record Struct
 		"""
+		# Initialize with default TTL if not provided
 		if not ttl:
 			ttl = self.DEFAULT_TTL
-		## Check if class type is supported for creation ##
+
+		## Check if class type is supported for creation
 		if self.type in RECORD_MAPPINGS and RECORD_MAPPINGS[self.type]["class"]:
-			record: DNS_RECORD = new_record(self.type, serial, ttl=ttl)
+			# See also: https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dnsp/6912b338-5472-4f59-b912-0edb536b6ed8
+			record = DNS_RECORD()
+			record[LDNS_ATTR_STRUCT_TYPE] = self.type
+			record[LDNS_ATTR_STRUCT_SERIAL] = serial
+			record[LDNS_ATTR_STRUCT_TTL_SECONDS] = ttl
+			record[LDNS_ATTR_STRUCT_RANK] = RANK_ZONE # 240
+
 			# Dynamically fetch the class based on the mapping
 			if self.mapping["class"]:
 				record_data = self.record_cls()
