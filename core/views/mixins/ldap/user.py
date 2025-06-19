@@ -434,6 +434,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 
 		# ADDS Requires permission changes to be separate from creation
 		user_perms = data.pop(LOCAL_ATTR_PERMISSIONS, [])
+		# Normalize and de-duplicate to set
 		user_perms = set(user_perms)
 		user_should_be_enabled = (
 			ldap_adsi.LDAP_UF_ACCOUNT_DISABLE not in user_perms
