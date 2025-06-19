@@ -7,6 +7,7 @@ from ldap3 import Entry as LDAPEntry, Attribute as LDAPAttribute
 from core.utils.main import (
 	getlocalkeyforldapattr,
 	getldapattrvalue,
+	getldapattr,
 	uppercase_ldif_identifiers,
 )
 from core.ldap.defaults import LDAP_LDIF_IDENTIFIERS
@@ -207,6 +208,19 @@ def f_ldap_entry(mocker: MockerFixture) -> LDAPEntry:
 
 	return m_entry
 
+
+class TestGetLdapAttr:
+	@staticmethod
+	def test_default_as_arg(mocker: MockerFixture):
+		m_entry = mocker.Mock()
+		delattr(m_entry, "some_attr")
+		assert getldapattr(m_entry, "some_attr", "default_value") == "default_value"
+
+	@staticmethod
+	def test_default_as_kwarg(mocker: MockerFixture):
+		m_entry = mocker.Mock()
+		delattr(m_entry, "some_attr")
+		assert getldapattr(m_entry, "some_attr", default="default_value") == "default_value"
 
 class TestGetLdapAttrValue:
 	@staticmethod
