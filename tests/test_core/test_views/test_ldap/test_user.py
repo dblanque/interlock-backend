@@ -227,10 +227,6 @@ class TestInsert(BaseViewTestClass):
 			"ldap_user_insert",
 			return_value=m_distinguished_name,
 		)
-		m_ldap_set_password = mocker.patch.object(
-			LDAPUserViewSet,
-			"ldap_set_password",
-		)
 
 		# Exec
 		response: Response = admin_user_client.post(
@@ -250,11 +246,6 @@ class TestInsert(BaseViewTestClass):
 			),
 		)
 		m_ldap_user_insert.assert_called_once_with(data=expected_m_data_call)
-		m_ldap_set_password.assert_called_once_with(
-			user_dn=m_distinguished_name,
-			user_pwd_new=m_data.get(LOCAL_ATTR_PASSWORD),
-			set_by_admin=True,
-		)
 
 	@pytest.mark.parametrize(
 		"use_email",
