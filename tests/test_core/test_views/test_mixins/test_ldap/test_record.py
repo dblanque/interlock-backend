@@ -328,6 +328,29 @@ def test_create_record(
 	m_ldap_record_instance.as_dict = record_fixture
 	m_ldap_record_instance.display_name = "mock_fullname"
 
+	# Test without auto-incremented serial
+	f_record_mixin.create_record(record_data=record_fixture)
+	m_ldap_record.assert_called_once_with(
+		connection=f_record_mixin.ldap_connection,
+		record_name=record_fixture["name"],
+		record_zone=record_fixture["zone"],
+		record_type=record_type,
+		record_main_value=record_main_value,
+	)
+	m_create.assert_called_once_with(values=record_fixture)
+	m_increment_serial.assert_not_called()
+	f_log_mixin.log.assert_any_call(
+		user=1,
+		operation_type=LOG_ACTION_CREATE,
+		log_target_class=LOG_CLASS_DNSR,
+		log_target="mock_fullname",
+	)
+
+	# Test with auto-incremented serial
+	m_ldap_record.reset_mock()
+	m_create.reset_mock()
+	m_increment_serial.reset_mock()
+	f_log_mixin.log.reset_mock()
 	result = f_record_mixin.create_record(record_data=record_fixture)
 	m_ldap_record.assert_called_once_with(
 		connection=f_record_mixin.ldap_connection,
@@ -337,14 +360,12 @@ def test_create_record(
 		record_main_value=record_main_value,
 	)
 	m_create.assert_called_once_with(values=record_fixture)
-
 	if record_type == RecordTypes.DNS_RECORD_TYPE_SOA.value:
 		m_increment_serial.assert_not_called()
 	else:
 		m_increment_serial.assert_called_once_with(
 			m_ldap_record_instance.soa_object, m_ldap_record_instance.serial
 		)
-
 	f_log_mixin.log.assert_any_call(
 		user=1,
 		operation_type=LOG_ACTION_CREATE,
@@ -362,6 +383,7 @@ def test_create_record_raises_could_not_increment_soa(
 ):
 	record_fixture = f_record_data_a
 	record_fixture["type"] = RecordTypes.DNS_RECORD_TYPE_A.value
+	record_fixture.pop("serial")
 	m_request = mocker.MagicMock()
 	m_request.user.id = 1
 	f_record_mixin.request = m_request
