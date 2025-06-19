@@ -22,10 +22,11 @@
 # Tests
 * Fix core.views.ldap.user.create tests
 * core.views.mixins.ldap.user.ldap_user_insert
-	* Create disabled user
-	* Create disabled user with non expirable password
-	* Create enabled user
-	* Create enabled user with non expirable password
+	* Create disabled user <d>
+	* Create disabled user with non expirable password  <d>
+	* Create enabled user  <d>
+	* Create enabled user with non expirable password  <d>
+* core.models.ldap_user.save
 * core.models.ldap_user.remove_primary_group
 * core.models.ldap_user.parse_add_groups
 * core.models.ldap_user.parse_remove_groups
