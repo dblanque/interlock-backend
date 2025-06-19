@@ -192,6 +192,16 @@ RECORD_MAPPINGS = {
 		"class": "DNS_RPC_RECORD_NODE_NAME",
 		"fields": [LDNS_ATTR_NAME_NODE],
 	},
+    RecordTypes.DNS_RECORD_TYPE_DNSKEY.value: {
+        "name": "DNSKEY",
+        "class": None,
+        "fields": [],
+    },
+    RecordTypes.DNS_RECORD_TYPE_RRSIG.value: {
+        "name": "RRSIG",
+        "class": None,
+        "fields": [],
+    }
 }
 
 
@@ -278,11 +288,11 @@ def record_to_dict(record: "DNS_RECORD", ts=False):
 				raise e
 	return record_dict
 
-
 class DNS_RECORD(Structure):
 	"""
 	dnsRecord - used in LDAP
 	[MS-DNSP] section 2.3.2.2
+	https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-dnsp/6912b338-5472-4f59-b912-0edb536b6ed8
 	"""
 
 	structure = (
