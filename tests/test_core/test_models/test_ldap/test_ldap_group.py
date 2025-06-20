@@ -4,7 +4,8 @@ from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
 
 ################################################################################
-from core.models.ldap_group import LDAPGroup
+from core.models.ldap_object import LDAPObject
+from core.models.ldap_group import LDAPGroup, DEFAULT_LOCAL_ATTRS
 from .test_ldap_object import TestDunderValidateInit as SuperDunderValidateInit
 from core.type_hints.connector import LDAPConnectionProtocol
 from core.ldap.types.group import LDAPGroupTypes
@@ -19,7 +20,24 @@ from core.exceptions import (
 from tests.test_core.conftest import (
 	LDAPAttributeFactoryProtocol,
 	LDAPEntryFactoryProtocol,
+	RuntimeSettingsFactory,
 )
+
+class TestInit:
+	def test_success(
+		self, mocker: MockerFixture, g_runtime_settings: RuntimeSettingsFactory
+	):
+		m_runtime_settings = g_runtime_settings(
+			patch_path="core.models.ldap_user.RuntimeSettings"
+		)
+		m_super_init = mocker.patch.object(LDAPObject, "__init__")
+		m_ldap_group = LDAPGroup(some_kwarg=True)
+		m_super_init.assert_called_once_with(some_kwarg=True)
+		assert m_ldap_group.search_attrs == {
+			m_runtime_settings.LDAP_FIELD_MAP.get(attr)
+			for attr in DEFAULT_LOCAL_ATTRS
+			if m_runtime_settings.LDAP_FIELD_MAP.get(attr, None)
+		}
 
 
 class TestDunderValidateInit(SuperDunderValidateInit):
@@ -648,3 +666,31 @@ class TestPostUpdate:
 		m_ldap_group.post_update()
 		m_post_create.assert_called_once()
 		m_parse_write_common_name.assert_called_once()
+
+class TestSave:
+	@pytest.mark.parametrize(
+		"add_members, rm_members, expected_force_post_update",
+		(
+			([], [], False),
+			([], ["mock_member"], True),
+			(["mock_member"], [], True),
+		),
+	)
+	def test_success(
+		self,
+		mocker: MockerFixture,
+		add_members,
+		rm_members,
+		expected_force_post_update,
+	):
+		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
+		m_ldap_group = LDAPGroup()
+		m_ldap_group.attributes = {
+			LOCAL_ATTR_GROUP_ADD_MEMBERS: add_members,
+			LOCAL_ATTR_GROUP_RM_MEMBERS: rm_members,
+		}
+		m_save = mocker.patch.object(LDAPObject, "save")
+		m_ldap_group.save()
+		m_save.assert_called_once_with(
+			update_kwargs={"force_post_update": expected_force_post_update}
+		)
