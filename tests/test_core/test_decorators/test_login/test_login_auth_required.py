@@ -1,12 +1,10 @@
 import pytest
 from core.decorators.login import (
 	auth_required,
-)  # Replace `your_module` with the actual module name
+)
 from core.models.user import User
 from rest_framework.request import Request
 from core.exceptions.base import PermissionDenied
-from tests.utils import get_ids_for_cases
-
 
 @pytest.fixture
 def m_request(mocker):
