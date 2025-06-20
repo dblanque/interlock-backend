@@ -250,7 +250,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			connection=self.ldap_connection,
 			attributes=group_data,
 			distinguished_name=distinguished_name,
-			context={"request": self.request}
+			context={"request": self.request},
 		)
 		group_obj.save()
 
@@ -274,7 +274,8 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				LOCAL_ATTR_OBJECT_CATEGORY,
 				LOCAL_ATTR_GROUP_TYPE,
 				LOCAL_ATTR_GROUP_SCOPE,
-			): data.pop(k, None)
+			):
+				data.pop(k, None)
 
 		# !!! CHECK IF GROUP EXISTS AND FETCH ATTRS !!! #
 		# We need to fetch the existing LDAP group object to know what
@@ -283,15 +284,15 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			connection=self.ldap_connection,
 			distinguished_name=distinguished_name,
 			search_attrs=self.search_attrs,
-			context={"request": self.request}
+			context={"request": self.request},
 		)
 		if not group_obj.exists:
 			raise exc_groups.GroupDoesNotExist
 
 		group_types = group_obj.attributes.get(LOCAL_ATTR_GROUP_TYPE, [])
 		if (
-			LOCAL_ATTR_GROUP_TYPE in data and
-			LDAPGroupTypes.TYPE_SYSTEM.name in group_types
+			LOCAL_ATTR_GROUP_TYPE in data
+			and LDAPGroupTypes.TYPE_SYSTEM.name in group_types
 		):
 			if not LDAPGroupTypes.TYPE_SYSTEM.name in data.get(
 				LOCAL_ATTR_GROUP_TYPE
@@ -299,7 +300,7 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				raise serializers.ValidationError(
 					{
 						LOCAL_ATTR_GROUP_TYPE: "System Group cannot have its "
-							"SYSTEM flag removed."
+						"SYSTEM flag removed."
 					}
 				)
 

@@ -11,7 +11,9 @@ class UserPermissionError(CoreException):
 
 class UserPasswordOverPlainLDAP(CoreException):
 	status_code = status.HTTP_406_NOT_ACCEPTABLE
-	default_detail = "User passwords cannot be changed over Plain LDAP (Use LDAPS)"
+	default_detail = (
+		"User passwords cannot be changed over Plain LDAP (Use LDAPS)"
+	)
 	default_code = "user_password_over_plain_ldap"
 
 

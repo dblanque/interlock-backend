@@ -31,6 +31,7 @@ from core.models.ldap_object import (
 from core.config.runtime import RuntimeSettings
 from core.ldap.types.group import LDAPGroupTypes
 from rest_framework.request import Request
+
 ################################################################################
 logger = getLogger()
 
@@ -197,7 +198,7 @@ class LDAPGroup(LDAPObject):
 					self,
 					distinguished_name=self.distinguished_name,
 					target_rdn=group_cn,
-					responsible_user=context_user
+					responsible_user=context_user,
 				)
 			)
 
@@ -207,8 +208,11 @@ class LDAPGroup(LDAPObject):
 		members_to_remove: list | set = None,
 	):
 		if not hasattr(self.entry, LDAP_ATTR_GROUP_MEMBERS):
-			logger.error("Missing Attribute required for "
-				"perform_member_operations call (%s)", LDAP_ATTR_GROUP_MEMBERS)
+			logger.error(
+				"Missing Attribute required for "
+				"perform_member_operations call (%s)",
+				LDAP_ATTR_GROUP_MEMBERS,
+			)
 			return
 
 		members = getldapattrvalue(self.entry, LDAP_ATTR_GROUP_MEMBERS)

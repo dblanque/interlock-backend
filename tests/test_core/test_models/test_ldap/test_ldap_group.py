@@ -21,6 +21,7 @@ from tests.test_core.conftest import (
 	LDAPEntryFactoryProtocol,
 )
 
+
 class TestDunderValidateInit(SuperDunderValidateInit):
 	test_cls = LDAPGroup
 
@@ -396,7 +397,7 @@ class TestParseWriteCommonName:
 			m_ldap_group,
 			distinguished_name=m_old_dn,
 			target_rdn=m_name,
-			responsible_user=m_request.user
+			responsible_user=m_request.user,
 		)
 		assert m_ldap_group.distinguished_name == m_new_dn
 
@@ -437,9 +438,10 @@ class TestPerformMemberOperations:
 		m_rm_members = ["mock_member_3", "mock_member_4"]
 
 		m_ldap_group = LDAPGroup()
-		m_ldap_group.entry = fc_ldap_entry(spec=False, **{
-			LDAP_ATTR_GROUP_MEMBERS: ["mock_member_1", "mock_member_3"]
-		})
+		m_ldap_group.entry = fc_ldap_entry(
+			spec=False,
+			**{LDAP_ATTR_GROUP_MEMBERS: ["mock_member_1", "mock_member_3"]},
+		)
 		m_ldap_group.connection = f_connection
 		m_ldap_group.distinguished_name = "mock_dn"
 		m_ldap_group.parsed_specials = []
@@ -461,7 +463,9 @@ class TestPerformMemberOperations:
 			LOCAL_ATTR_GROUP_RM_MEMBERS,
 		}
 
-	def test_logs_and_returns_none(self, mocker: MockerFixture, fc_ldap_attr: LDAPAttributeFactoryProtocol):
+	def test_logs_and_returns_none(
+		self, mocker: MockerFixture, fc_ldap_attr: LDAPAttributeFactoryProtocol
+	):
 		mocker.patch.object(LDAPGroup, "__init__", return_value=None)
 		m_ldap_group = LDAPGroup()
 		m_ldap_group.entry = mocker.Mock()
@@ -484,9 +488,9 @@ class TestPerformMemberOperations:
 		m_rm_members = ["mock_member_3", "mock_member_4"]
 
 		m_ldap_group = LDAPGroup()
-		m_ldap_group.entry = fc_ldap_entry(spec=False, **{
-			LDAP_ATTR_GROUP_MEMBERS: []
-		})
+		m_ldap_group.entry = fc_ldap_entry(
+			spec=False, **{LDAP_ATTR_GROUP_MEMBERS: []}
+		)
 		m_ldap_group.connection = f_connection
 		m_ldap_group.distinguished_name = "mock_dn"
 		m_ldap_group.parsed_specials = []
@@ -520,9 +524,9 @@ class TestPerformMemberOperations:
 		m_rm_members = ["mock_member_3", "mock_member_4"]
 
 		m_ldap_group = LDAPGroup()
-		m_ldap_group.entry = fc_ldap_entry(spec=False, **{
-			LDAP_ATTR_GROUP_MEMBERS: m_rm_members
-		})
+		m_ldap_group.entry = fc_ldap_entry(
+			spec=False, **{LDAP_ATTR_GROUP_MEMBERS: m_rm_members}
+		)
 		m_ldap_group.connection = f_connection
 		m_ldap_group.distinguished_name = "mock_dn"
 		m_ldap_group.parsed_specials = []

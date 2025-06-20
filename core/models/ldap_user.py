@@ -120,9 +120,7 @@ class LDAPUser(LDAPObject):
 
 	def parse_write_special_attributes(self):
 		self.parse_add_groups(
-			add_group_dns=self.attributes.get(
-				LOCAL_ATTR_USER_ADD_GROUPS, None
-			),
+			add_group_dns=self.attributes.get(LOCAL_ATTR_USER_ADD_GROUPS, None),
 		)
 		self.parse_remove_groups(
 			remove_group_dns=self.attributes.get(
@@ -154,7 +152,9 @@ class LDAPUser(LDAPObject):
 			}
 		)
 
-	def remove_primary_group(self, group_dns: list[str]) -> tuple[list[str], bool]:
+	def remove_primary_group(
+		self, group_dns: list[str]
+	) -> tuple[list[str], bool]:
 		"""
 		Finds Primary Group by Relative ID and removes its Distinguished Name
 		from list of strings.
@@ -162,7 +162,7 @@ class LDAPUser(LDAPObject):
 		found_id = False
 		if not group_dns:
 			return
-		if not isinstance(group_dns, list|set):
+		if not isinstance(group_dns, list | set):
 			raise TypeError("group_dns must be of types list, set")
 		if not isinstance(group_dns, set):
 			group_dns = set(group_dns)
@@ -180,7 +180,8 @@ class LDAPUser(LDAPObject):
 			LDAPGroup(
 				distinguished_name=distinguished_name,
 				connection=self.connection,
-			) for distinguished_name in group_dns
+			)
+			for distinguished_name in group_dns
 		]
 		for group in group_objects:
 			# Fetch Primary Group ID from Server-side Entry
@@ -193,16 +194,18 @@ class LDAPUser(LDAPObject):
 	def parse_add_groups(
 		self,
 		add_group_dns: list[str] | set[str] | str = None,
-	):			
+	):
 		if not add_group_dns:
 			return
 		if isinstance(add_group_dns, str):
-			add_group_dns = { add_group_dns }
+			add_group_dns = {add_group_dns}
 		if not isinstance(add_group_dns, (list, set)):
 			raise TypeError("add_group_dns must be of types list, set")
 
 		# Remove groups that the user is already a member of
-		previous_groups = getldapattrvalue(self.entry, LDAP_ATTR_USER_GROUPS, [])
+		previous_groups = getldapattrvalue(
+			self.entry, LDAP_ATTR_USER_GROUPS, []
+		)
 		if previous_groups:
 			ignore_dns = set()
 			for distinguished_name in add_group_dns:
@@ -225,12 +228,14 @@ class LDAPUser(LDAPObject):
 		if not remove_group_dns:
 			return
 		if isinstance(remove_group_dns, str):
-			remove_group_dns = { remove_group_dns }
+			remove_group_dns = {remove_group_dns}
 		if not isinstance(remove_group_dns, (list, set)):
 			raise TypeError("remove_group_dns must be of types list, set")
 
 		# Remove groups that the user is not a member of
-		previous_groups = getldapattrvalue(self.entry, LDAP_ATTR_USER_GROUPS, [])
+		previous_groups = getldapattrvalue(
+			self.entry, LDAP_ATTR_USER_GROUPS, []
+		)
 		if previous_groups:
 			ignore_dns = set()
 			for distinguished_name in remove_group_dns:

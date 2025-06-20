@@ -616,7 +616,7 @@ class TestInsert:
 				{
 					LDAP_UF_ACCOUNT_DISABLE,
 					LDAP_UF_NORMAL_ACCOUNT,
-					LDAP_UF_DONT_EXPIRE_PASSWD
+					LDAP_UF_DONT_EXPIRE_PASSWD,
 				},
 				[],
 			),
@@ -633,7 +633,7 @@ class TestInsert:
 			"Default Path, With Password, Custom Permissions, No Excluded Keys",
 			"Default Path, With Password, Custom Permissions, No Excluded Keys",
 			"Custom Path, No Password, Default Permissions, With Exclude Keys",
-		]
+		],
 	)
 	def test_success(
 		self,
@@ -662,9 +662,12 @@ class TestInsert:
 		)
 
 		# Mock LDAPUser class
-		m_distinguished_name = "CN=testuser,CN=Users,%s" % (
-			f_runtime_settings.LDAP_AUTH_SEARCH_BASE
-		) if not m_path else "CN=testuser,%s" % (m_path)
+		m_distinguished_name = (
+			"CN=testuser,CN=Users,%s"
+			% (f_runtime_settings.LDAP_AUTH_SEARCH_BASE)
+			if not m_path
+			else "CN=testuser,%s" % (m_path)
+		)
 		m_ldap_user = mocker.Mock()
 		m_ldap_user.attributes = {}
 		m_ldap_user_cls = mocker.Mock(return_value=m_ldap_user)

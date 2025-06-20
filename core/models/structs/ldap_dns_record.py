@@ -192,16 +192,16 @@ RECORD_MAPPINGS = {
 		"class": "DNS_RPC_RECORD_NODE_NAME",
 		"fields": [LDNS_ATTR_NAME_NODE],
 	},
-    RecordTypes.DNS_RECORD_TYPE_DNSKEY.value: {
-        "name": "DNSKEY",
-        "class": None,
-        "fields": [],
-    },
-    RecordTypes.DNS_RECORD_TYPE_RRSIG.value: {
-        "name": "RRSIG",
-        "class": None,
-        "fields": [],
-    }
+	RecordTypes.DNS_RECORD_TYPE_DNSKEY.value: {
+		"name": "DNSKEY",
+		"class": None,
+		"fields": [],
+	},
+	RecordTypes.DNS_RECORD_TYPE_RRSIG.value: {
+		"name": "RRSIG",
+		"class": None,
+		"fields": [],
+	},
 }
 
 
@@ -287,6 +287,7 @@ def record_to_dict(record: "DNS_RECORD", ts=False):
 				logger.exception(e)
 				raise e
 	return record_dict
+
 
 class DNS_RECORD(Structure):
 	"""

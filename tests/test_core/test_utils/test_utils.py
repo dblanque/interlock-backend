@@ -214,13 +214,20 @@ class TestGetLdapAttr:
 	def test_default_as_arg(mocker: MockerFixture):
 		m_entry = mocker.Mock()
 		delattr(m_entry, "some_attr")
-		assert getldapattr(m_entry, "some_attr", "default_value") == "default_value"
+		assert (
+			getldapattr(m_entry, "some_attr", "default_value")
+			== "default_value"
+		)
 
 	@staticmethod
 	def test_default_as_kwarg(mocker: MockerFixture):
 		m_entry = mocker.Mock()
 		delattr(m_entry, "some_attr")
-		assert getldapattr(m_entry, "some_attr", default="default_value") == "default_value"
+		assert (
+			getldapattr(m_entry, "some_attr", default="default_value")
+			== "default_value"
+		)
+
 
 class TestGetLdapAttrValue:
 	@staticmethod

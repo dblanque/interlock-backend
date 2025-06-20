@@ -710,7 +710,7 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 			record[LDNS_ATTR_STRUCT_TYPE] = self.type
 			record[LDNS_ATTR_STRUCT_SERIAL] = serial
 			record[LDNS_ATTR_STRUCT_TTL_SECONDS] = ttl
-			record[LDNS_ATTR_STRUCT_RANK] = RANK_ZONE # 240
+			record[LDNS_ATTR_STRUCT_RANK] = RANK_ZONE  # 240
 
 			# Dynamically fetch the class based on the mapping
 			if self.mapping["class"]:

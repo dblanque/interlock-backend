@@ -79,9 +79,7 @@ class TestParseWriteSpecialAttributes:
 			LDAPUser, "parse_write_permissions"
 		)
 		m_ldap_user.parse_write_special_attributes()
-		m_parse_add_groups.assert_called_once_with(
-			add_group_dns=["group_c_dn"]
-		)
+		m_parse_add_groups.assert_called_once_with(add_group_dns=["group_c_dn"])
 		m_parse_remove_groups.assert_called_once_with(
 			remove_group_dns=["group_b_dn"],
 		)

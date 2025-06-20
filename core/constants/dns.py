@@ -157,31 +157,31 @@ DNS_RPC_FLAG_CACHE_DATA = 0x80000000
 DNS_RPC_FLAG_RECORD_WIRE_FORMAT = 0x00100000
 
 # DNSSEC Record Flags (for RRSIG, DNSKEY, etc.)
-DNSSEC_FLAG_SEP = 0x0001               # Secure Entry Point (key signing key)
-DNSSEC_FLAG_REVOKE = 0x0080            # Key has been revoked
-DNSSEC_FLAG_ZONE = 0x0100              # Zone Key (used for zone signing)
+DNSSEC_FLAG_SEP = 0x0001  # Secure Entry Point (key signing key)
+DNSSEC_FLAG_REVOKE = 0x0080  # Key has been revoked
+DNSSEC_FLAG_ZONE = 0x0100  # Zone Key (used for zone signing)
 
 # DNSSEC Algorithms (RFC 4034)
 DNSSEC_ALGORITHMS = {
-    1: 'RSA/MD5',
-    2: 'DH',
-    3: 'DSA/SHA-1',
-    5: 'RSA/SHA-1',
-    6: 'DSA-NSEC3-SHA1',
-    7: 'RSASHA1-NSEC3-SHA1',
-    8: 'RSA/SHA-256',
-    10: 'RSA/SHA-512',
-    12: 'ECC-GOST',
-    13: 'ECDSA/P-256/SHA-256',
-    14: 'ECDSA/P-384/SHA-384',
-    15: 'ED25519',
-    16: 'ED448'
+	1: "RSA/MD5",
+	2: "DH",
+	3: "DSA/SHA-1",
+	5: "RSA/SHA-1",
+	6: "DSA-NSEC3-SHA1",
+	7: "RSASHA1-NSEC3-SHA1",
+	8: "RSA/SHA-256",
+	10: "RSA/SHA-512",
+	12: "ECC-GOST",
+	13: "ECDSA/P-256/SHA-256",
+	14: "ECDSA/P-384/SHA-384",
+	15: "ED25519",
+	16: "ED448",
 }
 
 # DNSSEC Protocol Values
-DNSSEC_PROTOCOL_DNSSEC = 3             # Standard DNSSEC protocol
-DNSSEC_PROTOCOL_TLS = 1                # TLS protocol (uncommon in DNS)
+DNSSEC_PROTOCOL_DNSSEC = 3  # Standard DNSSEC protocol
+DNSSEC_PROTOCOL_TLS = 1  # TLS protocol (uncommon in DNS)
 
 # Windows Server 2022 Specific Flags
-DNS_RECORD_FLAG_2022_SECURE = 0x00000800 # Windows 2022 enhanced security flag
-DNS_RECORD_FLAG_2022_COMPRESSED = 0x00001000 # Windows 2022 compressed format
+DNS_RECORD_FLAG_2022_SECURE = 0x00000800  # Windows 2022 enhanced security flag
+DNS_RECORD_FLAG_2022_COMPRESSED = 0x00001000  # Windows 2022 compressed format

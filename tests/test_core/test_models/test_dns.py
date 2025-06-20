@@ -1385,7 +1385,9 @@ class TestLDAPRecord:
 		m_serial = get_mock_serial()
 		m_record: LDAPRecord = f_record(record_type.value, test_values)
 		m_base_record_struct = mocker.MagicMock(spec=DNS_RECORD)
-		m_base_record_cls = mocker.patch("core.models.dns.DNS_RECORD", return_value=m_base_record_struct)
+		m_base_record_cls = mocker.patch(
+			"core.models.dns.DNS_RECORD", return_value=m_base_record_struct
+		)
 		m_data_struct = mocker.MagicMock(spec=record_spec)
 		m_data_struct.fromCanonical = mocker.Mock(return_value=None)
 		m_record.record_cls = mocker.Mock(return_value=m_data_struct)
@@ -1395,16 +1397,26 @@ class TestLDAPRecord:
 
 		# Assertions
 		m_base_record_cls.assert_called_once()
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[0].args == (LDNS_ATTR_STRUCT_TYPE, record_type.value)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[1].args == (LDNS_ATTR_STRUCT_SERIAL, m_serial)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[2].args == (LDNS_ATTR_STRUCT_TTL_SECONDS, m_record.DEFAULT_TTL)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[3].args == (LDNS_ATTR_STRUCT_RANK, RANK_ZONE)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[4].args == (LDNS_ATTR_STRUCT_DATA, m_data_struct)
+		assert m_base_record_struct.__setitem__.call_args_list[0].args == (
+			LDNS_ATTR_STRUCT_TYPE,
+			record_type.value,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[1].args == (
+			LDNS_ATTR_STRUCT_SERIAL,
+			m_serial,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[2].args == (
+			LDNS_ATTR_STRUCT_TTL_SECONDS,
+			m_record.DEFAULT_TTL,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[3].args == (
+			LDNS_ATTR_STRUCT_RANK,
+			RANK_ZONE,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[4].args == (
+			LDNS_ATTR_STRUCT_DATA,
+			m_data_struct,
+		)
 		m_data_struct.fromCanonical.assert_called_once_with(test_field_value)
 
 	@pytest.mark.parametrize(
@@ -1426,7 +1438,9 @@ class TestLDAPRecord:
 		m_serial = get_mock_serial()
 		m_record: LDAPRecord = f_record(record_type.value, test_values)
 		m_base_record_struct = mocker.MagicMock(spec=DNS_RECORD)
-		m_base_record_cls = mocker.patch("core.models.dns.DNS_RECORD", return_value=m_base_record_struct)
+		m_base_record_cls = mocker.patch(
+			"core.models.dns.DNS_RECORD", return_value=m_base_record_struct
+		)
 		m_data_struct = mocker.MagicMock(spec=DNS_RPC_RECORD_NODE_NAME)
 		m_data_struct: Union[DNS_COUNT_NAME, MockType]
 		m_data_struct.toCountName = mocker.Mock(return_value=None)
@@ -1437,16 +1451,26 @@ class TestLDAPRecord:
 
 		# Assertions
 		m_base_record_cls.assert_called_once()
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[0].args == (LDNS_ATTR_STRUCT_TYPE, record_type.value)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[1].args == (LDNS_ATTR_STRUCT_SERIAL, m_serial)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[2].args == (LDNS_ATTR_STRUCT_TTL_SECONDS, m_record.DEFAULT_TTL)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[3].args == (LDNS_ATTR_STRUCT_RANK, RANK_ZONE)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[4].args == (LDNS_ATTR_STRUCT_DATA, m_data_struct)
+		assert m_base_record_struct.__setitem__.call_args_list[0].args == (
+			LDNS_ATTR_STRUCT_TYPE,
+			record_type.value,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[1].args == (
+			LDNS_ATTR_STRUCT_SERIAL,
+			m_serial,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[2].args == (
+			LDNS_ATTR_STRUCT_TTL_SECONDS,
+			m_record.DEFAULT_TTL,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[3].args == (
+			LDNS_ATTR_STRUCT_RANK,
+			RANK_ZONE,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[4].args == (
+			LDNS_ATTR_STRUCT_DATA,
+			m_data_struct,
+		)
 		m_data_struct.toCountName.assert_called_once_with(
 			test_values["nameNode"]
 		)
@@ -1471,7 +1495,9 @@ class TestLDAPRecord:
 		m_serial = get_mock_serial()
 		m_record: LDAPRecord = f_record(record_type.value, test_values)
 		m_base_record_struct = mocker.MagicMock(spec=DNS_RECORD)
-		m_base_record_cls = mocker.patch("core.models.dns.DNS_RECORD", return_value=m_base_record_struct)
+		m_base_record_cls = mocker.patch(
+			"core.models.dns.DNS_RECORD", return_value=m_base_record_struct
+		)
 		m_data_struct = mocker.MagicMock(spec=DNS_RPC_RECORD_STRING)
 		m_data_struct: Union[DNS_RPC_NAME, MockType]
 		m_data_struct.toRPCName = mocker.Mock(return_value=None)
@@ -1482,21 +1508,33 @@ class TestLDAPRecord:
 
 		# Assertions
 		m_base_record_cls.assert_called_once()
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[0].args == (LDNS_ATTR_STRUCT_TYPE, record_type.value)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[1].args == (LDNS_ATTR_STRUCT_SERIAL, m_serial)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[2].args == (LDNS_ATTR_STRUCT_TTL_SECONDS, m_record.DEFAULT_TTL)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[3].args == (LDNS_ATTR_STRUCT_RANK, RANK_ZONE)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[4].args == (LDNS_ATTR_STRUCT_DATA, m_data_struct)
+		assert m_base_record_struct.__setitem__.call_args_list[0].args == (
+			LDNS_ATTR_STRUCT_TYPE,
+			record_type.value,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[1].args == (
+			LDNS_ATTR_STRUCT_SERIAL,
+			m_serial,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[2].args == (
+			LDNS_ATTR_STRUCT_TTL_SECONDS,
+			m_record.DEFAULT_TTL,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[3].args == (
+			LDNS_ATTR_STRUCT_RANK,
+			RANK_ZONE,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[4].args == (
+			LDNS_ATTR_STRUCT_DATA,
+			m_data_struct,
+		)
 		m_data_struct.toRPCName.assert_called_once_with(
 			test_values["stringData"]
 		)
 
-	def test_make_record_bytes_rpc_name_preference(self, mocker: MockerFixture, f_record):
+	def test_make_record_bytes_rpc_name_preference(
+		self, mocker: MockerFixture, f_record
+	):
 		test_values = {
 			"wPreference": 10,
 			"nameExchange": f"mx.{LDAP_DOMAIN}.",
@@ -1506,7 +1544,9 @@ class TestLDAPRecord:
 			RecordTypes.DNS_RECORD_TYPE_MX.value, test_values
 		)
 		m_base_record_struct = mocker.MagicMock(spec=DNS_RECORD)
-		m_base_record_cls = mocker.patch("core.models.dns.DNS_RECORD", return_value=m_base_record_struct)
+		m_base_record_cls = mocker.patch(
+			"core.models.dns.DNS_RECORD", return_value=m_base_record_struct
+		)
 		m_data_struct = mocker.MagicMock(spec=DNS_RPC_RECORD_NAME_PREFERENCE)
 		m_data_struct: Union[DNS_COUNT_NAME, MockType]
 		m_data_struct.insert_field_to_struct = mocker.Mock(return_value=None)
@@ -1519,16 +1559,26 @@ class TestLDAPRecord:
 
 		# Assertions
 		m_base_record_cls.assert_called_once()
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[0].args == (LDNS_ATTR_STRUCT_TYPE, RecordTypes.DNS_RECORD_TYPE_MX.value)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[1].args == (LDNS_ATTR_STRUCT_SERIAL, m_serial)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[2].args == (LDNS_ATTR_STRUCT_TTL_SECONDS, m_record.DEFAULT_TTL)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[3].args == (LDNS_ATTR_STRUCT_RANK, RANK_ZONE)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[4].args == (LDNS_ATTR_STRUCT_DATA, m_data_struct)
+		assert m_base_record_struct.__setitem__.call_args_list[0].args == (
+			LDNS_ATTR_STRUCT_TYPE,
+			RecordTypes.DNS_RECORD_TYPE_MX.value,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[1].args == (
+			LDNS_ATTR_STRUCT_SERIAL,
+			m_serial,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[2].args == (
+			LDNS_ATTR_STRUCT_TTL_SECONDS,
+			m_record.DEFAULT_TTL,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[3].args == (
+			LDNS_ATTR_STRUCT_RANK,
+			RANK_ZONE,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[4].args == (
+			LDNS_ATTR_STRUCT_DATA,
+			m_data_struct,
+		)
 		m_data_struct.insert_field_to_struct.assert_called_once_with(
 			fieldName="wPreference",
 			fieldStructVal=">H",
@@ -1556,7 +1606,9 @@ class TestLDAPRecord:
 			RecordTypes.DNS_RECORD_TYPE_SOA.value, test_values
 		)
 		m_base_record_struct = mocker.MagicMock(spec=DNS_RECORD)
-		m_base_record_cls = mocker.patch("core.models.dns.DNS_RECORD", return_value=m_base_record_struct)
+		m_base_record_cls = mocker.patch(
+			"core.models.dns.DNS_RECORD", return_value=m_base_record_struct
+		)
 		m_data_struct = mocker.MagicMock(spec=DNS_RPC_RECORD_SOA)
 		m_data_struct: Union[DNS_RPC_RECORD_SOA, MockType]
 		m_data_struct.setField = mocker.Mock(return_value=None)
@@ -1568,16 +1620,26 @@ class TestLDAPRecord:
 
 		# Assertions
 		m_base_record_cls.assert_called_once()
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[0].args == (LDNS_ATTR_STRUCT_TYPE, RecordTypes.DNS_RECORD_TYPE_SOA.value)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[1].args == (LDNS_ATTR_STRUCT_SERIAL, m_serial)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[2].args == (LDNS_ATTR_STRUCT_TTL_SECONDS, m_record.DEFAULT_TTL)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[3].args == (LDNS_ATTR_STRUCT_RANK, RANK_ZONE)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[4].args == (LDNS_ATTR_STRUCT_DATA, m_data_struct)
+		assert m_base_record_struct.__setitem__.call_args_list[0].args == (
+			LDNS_ATTR_STRUCT_TYPE,
+			RecordTypes.DNS_RECORD_TYPE_SOA.value,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[1].args == (
+			LDNS_ATTR_STRUCT_SERIAL,
+			m_serial,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[2].args == (
+			LDNS_ATTR_STRUCT_TTL_SECONDS,
+			m_record.DEFAULT_TTL,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[3].args == (
+			LDNS_ATTR_STRUCT_RANK,
+			RANK_ZONE,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[4].args == (
+			LDNS_ATTR_STRUCT_DATA,
+			m_data_struct,
+		)
 
 		INT_FIELDS = [
 			"dwSerialNo",
@@ -1606,7 +1668,9 @@ class TestLDAPRecord:
 			RecordTypes.DNS_RECORD_TYPE_SRV.value, test_values
 		)
 		m_base_record_struct = mocker.MagicMock(spec=DNS_RECORD)
-		m_base_record_cls = mocker.patch("core.models.dns.DNS_RECORD", return_value=m_base_record_struct)
+		m_base_record_cls = mocker.patch(
+			"core.models.dns.DNS_RECORD", return_value=m_base_record_struct
+		)
 		m_data_struct = mocker.MagicMock(spec=DNS_RPC_RECORD_SRV)
 		m_data_struct: Union[DNS_RPC_RECORD_SRV, MockType]
 		m_data_struct.setField = mocker.Mock(return_value=None)
@@ -1618,16 +1682,26 @@ class TestLDAPRecord:
 
 		# Assertions
 		m_base_record_cls.assert_called_once()
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[0].args == (LDNS_ATTR_STRUCT_TYPE, RecordTypes.DNS_RECORD_TYPE_SRV.value)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[1].args == (LDNS_ATTR_STRUCT_SERIAL, m_serial)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[2].args == (LDNS_ATTR_STRUCT_TTL_SECONDS, m_record.DEFAULT_TTL)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[3].args == (LDNS_ATTR_STRUCT_RANK, RANK_ZONE)
-		assert m_base_record_struct.__setitem__\
-			.call_args_list[4].args == (LDNS_ATTR_STRUCT_DATA, m_data_struct)
+		assert m_base_record_struct.__setitem__.call_args_list[0].args == (
+			LDNS_ATTR_STRUCT_TYPE,
+			RecordTypes.DNS_RECORD_TYPE_SRV.value,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[1].args == (
+			LDNS_ATTR_STRUCT_SERIAL,
+			m_serial,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[2].args == (
+			LDNS_ATTR_STRUCT_TTL_SECONDS,
+			m_record.DEFAULT_TTL,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[3].args == (
+			LDNS_ATTR_STRUCT_RANK,
+			RANK_ZONE,
+		)
+		assert m_base_record_struct.__setitem__.call_args_list[4].args == (
+			LDNS_ATTR_STRUCT_DATA,
+			m_data_struct,
+		)
 
 		INT_FIELDS = [
 			"wPriority",

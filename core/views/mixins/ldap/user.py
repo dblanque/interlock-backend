@@ -489,15 +489,18 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 			# UNLIKE SAMBA LDAP, garbage, I know!
 			if user_perms:
 				if (
-					ldap_adsi.LDAP_UF_ACCOUNT_DISABLE in user_perms and
-					user_should_be_enabled and set_pwd
+					ldap_adsi.LDAP_UF_ACCOUNT_DISABLE in user_perms
+					and user_should_be_enabled
+					and set_pwd
 				):
 					user_perms.remove(ldap_adsi.LDAP_UF_ACCOUNT_DISABLE)
-				self.ldap_user_update(data={
-					LOCAL_ATTR_USERNAME: username,
-					LOCAL_ATTR_DN: user_dn,
-					LOCAL_ATTR_PERMISSIONS: user_perms,
-				})
+				self.ldap_user_update(
+					data={
+						LOCAL_ATTR_USERNAME: username,
+						LOCAL_ATTR_DN: user_dn,
+						LOCAL_ATTR_PERMISSIONS: user_perms,
+					}
+				)
 		except LDAPException as e:
 			logger.error(e)
 			logger.error(f"Could not create User: {user_dn}")
@@ -546,9 +549,8 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 
 		if django_user:
 			for _key in data.keys():
-				if _key in (
-					LOCAL_ATTR_USER_GROUPS,
-				): continue
+				if _key in (LOCAL_ATTR_USER_GROUPS,):
+					continue
 
 				if _key in data:
 					setattr(django_user, _key, data[_key])

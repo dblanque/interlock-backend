@@ -31,6 +31,7 @@ from typing import overload
 from enum import Enum
 from logging import getLogger
 from core.utils.main import getldapattrvalue
+
 ################################################################################
 logger = getLogger()
 
