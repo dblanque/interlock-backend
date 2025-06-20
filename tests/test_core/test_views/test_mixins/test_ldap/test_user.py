@@ -4,10 +4,10 @@ from pytest_mock import MockerFixture, MockType
 
 ################################################################################
 from core.views.mixins.logs import LogMixin
-from core.views.mixins.ldap.user import LDAPUserMixin
+from core.views.mixins.ldap.user import LDAPUserMixin, LDAPUserBaseMixin
 from core.ldap.defaults import LDAP_DOMAIN
 from rest_framework.serializers import ValidationError
-from core.models.user import User
+from core.models.user import User, USER_TYPE_LDAP
 from typing import Union, Protocol, overload
 from ldap3 import MODIFY_REPLACE
 from core.utils.main import getldapattrvalue, getlocalkeyforldapattr
@@ -47,6 +47,7 @@ from ldap3.extend import (
 	MicrosoftExtendedOperations,
 )
 from core.constants.attrs import *
+from tests.test_core.test_views.conftest import UserFactory
 from tests.test_core.conftest import (
 	RuntimeSettingsFactory,
 	LDAPEntryFactoryProtocol,
@@ -1858,3 +1859,49 @@ class TestLdapBulkCreateFromDicts:
 		)
 		m_ldap_set_password.assert_not_called()
 		f_log.assert_not_called()
+
+
+################################################################################
+############################## LDAPUserBaseMixin ###############################
+################################################################################
+
+@pytest.fixture
+def f_userbase_mixin(mocker: MockerFixture, f_user_mixin: LDAPUserMixin):
+	return LDAPUserBaseMixin()
+
+
+class TestLdapUsersSync:
+	pass
+
+class TestLdapUsersPrune:
+	pass
+
+class TestLdapUsersPurge:
+	def test_success(
+		self,
+		f_user_ldap: User,
+		f_user_local: User,
+		f_userbase_mixin: LDAPUserBaseMixin,
+	):
+		assert User.objects.filter(user_type=USER_TYPE_LDAP).exists()
+		f_userbase_mixin.ldap_users_purge(responsible_user=f_user_local)
+		assert not User.objects.filter(user_type=USER_TYPE_LDAP).exists()
+
+	def test_does_not_self_delete(
+		self,
+		f_user_ldap: User,
+		user_factory: UserFactory,
+		f_userbase_mixin: LDAPUserBaseMixin,
+	):
+		user_factory(username="test_purge_ldap", user_type=USER_TYPE_LDAP)
+
+		assert User.objects.filter(
+			user_type=USER_TYPE_LDAP,
+			username="test_purge_ldap",
+		).exists()
+		f_userbase_mixin.ldap_users_purge(responsible_user=f_user_ldap)
+		assert User.objects.get(user_type=USER_TYPE_LDAP)
+		assert not User.objects.filter(
+			user_type=USER_TYPE_LDAP,
+			username="test_purge_ldap",
+		).exists()
