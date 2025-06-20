@@ -9,13 +9,17 @@
 # ---------------------------------- IMPORTS --------------------------------- #
 from struct import unpack, pack
 from impacket.structure import Structure
+from core.ldap.filter import LDAPFilter
+from core.type_hints.connector import LDAPConnectionProtocol
 from core.models.types.ldap_dns_record import RecordTypes
 from core.constants.dns import *
+from core.constants.attrs.ldap import LDAP_ATTR_OBJECT_CLASS
 from typing import Iterable
 import socket
 import datetime
 import sys
 import logging
+from ldap3 import LEVEL, Entry as LDAPEntry
 from typing import TypedDict, Required, NotRequired
 ################################################################################
 
@@ -288,6 +292,23 @@ def record_to_dict(record: "DNS_RECORD", ts=False):
 				raise e
 	return record_dict
 
+def get_dns_zones(connection: LDAPConnectionProtocol, root: str):
+	zones = []
+	connection.search(
+		search_base=root,
+		search_filter=LDAPFilter.eq(
+			LDAP_ATTR_OBJECT_CLASS,
+			LDNS_CLASS_DNS_ZONE
+		).to_string(),
+		search_scope=LEVEL,
+		attributes=["dc"],
+	)
+	for entry in connection.response:
+		entry: LDAPEntry
+		if entry["type"] != "searchResEntry":
+			continue
+		zones.append(entry["attributes"]["dc"][0])
+	return zones
 
 class DNS_RECORD(Structure):
 	"""

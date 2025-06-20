@@ -44,7 +44,7 @@ from core.constants.dns import (
 	RANK_ZONE,
 )
 from core.constants.attrs import LDAP_ATTR_OBJECT_CLASS, LDAP_ATTR_DN
-from core.utils.dnstool import (
+from core.models.structs.ldap_dns_record import (
 	record_to_dict,
 	get_dns_zones,
 	DNS_RECORD,

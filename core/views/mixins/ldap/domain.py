@@ -31,7 +31,7 @@ from core.models.choices.log import (
 )
 
 ### DNS Utilities
-from core.utils.dnstool import record_to_dict, DNS_RECORD
+from core.models.structs.ldap_dns_record import record_to_dict, DNS_RECORD
 
 ### Exceptions
 from core.exceptions import dns as exc_dns
