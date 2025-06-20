@@ -16,6 +16,7 @@ from core.constants.attrs import (
 ################################################################################
 
 LDNS_CLASS_DNS_NODE = "dnsNode"
+LDNS_CLASS_DNS_ZONE = "dnsZone"
 
 # Struct Attrs
 LDNS_ATTR_STRUCT_DATA_LENGTH = "DataLength"
