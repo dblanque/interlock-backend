@@ -231,8 +231,8 @@ class LDAPUser(LDAPObject):
 			for distinguished_name in group_dns:
 				_cond = (
 					distinguished_name in previous_groups
-					if operation == "add" else
-					distinguished_name not in previous_groups
+					if operation == "add"
+					else distinguished_name not in previous_groups
 				)
 				if _cond:
 					ignore_dns.add(distinguished_name)
@@ -240,9 +240,7 @@ class LDAPUser(LDAPObject):
 				group_dns.remove(distinguished_name)
 			self.attributes[_attr] = group_dns
 
-		group_dns, was_removed = self.remove_primary_group(
-			group_dns=group_dns
-		)
+		group_dns, was_removed = self.remove_primary_group(group_dns=group_dns)
 		if not _attr in self.parsed_specials:
 			self.parsed_specials.append(_attr)
 
