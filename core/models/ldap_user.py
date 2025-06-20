@@ -9,7 +9,7 @@
 # ---------------------------------- IMPORTS ----------------------------------#
 
 ### Interlock
-from core.exceptions import base as exc_base, users as exc_user
+from core.exceptions import users as exc_user
 from core.constants.attrs import *
 from core.ldap.countries import LDAP_COUNTRIES
 from core.config.runtime import RuntimeSettings
@@ -25,13 +25,15 @@ from core.ldap.adsi import (
 from core.type_hints.connector import LDAPConnectionProtocol
 from core.ldap.filter import LDAPFilter
 from ldap3 import Entry as LDAPEntry
-from typing import overload
+from typing import overload, get_args, Literal
 from logging import getLogger
 from core.models.ldap_object import LDAPObject, LDAPObjectTypes
 from core.utils.main import getldapattrvalue
 ################################################################################
 
 logger = getLogger()
+
+GroupsCleanupOperation = Literal["add", "remove"]
 
 DEFAULT_LOCAL_ATTRS = (
 	LOCAL_ATTR_DN,
@@ -119,13 +121,15 @@ class LDAPUser(LDAPObject):
 			super().__validate_init__(**kwargs)
 
 	def parse_write_special_attributes(self):
-		self.parse_add_groups(
-			add_group_dns=self.attributes.get(LOCAL_ATTR_USER_ADD_GROUPS, None),
+		# Cleanup Groups to ADD
+		self.cleanup_groups_operation(
+			group_dns=self.attributes.get(LOCAL_ATTR_USER_ADD_GROUPS, None),
+			operation="add",
 		)
-		self.parse_remove_groups(
-			remove_group_dns=self.attributes.get(
-				LOCAL_ATTR_USER_RM_GROUPS, None
-			),
+		# Cleanup Groups to REMOVE
+		self.cleanup_groups_operation(
+			group_dns=self.attributes.get(LOCAL_ATTR_USER_RM_GROUPS, None),
+			operation="remove",
 		)
 		self.parse_write_country(self.attributes.get(LOCAL_ATTR_COUNTRY, None))
 		self.parse_write_permissions(
@@ -191,67 +195,59 @@ class LDAPUser(LDAPObject):
 				group_dns.remove(group.distinguished_name)
 		return group_dns, found_id
 
-	def parse_add_groups(
+	def cleanup_groups_operation(
 		self,
-		add_group_dns: list[str] | set[str] | str = None,
+		group_dns: list[str] | set[str] | str = None,
+		operation: GroupsCleanupOperation = None,
 	):
-		if not add_group_dns:
+		"""Cleans up Group DN List in self.attributes before saving."""
+		if not group_dns:
 			return
-		if isinstance(add_group_dns, str):
-			add_group_dns = {add_group_dns}
-		if not isinstance(add_group_dns, (list, set)):
-			raise TypeError("add_group_dns must be of types list, set")
+		if not operation in get_args(GroupsCleanupOperation):
+			raise ValueError("operation must be add or remove.")
+		if not isinstance(group_dns, (list, set, tuple, str)):
+			raise TypeError(
+				"add_group_dns must be of types list, set, tuple, str"
+			)
+
+		if operation == "add":
+			_attr = LOCAL_ATTR_USER_ADD_GROUPS
+		else:
+			_attr = LOCAL_ATTR_USER_RM_GROUPS
+
+		if isinstance(group_dns, str):
+			group_dns = {group_dns}
+		elif isinstance(group_dns, (list, tuple)):
+			group_dns = set(group_dns)
 
 		# Remove groups that the user is already a member of
 		previous_groups = getldapattrvalue(
 			self.entry, LDAP_ATTR_USER_GROUPS, []
 		)
 		if previous_groups:
+			if not isinstance(previous_groups, (list, set, tuple)):
+				previous_groups = [previous_groups]
 			ignore_dns = set()
-			for distinguished_name in add_group_dns:
-				if distinguished_name in previous_groups:
+			for distinguished_name in group_dns:
+				_cond = (
+					distinguished_name in previous_groups
+					if operation == "add" else
+					distinguished_name not in previous_groups
+				)
+				if _cond:
 					ignore_dns.add(distinguished_name)
 			for distinguished_name in ignore_dns:
-				add_group_dns.remove(distinguished_name)
-			self.attributes[LOCAL_ATTR_USER_ADD_GROUPS] = add_group_dns
+				group_dns.remove(distinguished_name)
+			self.attributes[_attr] = group_dns
 
-		add_group_dns, was_removed = self.remove_primary_group(
-			group_dns=add_group_dns
+		group_dns, was_removed = self.remove_primary_group(
+			group_dns=group_dns
 		)
-		if not LOCAL_ATTR_USER_ADD_GROUPS in self.parsed_specials:
-			self.parsed_specials.append(LOCAL_ATTR_USER_ADD_GROUPS)
-
-	def parse_remove_groups(
-		self,
-		remove_group_dns: list[str] | set[str] | str = None,
-	) -> None:
-		if not remove_group_dns:
-			return
-		if isinstance(remove_group_dns, str):
-			remove_group_dns = {remove_group_dns}
-		if not isinstance(remove_group_dns, (list, set)):
-			raise TypeError("remove_group_dns must be of types list, set")
-
-		# Remove groups that the user is not a member of
-		previous_groups = getldapattrvalue(
-			self.entry, LDAP_ATTR_USER_GROUPS, []
-		)
-		if previous_groups:
-			ignore_dns = set()
-			for distinguished_name in remove_group_dns:
-				if distinguished_name not in previous_groups:
-					ignore_dns.add(distinguished_name)
-			for distinguished_name in ignore_dns:
-				remove_group_dns.remove(distinguished_name)
-			self.attributes[LOCAL_ATTR_USER_RM_GROUPS] = remove_group_dns
-
-		remove_group_dns, was_removed = self.remove_primary_group(
-			group_dns=remove_group_dns
-		)
-		if not LOCAL_ATTR_USER_RM_GROUPS in self.parsed_specials:
-			self.parsed_specials.append(LOCAL_ATTR_USER_RM_GROUPS)
+		if not _attr in self.parsed_specials:
+			self.parsed_specials.append(_attr)
 
 	def parse_write_country(self, value: str = None):
+		"""Parses Country data before saving to LDAP Server."""
 		_COUNTRY_ATTRS = (
 			LOCAL_ATTR_COUNTRY,
 			LOCAL_ATTR_COUNTRY_DCC,
@@ -274,11 +270,12 @@ class LDAPUser(LDAPObject):
 				self.parsed_specials.append(attr)
 
 	def parse_write_permissions(self, value: list[str]):
+		"""Parses Permission data before saving to LDAP Server."""
 		# If value is None then no changes were received for this field
 		if value is None:
 			return
 
-		if isinstance(value, tuple):
+		if isinstance(value, (list, tuple)):
 			value = set(value)
 		if not value or not isinstance(value, (list, set)):
 			value = [
@@ -293,6 +290,7 @@ class LDAPUser(LDAPObject):
 	def perform_group_operations(
 		self, groups_to_add=None, groups_to_remove=None
 	):
+		"""Executes parsed group membership changes."""
 		# De-duplicate group ops
 		if groups_to_add:
 			if not LOCAL_ATTR_USER_ADD_GROUPS in self.parsed_specials:
