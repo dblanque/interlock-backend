@@ -24,9 +24,11 @@ import re
 DBLogMixin = LogMixin()
 
 
-def user_auth_fail_conditions(user: User):
-	if not user.is_anonymous and user.is_enabled:
+def user_is_not_authenticated(user: User) -> bool:
+	"""Check if user is authenticated, enabled, and not anonymous"""
+	if user.is_anonymous or not user.is_enabled:
 		return True
+	return False
 
 
 class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
@@ -44,7 +46,7 @@ class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
 		data["refresh"] = str(self.refresh)
 		data["access"] = str(self.refresh.access_token)
 
-		if user_auth_fail_conditions(self.user) is not True:
+		if user_is_not_authenticated(self.user):
 			raise AuthenticationFailed
 
 		# TOTP
@@ -87,7 +89,7 @@ class TokenRefreshSerializer(jwt_serializers.TokenRefreshSerializer):
 	def validate(self, attrs):
 		self.user: User
 		data = super().validate(attrs)
-		if user_auth_fail_conditions(self.user) is not True:
+		if user_is_not_authenticated(self.user):
 			raise AuthenticationFailed
 		return data
 
