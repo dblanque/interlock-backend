@@ -1231,6 +1231,29 @@ class TestFetch:
 		assert result[LOCAL_ATTR_IS_ENABLED] == expected_enabled
 		assert result[LOCAL_ATTR_CREATED] == m_when_created
 
+	def test_return_entry(
+		self,
+		mocker: MockerFixture,
+		f_user_mixin: LDAPUserMixin,
+		fc_user_entry: LDAPUserEntryFactory,
+		f_log_mixin: LogMixin,
+		f_ldap_object,
+		f_default_user_filter,
+	):
+		# Mocks
+		m_user_entry: LDAPEntry = fc_user_entry()
+		m_ldap_user = f_ldap_object(m_user_entry)
+		mocker.patch(
+			"core.views.mixins.ldap.user.LDAPUser",
+			return_value=m_ldap_user,
+		)
+
+		# Execution
+		result = f_user_mixin.ldap_user_fetch(user_search="testuser", return_entry=True)
+		assert result == m_user_entry
+		assert f_user_mixin.search_filter == f_default_user_filter("testuser")
+		f_log_mixin.log.assert_not_called()
+
 	def test_raises_group_fetch_error(
 		self,
 		mocker: MockerFixture,

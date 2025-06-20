@@ -1194,6 +1194,7 @@ class LDAPUserBaseMixin(LDAPUserMixin):
 		purged_users = 0
 		users = User.objects.filter(user_type=USER_TYPE_LDAP)
 		for user in users:
+			user: User
 			if responsible_user:
 				if user.username.lower() == responsible_user.username.lower():
 					continue
