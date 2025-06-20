@@ -19,7 +19,10 @@ from core.ldap.adsi import (
 	LDAP_UF_DONT_EXPIRE_PASSWD,
 	LDAP_UF_PASSWD_CANT_CHANGE,
 )
-from tests.test_core.conftest import LDAPEntryFactoryProtocol, RuntimeSettingsFactory
+from tests.test_core.conftest import (
+	LDAPEntryFactoryProtocol,
+	RuntimeSettingsFactory,
+)
 
 
 class InitlessLDAPUserFactory(Protocol):
@@ -37,8 +40,11 @@ def f_ldap_user_no_init(mocker: MockerFixture) -> InitlessLDAPUserFactory:
 
 	return maker
 
-class TestInit():
-	def test_success(self, mocker: MockerFixture, g_runtime_settings: RuntimeSettingsFactory):
+
+class TestInit:
+	def test_success(
+		self, mocker: MockerFixture, g_runtime_settings: RuntimeSettingsFactory
+	):
 		m_runtime_settings = g_runtime_settings(
 			patch_path="core.models.ldap_user.RuntimeSettings"
 		)
@@ -50,6 +56,7 @@ class TestInit():
 			for attr in DEFAULT_LOCAL_ATTRS
 			if m_runtime_settings.LDAP_FIELD_MAP.get(attr, None)
 		}
+
 
 class TestDunderValidateInit(SuperDunderValidateInit):
 	test_cls = LDAPUser
@@ -83,7 +90,9 @@ class TestParseWriteSpecialAttributes:
 				}
 			}
 		)
-		m_cleanup_groups_operation = mocker.patch.object(LDAPUser, "cleanup_groups_operation")
+		m_cleanup_groups_operation = mocker.patch.object(
+			LDAPUser, "cleanup_groups_operation"
+		)
 		m_parse_write_country = mocker.patch.object(
 			LDAPUser, "parse_write_country"
 		)
@@ -173,10 +182,9 @@ class TestSave:
 		)
 		m_ldap_user.save()
 		m_save.assert_called_once_with(
-			update_kwargs={
-				"force_post_update": expected_force_post_update
-			}
+			update_kwargs={"force_post_update": expected_force_post_update}
 		)
+
 
 class TestRemovePrimaryGroup:
 	def test_returns_none_on_falsy_dn_list(
@@ -192,7 +200,7 @@ class TestRemovePrimaryGroup:
 	):
 		m_ldap_user = f_ldap_user_no_init()
 		with pytest.raises(TypeError):
-			m_ldap_user.remove_primary_group(group_dns={"a":"dictionary"})
+			m_ldap_user.remove_primary_group(group_dns={"a": "dictionary"})
 
 	def test_success(
 		self,
@@ -201,10 +209,10 @@ class TestRemovePrimaryGroup:
 		fc_ldap_entry: LDAPEntryFactoryProtocol,
 	):
 		# Mock User
-		m_primary_group_id = 513 # Default LDAP Group
-		m_entry = fc_ldap_entry(**{
-			LDAP_ATTR_PRIMARY_GROUP_ID: m_primary_group_id
-		})
+		m_primary_group_id = 513  # Default LDAP Group
+		m_entry = fc_ldap_entry(
+			**{LDAP_ATTR_PRIMARY_GROUP_ID: m_primary_group_id}
+		)
 		m_ldap_user = f_ldap_user_no_init()
 		m_ldap_user.entry = m_entry
 
@@ -213,26 +221,22 @@ class TestRemovePrimaryGroup:
 		m_group_1.distinguished_name = "mock_dn_1"
 		m_group_1.attributes = {
 			LOCAL_ATTR_DN: m_group_1.distinguished_name,
-			LOCAL_ATTR_RELATIVE_ID: 1105
+			LOCAL_ATTR_RELATIVE_ID: 1105,
 		}
 		m_group_2 = mocker.Mock()
 		m_group_2.distinguished_name = "mock_dn_2"
 		m_group_2.attributes = {
 			LOCAL_ATTR_DN: m_group_2.distinguished_name,
-			LOCAL_ATTR_RELATIVE_ID: m_primary_group_id
+			LOCAL_ATTR_RELATIVE_ID: m_primary_group_id,
 		}
 		m_groups = [m_group_1, m_group_2]
 		m_ldap_group_cls = mocker.patch(
-			"core.models.ldap_group.LDAPGroup",
-			side_effect=m_groups
+			"core.models.ldap_group.LDAPGroup", side_effect=m_groups
 		)
 
 		# Execution
 		result_dns, found = m_ldap_user.remove_primary_group(
-			group_dns=[
-				g.attributes[LOCAL_ATTR_DN]
-				for g in m_groups
-			]
+			group_dns=[g.attributes[LOCAL_ATTR_DN] for g in m_groups]
 		)
 
 		# Assertions
@@ -240,13 +244,14 @@ class TestRemovePrimaryGroup:
 		assert isinstance(result_dns, set)
 		assert result_dns == {m_group_1.attributes[LOCAL_ATTR_DN]}
 
+
 class TestCleanupGroupsOperation:
 	@pytest.mark.parametrize(
 		"falsy_value",
 		(
 			"",
-			[], # Empty List
-			set(), # Empty Set
+			[],  # Empty List
+			set(),  # Empty Set
 			False,
 			None,
 		),
@@ -257,14 +262,20 @@ class TestCleanupGroupsOperation:
 		falsy_value,
 	):
 		m_ldap_user = f_ldap_user_no_init()
-		assert m_ldap_user.cleanup_groups_operation(
-			group_dns=falsy_value,
-			operation="add",
-		) is None
-		assert m_ldap_user.cleanup_groups_operation(
-			group_dns=falsy_value,
-			operation="remove",
-		) is None
+		assert (
+			m_ldap_user.cleanup_groups_operation(
+				group_dns=falsy_value,
+				operation="add",
+			)
+			is None
+		)
+		assert (
+			m_ldap_user.cleanup_groups_operation(
+				group_dns=falsy_value,
+				operation="remove",
+			)
+			is None
+		)
 
 	def test_raises_type_error(
 		self,
@@ -273,12 +284,12 @@ class TestCleanupGroupsOperation:
 		m_ldap_user = f_ldap_user_no_init()
 		with pytest.raises(TypeError, match="must be of types"):
 			assert m_ldap_user.cleanup_groups_operation(
-				group_dns={"a":"dictionary"},
+				group_dns={"a": "dictionary"},
 				operation="add",
 			)
 		with pytest.raises(TypeError, match="must be of types"):
 			assert m_ldap_user.cleanup_groups_operation(
-				group_dns={"a":"dictionary"},
+				group_dns={"a": "dictionary"},
 				operation="remove",
 			)
 
@@ -289,7 +300,7 @@ class TestCleanupGroupsOperation:
 		m_ldap_user = f_ldap_user_no_init()
 		with pytest.raises(ValueError, match="operation must be"):
 			assert m_ldap_user.cleanup_groups_operation(
-				group_dns={"a":"dictionary"},
+				group_dns={"a": "dictionary"},
 				operation="some_bad_value",
 			)
 
@@ -314,11 +325,13 @@ class TestCleanupGroupsOperation:
 		m_remove_primary_group = mocker.patch.object(
 			LDAPUser,
 			"remove_primary_group",
-			side_effect=lambda group_dns, *args, **kwargs: (group_dns, False)
+			side_effect=lambda group_dns, *args, **kwargs: (group_dns, False),
 		)
-		m_entry = fc_ldap_entry(**{
-			LDAP_ATTR_USER_GROUPS: ["existing_group"],
-		})
+		m_entry = fc_ldap_entry(
+			**{
+				LDAP_ATTR_USER_GROUPS: ["existing_group"],
+			}
+		)
 		m_ldap_user = f_ldap_user_no_init()
 		m_ldap_user.entry = m_entry
 		m_ldap_user.parsed_specials = []
@@ -343,14 +356,15 @@ class TestCleanupGroupsOperation:
 
 		# Assertions
 		expected_groups = {
-			m_groups_to_affect[1] # new_group
+			m_groups_to_affect[1]  # new_group
 			if operation == "add"
-			else m_groups_to_affect[0] # existing_group
+			else m_groups_to_affect[0]  # existing_group
 		}
 		m_remove_primary_group.assert_called_once_with(
 			group_dns=expected_groups
 		)
 		assert m_ldap_user.attributes[check_attr] == expected_groups
+
 
 class TestParseWriteCountry:
 	def test_success(
