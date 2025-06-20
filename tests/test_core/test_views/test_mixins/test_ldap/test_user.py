@@ -1884,8 +1884,9 @@ class TestLdapUsersPurge:
 		f_userbase_mixin: LDAPUserBaseMixin,
 	):
 		assert User.objects.filter(user_type=USER_TYPE_LDAP).exists()
-		f_userbase_mixin.ldap_users_purge(responsible_user=f_user_local)
+		c = f_userbase_mixin.ldap_users_purge(responsible_user=f_user_local)
 		assert not User.objects.filter(user_type=USER_TYPE_LDAP).exists()
+		assert c == 1
 
 	def test_does_not_self_delete(
 		self,
@@ -1899,9 +1900,10 @@ class TestLdapUsersPurge:
 			user_type=USER_TYPE_LDAP,
 			username="test_purge_ldap",
 		).exists()
-		f_userbase_mixin.ldap_users_purge(responsible_user=f_user_ldap)
+		c = f_userbase_mixin.ldap_users_purge(responsible_user=f_user_ldap)
 		assert User.objects.get(user_type=USER_TYPE_LDAP)
 		assert not User.objects.filter(
 			user_type=USER_TYPE_LDAP,
 			username="test_purge_ldap",
 		).exists()
+		assert c == 1
