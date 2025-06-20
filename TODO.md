@@ -23,18 +23,16 @@
 * Fix core.views.ldap.user.create tests
 * core.views.mixins.ldap.user.ldap_user_insert
 	* Create disabled user <d>
-	* Create disabled user with non expirable password  <d>
-	* Create enabled user  <d>
-	* Create enabled user with non expirable password  <d>
-* core.models.ldap_user.save
-* core.models.ldap_user.remove_primary_group
-* core.models.ldap_user.parse_add_groups
-* core.models.ldap_user.parse_remove_groups
-* core.views.mixins.ldap.group.save
-* core.views.mixins.ldap.group.perform_member_operations
-* core.serializers.token
-	* validate -> get_user_totp_device block
-	* TokenRefreshSerializer -> validate
+	* Create disabled user with non expirable password <d>
+	* Create enabled user <d>
+	* Create enabled user with non expirable password <d>
+* core.models.ldap_user.save <d>
+* core.models.ldap_user.remove_primary_group <d>
+* core.models.ldap_user.clean_groups_operation <d>
+* core.views.mixins.ldap.group.save <d>
+* core.serializers.token <d>
+	* validate -> get_user_totp_device block <d>
+	* TokenRefreshSerializer -> validate <d>
 * core.views.mixins.SettingsViewMixin
 	* set_value_fields - mock test
 	* parse_local_setting_data - mock test
