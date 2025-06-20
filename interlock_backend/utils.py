@@ -6,14 +6,16 @@
 # Module: interlock_backend.utils
 # Contains generic utilities for Interlock
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 from typing import overload, Any
 
 _local_django_settings = None
 try:
-	from interlock_backend import (
-		local_django_settings as _local_django_settings,
-	)
+	# Add conditional to check if its not mock patched
+	if not _local_django_settings:
+		from interlock_backend import (
+			local_django_settings as _local_django_settings,
+		)
 except ImportError:
 	pass
 ################################################################################
