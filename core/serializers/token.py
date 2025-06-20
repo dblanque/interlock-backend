@@ -61,7 +61,7 @@ class TokenObtainPairSerializer(jwt_serializers.TokenObtainPairSerializer):
 				if "totp_code" not in attrs:
 					raise exc_otp.OTPRequired
 				regex = r"^[0-9]{6}$"
-				if not re.match(regex, attrs["totp_code"]):
+				if not re.match(regex, str(attrs["totp_code"])):
 					raise exc_otp.OTPInvalidData
 				validate_user_otp(user=self.user, data=attrs)
 
