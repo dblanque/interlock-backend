@@ -20,7 +20,6 @@
 * Add session management for OIDC (if possible)
 
 # Tests
-* Fix core.views.ldap.user.create tests
 * core.views.mixins.SettingsViewMixin
 	* set_value_fields - mock test
 	* parse_local_setting_data - mock test
