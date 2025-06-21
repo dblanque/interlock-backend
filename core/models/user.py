@@ -60,8 +60,6 @@ class BaseUserManager(DjangoBaseUserManager):
 		return user
 
 	def create_user(self, username=None, password=None, **extra_fields):
-		# extra_fields.setdefault("is_staff", False)
-		# extra_fields.setdefault("is_superuser", False)
 		return self._create_user(username, password, **extra_fields)
 
 	def create_superuser(self, username=None, password=None, **extra_fields):
@@ -84,7 +82,7 @@ class BaseUserManager(DjangoBaseUserManager):
 		if extra_fields.get("is_superuser") is not True:
 			raise ValueError("Superuser must have is_superuser=True.")
 
-		return self._create_user(
+		return self.create_user(
 			DEFAULT_SUPERUSER_USERNAME,
 			DEFAULT_SUPERUSER_PASSWORD,
 			**extra_fields,
