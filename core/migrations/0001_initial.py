@@ -11,617 +11,705 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-    initial = True
+	initial = True
 
-    dependencies = [
-        ("auth", "0012_alter_user_first_name_max_length"),
-    ]
+	dependencies = [
+		("auth", "0012_alter_user_first_name_max_length"),
+	]
 
-    operations = [
-        migrations.CreateModel(
-            name="Application",
-            fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                (
-                    "created_at",
-                    models.DateTimeField(auto_now_add=True, verbose_name="created at"),
-                ),
-                (
-                    "modified_at",
-                    models.DateTimeField(auto_now=True, verbose_name="modified at"),
-                ),
-                (
-                    "deleted_at",
-                    models.DateTimeField(
-                        blank=True, null=True, verbose_name="deleted at"
-                    ),
-                ),
-                ("deleted", models.BooleanField(default=False, verbose_name="deleted")),
-                ("notes", models.TextField(blank=True, null=True)),
-                ("name", models.CharField(max_length=255)),
-                ("enabled", models.BooleanField(default=True)),
-                (
-                    "client_id",
-                    models.CharField(
-                        default=core.models.application.generate_client_id,
-                        max_length=25,
-                        unique=True,
-                    ),
-                ),
-                (
-                    "client_secret",
-                    models.CharField(
-                        default=core.models.application.generate_client_secret,
-                        max_length=129,
-                    ),
-                ),
-                (
-                    "redirect_uris",
-                    models.TextField(help_text="Comma-separated redirect URIs"),
-                ),
-                ("scopes", models.TextField(default="openid profile email groups")),
-            ],
-            options={
-                "abstract": False,
-            },
-        ),
-        migrations.CreateModel(
-            name="InterlockSetting",
-            fields=[
-                (
-                    "created_at",
-                    models.DateTimeField(auto_now_add=True, verbose_name="created at"),
-                ),
-                (
-                    "modified_at",
-                    models.DateTimeField(auto_now=True, verbose_name="modified at"),
-                ),
-                (
-                    "deleted_at",
-                    models.DateTimeField(
-                        blank=True, null=True, verbose_name="deleted at"
-                    ),
-                ),
-                ("deleted", models.BooleanField(default=False, verbose_name="deleted")),
-                ("notes", models.TextField(blank=True, null=True)),
-                (
-                    "id",
-                    models.BigAutoField(
-                        primary_key=True, serialize=False, verbose_name="id"
-                    ),
-                ),
-                (
-                    "name",
-                    models.CharField(
-                        choices=[
-                            ("ILCK_AES_KEY", "ILCK_AES_KEY"),
-                            ("ILCK_ENABLE_LDAP", "ILCK_ENABLE_LDAP"),
-                            ("ILCK_LOG_MAX", "ILCK_LOG_MAX"),
-                            ("ILCK_LOG_READ", "ILCK_LOG_READ"),
-                            ("ILCK_LOG_CREATE", "ILCK_LOG_CREATE"),
-                            ("ILCK_LOG_UPDATE", "ILCK_LOG_UPDATE"),
-                            ("ILCK_LOG_DELETE", "ILCK_LOG_DELETE"),
-                            (
-                                "ILCK_LOG_OPEN_LDAP_CONNECTION",
-                                "ILCK_LOG_OPEN_LDAP_CONNECTION",
-                            ),
-                            (
-                                "ILCK_LOG_CLOSE_LDAP_CONNECTION",
-                                "ILCK_LOG_CLOSE_LDAP_CONNECTION",
-                            ),
-                            ("ILCK_LOG_LOGIN", "ILCK_LOG_LOGIN"),
-                            ("ILCK_LOG_LOGOUT", "ILCK_LOG_LOGOUT"),
-                        ],
-                        verbose_name="type",
-                    ),
-                ),
-                (
-                    "type",
-                    models.CharField(
-                        choices=[
-                            ("crypt", "CRYPT"),
-                            ("float", "FLOAT"),
-                            ("str", "STR"),
-                            ("bytes", "BYTES"),
-                            ("bool", "BOOL"),
-                            ("json", "JSON"),
-                            ("integer", "INTEGER"),
-                        ],
-                        verbose_name="type",
-                    ),
-                ),
-                ("_crypt_aes", models.BinaryField(blank=True, null=True)),
-                ("_crypt_ct", models.BinaryField(blank=True, null=True)),
-                ("_crypt_nonce", models.BinaryField(blank=True, null=True)),
-                ("_crypt_tag", models.BinaryField(blank=True, null=True)),
-                ("_float", models.FloatField(blank=True, null=True)),
-                ("_str", models.CharField(blank=True, null=True)),
-                ("_bytes", models.BinaryField(blank=True, null=True)),
-                ("_bool", models.BooleanField(blank=True, null=True)),
-                ("_json", models.JSONField(blank=True, null=True)),
-                ("_integer", models.IntegerField(blank=True, null=True)),
-            ],
-            options={
-                "db_table": "core_interlock_setting",
-            },
-        ),
-        migrations.CreateModel(
-            name="LDAPPreset",
-            fields=[
-                (
-                    "created_at",
-                    models.DateTimeField(auto_now_add=True, verbose_name="created at"),
-                ),
-                (
-                    "modified_at",
-                    models.DateTimeField(auto_now=True, verbose_name="modified at"),
-                ),
-                (
-                    "deleted_at",
-                    models.DateTimeField(
-                        blank=True, null=True, verbose_name="deleted at"
-                    ),
-                ),
-                ("deleted", models.BooleanField(default=False, verbose_name="deleted")),
-                ("notes", models.TextField(blank=True, null=True)),
-                (
-                    "id",
-                    models.BigAutoField(
-                        primary_key=True, serialize=False, verbose_name="id"
-                    ),
-                ),
-                (
-                    "name",
-                    models.CharField(max_length=128, unique=True, verbose_name="name"),
-                ),
-                ("label", models.CharField(max_length=64, verbose_name="label")),
-                (
-                    "active",
-                    models.BooleanField(null=True, unique=True, verbose_name="active"),
-                ),
-            ],
-            options={
-                "db_table": "core_ldap_preset",
-            },
-        ),
-        migrations.CreateModel(
-            name="User",
-            fields=[
-                (
-                    "created_at",
-                    models.DateTimeField(auto_now_add=True, verbose_name="created at"),
-                ),
-                (
-                    "modified_at",
-                    models.DateTimeField(auto_now=True, verbose_name="modified at"),
-                ),
-                (
-                    "deleted_at",
-                    models.DateTimeField(
-                        blank=True, null=True, verbose_name="deleted at"
-                    ),
-                ),
-                ("deleted", models.BooleanField(default=False, verbose_name="deleted")),
-                ("notes", models.TextField(blank=True, null=True)),
-                ("id", models.BigAutoField(primary_key=True, serialize=False)),
-                (
-                    "username",
-                    models.CharField(
-                        db_index=True,
-                        max_length=128,
-                        unique=True,
-                        validators=[core.serializers.ldap.ldap_user_validator_se],
-                        verbose_name="username",
-                    ),
-                ),
-                ("password", models.CharField(max_length=128, verbose_name="password")),
-                (
-                    "last_login",
-                    models.DateTimeField(
-                        blank=True, null=True, verbose_name="last login"
-                    ),
-                ),
-                (
-                    "email",
-                    models.EmailField(
-                        blank=True,
-                        db_index=True,
-                        max_length=254,
-                        null=True,
-                        unique=True,
-                        validators=[django.core.validators.EmailValidator()],
-                        verbose_name="email address",
-                    ),
-                ),
-                (
-                    "is_staff",
-                    models.BooleanField(
-                        default=False,
-                        help_text="Designates whether the user is staff.",
-                        verbose_name="staff status",
-                    ),
-                ),
-                (
-                    "is_superuser",
-                    models.BooleanField(
-                        default=False,
-                        help_text="Designates whether the user can log into this admin site and has superadmin privileges.",
-                        verbose_name="admin status",
-                    ),
-                ),
-                (
-                    "first_name",
-                    models.CharField(
-                        blank=True, max_length=255, null=True, verbose_name="First name"
-                    ),
-                ),
-                (
-                    "last_name",
-                    models.CharField(
-                        blank=True, max_length=255, null=True, verbose_name="Last name"
-                    ),
-                ),
-                (
-                    "_distinguished_name",
-                    models.CharField(
-                        blank=True,
-                        max_length=128,
-                        null=True,
-                        verbose_name="Distinguished Name",
-                    ),
-                ),
-                (
-                    "user_type",
-                    models.CharField(
-                        choices=[("local", "Local User"), ("ldap", "LDAP User")],
-                        default="local",
-                        verbose_name="User Type",
-                    ),
-                ),
-                (
-                    "recovery_codes",
-                    django.contrib.postgres.fields.ArrayField(
-                        base_field=models.CharField(max_length=32),
-                        blank=True,
-                        null=True,
-                        size=None,
-                        verbose_name="Recovery Codes",
-                    ),
-                ),
-                ("is_enabled", models.BooleanField(default=True)),
-                (
-                    "ldap_password_aes",
-                    models.BinaryField(blank=True, default=None, null=True),
-                ),
-                (
-                    "ldap_password_ct",
-                    models.BinaryField(blank=True, default=None, null=True),
-                ),
-                (
-                    "ldap_password_nonce",
-                    models.BinaryField(blank=True, default=None, null=True),
-                ),
-                (
-                    "ldap_password_tag",
-                    models.BinaryField(blank=True, default=None, null=True),
-                ),
-                (
-                    "groups",
-                    models.ManyToManyField(
-                        blank=True,
-                        help_text="The groups this user belongs to. A user will get all permissions granted to each of their groups.",
-                        related_name="user_set",
-                        related_query_name="user",
-                        to="auth.group",
-                        verbose_name="groups",
-                    ),
-                ),
-                (
-                    "user_permissions",
-                    models.ManyToManyField(
-                        blank=True,
-                        help_text="Specific permissions for this user.",
-                        related_name="user_set",
-                        related_query_name="user",
-                        to="auth.permission",
-                        verbose_name="user permissions",
-                    ),
-                ),
-            ],
-            options={
-                "verbose_name": "User",
-                "verbose_name_plural": "Users",
-            },
-            managers=[
-                ("objects", core.models.user.BaseUserManager()),
-            ],
-        ),
-        migrations.CreateModel(
-            name="ApplicationSecurityGroup",
-            fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                (
-                    "created_at",
-                    models.DateTimeField(auto_now_add=True, verbose_name="created at"),
-                ),
-                (
-                    "modified_at",
-                    models.DateTimeField(auto_now=True, verbose_name="modified at"),
-                ),
-                (
-                    "deleted_at",
-                    models.DateTimeField(
-                        blank=True, null=True, verbose_name="deleted at"
-                    ),
-                ),
-                ("deleted", models.BooleanField(default=False, verbose_name="deleted")),
-                ("notes", models.TextField(blank=True, null=True)),
-                ("enabled", models.BooleanField(default=True)),
-                (
-                    "ldap_objects",
-                    django.contrib.postgres.fields.ArrayField(
-                        base_field=models.CharField(max_length=255),
-                        blank=True,
-                        null=True,
-                        size=None,
-                    ),
-                ),
-                ("uuid", models.UUIDField(default=None, editable=False)),
-                (
-                    "application",
-                    models.OneToOneField(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        to="core.application",
-                    ),
-                ),
-                (
-                    "users",
-                    models.ManyToManyField(
-                        blank=True,
-                        related_name="asg_member",
-                        to=settings.AUTH_USER_MODEL,
-                    ),
-                ),
-            ],
-            options={
-                "db_table": "core_application_security_group",
-            },
-        ),
-        migrations.CreateModel(
-            name="LDAPSetting",
-            fields=[
-                (
-                    "created_at",
-                    models.DateTimeField(auto_now_add=True, verbose_name="created at"),
-                ),
-                (
-                    "modified_at",
-                    models.DateTimeField(auto_now=True, verbose_name="modified at"),
-                ),
-                (
-                    "deleted_at",
-                    models.DateTimeField(
-                        blank=True, null=True, verbose_name="deleted at"
-                    ),
-                ),
-                ("deleted", models.BooleanField(default=False, verbose_name="deleted")),
-                ("notes", models.TextField(blank=True, null=True)),
-                (
-                    "id",
-                    models.BigAutoField(
-                        primary_key=True, serialize=False, verbose_name="id"
-                    ),
-                ),
-                (
-                    "name",
-                    models.CharField(
-                        choices=[
-                            ("LDAP_AUTH_URL", "LDAP_AUTH_URL"),
-                            ("LDAP_DOMAIN", "LDAP_DOMAIN"),
-                            ("LDAP_AUTH_USE_SSL", "LDAP_AUTH_USE_SSL"),
-                            ("LDAP_AUTH_USE_TLS", "LDAP_AUTH_USE_TLS"),
-                            ("LDAP_AUTH_TLS_VERSION", "LDAP_AUTH_TLS_VERSION"),
-                            ("LDAP_AUTH_SEARCH_BASE", "LDAP_AUTH_SEARCH_BASE"),
-                            ("LDAP_DNS_LEGACY", "LDAP_DNS_LEGACY"),
-                            ("LDAP_AUTH_OBJECT_CLASS", "LDAP_AUTH_OBJECT_CLASS"),
-                            ("EXCLUDE_COMPUTER_ACCOUNTS", "EXCLUDE_COMPUTER_ACCOUNTS"),
-                            ("LDAP_FIELD_MAP", "LDAP_FIELD_MAP"),
-                            (
-                                "LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN",
-                                "LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN",
-                            ),
-                            (
-                                "LDAP_AUTH_CONNECTION_USER_DN",
-                                "LDAP_AUTH_CONNECTION_USER_DN",
-                            ),
-                            (
-                                "LDAP_AUTH_CONNECTION_USERNAME",
-                                "LDAP_AUTH_CONNECTION_USERNAME",
-                            ),
-                            (
-                                "LDAP_AUTH_CONNECTION_PASSWORD",
-                                "LDAP_AUTH_CONNECTION_PASSWORD",
-                            ),
-                            ("LDAP_AUTH_CONNECT_TIMEOUT", "LDAP_AUTH_CONNECT_TIMEOUT"),
-                            ("LDAP_AUTH_RECEIVE_TIMEOUT", "LDAP_AUTH_RECEIVE_TIMEOUT"),
-                            ("ADMIN_GROUP_TO_SEARCH", "ADMIN_GROUP_TO_SEARCH"),
-                        ],
-                        max_length=128,
-                        verbose_name="name",
-                    ),
-                ),
-                (
-                    "type",
-                    models.CharField(
-                        choices=[
-                            ("crypt", "CRYPT"),
-                            ("float", "FLOAT"),
-                            ("str", "STR"),
-                            ("bytes", "BYTES"),
-                            ("bool", "BOOL"),
-                            ("json", "JSON"),
-                            ("integer", "INTEGER"),
-                            ("ldap_uri", "LDAP_URI"),
-                            ("ldap_tls", "LDAP_TLS"),
-                        ],
-                        verbose_name="type",
-                    ),
-                ),
-                ("_crypt_aes", models.BinaryField(blank=True, null=True)),
-                ("_crypt_ct", models.BinaryField(blank=True, null=True)),
-                ("_crypt_nonce", models.BinaryField(blank=True, null=True)),
-                ("_crypt_tag", models.BinaryField(blank=True, null=True)),
-                ("_float", models.FloatField(blank=True, null=True)),
-                ("_str", models.CharField(blank=True, null=True)),
-                ("_bytes", models.BinaryField(blank=True, null=True)),
-                ("_bool", models.BooleanField(blank=True, null=True)),
-                ("_json", models.JSONField(blank=True, null=True)),
-                ("_integer", models.IntegerField(blank=True, null=True)),
-                (
-                    "_ldap_uri",
-                    django.contrib.postgres.fields.ArrayField(
-                        base_field=models.CharField(max_length=255),
-                        blank=True,
-                        null=True,
-                        size=None,
-                    ),
-                ),
-                (
-                    "_ldap_tls",
-                    models.CharField(
-                        blank=True,
-                        null=True,
-                        verbose_name=models.CharField(max_length=255),
-                    ),
-                ),
-                (
-                    "preset",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        to="core.ldappreset",
-                        verbose_name="settings_preset",
-                    ),
-                ),
-            ],
-            options={
-                "db_table": "core_ldap_setting",
-            },
-        ),
-        migrations.CreateModel(
-            name="Log",
-            fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                (
-                    "logged_at",
-                    models.DateTimeField(auto_now_add=True, verbose_name="logged at"),
-                ),
-                ("rotated", models.BooleanField(default=False, verbose_name="rotated")),
-                ("notes", models.TextField(blank=True, null=True)),
-                (
-                    "operation_type",
-                    models.CharField(
-                        choices=[
-                            ("CREATE", "Create"),
-                            ("READ", "Read"),
-                            ("UPDATE", "Update"),
-                            ("DELETE", "Delete"),
-                            ("LOGIN", "Login"),
-                            ("LOGOUT", "Logout"),
-                            ("OPEN_LDAP_CONNECTION", "Open Connection"),
-                            ("CLOSE_LDAP_CONNECTION", "Close Connection"),
-                            ("RENAME", "Rename"),
-                            ("MOVE", "Move"),
-                            ("UNKNOWN", "Unknown"),
-                        ],
-                        max_length=256,
-                        verbose_name="operation_type",
-                    ),
-                ),
-                (
-                    "log_target_class",
-                    models.CharField(
-                        choices=[
-                            ("USER", "User"),
-                            ("GROUP", "Group"),
-                            ("OU", "Organizational Unit"),
-                            ("DOM", "Domain"),
-                            ("GPO", "Group Policy Object"),
-                            ("LDAP", "LDAP Object"),
-                            ("CONN", "Connection"),
-                            ("SET", "Setting"),
-                            ("DNSZ", "DNS Zone"),
-                            ("DNSR", "DNS Record"),
-                            ("UNKNOWN", "Unknown"),
-                        ],
-                        max_length=256,
-                        verbose_name="log_target_class",
-                    ),
-                ),
-                (
-                    "log_target",
-                    models.JSONField(blank=True, null=True, verbose_name="log_target"),
-                ),
-                (
-                    "message",
-                    models.CharField(
-                        blank=True, max_length=256, null=True, verbose_name="message"
-                    ),
-                ),
-                (
-                    "user",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        to=settings.AUTH_USER_MODEL,
-                    ),
-                ),
-            ],
-            options={
-                "abstract": False,
-            },
-        ),
-        migrations.AddConstraint(
-            model_name="user",
-            constraint=models.CheckConstraint(
-                condition=models.Q(
-                    models.Q(
-                        ("ldap_password_aes", None),
-                        ("ldap_password_ct", None),
-                        ("ldap_password_nonce", None),
-                        ("ldap_password_tag", None),
-                    ),
-                    models.Q(
-                        ("ldap_password_aes__isnull", False),
-                        ("ldap_password_ct__isnull", False),
-                        ("ldap_password_nonce__isnull", False),
-                        ("ldap_password_tag__isnull", False),
-                    ),
-                    _connector="OR",
-                ),
-                name="user_password_crypt_data_all_or_none",
-            ),
-        ),
-    ]
+	operations = [
+		migrations.CreateModel(
+			name="Application",
+			fields=[
+				(
+					"id",
+					models.BigAutoField(
+						auto_created=True,
+						primary_key=True,
+						serialize=False,
+						verbose_name="ID",
+					),
+				),
+				(
+					"created_at",
+					models.DateTimeField(
+						auto_now_add=True, verbose_name="created at"
+					),
+				),
+				(
+					"modified_at",
+					models.DateTimeField(
+						auto_now=True, verbose_name="modified at"
+					),
+				),
+				(
+					"deleted_at",
+					models.DateTimeField(
+						blank=True, null=True, verbose_name="deleted at"
+					),
+				),
+				(
+					"deleted",
+					models.BooleanField(default=False, verbose_name="deleted"),
+				),
+				("notes", models.TextField(blank=True, null=True)),
+				("name", models.CharField(max_length=255)),
+				("enabled", models.BooleanField(default=True)),
+				(
+					"client_id",
+					models.CharField(
+						default=core.models.application.generate_client_id,
+						max_length=25,
+						unique=True,
+					),
+				),
+				(
+					"client_secret",
+					models.CharField(
+						default=core.models.application.generate_client_secret,
+						max_length=129,
+					),
+				),
+				(
+					"redirect_uris",
+					models.TextField(help_text="Comma-separated redirect URIs"),
+				),
+				(
+					"scopes",
+					models.TextField(default="openid profile email groups"),
+				),
+			],
+			options={
+				"abstract": False,
+			},
+		),
+		migrations.CreateModel(
+			name="InterlockSetting",
+			fields=[
+				(
+					"created_at",
+					models.DateTimeField(
+						auto_now_add=True, verbose_name="created at"
+					),
+				),
+				(
+					"modified_at",
+					models.DateTimeField(
+						auto_now=True, verbose_name="modified at"
+					),
+				),
+				(
+					"deleted_at",
+					models.DateTimeField(
+						blank=True, null=True, verbose_name="deleted at"
+					),
+				),
+				(
+					"deleted",
+					models.BooleanField(default=False, verbose_name="deleted"),
+				),
+				("notes", models.TextField(blank=True, null=True)),
+				(
+					"id",
+					models.BigAutoField(
+						primary_key=True, serialize=False, verbose_name="id"
+					),
+				),
+				(
+					"name",
+					models.CharField(
+						choices=[
+							("ILCK_AES_KEY", "ILCK_AES_KEY"),
+							("ILCK_ENABLE_LDAP", "ILCK_ENABLE_LDAP"),
+							("ILCK_LOG_MAX", "ILCK_LOG_MAX"),
+							("ILCK_LOG_READ", "ILCK_LOG_READ"),
+							("ILCK_LOG_CREATE", "ILCK_LOG_CREATE"),
+							("ILCK_LOG_UPDATE", "ILCK_LOG_UPDATE"),
+							("ILCK_LOG_DELETE", "ILCK_LOG_DELETE"),
+							(
+								"ILCK_LOG_OPEN_LDAP_CONNECTION",
+								"ILCK_LOG_OPEN_LDAP_CONNECTION",
+							),
+							(
+								"ILCK_LOG_CLOSE_LDAP_CONNECTION",
+								"ILCK_LOG_CLOSE_LDAP_CONNECTION",
+							),
+							("ILCK_LOG_LOGIN", "ILCK_LOG_LOGIN"),
+							("ILCK_LOG_LOGOUT", "ILCK_LOG_LOGOUT"),
+						],
+						verbose_name="type",
+					),
+				),
+				(
+					"type",
+					models.CharField(
+						choices=[
+							("crypt", "CRYPT"),
+							("float", "FLOAT"),
+							("str", "STR"),
+							("bytes", "BYTES"),
+							("bool", "BOOL"),
+							("json", "JSON"),
+							("integer", "INTEGER"),
+						],
+						verbose_name="type",
+					),
+				),
+				("_crypt_aes", models.BinaryField(blank=True, null=True)),
+				("_crypt_ct", models.BinaryField(blank=True, null=True)),
+				("_crypt_nonce", models.BinaryField(blank=True, null=True)),
+				("_crypt_tag", models.BinaryField(blank=True, null=True)),
+				("_float", models.FloatField(blank=True, null=True)),
+				("_str", models.CharField(blank=True, null=True)),
+				("_bytes", models.BinaryField(blank=True, null=True)),
+				("_bool", models.BooleanField(blank=True, null=True)),
+				("_json", models.JSONField(blank=True, null=True)),
+				("_integer", models.IntegerField(blank=True, null=True)),
+			],
+			options={
+				"db_table": "core_interlock_setting",
+			},
+		),
+		migrations.CreateModel(
+			name="LDAPPreset",
+			fields=[
+				(
+					"created_at",
+					models.DateTimeField(
+						auto_now_add=True, verbose_name="created at"
+					),
+				),
+				(
+					"modified_at",
+					models.DateTimeField(
+						auto_now=True, verbose_name="modified at"
+					),
+				),
+				(
+					"deleted_at",
+					models.DateTimeField(
+						blank=True, null=True, verbose_name="deleted at"
+					),
+				),
+				(
+					"deleted",
+					models.BooleanField(default=False, verbose_name="deleted"),
+				),
+				("notes", models.TextField(blank=True, null=True)),
+				(
+					"id",
+					models.BigAutoField(
+						primary_key=True, serialize=False, verbose_name="id"
+					),
+				),
+				(
+					"name",
+					models.CharField(
+						max_length=128, unique=True, verbose_name="name"
+					),
+				),
+				(
+					"label",
+					models.CharField(max_length=64, verbose_name="label"),
+				),
+				(
+					"active",
+					models.BooleanField(
+						null=True, unique=True, verbose_name="active"
+					),
+				),
+			],
+			options={
+				"db_table": "core_ldap_preset",
+			},
+		),
+		migrations.CreateModel(
+			name="User",
+			fields=[
+				(
+					"created_at",
+					models.DateTimeField(
+						auto_now_add=True, verbose_name="created at"
+					),
+				),
+				(
+					"modified_at",
+					models.DateTimeField(
+						auto_now=True, verbose_name="modified at"
+					),
+				),
+				(
+					"deleted_at",
+					models.DateTimeField(
+						blank=True, null=True, verbose_name="deleted at"
+					),
+				),
+				(
+					"deleted",
+					models.BooleanField(default=False, verbose_name="deleted"),
+				),
+				("notes", models.TextField(blank=True, null=True)),
+				("id", models.BigAutoField(primary_key=True, serialize=False)),
+				(
+					"username",
+					models.CharField(
+						db_index=True,
+						max_length=128,
+						unique=True,
+						validators=[
+							core.serializers.ldap.ldap_user_validator_se
+						],
+						verbose_name="username",
+					),
+				),
+				(
+					"password",
+					models.CharField(max_length=128, verbose_name="password"),
+				),
+				(
+					"last_login",
+					models.DateTimeField(
+						blank=True, null=True, verbose_name="last login"
+					),
+				),
+				(
+					"email",
+					models.EmailField(
+						blank=True,
+						db_index=True,
+						max_length=254,
+						null=True,
+						unique=True,
+						validators=[django.core.validators.EmailValidator()],
+						verbose_name="email address",
+					),
+				),
+				(
+					"is_staff",
+					models.BooleanField(
+						default=False,
+						help_text="Designates whether the user is staff.",
+						verbose_name="staff status",
+					),
+				),
+				(
+					"is_superuser",
+					models.BooleanField(
+						default=False,
+						help_text="Designates whether the user can log into this admin site and has superadmin privileges.",
+						verbose_name="admin status",
+					),
+				),
+				(
+					"first_name",
+					models.CharField(
+						blank=True,
+						max_length=255,
+						null=True,
+						verbose_name="First name",
+					),
+				),
+				(
+					"last_name",
+					models.CharField(
+						blank=True,
+						max_length=255,
+						null=True,
+						verbose_name="Last name",
+					),
+				),
+				(
+					"_distinguished_name",
+					models.CharField(
+						blank=True,
+						max_length=128,
+						null=True,
+						verbose_name="Distinguished Name",
+					),
+				),
+				(
+					"user_type",
+					models.CharField(
+						choices=[
+							("local", "Local User"),
+							("ldap", "LDAP User"),
+						],
+						default="local",
+						verbose_name="User Type",
+					),
+				),
+				(
+					"recovery_codes",
+					django.contrib.postgres.fields.ArrayField(
+						base_field=models.CharField(max_length=32),
+						blank=True,
+						null=True,
+						size=None,
+						verbose_name="Recovery Codes",
+					),
+				),
+				("is_enabled", models.BooleanField(default=True)),
+				(
+					"ldap_password_aes",
+					models.BinaryField(blank=True, default=None, null=True),
+				),
+				(
+					"ldap_password_ct",
+					models.BinaryField(blank=True, default=None, null=True),
+				),
+				(
+					"ldap_password_nonce",
+					models.BinaryField(blank=True, default=None, null=True),
+				),
+				(
+					"ldap_password_tag",
+					models.BinaryField(blank=True, default=None, null=True),
+				),
+				(
+					"groups",
+					models.ManyToManyField(
+						blank=True,
+						help_text="The groups this user belongs to. A user will get all permissions granted to each of their groups.",
+						related_name="user_set",
+						related_query_name="user",
+						to="auth.group",
+						verbose_name="groups",
+					),
+				),
+				(
+					"user_permissions",
+					models.ManyToManyField(
+						blank=True,
+						help_text="Specific permissions for this user.",
+						related_name="user_set",
+						related_query_name="user",
+						to="auth.permission",
+						verbose_name="user permissions",
+					),
+				),
+			],
+			options={
+				"verbose_name": "User",
+				"verbose_name_plural": "Users",
+			},
+			managers=[
+				("objects", core.models.user.BaseUserManager()),
+			],
+		),
+		migrations.CreateModel(
+			name="ApplicationSecurityGroup",
+			fields=[
+				(
+					"id",
+					models.BigAutoField(
+						auto_created=True,
+						primary_key=True,
+						serialize=False,
+						verbose_name="ID",
+					),
+				),
+				(
+					"created_at",
+					models.DateTimeField(
+						auto_now_add=True, verbose_name="created at"
+					),
+				),
+				(
+					"modified_at",
+					models.DateTimeField(
+						auto_now=True, verbose_name="modified at"
+					),
+				),
+				(
+					"deleted_at",
+					models.DateTimeField(
+						blank=True, null=True, verbose_name="deleted at"
+					),
+				),
+				(
+					"deleted",
+					models.BooleanField(default=False, verbose_name="deleted"),
+				),
+				("notes", models.TextField(blank=True, null=True)),
+				("enabled", models.BooleanField(default=True)),
+				(
+					"ldap_objects",
+					django.contrib.postgres.fields.ArrayField(
+						base_field=models.CharField(max_length=255),
+						blank=True,
+						null=True,
+						size=None,
+					),
+				),
+				("uuid", models.UUIDField(default=None, editable=False)),
+				(
+					"application",
+					models.OneToOneField(
+						on_delete=django.db.models.deletion.CASCADE,
+						to="core.application",
+					),
+				),
+				(
+					"users",
+					models.ManyToManyField(
+						blank=True,
+						related_name="asg_member",
+						to=settings.AUTH_USER_MODEL,
+					),
+				),
+			],
+			options={
+				"db_table": "core_application_security_group",
+			},
+		),
+		migrations.CreateModel(
+			name="LDAPSetting",
+			fields=[
+				(
+					"created_at",
+					models.DateTimeField(
+						auto_now_add=True, verbose_name="created at"
+					),
+				),
+				(
+					"modified_at",
+					models.DateTimeField(
+						auto_now=True, verbose_name="modified at"
+					),
+				),
+				(
+					"deleted_at",
+					models.DateTimeField(
+						blank=True, null=True, verbose_name="deleted at"
+					),
+				),
+				(
+					"deleted",
+					models.BooleanField(default=False, verbose_name="deleted"),
+				),
+				("notes", models.TextField(blank=True, null=True)),
+				(
+					"id",
+					models.BigAutoField(
+						primary_key=True, serialize=False, verbose_name="id"
+					),
+				),
+				(
+					"name",
+					models.CharField(
+						choices=[
+							("LDAP_AUTH_URL", "LDAP_AUTH_URL"),
+							("LDAP_DOMAIN", "LDAP_DOMAIN"),
+							("LDAP_AUTH_USE_SSL", "LDAP_AUTH_USE_SSL"),
+							("LDAP_AUTH_USE_TLS", "LDAP_AUTH_USE_TLS"),
+							("LDAP_AUTH_TLS_VERSION", "LDAP_AUTH_TLS_VERSION"),
+							("LDAP_AUTH_SEARCH_BASE", "LDAP_AUTH_SEARCH_BASE"),
+							("LDAP_DNS_LEGACY", "LDAP_DNS_LEGACY"),
+							(
+								"LDAP_AUTH_OBJECT_CLASS",
+								"LDAP_AUTH_OBJECT_CLASS",
+							),
+							(
+								"EXCLUDE_COMPUTER_ACCOUNTS",
+								"EXCLUDE_COMPUTER_ACCOUNTS",
+							),
+							("LDAP_FIELD_MAP", "LDAP_FIELD_MAP"),
+							(
+								"LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN",
+								"LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN",
+							),
+							(
+								"LDAP_AUTH_CONNECTION_USER_DN",
+								"LDAP_AUTH_CONNECTION_USER_DN",
+							),
+							(
+								"LDAP_AUTH_CONNECTION_USERNAME",
+								"LDAP_AUTH_CONNECTION_USERNAME",
+							),
+							(
+								"LDAP_AUTH_CONNECTION_PASSWORD",
+								"LDAP_AUTH_CONNECTION_PASSWORD",
+							),
+							(
+								"LDAP_AUTH_CONNECT_TIMEOUT",
+								"LDAP_AUTH_CONNECT_TIMEOUT",
+							),
+							(
+								"LDAP_AUTH_RECEIVE_TIMEOUT",
+								"LDAP_AUTH_RECEIVE_TIMEOUT",
+							),
+							("ADMIN_GROUP_TO_SEARCH", "ADMIN_GROUP_TO_SEARCH"),
+						],
+						max_length=128,
+						verbose_name="name",
+					),
+				),
+				(
+					"type",
+					models.CharField(
+						choices=[
+							("crypt", "CRYPT"),
+							("float", "FLOAT"),
+							("str", "STR"),
+							("bytes", "BYTES"),
+							("bool", "BOOL"),
+							("json", "JSON"),
+							("integer", "INTEGER"),
+							("ldap_uri", "LDAP_URI"),
+							("ldap_tls", "LDAP_TLS"),
+						],
+						verbose_name="type",
+					),
+				),
+				("_crypt_aes", models.BinaryField(blank=True, null=True)),
+				("_crypt_ct", models.BinaryField(blank=True, null=True)),
+				("_crypt_nonce", models.BinaryField(blank=True, null=True)),
+				("_crypt_tag", models.BinaryField(blank=True, null=True)),
+				("_float", models.FloatField(blank=True, null=True)),
+				("_str", models.CharField(blank=True, null=True)),
+				("_bytes", models.BinaryField(blank=True, null=True)),
+				("_bool", models.BooleanField(blank=True, null=True)),
+				("_json", models.JSONField(blank=True, null=True)),
+				("_integer", models.IntegerField(blank=True, null=True)),
+				(
+					"_ldap_uri",
+					django.contrib.postgres.fields.ArrayField(
+						base_field=models.CharField(max_length=255),
+						blank=True,
+						null=True,
+						size=None,
+					),
+				),
+				(
+					"_ldap_tls",
+					models.CharField(
+						blank=True,
+						null=True,
+						verbose_name=models.CharField(max_length=255),
+					),
+				),
+				(
+					"preset",
+					models.ForeignKey(
+						on_delete=django.db.models.deletion.CASCADE,
+						to="core.ldappreset",
+						verbose_name="settings_preset",
+					),
+				),
+			],
+			options={
+				"db_table": "core_ldap_setting",
+			},
+		),
+		migrations.CreateModel(
+			name="Log",
+			fields=[
+				(
+					"id",
+					models.BigAutoField(
+						auto_created=True,
+						primary_key=True,
+						serialize=False,
+						verbose_name="ID",
+					),
+				),
+				(
+					"logged_at",
+					models.DateTimeField(
+						auto_now_add=True, verbose_name="logged at"
+					),
+				),
+				(
+					"rotated",
+					models.BooleanField(default=False, verbose_name="rotated"),
+				),
+				("notes", models.TextField(blank=True, null=True)),
+				(
+					"operation_type",
+					models.CharField(
+						choices=[
+							("CREATE", "Create"),
+							("READ", "Read"),
+							("UPDATE", "Update"),
+							("DELETE", "Delete"),
+							("LOGIN", "Login"),
+							("LOGOUT", "Logout"),
+							("OPEN_LDAP_CONNECTION", "Open Connection"),
+							("CLOSE_LDAP_CONNECTION", "Close Connection"),
+							("RENAME", "Rename"),
+							("MOVE", "Move"),
+							("UNKNOWN", "Unknown"),
+						],
+						max_length=256,
+						verbose_name="operation_type",
+					),
+				),
+				(
+					"log_target_class",
+					models.CharField(
+						choices=[
+							("USER", "User"),
+							("GROUP", "Group"),
+							("OU", "Organizational Unit"),
+							("DOM", "Domain"),
+							("GPO", "Group Policy Object"),
+							("LDAP", "LDAP Object"),
+							("CONN", "Connection"),
+							("SET", "Setting"),
+							("DNSZ", "DNS Zone"),
+							("DNSR", "DNS Record"),
+							("UNKNOWN", "Unknown"),
+						],
+						max_length=256,
+						verbose_name="log_target_class",
+					),
+				),
+				(
+					"log_target",
+					models.JSONField(
+						blank=True, null=True, verbose_name="log_target"
+					),
+				),
+				(
+					"message",
+					models.CharField(
+						blank=True,
+						max_length=256,
+						null=True,
+						verbose_name="message",
+					),
+				),
+				(
+					"user",
+					models.ForeignKey(
+						on_delete=django.db.models.deletion.CASCADE,
+						to=settings.AUTH_USER_MODEL,
+					),
+				),
+			],
+			options={
+				"abstract": False,
+			},
+		),
+		migrations.AddConstraint(
+			model_name="user",
+			constraint=models.CheckConstraint(
+				condition=models.Q(
+					models.Q(
+						("ldap_password_aes", None),
+						("ldap_password_ct", None),
+						("ldap_password_nonce", None),
+						("ldap_password_tag", None),
+					),
+					models.Q(
+						("ldap_password_aes__isnull", False),
+						("ldap_password_ct__isnull", False),
+						("ldap_password_nonce__isnull", False),
+						("ldap_password_tag__isnull", False),
+					),
+					_connector="OR",
+				),
+				name="user_password_crypt_data_all_or_none",
+			),
+		),
+	]

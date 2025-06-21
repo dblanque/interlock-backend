@@ -23,6 +23,7 @@ from tests.test_core.conftest import (
 	RuntimeSettingsFactory,
 )
 
+
 class TestInit:
 	def test_success(
 		self, mocker: MockerFixture, g_runtime_settings: RuntimeSettingsFactory
@@ -666,6 +667,7 @@ class TestPostUpdate:
 		m_ldap_group.post_update()
 		m_post_create.assert_called_once()
 		m_parse_write_common_name.assert_called_once()
+
 
 class TestSave:
 	@pytest.mark.parametrize(

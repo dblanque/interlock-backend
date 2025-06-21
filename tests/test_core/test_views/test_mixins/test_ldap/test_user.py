@@ -1250,7 +1250,9 @@ class TestFetch:
 		)
 
 		# Execution
-		result = f_user_mixin.ldap_user_fetch(user_search="testuser", return_entry=True)
+		result = f_user_mixin.ldap_user_fetch(
+			user_search="testuser", return_entry=True
+		)
 		assert result == m_user_entry
 		assert f_user_mixin.search_filter == f_default_user_filter("testuser")
 		f_log_mixin.log.assert_not_called()
@@ -1865,6 +1867,7 @@ class TestLdapBulkCreateFromDicts:
 ############################## LDAPUserBaseMixin ###############################
 ################################################################################
 
+
 @pytest.fixture
 def f_userbase_mixin(mocker: MockerFixture, f_user_mixin: LDAPUserMixin):
 	return LDAPUserBaseMixin()
@@ -1873,8 +1876,10 @@ def f_userbase_mixin(mocker: MockerFixture, f_user_mixin: LDAPUserMixin):
 class TestLdapUsersSync:
 	pass
 
+
 class TestLdapUsersPrune:
 	pass
+
 
 class TestLdapUsersPurge:
 	def test_success(

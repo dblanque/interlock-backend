@@ -16,7 +16,7 @@ try:
 		from interlock_backend import (
 			local_django_settings as _local_django_settings,
 		)
-except ImportError: # pragma: no cover
+except ImportError:  # pragma: no cover
 	pass
 ################################################################################
 

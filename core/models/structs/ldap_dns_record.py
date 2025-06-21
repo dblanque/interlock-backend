@@ -292,13 +292,13 @@ def record_to_dict(record: "DNS_RECORD", ts=False):
 				raise e
 	return record_dict
 
+
 def get_dns_zones(connection: LDAPConnectionProtocol, root: str):
 	zones = []
 	connection.search(
 		search_base=root,
 		search_filter=LDAPFilter.eq(
-			LDAP_ATTR_OBJECT_CLASS,
-			LDNS_CLASS_DNS_ZONE
+			LDAP_ATTR_OBJECT_CLASS, LDNS_CLASS_DNS_ZONE
 		).to_string(),
 		search_scope=LEVEL,
 		attributes=["dc"],
@@ -309,6 +309,7 @@ def get_dns_zones(connection: LDAPConnectionProtocol, root: str):
 			continue
 		zones.append(entry["attributes"]["dc"][0])
 	return zones
+
 
 class DNS_RECORD(Structure):
 	"""

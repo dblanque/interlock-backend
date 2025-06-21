@@ -15,13 +15,15 @@ from core.models.choices.log import LOG_ACTION_LOGIN, LOG_CLASS_USER
 
 MODULE = "core.serializers.token"
 
+
 @pytest.fixture
 def f_user(mocker: MockerFixture):
 	return mocker.MagicMock()
 
+
 @pytest.fixture(autouse=True)
 def f_log(mocker: MockerFixture):
-	return mocker.patch(MODULE+".DBLogMixin.log")
+	return mocker.patch(MODULE + ".DBLogMixin.log")
 
 
 def test_user_is_not_authenticated_ok(mocker: MockerFixture):
@@ -57,10 +59,8 @@ class TestTokenObtainPairSerializer:
 		m_serializer_instance.user = f_user
 		m_serializer_instance.mocked_supers = {
 			"validate": mocker.patch(
-				"%s.jwt_serializers.TokenObtainSerializer.validate" % (
-					MODULE
-				),
-				return_value={}
+				"%s.jwt_serializers.TokenObtainSerializer.validate" % (MODULE),
+				return_value={},
 			)
 		}
 		m_refresh = mocker.MagicMock(name="mock_refresh_token")
@@ -80,10 +80,10 @@ class TestTokenObtainPairSerializer:
 		# Mocks
 		m_super_validate = f_serializer_instance.mocked_supers["validate"]
 		m_user_is_not_authenticated = mocker.patch(
-			MODULE+".user_is_not_authenticated",
+			MODULE + ".user_is_not_authenticated",
 			return_value=True,
 		)
-		m_attrs = {"some":"attrs"}
+		m_attrs = {"some": "attrs"}
 
 		# Execution
 		with pytest.raises(AuthenticationFailed):
@@ -107,20 +107,20 @@ class TestTokenObtainPairSerializer:
 		f_user.recovery_codes = []
 		m_super_validate = f_serializer_instance.mocked_supers["validate"]
 		m_user_is_not_authenticated = mocker.patch(
-			MODULE+".user_is_not_authenticated",
+			MODULE + ".user_is_not_authenticated",
 			return_value=False,
 		)
 		m_user_has_device = mocker.patch(
-			MODULE+".user_has_device",
+			MODULE + ".user_has_device",
 			return_value=True,
 		)
-		m_validate_user_otp = mocker.patch(MODULE+".validate_user_otp")
+		m_validate_user_otp = mocker.patch(MODULE + ".validate_user_otp")
 		m_attrs = {"recovery_code": "abcd-1234"}
 
 		# Executions
 		with pytest.raises(exc_otp.OTPInvalidRecoveryCode):
 			f_serializer_instance.validate(m_attrs)
-		
+
 		# Assertions
 		m_super_validate.assert_called_once_with(
 			f_serializer_instance,
@@ -141,14 +141,14 @@ class TestTokenObtainPairSerializer:
 		f_user.recovery_codes = []
 		m_super_validate = f_serializer_instance.mocked_supers["validate"]
 		m_user_is_not_authenticated = mocker.patch(
-			MODULE+".user_is_not_authenticated",
+			MODULE + ".user_is_not_authenticated",
 			return_value=False,
 		)
 		m_user_has_device = mocker.patch(
-			MODULE+".user_has_device",
+			MODULE + ".user_has_device",
 			return_value=True,
 		)
-		m_validate_user_otp = mocker.patch(MODULE+".validate_user_otp")
+		m_validate_user_otp = mocker.patch(MODULE + ".validate_user_otp")
 		m_attrs = {}
 
 		# Execution
@@ -175,15 +175,15 @@ class TestTokenObtainPairSerializer:
 		f_user.recovery_codes = []
 		m_super_validate = f_serializer_instance.mocked_supers["validate"]
 		m_user_is_not_authenticated = mocker.patch(
-			MODULE+".user_is_not_authenticated",
+			MODULE + ".user_is_not_authenticated",
 			return_value=False,
 		)
 		m_user_has_device = mocker.patch(
-			MODULE+".user_has_device",
+			MODULE + ".user_has_device",
 			return_value=True,
 		)
-		m_validate_user_otp = mocker.patch(MODULE+".validate_user_otp")
-		m_attrs = {"totp_code":"123abc"}
+		m_validate_user_otp = mocker.patch(MODULE + ".validate_user_otp")
+		m_attrs = {"totp_code": "123abc"}
 
 		# Execution
 		with pytest.raises(exc_otp.OTPInvalidData):
@@ -207,17 +207,19 @@ class TestTokenObtainPairSerializer:
 		f_log: MockType,
 	):
 		# Mocks
-		f_user.recovery_codes = ["abcd-1234",]
+		f_user.recovery_codes = [
+			"abcd-1234",
+		]
 		m_super_validate = f_serializer_instance.mocked_supers["validate"]
 		m_user_is_not_authenticated = mocker.patch(
-			MODULE+".user_is_not_authenticated",
+			MODULE + ".user_is_not_authenticated",
 			return_value=False,
 		)
 		m_user_has_device = mocker.patch(
-			MODULE+".user_has_device",
+			MODULE + ".user_has_device",
 			return_value=True,
 		)
-		m_validate_user_otp = mocker.patch(MODULE+".validate_user_otp")
+		m_validate_user_otp = mocker.patch(MODULE + ".validate_user_otp")
 		m_attrs = {"recovery_code": "abcd-1234"}
 
 		# Execution
@@ -249,15 +251,15 @@ class TestTokenObtainPairSerializer:
 		# Mocks
 		m_super_validate = f_serializer_instance.mocked_supers["validate"]
 		m_user_is_not_authenticated = mocker.patch(
-			MODULE+".user_is_not_authenticated",
+			MODULE + ".user_is_not_authenticated",
 			return_value=False,
 		)
 		m_user_has_device = mocker.patch(
-			MODULE+".user_has_device",
+			MODULE + ".user_has_device",
 			return_value=True,
 		)
-		m_validate_user_otp = mocker.patch(MODULE+".validate_user_otp")
-		m_attrs = {"totp_code":123456}
+		m_validate_user_otp = mocker.patch(MODULE + ".validate_user_otp")
+		m_attrs = {"totp_code": 123456}
 
 		# Execution
 		f_serializer_instance.validate(m_attrs)
@@ -287,15 +289,15 @@ class TestTokenObtainPairSerializer:
 		# Mocks
 		m_super_validate = f_serializer_instance.mocked_supers["validate"]
 		m_user_is_not_authenticated = mocker.patch(
-			MODULE+".user_is_not_authenticated",
+			MODULE + ".user_is_not_authenticated",
 			return_value=False,
 		)
 		m_user_has_device = mocker.patch(
-			MODULE+".user_has_device",
+			MODULE + ".user_has_device",
 			return_value=True,
 		)
-		m_validate_user_otp = mocker.patch(MODULE+".validate_user_otp")
-		m_attrs = {"totp_code":123456}
+		m_validate_user_otp = mocker.patch(MODULE + ".validate_user_otp")
+		m_attrs = {"totp_code": 123456}
 
 		# Execution
 		f_serializer_instance.validate(m_attrs)
@@ -334,14 +336,14 @@ class TestTokenObtainPairSerializer:
 		f_user.is_superuser = is_superuser
 		m_super_validate = f_serializer_instance.mocked_supers["validate"]
 		m_user_is_not_authenticated = mocker.patch(
-			MODULE+".user_is_not_authenticated",
+			MODULE + ".user_is_not_authenticated",
 			return_value=False,
 		)
 		m_user_has_device = mocker.patch(
-			MODULE+".user_has_device",
+			MODULE + ".user_has_device",
 			return_value=False,
 		)
-		m_validate_user_otp = mocker.patch(MODULE+".validate_user_otp")
+		m_validate_user_otp = mocker.patch(MODULE + ".validate_user_otp")
 		m_attrs = {}
 
 		# Execution

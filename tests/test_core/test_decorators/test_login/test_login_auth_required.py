@@ -6,6 +6,7 @@ from core.models.user import User
 from rest_framework.request import Request
 from core.exceptions.base import PermissionDenied
 
+
 @pytest.fixture
 def m_request(mocker):
 	request = mocker.Mock(spec=Request)
