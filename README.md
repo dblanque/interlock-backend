@@ -135,7 +135,7 @@ python manage.py creatersakey
 ```
 # PROJECT LICENSE
 
-*Interlock Copyright (C) 2022-2024 | Dylan Blanqué, BR Consulting S.R.L.*
+*Interlock Copyright (C) 2022-2025 | Dylan Blanqué, BR Consulting S.R.L.*
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by
