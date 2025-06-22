@@ -33,6 +33,7 @@
 * N/A
 
 ### Medium Priority
+* Add logging to all Application model operations. <d>
 * Add logging to all Application Security Group model operations.
 * Add logging to all TOTP operations.
 
@@ -52,6 +53,7 @@
 * Add Application Security Group Bulk actions
 
 ## Nice would-haves
+* Make DBLogMixin logging use a model reference and primary key for local data models.
 * Add LDAP_DEFAULT_USER_CLASSES, LDAP_DEFAULT_GROUP_CLASSES to ldap settings.
 * Add TEST Record Resolution btn to frontend dns view.
 * Add "View raw object data" option on LDAP Tree.
