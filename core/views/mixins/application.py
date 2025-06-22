@@ -31,7 +31,18 @@ from django.db import transaction
 from typing import Iterable, TypedDict
 import logging
 
+# Audit Logging
+from core.models.choices.log import (
+	LOG_CLASS_APP,
+	LOG_ACTION_CREATE,
+	LOG_ACTION_READ,
+	LOG_ACTION_UPDATE,
+	LOG_ACTION_DELETE,
+	LOG_TARGET_ALL,
+)
+from core.views.mixins.logs import LogMixin
 ################################################################################
+DBLogMixin = LogMixin()
 logger = logging.getLogger()
 
 ResponseTypeIdsDict = TypedDict(
@@ -159,6 +170,15 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 			if new_response_types:
 				self.set_client_response_types(new_response_types, client)
 			client.save()
+
+		# Audit Log
+		if hasattr(self, "request") and hasattr(self.request, "user"):
+			DBLogMixin.log(
+				user=self.request.user.id,
+				operation_type=LOG_ACTION_CREATE,
+				log_target_class=LOG_CLASS_APP,
+				log_target=application.id,
+			)
 		return application
 
 	def list_applications(self):
@@ -184,6 +204,15 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 		for field in HEADERS_EXCLUDE:
 			data_headers.remove(field)
 		data["headers"] = data_headers
+
+		# Audit Log
+		if hasattr(self, "request") and hasattr(self.request, "user"):
+			DBLogMixin.log(
+				user=self.request.user.id,
+				operation_type=LOG_ACTION_READ,
+				log_target_class=LOG_CLASS_APP,
+				log_target=LOG_TARGET_ALL,
+			)
 		return data
 
 	def fetch_application(self, application_id: int) -> dict:
@@ -224,6 +253,15 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 		if response_types:
 			for r_type in response_types:
 				data["response_types"][r_type] = True
+
+		# Audit Log
+		if hasattr(self, "request") and hasattr(self.request, "user"):
+			DBLogMixin.log(
+				user=self.request.user.id,
+				operation_type=LOG_ACTION_READ,
+				log_target_class=LOG_CLASS_APP,
+				log_target=application.id,
+			)
 		return data
 
 	def update_application(
@@ -303,6 +341,15 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 			if new_response_types:
 				self.set_client_response_types(new_response_types, client)
 			client.save()
+
+			# Audit Log
+			if hasattr(self, "request") and hasattr(self.request, "user"):
+				DBLogMixin.log(
+					user=self.request.user.id,
+					operation_type=LOG_ACTION_UPDATE,
+					log_target_class=LOG_CLASS_APP,
+					log_target=application.id,
+				)
 		return application, client
 
 	def delete_application(self, application_id: int):
@@ -315,3 +362,12 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 			if Client.objects.filter(client_id=client_id).exists():
 				Client.objects.get(client_id=client_id).delete()
 			application.delete_permanently()
+
+			# Audit Log
+			if hasattr(self, "request") and hasattr(self.request, "user"):
+				DBLogMixin.log(
+					user=self.request.user.id,
+					operation_type=LOG_ACTION_DELETE,
+					log_target_class=LOG_CLASS_APP,
+					log_target=application.id,
+				)
