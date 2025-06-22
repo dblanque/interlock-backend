@@ -40,6 +40,7 @@
 * Add logging to all TOTP operations.
 
 ### Low Priority (Post Release)
+* Implement Server-side pagination.
 * Implement LDAP Group Serializer usage.
 * Add Application Group LDAP Object Pruning Signal and Endpoint
 * Add bool setting key for Interlock -> ALLOW_LDAP_TO_OVERRIDE_LOCAL_USERS
