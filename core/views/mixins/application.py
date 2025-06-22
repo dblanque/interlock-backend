@@ -260,7 +260,7 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 				user=self.request.user.id,
 				operation_type=LOG_ACTION_READ,
 				log_target_class=LOG_CLASS_APP,
-				log_target=application.id,
+				log_target=application.name,
 			)
 		return data
 
@@ -348,7 +348,7 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 					user=self.request.user.id,
 					operation_type=LOG_ACTION_UPDATE,
 					log_target_class=LOG_CLASS_APP,
-					log_target=application.id,
+					log_target=application.name,
 				)
 		return application, client
 
@@ -369,5 +369,5 @@ class ApplicationViewMixin(viewsets.ViewSetMixin):
 					user=self.request.user.id,
 					operation_type=LOG_ACTION_DELETE,
 					log_target_class=LOG_CLASS_APP,
-					log_target=application.id,
+					log_target=application.name,
 				)
