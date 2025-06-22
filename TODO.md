@@ -30,10 +30,7 @@
 
 ## Issues
 ### High Priority
-* Add re-openable disclaimer in DNS View: <d>
-	* Wait for ttl of zone to check dns resolution
-	* Beware of enabling Legacy LDAP DNS if using an older Active Directory
-* Check TOTP support for non admin users. <d>
+* N/A
 
 ### Medium Priority
 * Add logging to all Application Security Group model operations.
