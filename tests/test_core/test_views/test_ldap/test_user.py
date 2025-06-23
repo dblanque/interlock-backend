@@ -968,8 +968,10 @@ class TestBulkCreate(BaseViewTestClass):
 	):
 		m_username_1 = "importeduser1"
 		m_username_2 = "importeduser2"
+		m_username_3 = "importeduser3"
 		m_email_1 = "iu1@example.com"
 		m_email_2 = "iu2@example.com"
+		m_email_3 = "iu3@example.com"
 		m_path = list(f_default_ldap_path.values())[0]
 		m_users = [
 			[
@@ -981,6 +983,12 @@ class TestBulkCreate(BaseViewTestClass):
 			[
 				m_username_2,
 				m_email_2,
+				"First",
+				"Last",
+			],
+			[
+				m_username_3,
+				m_email_3,
 				"First",
 				"Last",
 			],
@@ -1000,7 +1008,7 @@ class TestBulkCreate(BaseViewTestClass):
 		m_bulk_check_users = mocker.patch.object(
 			LDAPUserViewSet,
 			"bulk_check_users",
-			return_value=[],
+			return_value=[m_username_3],
 		)
 		m_bulk_create_from_csv = mocker.patch.object(
 			LDAPUserViewSet,
@@ -1026,7 +1034,7 @@ class TestBulkCreate(BaseViewTestClass):
 			m_username_2,
 		]
 		assert response.data.get("failed_users") == []
-		assert response.data.get("skipped_users") == []
+		assert response.data.get("skipped_users") == [m_username_3]
 		m_index_map_fn.assert_called_once_with(
 			headers=m_data["headers"],
 			csv_map=m_data["mapping"],
@@ -1036,6 +1044,7 @@ class TestBulkCreate(BaseViewTestClass):
 			[
 				(m_username_1, m_email_1),
 				(m_username_2, m_email_2),
+				(m_username_3, m_email_3),
 			],
 			ignore_local=True,
 			raise_exception=False,
@@ -1046,6 +1055,7 @@ class TestBulkCreate(BaseViewTestClass):
 			index_map=m_index_map,
 			path=m_path,
 			placeholder_password=None,
+			skipped_users=[m_username_3]
 		)
 		m_bulk_create_from_dicts.assert_not_called()
 
@@ -1107,6 +1117,7 @@ class TestBulkCreate(BaseViewTestClass):
 			user_dicts=m_users,
 			path=None,
 			placeholder_password=None,
+			skipped_users=[],
 		)
 
 	def test_raises_overlapping_operations(
@@ -1783,7 +1794,7 @@ class TestSelfChangePassword(BaseViewTestClass):
 		m_set_password.assert_called_once_with(
 			user_dn=normal_user.distinguished_name,
 			user_pwd_new="mock_password",
-			user_pwd_old="mock_password_old",
+			set_by_admin=True,
 		)
 		normal_user.refresh_from_db()
 		assert aes_decrypt(*normal_user.encrypted_password) == "mock_password"

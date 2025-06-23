@@ -1547,11 +1547,14 @@ class TestLDAPRecord:
 		m_base_record_cls = mocker.patch(
 			"core.models.dns.DNS_RECORD", return_value=m_base_record_struct
 		)
+		m_dns_count_name = mocker.Mock()
+		m_dns_count_name.toCountName = mocker.Mock(return_value=None)
+		m_dns_count_name_cls = mocker.patch(
+			"core.models.dns.DNS_COUNT_NAME",
+			return_value=m_dns_count_name,
+		)
 		m_data_struct = mocker.MagicMock(spec=DNS_RPC_RECORD_NAME_PREFERENCE)
 		m_data_struct: Union[DNS_COUNT_NAME, MockType]
-		m_data_struct.insert_field_to_struct = mocker.Mock(return_value=None)
-		m_data_struct.setCastField = mocker.Mock(return_value=None)
-		m_data_struct.toCountName = mocker.Mock(return_value=None)
 		m_record.record_cls = mocker.Mock(return_value=m_data_struct)
 
 		# Execution
@@ -1579,15 +1582,7 @@ class TestLDAPRecord:
 			LDNS_ATTR_STRUCT_DATA,
 			m_data_struct,
 		)
-		m_data_struct.insert_field_to_struct.assert_called_once_with(
-			fieldName="wPreference",
-			fieldStructVal=">H",
-		)
-		m_data_struct.setCastField.assert_called_once_with(
-			"wPreference",
-			value=test_values["wPreference"],
-		)
-		m_data_struct.toCountName.assert_called_once_with(
+		m_dns_count_name.toCountName.assert_called_once_with(
 			test_values["nameExchange"]
 		)
 

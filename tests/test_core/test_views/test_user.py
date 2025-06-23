@@ -634,6 +634,7 @@ class TestSelfChangePassword(BaseViewTestClass):
 	def test_raises_not_local(
 		self,
 		mocker: MockerFixture,
+		g_interlock_ldap_enabled,
 		f_api_client: APIClientFactory,
 		f_user_ldap: User,
 		f_log: MockType,
@@ -716,6 +717,7 @@ class TestSelfUpdate(BaseViewTestClass):
 	def test_raises_not_local(
 		self,
 		mocker: MockerFixture,
+		g_interlock_ldap_enabled,
 		f_api_client: APIClientFactory,
 		f_user_ldap: User,
 		f_log: MockType,
