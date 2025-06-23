@@ -35,11 +35,6 @@ def f_connector(mocker: MockerFixture, g_ldap_connector: ConnectorFactory):
 	)
 
 
-@pytest.fixture(autouse=True)
-def f_runtime_settings(g_runtime_settings: RuntimeSettingsFactory):
-	return g_runtime_settings(patch_path="core.views.home.RuntimeSettings")
-
-
 @pytest.fixture
 def f_users(user_factory: UserFactory):
 	m_users = [
@@ -81,12 +76,9 @@ class TestList:
 		f_connector: LDAPConnectorMock,
 		admin_user_client: APIClient,
 		g_interlock_ldap_enabled,
-		f_runtime_settings: RuntimeSettingsSingleton,
 		use_tls: bool,
 		use_ssl: bool,
 	):
-		f_runtime_settings.LDAP_AUTH_USE_TLS = use_tls
-		f_runtime_settings.LDAP_AUTH_USE_SSL = use_ssl
 
 		m_server = mocker.Mock(name="m_server")
 		m_server.name = (
