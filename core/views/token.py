@@ -47,7 +47,7 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 	"""
 
 	serializer_class = TokenObtainPairSerializer
-	token_exc = [TokenError, AuthenticationFailed]
+	token_exc = (TokenError, AuthenticationFailed,)
 
 	def get_serializer(self, *args, **kwargs) -> TokenObtainPairSerializer:
 		return super().get_serializer(*args, **kwargs)
@@ -57,7 +57,7 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 			serializer = self.get_serializer(data=request.data)
 			serializer.is_valid(raise_exception=True)
 		except Exception as e:
-			if any(type(e) == te for te in self.token_exc):
+			if isinstance(e, self.token_exc):
 				return RemoveTokenResponse(request, bad_login_count=True)
 			raise e
 
