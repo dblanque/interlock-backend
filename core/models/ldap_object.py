@@ -356,9 +356,11 @@ class LDAPObject:
 				continue
 
 			if (
-				attr_key == LDAP_ATTR_SECURITY_ID
-				and self.__get_common_name__(distinguished_name).lower()
-				!= LOCAL_ATTR_BUILT_IN
+				attr_key == LDAP_ATTR_SECURITY_ID and
+				self.__get_common_name__(
+					distinguished_name
+				).lower() != LOCAL_ATTR_BUILT_IN and
+				getldapattrvalue(self.entry, attr_key, None)
 			):
 				try:
 					# Do not use getldapattr here, we want raw_values
