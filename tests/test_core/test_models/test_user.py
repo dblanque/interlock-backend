@@ -203,7 +203,7 @@ class TestUserModel:
 			password=self.default_password,
 			user_type=USER_TYPE_LOCAL,
 		)
-		assert str(user) == f"test_str_representation"
+		assert str(user) == "test_str_representation"
 
 	# BaseUserManager tests through User implementation
 	def test_create_user_via_manager(self):

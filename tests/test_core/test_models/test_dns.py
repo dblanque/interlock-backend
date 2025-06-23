@@ -1491,7 +1491,7 @@ class TestLDAPRecord:
 		f_record,
 		record_type: RecordTypes,
 	):
-		test_values = {"stringData": f"this is a text string."}
+		test_values = {"stringData": "this is a text string."}
 		m_serial = get_mock_serial()
 		m_record: LDAPRecord = f_record(record_type.value, test_values)
 		m_base_record_struct = mocker.MagicMock(spec=DNS_RECORD)

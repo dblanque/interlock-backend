@@ -312,7 +312,7 @@ class TestUpdate(BaseViewTestClass):
 	):
 		m_save = mocker.patch.object(User, "save")
 		response: Response = admin_user_client.put(
-			self.endpoint + f"999/",
+			self.endpoint + "999/",
 			data={LOCAL_ATTR_EMAIL: "new.email@example.com"},
 			format="json",
 		)

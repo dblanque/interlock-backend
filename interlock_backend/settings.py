@@ -307,7 +307,7 @@ DATABASES = {
 		"PORT": "5432",
 	},
 	"test": {
-		"NAME": f"test_interlockdb",
+		"NAME": "test_interlockdb",
 	},
 }
 

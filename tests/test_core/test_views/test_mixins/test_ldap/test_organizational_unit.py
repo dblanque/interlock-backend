@@ -36,7 +36,7 @@ def f_logger(mocker: MockerFixture):
 @pytest.fixture(autouse=True)
 def f_log_mixin(mocker: MockerFixture) -> LogMixin:
 	return mocker.patch(
-		f"core.views.mixins.ldap.organizational_unit.DBLogMixin",
+		"core.views.mixins.ldap.organizational_unit.DBLogMixin",
 		mocker.MagicMock(),
 	)
 

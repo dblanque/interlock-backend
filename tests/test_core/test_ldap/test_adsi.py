@@ -92,7 +92,7 @@ from core.ldap.adsi import (
 			LDAP_FILTER_AND,
 			False,
 			False,
-			f"(sAMAccountName=testuser)",
+			"(sAMAccountName=testuser)",
 		),
 		# OR expression merging
 		(

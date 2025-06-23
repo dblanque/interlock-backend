@@ -497,7 +497,7 @@ def record_type_main_field(t: RecordTypes | int | str) -> str:
 		and not isinstance(t, str)
 	):
 		raise TypeError(
-			f"t must be a valid RecordType Enum, RecordType int, or string identifier."
+			"t must be a valid RecordType Enum, RecordType int, or string identifier."
 		)
 	if isinstance(t, str):
 		t_str = t.upper()

@@ -377,7 +377,7 @@ def f_user_local(user_factory: UserFactory):
 	return user_factory(
 		username="testuserlocal",
 		password=MOCK_PASSWORD,
-		email=f"testuserlocal@example.org",
+		email="testuserlocal@example.org",
 		user_type=USER_TYPE_LOCAL,
 		is_enabled=True,
 	)

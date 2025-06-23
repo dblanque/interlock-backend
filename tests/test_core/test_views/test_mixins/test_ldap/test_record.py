@@ -43,7 +43,7 @@ def f_logger(mocker):
 @pytest.fixture(autouse=True)
 def f_log_mixin(mocker):
 	return mocker.patch(
-		f"core.views.mixins.ldap.record.DBLogMixin", mocker.MagicMock()
+		"core.views.mixins.ldap.record.DBLogMixin", mocker.MagicMock()
 	)
 
 
@@ -256,7 +256,7 @@ def test_validate_record_raises_root_dns_servers_validation_error(
 def test_validate_record_raises_on_self_reference(
 	f_record_data_name_node: dict, f_record_mixin: DNSRecordMixin
 ):
-	f_record_data_name_node["name"] = f"subdomain"
+	f_record_data_name_node["name"] = "subdomain"
 	f_record_data_name_node["nameNode"] = f"subdomain.{LDAP_DOMAIN}."
 	with pytest.raises(exc_dns.DNSRecordSelfReference):
 		f_record_mixin.validate_record(record_data=f_record_data_name_node)
@@ -265,7 +265,7 @@ def test_validate_record_raises_on_self_reference(
 def test_validate_record_does_not_raise_self_reference(
 	f_record_data_name_node: dict, f_record_mixin: DNSRecordMixin
 ):
-	f_record_data_name_node["name"] = f"subdomain"
+	f_record_data_name_node["name"] = "subdomain"
 	f_record_data_name_node["nameNode"] = f"subdomain.sub2.{LDAP_DOMAIN}."
 	f_record_mixin.validate_record(record_data=f_record_data_name_node)
 
@@ -318,7 +318,7 @@ def test_create_record(
 	)
 	m_ldap_record_instance = mocker.MagicMock()
 	m_ldap_record = mocker.patch(
-		f"core.views.mixins.ldap.record.LDAPRecord",
+		"core.views.mixins.ldap.record.LDAPRecord",
 		return_value=m_ldap_record_instance,
 	)
 	m_soa_object = mocker.MagicMock()
@@ -392,7 +392,7 @@ def test_create_record_raises_could_not_increment_soa(
 	)
 	m_ldap_record_instance = mocker.MagicMock()
 	mocker.patch(
-		f"core.views.mixins.ldap.record.LDAPRecord",
+		"core.views.mixins.ldap.record.LDAPRecord",
 		return_value=m_ldap_record_instance,
 	)
 	m_soa_object = mocker.MagicMock()
@@ -464,7 +464,7 @@ def test_update_record_same_name(
 		return_value="mock_fullname"
 	)
 	m_ldap_record = mocker.patch(
-		f"core.views.mixins.ldap.record.LDAPRecord",
+		"core.views.mixins.ldap.record.LDAPRecord",
 		return_value=m_ldap_record_instance,
 	)
 
@@ -552,7 +552,7 @@ def test_update_record_different_name(
 		return_value="mock_fullname"
 	)
 	m_ldap_record = mocker.patch(
-		f"core.views.mixins.ldap.record.LDAPRecord",
+		"core.views.mixins.ldap.record.LDAPRecord",
 		side_effect=[m_ldap_record_instance, m_old_ldap_record_instance],
 	)
 
@@ -624,7 +624,7 @@ def test_update_record_raises_increment_soa_exception(
 		return_value="mock_fullname"
 	)
 	mocker.patch(
-		f"core.views.mixins.ldap.record.LDAPRecord",
+		"core.views.mixins.ldap.record.LDAPRecord",
 		side_effect=[m_ldap_record_instance, m_old_ldap_record_instance],
 	)
 
@@ -661,7 +661,7 @@ def test_update_record_different_name_raises_ldap_backend_error(
 		return_value="mock_fullname"
 	)
 	mocker.patch(
-		f"core.views.mixins.ldap.record.LDAPRecord",
+		"core.views.mixins.ldap.record.LDAPRecord",
 		side_effect=[m_ldap_record_instance, m_old_ldap_record_instance],
 	)
 
@@ -736,7 +736,7 @@ def test_delete_record(
 		return_value="mock_fullname"
 	)
 	m_ldap_record = mocker.patch(
-		f"core.views.mixins.ldap.record.LDAPRecord",
+		"core.views.mixins.ldap.record.LDAPRecord",
 		return_value=m_ldap_record_instance,
 	)
 

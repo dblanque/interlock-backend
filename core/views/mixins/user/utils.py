@@ -86,11 +86,11 @@ class UserUtilsMixin:
 	):
 		if not headers or not isinstance(headers, list):
 			raise exc_user.UserBulkInsertMappingError(
-				data={"detail": f"Key 'headers' must be of type list."}
+				data={"detail": "Key 'headers' must be of type list."}
 			)
 		if csv_map and not isinstance(csv_map, dict):
 			raise exc_user.UserBulkInsertMappingError(
-				data={"detail": f"Key 'csv_map' must be of type dict"}
+				data={"detail": "Key 'csv_map' must be of type dict"}
 			)
 
 		if csv_map:

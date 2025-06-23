@@ -83,7 +83,7 @@ def ldap_permission_validator(v: str):
 
 def website_validator(v: str):
 	if not WEBSITE_RE.match(v):
-		raise ValidationError(f"Website validation failed.")
+		raise ValidationError("Website validation failed.")
 	return v
 
 
