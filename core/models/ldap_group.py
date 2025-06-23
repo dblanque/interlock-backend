@@ -231,31 +231,33 @@ class LDAPGroup(LDAPObject):
 			members_to_remove.remove(dn)
 
 		# Execute operations
-		try:
-			self.connection.extend.microsoft.add_members_to_groups(
-				members=members_to_add,
-				groups=self.distinguished_name,
-			)
-			if not LOCAL_ATTR_GROUP_ADD_MEMBERS in self.parsed_specials:
-				self.parsed_specials.append(LOCAL_ATTR_GROUP_ADD_MEMBERS)
-		except Exception as e:
-			logger.exception(e)
-			raise exc_group.GroupMembersAdd(
-				data={"ldap_response": self.connection.result}
-			)
+		if members_to_add:
+			try:
+				self.connection.extend.microsoft.add_members_to_groups(
+					members=members_to_add,
+					groups=self.distinguished_name,
+				)
+				if not LOCAL_ATTR_GROUP_ADD_MEMBERS in self.parsed_specials:
+					self.parsed_specials.append(LOCAL_ATTR_GROUP_ADD_MEMBERS)
+			except Exception as e:
+				logger.exception(e)
+				raise exc_group.GroupMembersAdd(
+					data={"ldap_response": self.connection.result}
+				)
 
-		try:
-			self.connection.extend.microsoft.remove_members_from_groups(
-				members=members_to_remove,
-				groups=self.distinguished_name,
-			)
-			if not LOCAL_ATTR_GROUP_RM_MEMBERS in self.parsed_specials:
-				self.parsed_specials.append(LOCAL_ATTR_GROUP_RM_MEMBERS)
-		except Exception as e:
-			logger.exception(e)
-			raise exc_group.GroupMembersRemove(
-				data={"ldap_response": self.connection.result}
-			)
+		if members_to_remove:
+			try:
+				self.connection.extend.microsoft.remove_members_from_groups(
+					members=members_to_remove,
+					groups=self.distinguished_name,
+				)
+				if not LOCAL_ATTR_GROUP_RM_MEMBERS in self.parsed_specials:
+					self.parsed_specials.append(LOCAL_ATTR_GROUP_RM_MEMBERS)
+			except Exception as e:
+				logger.exception(e)
+				raise exc_group.GroupMembersRemove(
+					data={"ldap_response": self.connection.result}
+				)
 
 	def parse_write_special_attributes(self):
 		self.parse_write_group_type_scope()
