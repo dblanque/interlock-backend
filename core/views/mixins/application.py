@@ -41,6 +41,7 @@ from core.models.choices.log import (
 	LOG_TARGET_ALL,
 )
 from core.views.mixins.logs import LogMixin
+
 ################################################################################
 DBLogMixin = LogMixin()
 logger = logging.getLogger()

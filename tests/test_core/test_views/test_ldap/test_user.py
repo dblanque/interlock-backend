@@ -1055,7 +1055,7 @@ class TestBulkCreate(BaseViewTestClass):
 			index_map=m_index_map,
 			path=m_path,
 			placeholder_password=None,
-			skipped_users=[m_username_3]
+			skipped_users=[m_username_3],
 		)
 		m_bulk_create_from_dicts.assert_not_called()
 

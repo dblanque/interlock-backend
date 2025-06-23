@@ -90,8 +90,11 @@ class TestList:
 		f_runtime_settings.LDAP_AUTH_USE_SSL = use_ssl
 
 		m_server = mocker.Mock(name="m_server")
-		m_server.name = "ldaps://127.0.0.1:636" if use_ssl or use_tls\
+		m_server.name = (
+			"ldaps://127.0.0.1:636"
+			if use_ssl or use_tls
 			else "ldap://127.0.0.1:389"
+		)
 		m_server.host = "127.0.0.1"
 		m_server.ssl = use_ssl
 		f_connector.connection.server_pool.get_current_server.return_value = (
@@ -106,7 +109,9 @@ class TestList:
 		assert data.get("ldap_active_server") == "127.0.0.1"
 		assert data.get("local_user_count") == 2
 		assert data.get("ldap_user_count") == 3
-		assert data.get("ldap_tls") == use_tls or m_server.name.startswith("ldaps://")
+		assert data.get("ldap_tls") == use_tls or m_server.name.startswith(
+			"ldaps://"
+		)
 		assert data.get("ldap_ssl") == use_ssl
 
 	@pytest.mark.parametrize(

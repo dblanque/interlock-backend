@@ -45,6 +45,7 @@ def request_intercept(func=None):
 		return decorator
 	return decorator(func)
 
+
 def is_ldap_backend_enabled() -> bool:
 	"""Gets the LDAP Back-end enabled state."""
 	try:
@@ -56,6 +57,7 @@ def is_ldap_backend_enabled() -> bool:
 		# Handle missing setting (not properly initialized)
 		pass
 	return False
+
 
 def ldap_backend_intercept(func=None):
 	def decorator(view_func):
