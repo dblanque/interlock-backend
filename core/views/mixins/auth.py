@@ -145,7 +145,7 @@ class CookieJWTAuthentication(JWTAuthentication):
 			):
 				return AnonymousUser(), EMPTY_TOKEN
 			validated_token = AccessToken(AUTH_TOKEN)
-		except TokenError as e:
+		except TokenError:
 			raise AccessTokenInvalid()
 		except Exception as generic_e:
 			logger.exception(generic_e)
@@ -170,7 +170,7 @@ class CookieJWTAuthentication(JWTAuthentication):
 
 		try:
 			refreshed_tokens = RefreshToken(REFRESH_TOKEN)
-		except TokenError as e:
+		except TokenError:
 			raise RefreshTokenExpired()
 		except Exception as generic_e:
 			logger.exception(generic_e)
