@@ -59,6 +59,8 @@ class HomeViewSet(BaseViewSet):
 		# Check LDAP Backend status
 		ldap_ok = False
 		ldap_server = None
+		ldap_ssl = False
+		ldap_tls = False
 		if ldap_enabled:
 			try:
 				with LDAPConnector(user=user) as ldc:
@@ -68,6 +70,9 @@ class HomeViewSet(BaseViewSet):
 					ldap_server: Server = ldap_server_pool.get_current_server(
 						ldc.connection
 					)
+					if ldap_server.name.startswith("ldaps"):
+						ldap_tls = True
+					ldap_ssl = ldap_server.ssl
 					ldap_server = ldap_server.host
 
 				is_bound = ldc.connection.bound
@@ -85,8 +90,8 @@ class HomeViewSet(BaseViewSet):
 					"oidc_well_known": oidc_well_known_info,
 					"ldap_user_count": ldap_user_count,
 					"ldap_enabled": ldap_enabled,
-					"ldap_tls": RuntimeSettings.LDAP_AUTH_USE_TLS,
-					"ldap_ssl": RuntimeSettings.LDAP_AUTH_USE_SSL,
+					"ldap_tls": ldap_tls,
+					"ldap_ssl": ldap_ssl,
 					"ldap_ok": ldap_ok,
 					"ldap_active_server": ldap_server,
 				},
