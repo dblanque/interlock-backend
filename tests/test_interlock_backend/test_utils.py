@@ -7,7 +7,6 @@
 # ---------------------------------- IMPORTS --------------------------------- #
 from typing import Any, Dict
 from pytest_mock import MockerFixture
-import pytest
 
 # Import the module containing load_override
 from interlock_backend.utils import load_override

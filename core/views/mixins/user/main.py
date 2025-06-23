@@ -33,7 +33,6 @@ from core.constants.attrs.local import (
 	LOCAL_ATTR_USERNAME,
 	LOCAL_ATTR_EMAIL,
 	LOCAL_ATTR_PASSWORD,
-	LOCAL_ATTR_PASSWORD_CONFIRM,
 )
 from core.models.choices.log import (
 	LOG_ACTION_UPDATE,

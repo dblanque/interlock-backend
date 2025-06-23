@@ -1,6 +1,5 @@
 ########################### Standard Pytest Imports ############################
 import pytest
-from pytest_mock import MockerFixture
 
 ################################################################################
 from core.utils.iterables import (

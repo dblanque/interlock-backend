@@ -1,6 +1,5 @@
 ########################### Standard Pytest Imports ############################
 import pytest
-from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
 
 ################################################################################
@@ -35,7 +34,6 @@ from core.models.dns import RecordTypes
 from ldap3 import LEVEL as ldap3_LEVEL
 from logging import Logger
 from tests.test_core.conftest import (
-	LDAPAttributeFactoryProtocol,
 	LDAPEntryFactoryProtocol,
 )
 

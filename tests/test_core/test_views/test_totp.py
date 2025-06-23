@@ -1,6 +1,5 @@
 ########################### Standard Pytest Imports ############################
 import pytest
-from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
 
 ################################################################################
@@ -9,7 +8,6 @@ from core.models.user import User
 from rest_framework.response import Response
 from rest_framework.test import APIClient
 from rest_framework import status
-from core.exceptions import otp as exc_otp
 from core.constants.attrs.local import LOCAL_ATTR_USERNAME
 from core.views.mixins.totp import (
 	create_device_totp_for_user,

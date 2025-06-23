@@ -13,7 +13,6 @@ from core.models.interlock_settings import (
 	InterlockSetting,
 	INTERLOCK_SETTING_ENABLE_LDAP,
 )
-from core.config.runtime import RuntimeSettings
 
 ### Auth
 from core.decorators.login import auth_required, admin_required

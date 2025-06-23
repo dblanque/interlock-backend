@@ -1,5 +1,4 @@
 import pytest
-from unittest.mock import patch
 from core.decorators.intercept import request_intercept
 from rest_framework.request import Request as django_request
 from django.contrib.auth.models import User

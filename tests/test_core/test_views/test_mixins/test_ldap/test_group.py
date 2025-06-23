@@ -1,6 +1,5 @@
 ########################### Standard Pytest Imports ############################
 import pytest
-from pytest import FixtureRequest
 from pytest_mock import MockerFixture, MockType
 
 ################################################################################
@@ -54,7 +53,6 @@ from core.models.choices.log import (
 	LOG_CLASS_GROUP,
 	LOG_TARGET_ALL,
 )
-from ldap3 import ALL_OPERATIONAL_ATTRIBUTES
 from typing import Protocol, overload
 from logging import Logger
 

@@ -10,7 +10,6 @@
 import sys
 import logging
 from rest_framework.serializers import ValidationError
-from django.utils.translation import gettext_lazy as _
 from core.models.validators.networking import (
 	ipv4_validator,
 	ipv6_validator,

@@ -11,7 +11,7 @@
 from core.exceptions.base import PermissionDenied, BadRequest
 from core.exceptions import base as exc_base, users as exc_user
 from django.core.exceptions import ObjectDoesNotExist
-from interlock_backend.encrypt import aes_encrypt, aes_decrypt
+from interlock_backend.encrypt import aes_encrypt
 
 ### Models
 from core.models.user import (

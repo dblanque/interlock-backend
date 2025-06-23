@@ -1,7 +1,6 @@
 ########################### Standard Pytest Imports ############################
 import pytest
-from pytest import FixtureRequest
-from pytest_mock import MockerFixture, MockType
+from pytest_mock import MockerFixture
 
 ################################################################################
 from tests.test_core.test_views.conftest import BaseViewTestClass
@@ -17,7 +16,6 @@ from core.models.choices.log import (
 	LOG_CLASS_DNSR,
 	LOG_TARGET_ALL,
 )
-from core.models.interlock_settings import InterlockSetting
 
 
 @pytest.fixture

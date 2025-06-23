@@ -65,7 +65,6 @@ from core.constants.settings import (
 
 #### Exceptions
 from core.exceptions import (
-	base as exc_base,
 	ldap as exc_ldap,
 	ldap_settings as exc_set,
 )

@@ -11,7 +11,6 @@ from rest_framework import status
 from core.constants.attrs import LOCAL_ATTR_NAME
 from tests.test_core.test_views.conftest import (
 	BaseViewTestClass,
-	BaseViewTestClassWithPk,
 )
 
 

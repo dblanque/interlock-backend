@@ -5,10 +5,8 @@ from core.models.user import User
 from core.models.log import Log
 from core.views.mixins.logs import LogMixin
 from core.models.choices.log import (
-	LOG_ACTION_CREATE,
 	LOG_ACTION_READ,
 	LOG_ACTION_UPDATE,
-	LOG_ACTION_DELETE,
 	LOG_CLASS_USER,
 	LOG_EXTRA_USER_END_USER_UPDATE,
 )

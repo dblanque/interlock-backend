@@ -4,7 +4,6 @@ from django.db.transaction import TransactionManagementError
 from django.db.utils import IntegrityError
 from core.models.user import User, USER_TYPE_LOCAL, USER_TYPE_LDAP
 from interlock_backend.test_settings import (
-	DEFAULT_SUPERUSER_PASSWORD,
 	DEFAULT_SUPERUSER_USERNAME,
 )
 from django.db import transaction

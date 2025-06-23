@@ -32,7 +32,6 @@ from core.constants.attrs import (
 	LDAP_ATTR_COMMON_NAME,
 	LOCAL_ATTR_NAME,
 )
-from core.serializers.group import LDAPGroupSerializer
 from core.constants.group import LDAPGroupSearchAttrBuilder
 from core.decorators.login import auth_required, admin_required
 from core.decorators.intercept import ldap_backend_intercept

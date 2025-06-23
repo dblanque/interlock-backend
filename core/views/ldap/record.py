@@ -23,7 +23,6 @@ from core.views.mixins.ldap.domain import DomainViewMixin
 
 ### REST Framework
 from rest_framework.response import Response
-from rest_framework.decorators import action
 
 ### Others
 from core.decorators.login import auth_required, admin_required
