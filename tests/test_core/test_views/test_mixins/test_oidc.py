@@ -254,6 +254,7 @@ class TestCustomScopeClaims:
 			CustomScopeClaims.create_response_dic
 		)
 		m_groups = ["mock_group_list"]
+		# Mock get_user_groups
 		m_get_user_groups = mocker.patch(
 			"core.views.mixins.oidc.get_user_groups", return_value=m_groups
 		)
@@ -271,6 +272,7 @@ class TestCustomScopeClaims:
 			"profile",
 			"groups",
 		):
+			m_get_user_groups.assert_called_once_with(f_user_local)
 			assert response_dict["groups"] == m_groups
 
 

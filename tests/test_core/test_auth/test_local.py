@@ -72,7 +72,6 @@ class TestEmailAuthBackend:
 			assert result == m_user
 
 		def test_returns_none(self, mocker: MockerFixture):
-			m_user = mocker.Mock()
 			m_user_cls = mocker.Mock()
 			m_user_cls.DoesNotExist = ObjectDoesNotExist
 			m_user_cls.objects.get.side_effect = m_user_cls.DoesNotExist

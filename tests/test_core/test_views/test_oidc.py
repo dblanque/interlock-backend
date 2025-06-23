@@ -366,7 +366,8 @@ class TestOidcAuthorizeView(BaseViewTestClass):
 	):
 		m_user: User = request.getfixturevalue(user_fixture)
 		api_client = f_api_client(user=m_user)
-		user_consent = fc_user_consent(user=m_user, client=f_client)
+		# Mock user consent
+		fc_user_consent(user=m_user, client=f_client)
 		f_ldap_connector.connection.entries = [f_ldap_group]
 
 		if m_user.id not in f_application_group.users.values_list(
@@ -431,7 +432,8 @@ class TestOidcAuthorizeView(BaseViewTestClass):
 	):
 		m_user: User = request.getfixturevalue(user_fixture)
 		api_client = f_api_client(user=m_user)
-		user_consent = fc_user_consent(user=m_user, client=f_client)
+		# Mock user consent
+		fc_user_consent(user=m_user, client=f_client)
 
 		app_group_modified = False
 		if m_user.id in f_application_group.users.values_list(

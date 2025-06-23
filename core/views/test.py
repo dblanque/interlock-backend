@@ -26,8 +26,6 @@ class TestViewSet(BaseViewSet):  # pragma: no cover
 	@auth_required
 	@admin_required
 	def list(self, request, pk=None):
-		user: User = request.user
-		data = {}
 		code = 0
 		printSettings = False
 

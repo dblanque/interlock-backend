@@ -45,8 +45,6 @@ class LogsViewSet(BaseViewSet, LogMixin):
 	@admin_required
 	def list(self, request: Request, pk=None):
 		# TODO - Add backend pagination
-		user: User = request.user
-		data = {}
 		code = 0
 		headers = {
 			"id": "id",
@@ -90,7 +88,6 @@ class LogsViewSet(BaseViewSet, LogMixin):
 	@auth_required
 	@admin_required
 	def reset(self, request: Request, pk=None):
-		user: User = request.user
 		data = request.data
 		code = 0
 
@@ -103,7 +100,6 @@ class LogsViewSet(BaseViewSet, LogMixin):
 	@auth_required
 	@admin_required
 	def truncate(self, request: Request, pk=None):
-		user: User = request.user
 		data: dict = request.data
 		code = 0
 

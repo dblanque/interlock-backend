@@ -662,7 +662,6 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 		code_msg = "ok"
 		data: dict = request.data
 		updated_users = 0
-		error_users = 0
 		users: list[int] = self.validated_user_pk_list(data=data)
 		target_status = data.pop(LOCAL_ATTR_ENABLED, None)
 

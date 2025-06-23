@@ -449,7 +449,7 @@ class BaseViewTestClass:
 			raise NotImplementedError("Test class requires an endpoint")
 		# For debugging
 		urlconf = get_urlconf()
-		resolver = get_resolver(urlconf)
+		resolver = get_resolver(urlconf)  # noqa: F841
 		#
 		return reverse(self._endpoint)
 

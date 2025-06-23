@@ -17,6 +17,7 @@ from core.models.user import User
 from core.decorators.login import auth_required, admin_required
 
 ### REST Framework
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
@@ -33,9 +34,7 @@ logger = logging.getLogger(__name__)
 class DebugViewSet(BaseViewSet):  # pragma: no cover
 	@auth_required
 	@admin_required
-	def list(self, request):
-		user: User = request.user
-		data = []
+	def list(self, request: Request):
 		NON_DEBUGGABLE_OPERATIONS = ["BIND", "UNBIND", "COMPARE", "ABANDON"]
 		valid_debug_operations = LDAP_OPERATIONS
 		for op in NON_DEBUGGABLE_OPERATIONS:
@@ -54,8 +53,7 @@ class DebugViewSet(BaseViewSet):  # pragma: no cover
 	@action(detail=False, methods=["post"])
 	@auth_required
 	@admin_required
-	def action(self, request):
-		user: User = request.user
+	def action(self, request: Request):
 		data = request.data
 		code = 0
 		code_msg = "ok"

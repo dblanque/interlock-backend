@@ -233,7 +233,6 @@ class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 		data_settings: dict = request.data["settings"]
 		code = 0
 		settings_preset = None
-		active_preset = None
 
 		if data_preset and LOCAL_ATTR_ID in data_preset:
 			try:

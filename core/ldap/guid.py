@@ -75,7 +75,7 @@ class GUID:
 	def from_str(self, guid_str: str):
 		# Validate the GUID string format
 		try:
-			uuid_obj = uuid.UUID(guid_str)
+			uuid.UUID(guid_str)
 		except ValueError as e:
 			logger.error(f"Invalid GUID string: {guid_str}")
 			raise e

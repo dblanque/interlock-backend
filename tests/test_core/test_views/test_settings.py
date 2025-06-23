@@ -172,9 +172,8 @@ class TestFetch(BaseViewTestClassWithPk):
 			name="test_preset_01", label="Test Preset 01", active=True
 		)
 		self._pk = f_preset_01.id
-		f_preset_02 = fc_ldap_preset(
-			name="test_preset_02", label="Test Preset 02"
-		)
+		# Create entry for a second preset
+		fc_ldap_preset(name="test_preset_02", label="Test Preset 02")
 
 		response: Response = admin_user_client.get(self.endpoint)
 		response_data: dict = response.data

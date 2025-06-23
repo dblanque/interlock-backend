@@ -197,6 +197,7 @@ class TestLogMixin:
 		)
 
 		# Verify no rotation occurred
+		m_order.assert_not_called()
 		m_filter.assert_not_called()
 
 	def test_log_atomic_transaction(

@@ -123,6 +123,7 @@ class TestUtils:
 	):
 		result = f_domain_mixin.increment_soa_serial(f_mock_soa_record, 101)
 		f_mock_soa_record.update.assert_called_once()
+		assert result == f_mock_soa_record.connection.result
 
 	@staticmethod
 	@pytest.mark.parametrize(
