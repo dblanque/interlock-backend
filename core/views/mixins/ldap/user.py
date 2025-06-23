@@ -926,6 +926,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 		index_map: dict[str],
 		path: str = None,
 		placeholder_password: str = None,
+		skipped_users: list[str] = None,
 	) -> tuple[list[str], list[dict]]:
 		"""Create LDAP Users from CSV Rows
 
@@ -978,6 +979,11 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 				serializer.validated_data
 			)
 
+			# Skip if it exists
+			if skipped_users and isinstance(skipped_users, (list, set, tuple)):
+				if cleaned_data[LOCAL_ATTR_USERNAME] in skipped_users:
+					continue
+
 			# Create User Instance
 			try:
 				user_dn = self.ldap_user_insert(data=cleaned_data)
@@ -1027,6 +1033,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 		user_dicts: list[dict],
 		path: str = None,
 		placeholder_password: str = None,
+		skipped_users: list[str] = None,
 	) -> tuple[list[str], list[dict]]:
 		"""Create LDAP Users from Dictionaries
 
@@ -1065,9 +1072,16 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 					}
 				)
 				continue
+
+			# Cleanup data
 			cleaned_data = self.cleanup_empty_str_values(
 				serializer.validated_data
 			)
+
+			# Skip if it exists
+			if skipped_users and isinstance(skipped_users, (list, set, tuple)):
+				if cleaned_data[LOCAL_ATTR_USERNAME] in skipped_users:
+					continue
 
 			# Create User
 			try:

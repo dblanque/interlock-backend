@@ -520,6 +520,7 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 					index_map=index_map,
 					path=create_path,
 					placeholder_password=data.pop("placeholder_password", None),
+					skipped_users=skipped_users,
 				)
 		elif user_dicts:  # Insert from list of dicts
 			skipped_users = self.bulk_check_users(
@@ -540,6 +541,7 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 					user_dicts=user_dicts,
 					path=create_path,
 					placeholder_password=data.pop("placeholder_password", None),
+					skipped_users=skipped_users,
 				)
 
 		return Response(
@@ -808,7 +810,7 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 			self.ldap_set_password(
 				user_dn=ldap_user.distinguished_name,
 				user_pwd_new=data[LOCAL_ATTR_PASSWORD],
-				user_pwd_old=aes_decrypt(*user.encrypted_password),
+				set_by_admin=True,
 			)
 
 		django_user: User = None
@@ -950,11 +952,12 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 				user_data = self.ldap_user_fetch(user_search=user_search)
 				_keys = self.filter_attr_builder(
 					RuntimeSettings
-				).get_fetch_me_attrs()
+				).get_fetch_me_attrs() + [LOCAL_ATTR_CAN_CHANGE_PWD]
 				user_data = {key: user_data.get(key, "") for key in _keys}
 
-		if LOCAL_ATTR_ID in user_data:
-			del user_data[LOCAL_ATTR_ID]
+		for k in (LOCAL_ATTR_ID, LOCAL_ATTR_UAC):
+			if k in user_data:
+				del user_data[k]
 		return Response(
 			data={"code": code, "code_msg": code_msg, "data": user_data}
 		)
