@@ -4,5 +4,6 @@
 	],
 	"python.testing.unittestEnabled": false,
 	"python.testing.pytestEnabled": true,
-	"python.testing.unittestArgs": ["-s"],
+	// For printing stdout
+	// "python.testing.unittestArgs": ["-s"],
 }
