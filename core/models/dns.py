@@ -720,7 +720,6 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 					DNS_RPC_RECORD_AAAA,
 					DNS_COUNT_NAME,
 					DNS_RPC_NAME,
-					DNS_COUNT_NAME,
 					DNS_RPC_RECORD_SOA,
 					DNS_RPC_RECORD_SRV,
 				]
@@ -756,12 +755,11 @@ class LDAPRecord(LDAPDNS, LDAPRecordMixin):
 						== "DNS_RPC_RECORD_NAME_PREFERENCE"
 					):
 						if field == "wPreference":
-							record_data.insert_field_to_struct(
-								fieldName=field, fieldStructVal=">H"
-							)
-							record_data.setCastField(field, value=values[field])
+							record_data[field] = int(values[field])
 						if field == "nameExchange":
-							record_data.toCountName(values[field])
+							_mx_data = DNS_COUNT_NAME()
+							_mx_data.toCountName(values[field])
+							record_data[field] = _mx_data
 
 					elif self.mapping["class"] == "DNS_RPC_RECORD_SOA":
 						if field in INT_FIELDS:
