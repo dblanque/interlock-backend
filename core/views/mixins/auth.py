@@ -68,7 +68,19 @@ class RemoveTokenResponse:
 		request: HttpRequest,
 		remove_refresh: bool = False,
 		bad_login_count: bool = False,
-	):
+	) -> Response:
+		"""Response used to Remove a client's JWT.
+
+		Args:
+			request (HttpRequest): The HTTP Request
+			remove_refresh (bool, optional): Whether to remove the client's
+				Refresh Token or just the Access Token. Defaults to False.
+			bad_login_count (bool, optional): Whether to set the bad login
+				count cookie on the client. Defaults to False.
+
+		Returns:
+			Response: Standard rest_framework Response type.
+		"""
 		response = Response(status=status.HTTP_401_UNAUTHORIZED)
 		response.set_cookie(
 			key=JWT_SETTINGS["AUTH_COOKIE_NAME"],
