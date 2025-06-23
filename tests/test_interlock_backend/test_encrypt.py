@@ -86,7 +86,7 @@ def test_import_rsa_key_when_exists(mocker):
 
 
 def test_import_or_create_rsa_key_when_not_exists(mocker):
-	m_get: MockType = mocker.patch(
+	mocker.patch(
 		"core.models.interlock_settings.InterlockSetting.objects.get",
 		return_value=None,
 		side_effect=InterlockSetting.DoesNotExist,
