@@ -512,7 +512,7 @@ class LDAPConnector(object):
 			self.connection.rebind(
 				user=user_dn, password=password, read_server_info=True
 			)
-		except LDAPException as ex:
+		except LDAPException:
 			logger.error(f"Rebind failed for user {str(user_dn)}.")
 			return None
 		return self.connection.result

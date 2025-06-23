@@ -905,7 +905,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 
 		try:
 			self.ldap_connection.delete(user_entry.entry_dn)
-		except Exception as e:
+		except Exception:
 			raise exc_base.CoreException(
 				data={"ldap_response": self.ldap_connection.result}
 			)

@@ -101,7 +101,7 @@ class LDAPDomainViewSet(BaseViewSet, DomainViewMixin):
 			if target_zone:
 				try:
 					domain_validator(target_zone)
-				except Exception as e:
+				except Exception:
 					raise exc_dns.DNSFieldValidatorFailed(
 						data={"dnsZone": target_zone}
 					)
