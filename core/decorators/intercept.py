@@ -45,21 +45,23 @@ def request_intercept(func=None):
 		return decorator
 	return decorator(func)
 
+def is_ldap_backend_enabled() -> bool:
+	"""Gets the LDAP Back-end enabled state."""
+	try:
+		ldap_setting = InterlockSetting.objects.get(
+			name=INTERLOCK_SETTING_ENABLE_LDAP
+		)
+		return ldap_setting.value
+	except ObjectDoesNotExist:
+		# Handle missing setting (not properly initialized)
+		pass
+	return False
 
 def ldap_backend_intercept(func=None):
 	def decorator(view_func):
 		@wraps(view_func)
 		def _wrapped(self, request: Request, *args, **kwargs):
-			try:
-				ldap_setting = InterlockSetting.objects.get(
-					name=INTERLOCK_SETTING_ENABLE_LDAP
-				)
-				ldap_enabled = ldap_setting.value
-			except ObjectDoesNotExist:
-				# Handle missing setting (now properly initialized)
-				ldap_enabled = False
-
-			if not ldap_enabled:
+			if not is_ldap_backend_enabled():
 				raise LDAPBackendDisabled()
 			return view_func(self, request, *args, **kwargs)
 
