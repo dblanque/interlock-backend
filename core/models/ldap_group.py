@@ -207,15 +207,9 @@ class LDAPGroup(LDAPObject):
 		members_to_add: list | set = None,
 		members_to_remove: list | set = None,
 	):
-		if not hasattr(self.entry, LDAP_ATTR_GROUP_MEMBERS):
-			logger.error(
-				"Missing Attribute required for "
-				"perform_member_operations call (%s)",
-				LDAP_ATTR_GROUP_MEMBERS,
-			)
-			return
+		# Set members to check
+		members = getldapattrvalue(self.entry, LDAP_ATTR_GROUP_MEMBERS, [])
 
-		members = getldapattrvalue(self.entry, LDAP_ATTR_GROUP_MEMBERS)
 		# Clean-up DNs to add
 		ignore_add = set()
 		if members_to_add:
