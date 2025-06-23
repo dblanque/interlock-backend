@@ -28,9 +28,10 @@ from core.constants.attrs.local import (
 	LOCAL_ATTR_USERNAME,
 	LOCAL_ATTR_LAST_LOGIN,
 )
-from core.models.user import User
+from core.models.user import User, USER_TYPE_LDAP
 from core.serializers.token import TokenObtainPairSerializer
 from core.views.mixins.auth import RemoveTokenResponse, DATE_FMT_COOKIE
+from core.decorators.intercept import is_ldap_backend_enabled
 
 ### Others
 import logging
@@ -64,9 +65,13 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 		tokens = {}
 		for k in ["access", "refresh"]:
 			tokens[k] = validated_data.pop(k)
+
+		# Get User Instance
 		user: User = User.objects.get(
 			username=request.data.get(LOCAL_ATTR_USERNAME)
 		)
+		if user.user_type == USER_TYPE_LDAP and not is_ldap_backend_enabled():
+			return RemoveTokenResponse(request, remove_refresh=True)
 		user.last_login = tz_aware_now()
 		user.save(update_fields=[LOCAL_ATTR_LAST_LOGIN])
 
