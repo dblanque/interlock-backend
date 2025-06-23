@@ -53,6 +53,9 @@
 * Add Application Security Group Bulk actions
 
 ## Nice would-haves
+* Generate New Recovery Codes
+* Directory Tree Bulk-Move
+* Directory Tree Recursive Delete.
 * Make DBLogMixin logging use a model reference and primary key for local data models.
 * Add LDAP_DEFAULT_USER_CLASSES, LDAP_DEFAULT_GROUP_CLASSES to ldap settings.
 * Add TEST Record Resolution btn to frontend dns view.
