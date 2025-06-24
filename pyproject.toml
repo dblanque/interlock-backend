@@ -1,6 +1,6 @@
 [project]
 name = "interlock-backend"
-version = "0.1.0"
+version = "0.1.0" # This gets replaced by the deb pkg builder
 description = "Identity Provider and LDAP Manager Backend"
 authors = [
     {name = "Dylan Blanque",email = "dylan.blanque@gmail.com"}
