@@ -13,10 +13,10 @@ RestartSec=2
 User=root
 # ---------------------------------------------------------------------------- #
 # ! Uncomment line below to run Back-end server with SSL (Force HTTPS)
-ExecStart=/var/lib/interlock/interlock_backend/bin/python ./manage.py runsslserver --certificate /var/lib/interlock/sslcerts/fullchain.pem --key /var/lib/interlock/sslcerts/privkey.pem
+ExecStart=/var/lib/interlock/interlock_backend/venv/bin/python ./manage.py runsslserver --certificate /var/lib/interlock/sslcerts/fullchain.pem --key /var/lib/interlock/sslcerts/privkey.pem
 # ---------------------------------------------------------------------------- #
 # ! Uncomment line below to run Back-end server without SSL (HTTP)
-#ExecStart=/var/lib/interlock/interlock_backend/bin/python ./manage.py runserver
+#ExecStart=/var/lib/interlock/interlock_backend/venv/bin/python ./manage.py runserver
 
 [Install]
 WantedBy=multi-user.target
