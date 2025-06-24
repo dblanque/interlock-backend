@@ -79,7 +79,6 @@ class TestList:
 		use_tls: bool,
 		use_ssl: bool,
 	):
-
 		m_server = mocker.Mock(name="m_server")
 		m_server.name = (
 			"ldaps://127.0.0.1:636"
