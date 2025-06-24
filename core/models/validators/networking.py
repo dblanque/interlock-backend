@@ -6,7 +6,7 @@
 # Module: core.models.validators.networking
 # Contains networking related validators.
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 from core.utils.network import ipv6_to_integer
 import socket
 from rest_framework.serializers import ValidationError

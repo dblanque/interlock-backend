@@ -6,7 +6,7 @@
 # Module: core.config.runtime
 # Contains the RuntimeSettingsSingleton global instance.
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 ################################################################################
 

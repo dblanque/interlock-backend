@@ -6,7 +6,7 @@
 # Module: core.models.settings.base
 # Contains the base model for database driven setting overrides.
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 from core.models.base import BaseModel
 from django.utils.translation import gettext_lazy as _
 from django.db import models

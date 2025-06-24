@@ -6,7 +6,7 @@
 # Module: core.serializers.token
 # Contains token/auth serializer classes and utilities
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 from rest_framework import serializers as serializers
 from rest_framework_simplejwt import serializers as jwt_serializers
 from rest_framework_simplejwt.tokens import RefreshToken

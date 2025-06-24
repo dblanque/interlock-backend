@@ -6,7 +6,7 @@
 # Module: core.decorators.login
 # Contains Login and Authentication related decorators
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 from core.models.user import User
 from rest_framework.request import Request
 from core.exceptions.base import PermissionDenied

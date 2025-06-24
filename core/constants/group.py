@@ -6,7 +6,7 @@
 # Module: core.constants.group
 # Contains the attribute builder class for LDAP Groups
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 from core.constants.attrs import *
 from .search_attr_builder import SearchAttrBuilder
 ################################################################################

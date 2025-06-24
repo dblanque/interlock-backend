@@ -6,7 +6,7 @@
 # Module: core.decorators.intercept
 # Contains Request interception decorators for DEVELOPMENT
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 from core.models.user import User
 from core.models.interlock_settings import (
 	InterlockSetting,

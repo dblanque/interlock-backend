@@ -6,7 +6,7 @@
 # Module: core.serializers.ldap_settings
 # Contains the serializer classes for LDAPPreset and LDAPSetting models
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 from rest_framework import serializers
 from django.core.validators import RegexValidator
 from core.models.ldap_settings import (

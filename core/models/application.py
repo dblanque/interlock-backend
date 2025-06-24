@@ -6,7 +6,7 @@
 # Module: core.models.application
 # Contains the Application Model.
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 from core.models.base import BaseModel
 from core.models.user import User
 from django.db import models

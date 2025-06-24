@@ -6,7 +6,7 @@
 # Module: core.constants.dns
 # Contains LDAP DNS Related Constants
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 from core.constants.attrs import (
 	LDAP_ATTR_DN,
 	LDAP_ATTR_FULL_NAME,

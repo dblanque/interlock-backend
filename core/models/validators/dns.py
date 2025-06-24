@@ -6,7 +6,7 @@
 # Module: core.models.validators.dns
 # Contains validators for DNS related fields.
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 import re
 from rest_framework.serializers import ValidationError
 ################################################################################

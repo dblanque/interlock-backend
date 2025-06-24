@@ -6,7 +6,7 @@
 # Module: core.serializers.ldap
 # Contains LDAP Serializer validator functions and REGEXs
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 from rest_framework import serializers
 from rest_framework.serializers import ValidationError
 import re

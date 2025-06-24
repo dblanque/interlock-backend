@@ -6,7 +6,7 @@
 # Module: interlock_backend.server_timezone
 # Contains utilities to fetch local timezone from the server
 
-# ---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 import os
 import pytz
 import subprocess
