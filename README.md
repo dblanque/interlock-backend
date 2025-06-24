@@ -1,9 +1,39 @@
 # Interlock Documentation
 
-[Interlock Website](https://interlock.brconsulting.info/)
+# What is Interlock?
+
+Interlock is an **Open-Source Project** powered by *VueJS/Vuetify* and
+*Django Rest Framework* made for Organization Credentials and Authorization Management,
+and can serve as an SSO Authorizer or Identity Provider (IdP).
+
+[Click here to visit the official Website for Interlock](https://interlock.brconsulting.info/)
 
 For information and official Interlock Documentation go to:
 [BR Consulting S.R.L. Documentation - Interlock](https://docs.brconsulting.info/sphinx/en/docs/Development/Interlock/00-ilck-overview.html)
+
+It also sports several bonus features such as being able to manage an LDAP
+Server's *-or Server Pool's-* **DNS Zones**, **TOTP**,
+**API-fying** LDAP Servers, and more.
+
+It supports several main use-cases:
+* Stand-alone (Credentials are saved in a local database)
+	* User Management.
+	* SSO Application Management.
+	* SSO Application Groups Management.
+	* Authentication with TOTP.
+* LDAP Back-end
+	* Samba LDAP Back-end.
+	* Microsoft Active Directory Services Back-end.
+
+Both LDAP Back-ends support the following features.
+* All of the Stand-alone mode features.
+* LDAP User CRUD, Group Membership, and Permissions Management.
+* LDAP Group CRUD and Members Management.
+* DNS Zones Management.
+* Directory Tree Management
+	* Organizational Units CRUD.
+	* Moving LDAP Objects.
+	* Renaming LDAP Objects.
 
 ### Would you like to support me?
 <a href='https://ko-fi.com/E1E2YQ4TG' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi2.png?v=3' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
@@ -50,14 +80,14 @@ unset $version
 
 echo "
 DATABASES = {
-    \"default\": {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'interlockdb',
-        'USER': 'interlockadmin',
-        'PASSWORD': 'password',
-        'HOST': '127.0.0.1',  # Or an IP Address that your DB is hosted on
-        'PORT': '5432',
-    }
+	\"default\": {
+		'ENGINE': 'django.db.backends.postgresql',
+		'NAME': 'interlockdb',
+		'USER': 'interlockadmin',
+		'PASSWORD': 'password',
+		'HOST': '127.0.0.1',  # Or an IP Address that your DB is hosted on
+		'PORT': '5432',
+	}
 }" >> /opt/interlock-backend/interlock_backend/local_settings.py
 ```
 
@@ -75,25 +105,37 @@ Now we must install the requirements in a virtual environment with pip.
 ```bash
 # Create the Virtual Environment
 cd /opt/interlock-backend/
-python3 -m venv . --upgrade
+python3 -m venv venv --upgrade
 
 # Activate it and Install the Requirements
-source bin/activate
-pip3 install -r requirements.txt
+source venv/bin/activate
+pip3 install poetry
+poetry install
 
 # Make migrations and apply them to DB
 python3 ./manage.py makemigrations
 python3 ./manage.py migrate
+python3 ./manage.py creatersakey
 
-# Create Default Superuser
-python3 ./manage.py shell < create_default_superuser.py
-
-# Optionally: Create Superuser Manually
+# OPTIONAL
+## Create Default Superuser
+## (It will auto-create on first login if not done like this)
+### With django script
+python3 ./manage.py shell < install/create_default_superuser.py
+### Manually
 python3 ./manage.py createsuperuser
+
+## Create RSA Encryption Key Pair for LDAP Connections 
+## (It will auto-create on first login if not done like this)
+python3 ./manage.py shell < install/create_rsa_key.py
+
+## Create RSA Encryption Key Pair for OIDC
+## (It will auto-create on first login if not done like this)
+python manage.py creatersakey
 ```
 # PROJECT LICENSE
 
-*Interlock Copyright (C) 2022-2024 | Dylan Blanqué, BR Consulting S.R.L.*
+*Interlock Copyright (C) 2022-2025 | Dylan Blanqué, BR Consulting S.R.L.*
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as published by

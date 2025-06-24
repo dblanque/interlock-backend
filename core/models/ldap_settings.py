@@ -6,71 +6,87 @@
 # Module: core.models.ldap_settings
 # Description:	Contains default LDAP Setting definitions
 #
-#---------------------------------- IMPORTS -----------------------------------#
-from .base import BaseModel
+# ---------------------------------- IMPORTS --------------------------------- #
 from django.db import models
-from .validators.ldap_uri import validate_ldap_uri
+from core.models.validators.ldap import ldap_uri_validator
 from django.utils.translation import gettext_lazy as _
-from django.contrib.postgres.fields import ArrayField
+from core.models.setting.base import (
+	BaseSetting,
+	BaseSettingsPreset,
+	add_fields_from_dict,
+)
+from core.models.types.settings import (
+	LDAP_SETTING_FIELDS,
+	TYPE_STRING,
+	TYPE_BOOL,
+	TYPE_JSON,
+	TYPE_AES_ENCRYPT,
+	TYPE_INTEGER,
+	TYPE_LDAP_URI,
+	TYPE_LDAP_TLS_VERSION,
+)
+from core.constants.settings import (
+	K_LDAP_AUTH_URL,
+	K_LDAP_DOMAIN,
+	K_LDAP_AUTH_USE_SSL,
+	K_LDAP_AUTH_USE_TLS,
+	K_LDAP_AUTH_TLS_VERSION,
+	K_LDAP_AUTH_SEARCH_BASE,
+	K_LDAP_DNS_LEGACY,
+	K_LDAP_AUTH_OBJECT_CLASS,
+	K_EXCLUDE_COMPUTER_ACCOUNTS,
+	K_LDAP_FIELD_MAP,
+	K_LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN,
+	K_LDAP_AUTH_CONNECTION_USER_DN,
+	K_LDAP_AUTH_CONNECTION_USERNAME,
+	K_LDAP_AUTH_CONNECTION_PASSWORD,
+	K_LDAP_AUTH_CONNECT_TIMEOUT,
+	K_LDAP_AUTH_RECEIVE_TIMEOUT,
+	K_ADMIN_GROUP_TO_SEARCH,
+)
 ################################################################################
 
-LDAP_TYPE_STRING = "STRING"
-LDAP_TYPE_BOOL = "BOOL"
-LDAP_TYPE_JSON = "JSON"
-LDAP_TYPE_INTEGER = "INTEGER"
-LDAP_TYPE_PASSWORD = "PASSWORD"
-LDAP_AUTH_TLS_VERSION = "TLS"
-LDAP_TYPE_LDAP_URI = "LDAP_URI"
-LDAP_SETTING_TYPES = (
+LDAP_SETTING_TABLE = "core_ldap_setting"
+LDAP_PRESET_TABLE = "core_ldap_preset"
+LDAP_TLS_TYPES = (
 	# Identifier, Pretty Name
-	(LDAP_TYPE_STRING, "String"),
-	(LDAP_TYPE_BOOL, "Boolean"),
-	(LDAP_TYPE_JSON, "JSON Object"),
-	(LDAP_TYPE_PASSWORD, "Password"),
-	(LDAP_TYPE_INTEGER, "Integer"),
-	(LDAP_TYPE_LDAP_URI, "LDAP URI"),
-	(LDAP_AUTH_TLS_VERSION, "LDAP TLS Version")
+	("PROTOCOL_TLSv1", "TLSv1"),
+	("PROTOCOL_TLSv1_1", "TLSv1_1"),
+	("PROTOCOL_TLSv1_2", "TLSv1_2"),
+	("PROTOCOL_TLSv1_3", "TLSv1_3"),
+	("PROTOCOL_TLS", "TLS"),
+	("PROTOCOL_TLS_CLIENT", "TLS_CLIENT"),
 )
-LDAP_SETTING_TYPES_LIST = [x[0] for x in LDAP_SETTING_TYPES]
 
 # ! Only add non-constant values with DB Save-able overrides here.
 # ! You also have to add the settings to the following files:
 # core.models.ldap_settings			<------------ You're Here
-# core.models.ldap_settings_db
+# core.models.ldap_settings_runtime
 # interlock_backend.ldap.defaults
-CMAPS = {
-	"LDAP_AUTH_URL": LDAP_TYPE_LDAP_URI,
-	"LDAP_DOMAIN": LDAP_TYPE_STRING,
-	"LDAP_LOG_MAX": LDAP_TYPE_INTEGER,
-	"LDAP_LOG_READ": LDAP_TYPE_BOOL,
-	"LDAP_LOG_CREATE": LDAP_TYPE_BOOL,
-	"LDAP_LOG_UPDATE": LDAP_TYPE_BOOL,
-	"LDAP_LOG_DELETE": LDAP_TYPE_BOOL,
-	"LDAP_LOG_OPEN_CONNECTION": LDAP_TYPE_BOOL,
-	"LDAP_LOG_CLOSE_CONNECTION": LDAP_TYPE_BOOL,
-	"LDAP_LOG_LOGIN": LDAP_TYPE_BOOL,
-	"LDAP_LOG_LOGOUT": LDAP_TYPE_BOOL,
-	"LDAP_AUTH_USE_SSL": LDAP_TYPE_BOOL, 
-	"LDAP_AUTH_USE_TLS": LDAP_TYPE_BOOL, 
-	"LDAP_AUTH_TLS_VERSION": LDAP_AUTH_TLS_VERSION,
-	"LDAP_AUTH_SEARCH_BASE":LDAP_TYPE_STRING,
-	"LDAP_DNS_LEGACY": LDAP_TYPE_BOOL,
-	"LDAP_AUTH_OBJECT_CLASS":LDAP_TYPE_STRING,
-	"EXCLUDE_COMPUTER_ACCOUNTS": LDAP_TYPE_BOOL,
-	"LDAP_AUTH_USER_FIELDS": LDAP_TYPE_JSON,
-	"LDAP_DIRTREE_OU_FILTER": LDAP_TYPE_JSON,
-	"LDAP_DIRTREE_CN_FILTER": LDAP_TYPE_JSON,
-	"LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN": LDAP_TYPE_STRING,
-	"LDAP_AUTH_CONNECTION_USER_DN":LDAP_TYPE_STRING,
-	"LDAP_AUTH_CONNECTION_USERNAME":LDAP_TYPE_STRING,
-	"LDAP_AUTH_CONNECTION_PASSWORD": LDAP_TYPE_PASSWORD,
-	"LDAP_AUTH_CONNECT_TIMEOUT": LDAP_TYPE_INTEGER,
-	"LDAP_AUTH_RECEIVE_TIMEOUT": LDAP_TYPE_INTEGER,
-	"ADMIN_GROUP_TO_SEARCH": LDAP_TYPE_STRING
+LDAP_SETTING_MAP = {
+	K_LDAP_AUTH_URL: TYPE_LDAP_URI,
+	K_LDAP_DOMAIN: TYPE_STRING,
+	K_LDAP_AUTH_USE_SSL: TYPE_BOOL,
+	K_LDAP_AUTH_USE_TLS: TYPE_BOOL,
+	K_LDAP_AUTH_TLS_VERSION: TYPE_LDAP_TLS_VERSION,
+	K_LDAP_AUTH_SEARCH_BASE: TYPE_STRING,
+	K_LDAP_DNS_LEGACY: TYPE_BOOL,
+	K_LDAP_AUTH_OBJECT_CLASS: TYPE_STRING,
+	K_EXCLUDE_COMPUTER_ACCOUNTS: TYPE_BOOL,
+	K_LDAP_FIELD_MAP: TYPE_JSON,
+	K_LDAP_AUTH_ACTIVE_DIRECTORY_DOMAIN: TYPE_STRING,
+	K_LDAP_AUTH_CONNECTION_USER_DN: TYPE_STRING,
+	K_LDAP_AUTH_CONNECTION_USERNAME: TYPE_STRING,
+	K_LDAP_AUTH_CONNECTION_PASSWORD: TYPE_AES_ENCRYPT,
+	K_LDAP_AUTH_CONNECT_TIMEOUT: TYPE_INTEGER,
+	K_LDAP_AUTH_RECEIVE_TIMEOUT: TYPE_INTEGER,
+	K_ADMIN_GROUP_TO_SEARCH: TYPE_STRING,
 }
+VALIDATORS = {TYPE_LDAP_URI: [ldap_uri_validator]}
+FIELD_ARGS = {TYPE_LDAP_URI: [models.CharField(max_length=255)]}
 
 LDAP_SETTINGS_CHOICES_MAP = {
-	LDAP_AUTH_TLS_VERSION:[
+	TYPE_LDAP_TLS_VERSION: [
 		"PROTOCOL_TLSv1",
 		"PROTOCOL_TLSv1_1",
 		"PROTOCOL_TLSv1_2",
@@ -79,36 +95,57 @@ LDAP_SETTINGS_CHOICES_MAP = {
 		"PROTOCOL_TLS_CLIENT",
 	]
 }
+LDAP_SETTING_NAME_CHOICES = tuple([(k, k) for k, t in LDAP_SETTING_MAP.items()])
+LDAP_SETTING_TYPE_CHOICES = []
+for key in LDAP_SETTING_FIELDS.keys():
+	LDAP_SETTING_TYPE_CHOICES.append(
+		(
+			key,
+			key.upper(),
+		)
+	)
+LDAP_SETTING_TYPE_CHOICES = tuple(LDAP_SETTING_TYPE_CHOICES)
 
-class LDAPPreset(BaseModel):
+
+class LDAPPreset(BaseSettingsPreset):
 	id = models.BigAutoField(verbose_name=_("id"), primary_key=True)
-	name = models.CharField(verbose_name=_("name"), unique=True, null=False, blank=False, max_length=128)
-	label = models.CharField(verbose_name=_("label"), blank=False, null=False, max_length=64)
-	active = models.BooleanField(verbose_name=_("active"), unique=True, null=True)
-
-class BaseLDAPSetting(BaseModel):
-	id = models.BigAutoField(verbose_name=_("id"), primary_key=True)
-	name = models.CharField(verbose_name=_("name"), choices=[(k, f"lds_{k.lower()}") for k in CMAPS.keys()], unique=False, null=False, blank=False, max_length=128)
-	type = models.CharField(verbose_name=_("type"), choices=LDAP_SETTING_TYPES, null=False)
-	preset = models.ForeignKey(LDAPPreset, verbose_name=_("ldap_preset"), on_delete=models.CASCADE)
-
-	class Meta:
-		abstract = True
-
-class LDAPSetting(BaseLDAPSetting):
-	v_string = models.CharField(verbose_name=_("param_v_string"), null=True, blank=True, max_length=128)
-	v_password = models.CharField(verbose_name=_("param_v_password"), null=True, blank=True)
-	v_bool = models.BooleanField(verbose_name=_("param_v_bool"), null=True, blank=True)
-	v_json = models.JSONField(verbose_name=_("param_v_json"), null=True, blank=True)
-	v_integer = models.IntegerField(verbose_name=_("param_v_integer"), null=True, blank=True)
-	v_tls = models.CharField(verbose_name=_("param_v_tls"), null=True, blank=True)
-	v_ldap_uri = ArrayField(
-		models.CharField(_("param_v_ldap_uri"), max_length=255),
-		verbose_name=_("param_v_ldap_uri_list"),
-		null=True,
-		blank=True,
-		validators=[validate_ldap_uri]
+	name = models.CharField(
+		verbose_name=_("name"),
+		unique=True,
+		null=False,
+		blank=False,
+		max_length=128,
+	)
+	label = models.CharField(
+		verbose_name=_("label"), blank=False, null=False, max_length=64
+	)
+	active = models.BooleanField(
+		verbose_name=_("active"), unique=True, null=True
 	)
 
-	def __str__(self):
-		return getattr(self, f"v_{self.type.lower()}", None)
+	class Meta:
+		db_table = LDAP_PRESET_TABLE
+
+
+@add_fields_from_dict(
+	LDAP_SETTING_FIELDS, validators_dict=VALIDATORS, args_pass=FIELD_ARGS
+)
+class LDAPSetting(BaseSetting):
+	setting_fields = LDAP_SETTING_FIELDS
+	name = models.CharField(
+		verbose_name=_("name"),
+		choices=LDAP_SETTING_NAME_CHOICES,
+		unique=False,
+		null=False,
+		blank=False,
+		max_length=128,
+	)
+	preset = models.ForeignKey(
+		LDAPPreset, verbose_name=_("settings_preset"), on_delete=models.CASCADE
+	)
+	type = models.CharField(
+		verbose_name=_("type"), choices=LDAP_SETTING_TYPE_CHOICES, null=False
+	)
+
+	class Meta:
+		db_table = LDAP_SETTING_TABLE

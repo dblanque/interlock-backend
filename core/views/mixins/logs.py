@@ -1,37 +1,129 @@
+################################################################################
+#################### INTERLOCK IS LICENSED UNDER GNU AGPLv3 ####################
+################## ORIGINAL PROJECT CREATED BY DYLAN BLANQUÉ ###################
+########################## AND BR CONSULTING S.R.L. ############################
+################################################################################
+# Module: core.views.mixins.logs
+# Contains the Mixin for Log related operations
+
+# ---------------------------------- IMPORTS --------------------------------- #
 from rest_framework import viewsets
-from core.models.ldap_settings_db import RunningSettings
+from core.models.interlock_settings import (
+	InterlockSetting,
+	INTERLOCK_SETTINGS_LOG_MAX,
+	INTERLOCK_SETTING_MAP,
+)
+from core.models.user import User
 from core.models.log import Log
+from django.db import transaction
+from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Count, Max
+import logging
+from core.models.choices.log import (
+	ACTION_CHOICES,
+	LOG_ACTION_MOVE,
+	LOG_ACTION_RENAME,
+)
+
+#################################################################################
+logger = logging.getLogger()
+
+
 class LogMixin(viewsets.ViewSetMixin):
-	def log(self, **kwargs):
-		# This function rotates logs based on a Maximum Limit Setting
-		logLimit = RunningSettings.LDAP_LOG_MAX
+	def log(
+		self,
+		user: int | User,
+		operation_type: str,
+		log_target_class: str,
+		log_target: str = None,
+		message: str = None,
+		**kwargs,
+	):
+		"""Maintains log rotation while ensuring atomic operations."""
+		if not any(
+			isinstance(user, t)
+			for t in (
+				int,
+				User,
+			)
+		):
+			raise TypeError("user must be of type int | User")
 
-		# Truncate Logs if necessary
-		if Log.objects.count() > logLimit:
-			Log.objects.filter(id__gt=logLimit).delete()
-
-		unrotatedLogCount = Log.objects.filter(rotated=False).count()
-		lastUnrotatedLog = Log.objects.filter(rotated=False).last()
-		# If there's no last unrotated log, set to 0 to avoid conditional issues
-		if lastUnrotatedLog is None:
-			lastUnrotatedLogId = 0
+		LOG_OPTION = None
+		if operation_type.upper() in (LOG_ACTION_MOVE, LOG_ACTION_RENAME):
+			LOG_OPTION = "ILCK_LOG_UPDATE"
 		else:
-			lastUnrotatedLogId = lastUnrotatedLog.id
+			LOG_OPTION = f"ILCK_LOG_{operation_type}"
+		if LOG_OPTION not in list(INTERLOCK_SETTING_MAP.keys()):
+			logger.warning(
+				"%s log option does not exist in InterlockSettings Model.",
+				LOG_OPTION,
+			)
+			return None
+		try:
+			log_enabled_for_opt = InterlockSetting.objects.get(name=LOG_OPTION)
+			if not log_enabled_for_opt.value:
+				return None
+		except ObjectDoesNotExist:
+			return None
 
-		# If there are no unrotated logs or the range is exceeded, restart sequence
-		if unrotatedLogCount < 1 or lastUnrotatedLogId >= logLimit:
-			Log.objects.all().update(rotated=True)
-			logId = 1
+		if not any(
+			operation_type.lower() == v.lower() for v, m in ACTION_CHOICES
+		):
+			logger.warning(
+				"%s log operation does not exist in Action Choices for Model.",
+				operation_type,
+			)
+			return None
+
+		log_limit = None
+		try:
+			log_limit = InterlockSetting.objects.get(
+				name=INTERLOCK_SETTINGS_LOG_MAX,
+			).value
+			log_limit = int(log_limit)
+		except (ObjectDoesNotExist, ValueError):
+			log_limit = 100
+
+		if isinstance(user, int):
+			kwargs["user_id"] = user
 		else:
-			logId = Log.objects.filter(rotated=False).last().id + 1
+			kwargs["user"] = user
 
-		logWithCurrentId = Log.objects.filter(id=logId)
-		if logWithCurrentId.count() > 0:
-			logWithCurrentId.delete()
-			logAction = Log(id=logId, rotated=False, **kwargs)
-			logAction.save()
-		else:
-			logAction = Log(id=logId, rotated=False, **kwargs)
-			logAction.save()
+		with transaction.atomic():
+			# Get aggregated log information in a single query
+			log_info = Log.objects.aggregate(
+				total_logs=Count("id"), max_id=Max("id")
+			)
 
-		return logAction.id
+			# Rotate logs if necessary using bulk operations
+			if log_info["total_logs"] >= log_limit:
+				self._rotate_logs(log_limit, log_info["total_logs"])
+
+			# Determine next log ID using database-generated sequence
+			log_instance = Log(
+				operation_type=operation_type,
+				log_target_class=log_target_class,
+				log_target=log_target,
+				message=message,
+				**kwargs,
+			)
+			log_instance.save(force_insert=True)
+
+			return log_instance.id
+
+	def _rotate_logs(self, log_limit, current_count):
+		"""Handle log rotation using bulk ops."""
+
+		# Calculate how many logs to remove
+		remove_count = current_count - log_limit + 1
+
+		# Get IDs of oldest logs to remove
+		old_log_ids = (
+			Log.objects.order_by("id").values_list("id", flat=True)[
+				: remove_count + 1
+			]  # Sum 1 to index
+		)
+
+		# Bulk delete old logs
+		Log.objects.filter(id__in=old_log_ids).delete()

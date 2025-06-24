@@ -6,7 +6,7 @@
 # Module: core.views.settings
 # Contains the ViewSet for System Setting related operations
 #
-#---------------------------------- IMPORTS -----------------------------------#
+# ---------------------------------- IMPORTS --------------------------------- #
 ### Exceptions
 from core.exceptions.ldap import ConnectionTestFailed
 from core.exceptions import (
@@ -15,374 +15,379 @@ from core.exceptions import (
 )
 
 ### Models
+from core.models.types.settings import TYPE_BOOL, TYPE_STRING
 from core.views.mixins.logs import LogMixin
+from core.models.choices.log import (
+	LOG_ACTION_READ,
+	LOG_ACTION_UPDATE,
+	LOG_CLASS_SET,
+	LOG_TARGET_ALL,
+)
 from core.models.ldap_settings import (
-	CMAPS,
+	LDAP_SETTING_MAP,
 	LDAPSetting,
 	LDAPPreset,
-	LDAP_SETTING_TYPES_LIST,
-	LDAP_SETTINGS_CHOICES_MAP
+	LDAP_SETTINGS_CHOICES_MAP,
 )
 
 ### Mixins
-from .mixins.ldap_settings import SettingsViewMixin
+from core.views.mixins.ldap_settings import SettingsViewMixin
+from core.views.mixins.ldap.user import LDAPUserBaseMixin
 
 ### Viewsets
-from .base import BaseViewSet
+from core.views.base import BaseViewSet
 
 ### Serializers
-from core.serializers.ldap_settings import LDAPSettingSerializer, LDAPPresetSerializer
+from core.serializers.ldap_settings import LDAPPresetSerializer
 
 ### REST Framework
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### Others
-from interlock_backend.ldap import defaults
-from interlock_backend.ldap.encrypt import encrypt
-from core.decorators.login import auth_required
-from core.models.ldap_settings_db import RunningSettings
-from interlock_backend.ldap.settings import getSettingsList
-import logging, ssl
+from core.constants.attrs import (
+	LOCAL_ATTR_ID,
+	LOCAL_ATTR_NAME,
+	LOCAL_ATTR_VALUE,
+	LOCAL_ATTR_LABEL,
+	LOCAL_ATTR_ACTIVE,
+	LOCAL_ATTR_TYPE,
+)
+from core.decorators.login import auth_required, admin_required
+from django.db import transaction
+from django.core.exceptions import ObjectDoesNotExist
+import logging
 ################################################################################
 
 DBLogMixin = LogMixin()
 logger = logging.getLogger(__name__)
 
-class SettingsViewSet(BaseViewSet, SettingsViewMixin):
 
-	@auth_required()
-	def list(self, request, pk=None):
-		# user = request.user
-		# data = {}
+class SettingsViewSet(BaseViewSet, SettingsViewMixin):
+	ldap_setting_class = LDAPSetting
+
+	@auth_required
+	@admin_required
+	def list(self, request: Request, pk=None):
 		code = 0
 		active_preset = self.get_active_settings_preset()
 
-		presets = list()
+		presets = []
 		for p in LDAPPreset.objects.all():
-			presets.append({
-				"name": p.name,
-				"id": p.id,
-				"label": p.label,
-				"active": p.active or False
-			})
-
-		if RunningSettings.LDAP_LOG_READ == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=request.user.id,
-				actionType="READ",
-				objectClass="SET",
-				affectedObject="ALL"
+			presets.append(
+				{
+					LOCAL_ATTR_NAME: p.name,
+					LOCAL_ATTR_ID: p.id,
+					LOCAL_ATTR_LABEL: p.label,
+					LOCAL_ATTR_ACTIVE: p.active or False,
+				}
 			)
 
-		return Response(
-			 data={
-				'code': code,
-				'code_msg': 'ok',
-				'presets': presets,
-				'active_preset': active_preset.id
-			 }
+		DBLogMixin.log(
+			user=request.user.id,
+			operation_type=LOG_ACTION_READ,
+			log_target_class=LOG_CLASS_SET,
+			log_target=LOG_TARGET_ALL,
 		)
 
-	@auth_required()
-	@action(detail=True, methods=['get'])
-	def fetch(self, request, pk):
-		# user = request.user
+		return Response(
+			data={
+				"code": code,
+				"code_msg": "ok",
+				"presets": presets,
+				"active_preset": active_preset.id,
+			}
+		)
+
+	@auth_required
+	@admin_required
+	def retrieve(self, request: Request, pk):
 		preset_id = int(pk)
-		data = {}
 		code = 0
 
-		# Gets front-end parsed settings
-		data = getSettingsList(preset_id)
-		data['DEFAULT_ADMIN_ENABLED'] = self.get_admin_status()
+		# Gets Front-End Parsed LDAP Settings
+		ldap_settings = {}
+		ldap_settings = self.get_ldap_settings(preset_id)
+		local_settings = self.get_local_settings(preset_id)
 
-		if RunningSettings.LDAP_LOG_READ == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=request.user.id,
-				actionType="READ",
-				objectClass="SET",
-				affectedObject="ALL"
-			)
-
-		return Response(
-			 data={
-				'code': code,
-				'code_msg': 'ok',
-				'settings': data
-			 }
+		DBLogMixin.log(
+			user=request.user.id,
+			operation_type=LOG_ACTION_READ,
+			log_target_class=LOG_CLASS_SET,
+			log_target=LOG_TARGET_ALL,
 		)
 
-	@action(detail=False, methods=['post'])
-	@auth_required()
-	def preset_create(self, request, pk=None):
-		# user = request.user
-		# data: dict = request.data
+		return Response(
+			data={
+				"code": code,
+				"code_msg": "ok",
+				"settings": {
+					"local": local_settings,
+					"ldap": ldap_settings,
+				},
+			}
+		)
+
+	@auth_required
+	@admin_required
+	def preset_create(self, request: Request, pk=None):
 		code = 0
-		if not "label" in request.data:
-			raise exc_base.MissingDataKey(data={"detail":"label"})
-		preset_label = str(request.data["label"])
+		if not LOCAL_ATTR_LABEL in request.data:
+			raise exc_base.MissingDataKey(data={"detail": LOCAL_ATTR_LABEL})
+		preset_label = request.data[LOCAL_ATTR_LABEL]
+		if not isinstance(preset_label, str):
+			raise exc_base.BadRequest(
+				data={"detail": "Preset Label must be of type str."}
+			)
 		preset_name = self.normalize_preset_name(preset_label)
 		if LDAPPreset.objects.filter(name=preset_name).exists():
 			raise exc_set.SettingPresetExists
-		preset = {
-			"name": preset_name,
-			"label": preset_label
-		}
+		preset = {LOCAL_ATTR_NAME: preset_name, LOCAL_ATTR_LABEL: preset_label}
 		serializer = LDAPPresetSerializer(data=preset)
 		if not serializer.is_valid():
-			raise exc_set.SettingPresetSerializerError(data={
-				"errors": serializer.errors
-			})
-		LDAPPreset.objects.create(**preset)
+			raise exc_set.SettingPresetSerializerError(
+				data={"errors": serializer.errors}
+			)
 
-		return Response(
-			data={
-				'code': code,
-				'code_msg': 'ok'
-			}
-		)
+		preset_instance = LDAPPreset(**preset)
+		preset_instance.save()
 
-	@action(detail=False, methods=['post'])
-	@auth_required()
-	def preset_delete(self, request, pk=None):
-		# user = request.user
-		data: dict = request.data
+		return Response(data={"code": code, "code_msg": "ok"})
+
+	@auth_required
+	@admin_required
+	def preset_delete(self, request: Request, pk=None):
 		code = 0
-		if not "id" in data:
-			raise exc_base.MissingDataKey(data={"key":"id"})
-		preset_id = data["id"]
-		if not LDAPPreset.objects.filter(id=preset_id).exists():
+		preset_id = pk
+		try:
+			LDAPPreset.objects.get(id=preset_id)
+		except ObjectDoesNotExist:
 			raise exc_set.SettingPresetNotExists
+
 		active_preset = self.get_active_settings_preset()
-		if active_preset.id == preset_id:
+		if active_preset.id == int(preset_id):
 			raise exc_set.SettingPresetMustBeDisabled
 		LDAPPreset.objects.get(id=preset_id).delete_permanently()
-		return Response(
-			data={
-				'code': code,
-				'code_msg': 'ok'
-			}
-		)
+		return Response(data={"code": code, "code_msg": "ok"})
 
-	@action(detail=False, methods=['post'])
-	@auth_required()
-	def preset_enable(self, request, pk=None):
-		# user = request.user
-		data: dict = request.data
+	@auth_required
+	@admin_required
+	@action(detail=True, methods=["post"], url_name="enable", url_path="enable")
+	def preset_enable(self, request: Request, pk):
 		code = 0
-		if not "id" in data:
-			raise exc_base.MissingDataKey(data={"key":"id"})
-		preset_id = data["id"]
-		if not LDAPPreset.objects.filter(id=preset_id).exists():
+		preset_id = pk
+		try:
+			new_preset = LDAPPreset.objects.get(id=preset_id)
+		except ObjectDoesNotExist:
 			raise exc_set.SettingPresetNotExists
-		active_preset = self.get_active_settings_preset()
-		active_preset.active = None # Don't set this to False, DB Constraints
-		active_preset.save()
-		inactive_preset = LDAPPreset.objects.get(id=preset_id)
-		inactive_preset.active = True
-		inactive_preset.save()
+
+		with transaction.atomic():
+			old_preset = self.get_active_settings_preset()
+			old_preset.active = None  # Don't set this to False, DB Constraints
+			old_preset.save()
+			new_preset.active = True
+			new_preset.save()
 
 		self.resync_settings()
-		return Response(
-			data={
-				'code': code,
-				'code_msg': 'ok'
-			}
-		)
+		return Response(data={"code": code, "code_msg": "ok"})
 
-	@action(detail=False, methods=['post'])
-	@auth_required()
-	def preset_rename(self, request, pk=None):
-		# user = request.user
+	@auth_required
+	@admin_required
+	@action(detail=True, methods=["post"], url_name="rename", url_path="rename")
+	def preset_rename(self, request: Request, pk):
 		data: dict = request.data
 		code = 0
-		for k in ["id","label"]:
-			if not k in data:
-				raise exc_base.MissingDataKey(data={"key": k})
-		preset_id = data["id"]
-		preset_label = data["label"]
-		if not LDAPPreset.objects.filter(id=preset_id).exists():
+		if not LOCAL_ATTR_LABEL in data:
+			raise exc_base.MissingDataKey(data={"key": LOCAL_ATTR_LABEL})
+		preset_id = pk
+		preset_label = data[LOCAL_ATTR_LABEL]
+
+		try:
+			preset = LDAPPreset.objects.get(id=preset_id)
+		except ObjectDoesNotExist:
 			raise exc_set.SettingPresetNotExists
-		preset = LDAPPreset.objects.get(id=preset_id)
 
-		serializer = LDAPPresetSerializer(data={
-			"label": preset_label,
-			"name": self.normalize_preset_name(preset_label),
-		})
-		if not serializer.is_valid():
-			raise exc_set.SettingPresetSerializerError(data={
-				"errors": serializer.errors
-			})
-		preset.label = serializer.data["label"]
-		preset.name = serializer.data["name"]
-		preset.save()
-
-		return Response(
+		serializer = LDAPPresetSerializer(
 			data={
-				'code': code,
-				'code_msg': 'ok'
+				LOCAL_ATTR_LABEL: preset_label,
+				LOCAL_ATTR_NAME: self.normalize_preset_name(preset_label),
 			}
 		)
+		if not serializer.is_valid():
+			raise exc_set.SettingPresetSerializerError(
+				data={"errors": serializer.errors}
+			)
+		preset.label = serializer.data[LOCAL_ATTR_LABEL]
+		preset.name = serializer.data[LOCAL_ATTR_NAME]
+		preset.save()
 
-	@action(detail=False, methods=['post'])
-	@auth_required()
-	def save(self, request, pk=None):
-		# user = request.user
+		return Response(data={"code": code, "code_msg": "ok"})
+
+	@auth_required
+	@admin_required
+	@action(detail=False, methods=["post"])
+	def save(self, request: Request, pk=None):
+		"""Saves Preset Data to currently active preset"""
 		data_preset: dict = request.data["preset"]
 		data_settings: dict = request.data["settings"]
 		code = 0
 		settings_preset = None
-		active_preset = None
 
-		if "id" in data_preset:
-			try: settings_preset = LDAPPreset.objects.get(id=data_preset["id"])
-			except: raise exc_set.SettingPresetNotExists
+		if data_preset and LOCAL_ATTR_ID in data_preset:
+			try:
+				settings_preset = LDAPPreset.objects.get(
+					id=data_preset[LOCAL_ATTR_ID]
+				)
+			except:
+				raise exc_set.SettingPresetNotExists
 		else:
-			raise exc_base.MissingDataKey(data={"key":"data.preset.id"})
+			raise exc_base.MissingDataKey(data={"key": "data.preset.id"})
 
-		try: active_preset = self.get_active_settings_preset()
-		except: raise
+		# Local Settings
+		local_settings: dict = data_settings.pop("local")
 
-		if 'LDAP_LOG_MAX' in data_settings:
-			if int(data_settings['LDAP_LOG_MAX']['value']) > 10000:
-				raise exc_set.SettingLogMaxLimit
+		# Pop Admin Settings
+		admin_enabled_dct: dict = local_settings.pop(
+			"DEFAULT_ADMIN_ENABLED",
+			{LOCAL_ATTR_VALUE: True, LOCAL_ATTR_TYPE: TYPE_BOOL},
+		)
+		admin_enabled = admin_enabled_dct.get(LOCAL_ATTR_VALUE)
+		admin_password_dct: dict = local_settings.pop(
+			"DEFAULT_ADMIN_PWD",
+			{LOCAL_ATTR_VALUE: "", LOCAL_ATTR_TYPE: TYPE_STRING},
+		)
+		admin_password = admin_password_dct.get(LOCAL_ATTR_VALUE)
 
-		adminEnabled = data_settings.pop('DEFAULT_ADMIN_ENABLED')
-		adminPassword = data_settings.pop('DEFAULT_ADMIN_PWD')
-		self.set_admin_status(status=adminEnabled, password=adminPassword)
-		for param_name, param_value in data_settings.items():
-			if not param_name in CMAPS:
-				raise exc_set.SettingTypeDoesNotMatch
-			param_to_update = None
-			param_type = CMAPS[param_name].lower()
-			param_value = param_value.pop("value")
-			is_default = False
-			if param_name == "LDAP_AUTH_TLS_VERSION":
-				is_default = (getattr(ssl, param_value) == getattr(defaults, param_name, None))
-			else:
-				is_default = (param_value == getattr(defaults, param_name, None))
-			if is_default:
-				try:
-					if LDAPSetting.objects.filter(name=param_name, preset_id=settings_preset).exists():
-						LDAPSetting.objects.get(name=param_name, preset_id=settings_preset).delete_permanently()
-				except:
-					pass
-			else:
-				if param_type == "password":
-					param_value = encrypt(param_value)
-				kwdata = {
-					"name": param_name,
-					"type": param_type.upper(),
-					f"v_{param_type}": param_value,
-					"preset": settings_preset
+		if not isinstance(admin_enabled, bool):
+			raise exc_base.BadRequest(
+				data={
+					"detail": "Local Setting admin_enabled must be of type bool."
 				}
-				for setting_type in LDAP_SETTING_TYPES_LIST:
-					setting_key = f"v_{setting_type.lower()}"
-					# Set other field types in row as null
-					if setting_key != f"v_{param_type}":
-						kwdata[setting_key] = None
-				serializer = LDAPSettingSerializer(data=kwdata)
-				if not serializer.is_valid():
-					raise exc_set.SettingSerializerError(data={
-						'key': setting_key
-					})
-
-				if param_type.upper() in LDAP_SETTINGS_CHOICES_MAP:
-					if param_value not in LDAP_SETTINGS_CHOICES_MAP[param_type.upper()]:
-						raise exc_set.SettingTypeDoesNotMatch
-
-				if LDAPSetting.objects.filter(name=param_name, preset_id=settings_preset).exists():
-					param_to_update = LDAPSetting.objects.get(name=param_name, preset_id=settings_preset)
-					for kw, kw_v in kwdata.items():
-						setattr(param_to_update, kw, kw_v)
-					param_to_update.save()
-				else:
-					LDAPSetting.objects.create(**kwdata)
-
-		if RunningSettings.LDAP_LOG_UPDATE == True:
-			# Log this action to DB
-			DBLogMixin.log(
-				user_id=request.user.id,
-				actionType="UPDATE",
-				objectClass="SET",
 			)
+		if not isinstance(admin_password, str) and admin_password is not None:
+			raise exc_base.BadRequest(
+				data={
+					"detail": "Local Setting admin_password must be of type str"
+					" or None."
+				}
+			)
+
+		# LDAP Settings
+		ldap_settings: dict = data_settings.pop("ldap")
+
+		with transaction.atomic():
+			self.set_admin_status(
+				status=admin_enabled,
+				password=admin_password,
+			)
+			self.save_local_settings(local_settings)
+			self.save_ldap_settings(ldap_settings, settings_preset)
+
+		DBLogMixin.log(
+			user=request.user.id,
+			operation_type=LOG_ACTION_UPDATE,
+			log_target_class=LOG_CLASS_SET,
+		)
 
 		self.resync_settings()
 		return Response(
-			 data={
-				'code': code,
-				'code_msg': 'ok',
-				'settings': data_settings,
-				'restart': True
-			 }
+			data={
+				"code": code,
+				"code_msg": "ok",
+			}
 		)
 
-	@action(detail=False, methods=['get'])
-	@auth_required()
-	def reset(self, request, pk=None):
-		# user = request.user
-		data = request.data
+	@auth_required
+	@admin_required
+	@action(detail=False, methods=["get"])
+	def reset(self, request: Request, pk=None):
+		data: dict = request.data
 		code = 0
 		active_preset = self.get_active_settings_preset()
 
-		try: LDAPSetting.objects.filter(preset_id=active_preset.id).delete()
-		except: raise
+		LDAPSetting.objects.filter(preset_id=active_preset.id).delete()
 
 		self.resync_settings()
-		return Response(
-			 data={
-				'code': code,
-				'code_msg': 'ok',
-				'data': data
-			 }
-		)
+		return Response(data={"code": code, "code_msg": "ok", "data": data})
 
-	# TODO
-	# @action(detail=False, methods=['post'])
-	# @auth_required()
-	# def manualcmd(self, request, pk=None):
-	# 	user = request.user
-	# 	data = request.data
-	# 	code = 0
-
-	# 	operation = data['operation']
-	# 	op_dn = data['dn']
-	# 	op_object = data['op_object']
-	# 	op_filter = data['op_filter']
-	# 	op_attributes = data['op_attributes']
-
-	# 	# Open LDAP Connection
-	# 	try:
-	# 		self.ldap_connection = LDAPConnector(user.dn, user.encryptedPassword, request.user).connection
-	# 	except Exception as e:
-	# 		print(e)
-	# 		raise exc_ldap.CouldNotOpenConnection
-
-	# 	# Unbind the connection
-	# 	self.ldap_connection.unbind()
-	# 	return Response(
-	# 		 data={
-	# 			'code': code,
-	# 			'code_msg': 'ok',
-	# 			'data': data
-	# 		 }
-	# 	)
-
-	@action(detail=False, methods=['post'])
-	@auth_required()
-	def test(self, request, pk=None):
-		data = request.data
+	@auth_required
+	@admin_required
+	@action(detail=False, methods=["post"])
+	def test(self, request: Request, pk=None):
+		data: dict = request.data
 		code = 0
+
+		for param_name, param_data in data.items():
+			if param_name not in LDAP_SETTING_MAP:
+				raise exc_base.BadRequest(
+					data={
+						"detail": f"Invalid field name ({param_name}).",
+					}
+				)
+			param_type = param_data[LOCAL_ATTR_TYPE]
+			expected_param_type = LDAP_SETTING_MAP[param_name].lower()
+			if expected_param_type != param_type:
+				raise exc_set.SettingTypeDoesNotMatch(
+					data={
+						"detail": f"Invalid field type for {param_name} ({expected_param_type})."
+					}
+				)
+			if param_type in LDAP_SETTINGS_CHOICES_MAP:
+				if (
+					param_data[LOCAL_ATTR_VALUE]
+					not in LDAP_SETTINGS_CHOICES_MAP[param_type]
+				):
+					raise exc_set.SettingChoiceIsInvalid(
+						{"detail": f"{param_type} field value is invalid."}
+					)
+
 		data = self.test_ldap_settings(data)
 		if not data:
 			raise ConnectionTestFailed
 
+		return Response(data={"code": code, "code_msg": "ok", "data": data})
+
+	@auth_required
+	@admin_required
+	@action(detail=False, methods=["get"], url_path="sync-users")
+	def sync_users(self, request: Request, pk=None):
+		"""Synchronizes LDAP Users to Local Database"""
+		synced_users, updated_users = LDAPUserBaseMixin().ldap_users_sync(
+			responsible_user=request.user
+		)
+
 		return Response(
-			 data={
-				'code': code,
-				'code_msg': 'ok',
-				'data': data
-			 }
+			data={
+				"code": 0,
+				"code_msg": "ok",
+				"synced_users": synced_users,
+				"updated_users": updated_users,
+			}
+		)
+
+	@auth_required
+	@admin_required
+	@action(detail=False, methods=["get"], url_path="prune-users")
+	def prune_users(self, request: Request, pk=None):
+		"""Prunes LDAP Users from Local Database"""
+		pruned_users = LDAPUserBaseMixin().ldap_users_prune(
+			responsible_user=request.user
+		)
+		return Response(
+			data={"code": 0, "code_msg": "ok", "count": pruned_users}
+		)
+
+	@auth_required
+	@admin_required
+	@action(detail=False, methods=["get"], url_path="purge-users")
+	def purge_users(self, request: Request, pk=None):
+		"""Synchronizes LDAP Users to Local Database"""
+		logger.warning(f"LDAP User Purge requested by {request.user.username}")
+		purged_users = LDAPUserBaseMixin().ldap_users_purge(
+			responsible_user=request.user
+		)
+
+		return Response(
+			data={"code": 0, "code_msg": "ok", "count": purged_users}
 		)
