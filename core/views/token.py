@@ -74,7 +74,10 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 			username=request.data.get(LOCAL_ATTR_USERNAME)
 		)
 		if user.user_type == USER_TYPE_LDAP and not is_ldap_backend_enabled():
+			user.set_unusable_password()
+			user.save()
 			return RemoveTokenResponse(request, remove_refresh=True)
+
 		user.last_login = tz_aware_now()
 		user.save(update_fields=[LOCAL_ATTR_LAST_LOGIN])
 
