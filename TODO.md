@@ -38,6 +38,7 @@
 * Add logging to all TOTP operations.
 
 ### Low Priority (Post Release)
+* Update Contributors in front-end AboutDialog.
 * Implement Server-side pagination.
 * Implement LDAP Group Serializer usage.
 * Add Application Group LDAP Object Pruning Signal and Endpoint
