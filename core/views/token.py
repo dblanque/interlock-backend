@@ -73,6 +73,7 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 		user: User = User.objects.get(
 			username=request.data.get(LOCAL_ATTR_USERNAME)
 		)
+		# Edge-case where LDAP User is still in DB with LDAP Back-end disabled
 		if user.user_type == USER_TYPE_LDAP and not is_ldap_backend_enabled():
 			user.set_unusable_password()
 			user.save()
