@@ -931,7 +931,6 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 		return Response(data={"code": code, "code_msg": "ok", "user": data})
 
 	@auth_required
-	@ldap_backend_intercept
 	@action(detail=False, methods=["get"], url_path="self/fetch")
 	def self_fetch(self, request: Request):
 		user: User = request.user
