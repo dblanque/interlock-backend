@@ -9,7 +9,10 @@ from core.ldap.connector import recursive_member_search
 from core.models.application import Application, ApplicationSecurityGroup
 from core.models.user import User
 from core.views.mixins.oidc import get_user_groups
-from interlock_backend.settings import OIDC_INTERLOCK_LOGIN_COOKIE
+from interlock_backend.settings import (
+	OIDC_INTERLOCK_LOGIN_COOKIE,
+	OIDC_INTERLOCK_NEXT_COOKIE,
+)
 from core.constants.attrs import (
 	LOCAL_ATTR_USER_GROUPS,
 	LOCAL_ATTR_DN,
@@ -585,20 +588,29 @@ class TestAbortRedirect:
 class TestGetLoginUrl:
 	@staticmethod
 	def test_base_parameters(
+		mocker: MockerFixture,
 		f_authorize_mixin: OidcAuthorizeMixin,
 		f_application: MockType,
 		f_client: MockType,
 		f_user_ldap: MockType,
 	) -> None:
+		m_fernet_encrypt = mocker.patch(
+			"core.views.mixins.oidc.fernet_encrypt",
+			return_value="encrypted_url"
+		)
 		f_authorize_mixin.application = f_application
 		f_authorize_mixin.client = f_client
 		f_authorize_mixin.request.user = f_user_ldap
 
-		login_url = f_authorize_mixin.get_login_url()
+		login_url, encrypted_url = f_authorize_mixin.get_login_url()
 		parsed = urlparse(login_url)
 		params = parse_qs(parsed.query)
 
 		assert QK_NEXT in params
+		m_fernet_encrypt.assert_called_once_with(
+			f_authorize_mixin.request.get_full_path.return_value
+		)
+		assert encrypted_url == "encrypted_url"
 		assert params["application"][0] == f_application.name
 		assert params["client_id"][0] == f_client.client_id
 		assert params["redirect_uri"][0] == f_client.redirect_uris[0]
@@ -614,12 +626,17 @@ class TestGetLoginUrl:
 		],
 	)
 	def test_with_allowed_prompt_values(
+		mocker: MockerFixture,
 		f_authorize_mixin: OidcAuthorizeMixin,
 		f_application: MockType,
 		f_client: MockType,
 		f_oidc_uri: OidcUriFactory,
 		prompt_value: str,
 	) -> None:
+		m_fernet_encrypt = mocker.patch(
+			"core.views.mixins.oidc.fernet_encrypt",
+			return_value="encrypted_url"
+		)
 		m_oidc_uri = f_oidc_uri(prompt=prompt_value)
 		m_oidc_uri_qs = parse_qs(urlparse(m_oidc_uri).query)
 		for _k, _q in m_oidc_uri_qs.items():
@@ -634,18 +651,27 @@ class TestGetLoginUrl:
 			f_authorize_mixin.request
 		)
 
-		login_url = f_authorize_mixin.get_login_url()
+		login_url, encrypted_url = f_authorize_mixin.get_login_url()
 		params = parse_qs(urlparse(login_url).query)
 
+		assert encrypted_url == "encrypted_url"
+		m_fernet_encrypt.assert_called_once_with(
+			f_authorize_mixin.request.get_full_path.return_value
+		)
 		assert params["prompt"][0] == prompt_value
 
 	@staticmethod
 	def test_with_oidc_attrs_parameters(
+		mocker: MockerFixture,
 		f_authorize_mixin: OidcAuthorizeMixin,
 		f_application: MockType,
 		f_client: MockType,
 		f_oidc_uri: OidcUriFactory,
 	) -> None:
+		m_fernet_encrypt = mocker.patch(
+			"core.views.mixins.oidc.fernet_encrypt",
+			return_value="encrypted_url"
+		)
 		f_authorize_mixin.application = f_application
 		f_authorize_mixin.client = f_client
 		m_oidc_uri = f_oidc_uri(
@@ -667,9 +693,13 @@ class TestGetLoginUrl:
 			f_authorize_mixin.request
 		)
 
-		login_url = f_authorize_mixin.get_login_url()
+		login_url, encrypted_url = f_authorize_mixin.get_login_url()
 		params = parse_qs(urlparse(login_url).query)
 
+		assert encrypted_url == "encrypted_url"
+		m_fernet_encrypt.assert_called_once_with(
+			f_authorize_mixin.request.get_full_path.return_value
+		)
 		assert params["response_type"][0] == "id_token"
 		assert params["prompt"][0] == OIDC_PROMPT_CONSENT
 		assert int(params["nonce"][0]) == 12345
@@ -697,7 +727,9 @@ class TestLoginRedirect:
 		f_authorize_mixin.application = f_application
 		f_authorize_mixin.client = f_client
 		mocker.patch.object(
-			f_authorize_mixin, "get_login_url", return_value="/login"
+			f_authorize_mixin,
+			"get_login_url",
+			return_value=("/login", "encrypted_url"),
 		)
 
 		response = f_authorize_mixin.login_redirect()
@@ -706,6 +738,10 @@ class TestLoginRedirect:
 		assert (
 			response.cookies.get(OIDC_INTERLOCK_LOGIN_COOKIE).value
 			== OIDC_COOKIE_VUE_LOGIN
+		)
+		assert (
+			response.cookies.get(OIDC_INTERLOCK_NEXT_COOKIE).value
+			== "encrypted_url"
 		)
 
 

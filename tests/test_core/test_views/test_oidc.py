@@ -17,6 +17,7 @@ from core.views.mixins.application import ApplicationViewMixin
 from core.models.user import User
 from interlock_backend.settings import (
 	OIDC_INTERLOCK_LOGIN_COOKIE,
+	OIDC_INTERLOCK_NEXT_COOKIE,
 	OIDC_SKIP_CONSENT_EXPIRE,
 )
 from rest_framework.response import Response
@@ -118,14 +119,20 @@ class TestCustomOidcViewSet(BaseViewTestClass):
 
 	def test_consent_success_new_consent(
 		self,
+		mocker: MockerFixture,
 		admin_user: User,
 		admin_user_client: APIClient,
 		f_client: Client,
 	):
+		m_fernet_decrypt = mocker.patch(
+			"core.views.oidc.fernet_decrypt",
+			return_value="decrypted_next_uri",
+		)
 		data = {
 			"client_id": f_client.client_id,
-			"next": f_client.redirect_uris[0],
+			"next": "true",
 		}
+		admin_user_client.set_cookie(OIDC_INTERLOCK_NEXT_COOKIE, "mock_next_encrypted")
 		response: Response = admin_user_client.post(
 			self.endpoint,
 			data=data,
@@ -134,18 +141,25 @@ class TestCustomOidcViewSet(BaseViewTestClass):
 
 		assert response.status_code == status.HTTP_200_OK
 		assert response.data["code"] == 0
-		assert response.data["data"]["redirect_uri"] == data["next"]
+		assert response.data["data"]["redirect_uri"] == "decrypted_next_uri"
+		m_fernet_decrypt.assert_called_once_with("mock_next_encrypted")
 		assert UserConsent.objects.filter(user=admin_user).exists()
 
 	def test_consent_success_existing_consent(
 		self,
+		mocker: MockerFixture,
 		admin_user_client: APIClient,
 		user_consent: UserConsent,
 	):
+		m_fernet_decrypt = mocker.patch(
+			"core.views.oidc.fernet_decrypt",
+			return_value="decrypted_next_uri",
+		)
 		data = {
 			"client_id": user_consent.client.client_id,
-			"next": user_consent.client.redirect_uris[0],
+			"next": "true",
 		}
+		admin_user_client.set_cookie(OIDC_INTERLOCK_NEXT_COOKIE, "mock_next_encrypted")
 		old_expiry = user_consent.expires_at
 
 		response: Response = admin_user_client.post(
@@ -154,14 +168,31 @@ class TestCustomOidcViewSet(BaseViewTestClass):
 
 		user_consent.refresh_from_db()
 		assert response.status_code == status.HTTP_200_OK
+		m_fernet_decrypt.assert_called_once_with("mock_next_encrypted")
 		assert user_consent.expires_at > old_expiry
 
+	@pytest.mark.parametrize(
+		"remove_cookie, remove_data_key",
+		(
+			(True, False,),
+			(False, True,),
+			(True, True,),
+		),
+	)
 	def test_consent_missing_next(
 		self,
 		admin_user_client: APIClient,
 		f_client: Client,
+		remove_cookie: bool,
+		remove_data_key: bool,
 	):
-		data = {"client_id": f_client.client_id}
+		data = {"client_id": f_client.client_id, "next": "true"}
+		if remove_data_key:
+			data.pop("next")
+
+		if not remove_cookie:
+			admin_user_client.set_cookie(OIDC_INTERLOCK_NEXT_COOKIE, "mock_next_encrypted")
+
 		response: Response = admin_user_client.post(
 			self.endpoint, data=data, format="json"
 		)
@@ -179,6 +210,7 @@ class TestCustomOidcViewSet(BaseViewTestClass):
 			"client_id": "invalid-client",
 			"next": f_client.redirect_uris[0],
 		}
+		admin_user_client.set_cookie(OIDC_INTERLOCK_NEXT_COOKIE, "mock_next_encrypted")
 		response: Response = admin_user_client.post(
 			self.endpoint, data=data, format="json"
 		)
@@ -200,8 +232,9 @@ class TestCustomOidcViewSet(BaseViewTestClass):
 		)
 		data = {
 			"client_id": f_client.client_id,
-			"next": f_client.redirect_uris[0],
+			"next": "true",
 		}
+		admin_user_client.set_cookie(OIDC_INTERLOCK_NEXT_COOKIE, "mock_next_encrypted")
 		response: Response = admin_user_client.post(
 			self.endpoint, data=data, format="json"
 		)

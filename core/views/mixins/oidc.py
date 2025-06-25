@@ -9,7 +9,6 @@
 # ---------------------------------- IMPORTS --------------------------------- #
 # Constants
 from core.constants.oidc import (
-	QK_NEXT,
 	QK_ERROR,
 	QK_ERROR_DETAIL,
 	OIDC_COOKIE_VUE_LOGIN,
@@ -18,6 +17,7 @@ from core.constants.oidc import (
 )
 from interlock_backend.settings import (
 	OIDC_INTERLOCK_LOGIN_COOKIE,
+	OIDC_INTERLOCK_NEXT_COOKIE,
 	OIDC_SKIP_CUSTOM_CONSENT,
 	SIMPLE_JWT as JWT_SETTINGS,
 )
@@ -46,6 +46,7 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 
 # Others
+from interlock_backend.encrypt import fernet_encrypt
 from core.constants.attrs import LOCAL_ATTR_USER_GROUPS, LOCAL_ATTR_DN
 import logging
 from interlock_backend.settings import LOGIN_URL
@@ -234,13 +235,15 @@ class OidcAuthorizeMixin:
 	def get_login_url(self) -> str:
 		self.authorize: OidcAuthorizeEndpoint
 		original_url = self.request.get_full_path()
-		# Encode the URL for safe inclusion in another URL
-		encoded_url = quote(original_url)
-		login_url = f"{LOGIN_URL}/?{QK_NEXT}={encoded_url}"
+		# Encrypt the URL for temporary client-side storage
+		encrypted_url = fernet_encrypt(original_url)
+		login_url = f"{LOGIN_URL}/?"
 
-		# These parameters need to be added or replaced with custom local data,
-		# instead of the default oidc_provider parameters
+		# These parameters need to be added because we're encrypting the
+		# original redirection url for integrity and security purposes.
+		# But the front-end needs some data.
 		replace_params = {
+			"next": str(True).lower(),
 			"application": self.application.name,
 			"client_id": self.client.client_id,
 			"reuse_consent": self.client.reuse_consent,
@@ -249,6 +252,9 @@ class OidcAuthorizeMixin:
 			),
 			"redirect_uri": self.client.redirect_uris[0],
 		}
+
+		# Set all non-replaced query params as well, they won't be used anyways
+		# but the front-end might have some use for them.
 		for attr in OIDC_ATTRS:
 			if attr in replace_params:
 				continue
@@ -258,17 +264,26 @@ class OidcAuthorizeMixin:
 					replace_params[attr] = self.authorize.params[attr]
 				elif isinstance(val, (tuple, set, list)):
 					replace_params[attr] = "+".join(self.authorize.params[attr])
+
 		login_url = self.set_extra_params(
 			data=replace_params, login_url=login_url
 		)
-		return login_url
+		return login_url, encrypted_url
 
 	def login_redirect(self) -> HttpResponse:
-		login_url = self.get_login_url()
+		login_url, encrypted_next = self.get_login_url()
 		response = redirect(login_url)
 		response.set_cookie(
 			key=OIDC_INTERLOCK_LOGIN_COOKIE,
 			value=OIDC_COOKIE_VUE_LOGIN,
+			httponly=True,
+			samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
+			secure=JWT_SETTINGS["AUTH_COOKIE_SECURE"],
+			domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
+		)
+		response.set_cookie(
+			key=OIDC_INTERLOCK_NEXT_COOKIE,
+			value=encrypted_next,
 			httponly=True,
 			samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
 			secure=JWT_SETTINGS["AUTH_COOKIE_SECURE"],
