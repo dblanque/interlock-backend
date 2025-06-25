@@ -803,9 +803,14 @@ class TestInsert:
 
 
 class TestUpdate:
+	@pytest.mark.parametrize(
+		"user_with_email_exists",
+		(True, False,),
+	)
 	def test_success(
 		self,
 		mocker: MockerFixture,
+		user_with_email_exists: bool,
 		normal_user: User,
 		f_user_mixin: LDAPUserMixin,
 		f_log_mixin: LogMixin,
@@ -816,10 +821,26 @@ class TestUpdate:
 		m_ldap_user.attributes = {"old": "attributes"}
 		m_ldap_user_cls = mocker.Mock(return_value=m_ldap_user)
 		mocker.patch("core.views.mixins.ldap.user.LDAPUser", m_ldap_user_cls)
+		mocker.patch.object(
+			f_user_mixin,
+			"ldap_user_exists",
+			return_value=False if not user_with_email_exists else None,
+			side_effect=exc_ldap.LDAPObjectExists(
+				data={"code": "user_ldap_email_exists"}
+			) if user_with_email_exists else None
+		)
 		m_data = {
 			LOCAL_ATTR_USERNAME: normal_user.username,
 			LOCAL_ATTR_EMAIL: m_email_update,
 		}
+
+		if user_with_email_exists:
+			with pytest.raises(exc_ldap.LDAPObjectExists):
+				f_user_mixin.ldap_user_update(data=m_data)
+			m_ldap_user_cls.assert_not_called()
+			m_ldap_user.save.assert_not_called()
+			f_log_mixin.log.assert_not_called()
+			return
 
 		f_user_mixin.ldap_user_update(data=m_data)
 		m_ldap_user_cls.assert_called_once_with(

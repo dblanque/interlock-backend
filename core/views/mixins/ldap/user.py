@@ -530,6 +530,12 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 			ldap3.Connection
 		"""
 		username = data.get(LOCAL_ATTR_USERNAME)
+
+		# Check Email Overlap
+		if LOCAL_ATTR_EMAIL in data:
+			self.ldap_user_exists(email=data[LOCAL_ATTR_EMAIL])
+
+		# Perform Update
 		user_obj = LDAPUser(connection=self.ldap_connection, username=username)
 		user_obj.attributes = data
 		user_obj.save()
