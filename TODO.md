@@ -32,6 +32,7 @@
 ### High Priority
 * Fix support for different response types.
 * Allow CORS Any for well-known endpoint.
+* Fix HTML Title (Front)
 
 ### Medium Priority
 * Add logging to all Application model operations. <d>
