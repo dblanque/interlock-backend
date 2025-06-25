@@ -113,6 +113,7 @@ if DEBUG:
 	ALLOWED_HOSTS = ALL_HOSTS
 else:
 	# SAFER CORS SETTINGS
+	CORS_ORIGIN_ALLOW_ALL = False
 	CORS_ALLOWED_ORIGINS = URLS
 	CORS_ORIGIN_WHITELIST = URLS
 	CORS_ORIGIN_REGEX_WHITELIST = URLS
@@ -166,7 +167,7 @@ MIDDLEWARE = [
 	"django.middleware.locale.LocaleMiddleware",
 	"django.contrib.sessions.middleware.SessionMiddleware",
 	################### ↓ Must be before Common Middleware ↓ ###################
-	"corsheaders.middleware.CorsMiddleware",  #
+	"interlock_backend.middleware.OpenIDCorsMiddleware",
 	"django.middleware.common.CommonMiddleware",
 	"django.middleware.csrf.CsrfViewMiddleware",
 	############### ↓ Must be before Authentication Middleware ↓ ###############
