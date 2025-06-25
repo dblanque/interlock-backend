@@ -320,6 +320,13 @@ class APIClientFactory(Protocol):
 @pytest.fixture
 def f_api_client(api_client: APIClient):
 	def maker(user: User, **kwargs):
+		def set_cookie(key, value):
+			api_client.cookies[key] = str(value)
+			api_client.cookies[key]["httponly"] = True
+			api_client.cookies[key]["samesite"] = _JWT_SAMESITE
+			api_client.cookies[key]["secure"] = _JWT_SECURE
+		api_client.set_cookie = set_cookie
+
 		refresh = kwargs.pop("refresh_token", None)
 		if not refresh and kwargs.pop("use_endpoint", True):
 			api_client.post(
@@ -333,12 +340,8 @@ def f_api_client(api_client: APIClient):
 			if not refresh:
 				refresh = RefreshToken.for_user(user)
 
-			api_client.cookies[_ACCESS_NAME] = str(refresh.access_token)
-			api_client.cookies[_REFRESH_NAME] = str(refresh)
-			for cookie in (_ACCESS_NAME, _REFRESH_NAME):
-				api_client.cookies[cookie]["httponly"] = True
-				api_client.cookies[cookie]["samesite"] = _JWT_SAMESITE
-				api_client.cookies[cookie]["secure"] = _JWT_SECURE
+			api_client.set_cookie(_ACCESS_NAME, str(refresh.access_token))
+			api_client.set_cookie(_REFRESH_NAME, str(refresh))
 		return api_client
 
 	return maker
