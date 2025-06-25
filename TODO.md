@@ -32,7 +32,7 @@
 ### High Priority
 * [x] Fix install documentation GPG key link.
 * [ ] Update all Interlock Documentation.
-* [ ] Add email exists check to ldap user update/bulk update.
+* [x] Add email exists check to ldap user update/bulk update.
 * [ ] Fix support for different response types.
 * [ ] Allow CORS Any for well-known endpoint.
 * [ ] Fix HTML Title (Front)
