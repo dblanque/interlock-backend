@@ -30,6 +30,7 @@
 
 ## Issues
 ### High Priority
+* Fix install documentation GPG key link.
 * Fix support for different response types.
 * Allow CORS Any for well-known endpoint.
 * Fix HTML Title (Front)
