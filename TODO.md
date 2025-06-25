@@ -61,6 +61,7 @@
 * Add Application Security Group Bulk actions
 
 ## Nice would-haves
+* Log OIDC Login connections
 * Generate New Recovery Codes
 * Directory Tree Bulk-Move
 * Directory Tree Recursive Delete.
