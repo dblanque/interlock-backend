@@ -7,7 +7,6 @@
 # Contains Request interception decorators for DEVELOPMENT
 
 # ---------------------------------- IMPORTS --------------------------------- #
-from core.models.user import User
 from core.models.interlock_settings import (
 	InterlockSetting,
 	INTERLOCK_SETTING_ENABLE_LDAP,
@@ -17,7 +16,8 @@ from rest_framework.request import Request
 from core.exceptions.base import LDAPBackendDisabled
 from functools import wraps
 from logging import getLogger
-
+from core.views.mixins.auth import CookieJWTAuthentication
+from core.exceptions.base import AccessTokenInvalid
 ################################################################################
 logger = getLogger()
 
@@ -26,9 +26,13 @@ def request_intercept(func=None):
 	def decorator(view_func):
 		@wraps(view_func)
 		def _wrapped(self, request: Request, *args, **kwargs):
-			user: User = request.user
+			try:
+				cookie_auth = CookieJWTAuthentication()
+				request.user, token = cookie_auth.authenticate(request)
+			except AccessTokenInvalid:
+				pass
 			logger.info(request)
-			logger.info(user)
+			logger.info(request.user)
 			if hasattr(request, "query_params"):
 				logger.info(request.query_params)
 			else:

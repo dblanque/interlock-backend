@@ -1,18 +1,41 @@
 import pytest
 from core.decorators.intercept import request_intercept
-from rest_framework.request import Request as django_request
-from django.contrib.auth.models import User
+from django.http.request import HttpRequest
+from django.http.cookie import SimpleCookie
+from core.models.user import User
+from rest_framework_simplejwt.tokens import RefreshToken
+from interlock_backend.settings import SIMPLE_JWT
+from pytest_mock import MockType
+from typing import Union
 
+_ACCESS_NAME = SIMPLE_JWT["AUTH_COOKIE_NAME"]
+_REFRESH_NAME = SIMPLE_JWT["REFRESH_COOKIE_NAME"]
+_JWT_SAMESITE = SIMPLE_JWT["AUTH_COOKIE_SAME_SITE"]
+_JWT_SECURE = SIMPLE_JWT["AUTH_COOKIE_SECURE"]
 
 @pytest.fixture
 def mock_request(mocker):
-	request = mocker.Mock(spec=django_request)
-	request.user = mocker.Mock(spec=User)
+	user = User(
+		username="test_intercept",
+		email="testic@example.com",
+		password="MockPassword",
+		is_staff=True,
+		is_superuser=False,
+	)
+	user.save()
+	request: Union[HttpRequest, MockType] = mocker.Mock(spec=HttpRequest)
+	request.user = user
 	request.query_params = {"param": "value"}
 	request.data = {"key": "value"}
+	refresh = RefreshToken.for_user(user)
+
+	request.COOKIES = {}
+	request.COOKIES[_ACCESS_NAME] = SimpleCookie(str(refresh.access_token))
+	request.COOKIES[_REFRESH_NAME] = SimpleCookie(str(refresh))
 	return request
 
 
+@pytest.mark.django_db
 @pytest.mark.parametrize(
 	"is_factory",
 	(
