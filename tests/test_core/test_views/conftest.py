@@ -165,7 +165,11 @@ ldap_endpoints = (
 	("/api/ldap/users/bulk/unlock/", HTTPMethod.POST),
 	("/api/ldap/users/self/change-password/", HTTPMethod.POST),
 	("/api/ldap/users/self/update/", HTTPMethod.POST),
-	("/api/ldap/users/self/fetch/", HTTPMethod.GET),
+
+	# This is not LDAP Only, should be moved to another viewset later
+	# ("/api/ldap/users/self/info/", HTTPMethod.GET),
+	# ("/api/ldap/users/self/fetch/", HTTPMethod.GET),
+
 	# LDAP Directory Tree and OUs
 	("/api/ldap/dirtree/", HTTPMethod.GET),  # Retrieve Dirtree
 	("/api/ldap/dirtree/", HTTPMethod.POST),  # Create
@@ -188,6 +192,20 @@ ldap_endpoints = (
 	scope="session",
 )
 def g_ldap_domain_endpoints(request: FixtureRequest):
+	return request.param
+
+@pytest.fixture(
+	params=[
+		# Access underlying params
+		p
+		for p in g_all_endpoints._pytestfixturefunction.params
+		# Filter condition
+		if p not in ldap_endpoints
+	],
+	ids=lambda x: f"{x[1].upper()}: {x[0]} (LDAP NOT Required)",
+	scope="session",
+)
+def g_non_ldap_domain_endpoints(request: FixtureRequest):
 	return request.param
 
 
