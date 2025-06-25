@@ -30,12 +30,15 @@
 
 ## Issues
 ### High Priority
-* N/A
+* Fix support for different response types.
+* Allow CORS Any for well-known endpoint.
 
 ### Medium Priority
 * Add logging to all Application model operations. <d>
 * Add logging to all Application Security Group model operations.
 * Add logging to all TOTP operations.
+* Add display name to oidc scopes
+* Add all relevant endpoints for oidc to home view
 
 ### Low Priority (Post Release)
 * Update Contributors in front-end AboutDialog.
