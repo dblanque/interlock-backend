@@ -61,6 +61,7 @@
 * Add Application Security Group Bulk actions
 
 ## Nice would-haves
+* Add customizable gunicorn config
 * Log OIDC Login connections
 * Generate New Recovery Codes
 * Directory Tree Bulk-Move
