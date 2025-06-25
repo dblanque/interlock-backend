@@ -16,9 +16,7 @@ from oidc_provider.models import Client
 from rest_framework_simplejwt.tokens import RefreshToken
 from typing import Protocol
 from http import HTTPMethod
-from pytest import FixtureRequest
 from interlock_backend.test_settings import SIMPLE_JWT
-from typing import Protocol
 from django.urls import reverse, get_resolver, get_urlconf
 
 _ACCESS_NAME = SIMPLE_JWT["AUTH_COOKIE_NAME"]
