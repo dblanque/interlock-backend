@@ -30,6 +30,7 @@
 
 ## Issues
 ### High Priority
+* Add email exists check to ldap user update/bulk update
 * Fix install documentation GPG key link.
 * Fix support for different response types.
 * Allow CORS Any for well-known endpoint.
