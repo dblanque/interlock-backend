@@ -13,6 +13,7 @@ from corsheaders.middleware import (
 	CorsMiddleware,
 	ACCESS_CONTROL_ALLOW_ORIGIN,
 	ACCESS_CONTROL_ALLOW_METHODS,
+	ACCESS_CONTROL_ALLOW_HEADERS,
 )
 from django.http.request import HttpRequest
 from django.http.response import HttpResponseBase, HttpResponse
@@ -42,6 +43,7 @@ class OpenIDCorsMiddleware(CorsMiddleware):
 		if request.path and OPENID_WELLKNOWN_PATTERN.match(request.path):
 			response[ACCESS_CONTROL_ALLOW_ORIGIN] = "*"
 			response[ACCESS_CONTROL_ALLOW_METHODS] = "GET, OPTIONS"
+			response[ACCESS_CONTROL_ALLOW_HEADERS] = "*"
 			return response
 
 		# Apply default CORS rules for all other endpoints
