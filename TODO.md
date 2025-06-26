@@ -20,6 +20,8 @@
 * Add session management for OIDC (if possible)
 
 # Tests
+* core.views.oidc.CustomOidcViewSet.reject
+* core.mixins.oidc.OidcAuthorizeMixin.get_reject_url
 * core.views.mixins.SettingsViewMixin
 	* set_value_fields - mock test
 	* parse_local_setting_data - mock test
