@@ -45,7 +45,9 @@
 * [x] Add logging to all Application model operations.
 * [ ] Add logging to all Application Security Group model operations.
 * [ ] Add logging to all TOTP operations.
-* [ ] Add all relevant endpoints for oidc to home view
+* [ ] Add all relevant endpoints for oidc to home view.
+* [ ] Fix issues with consent reject redirection and UserConsent creation.
+* [ ] Add Reject URI to SSO Applications.
 
 ### Low Priority (Post Release)
 * [ ] Implement Server-side pagination.
