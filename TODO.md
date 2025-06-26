@@ -33,16 +33,12 @@
 ## Issues
 ### High Priority
 * [ ] Update all Interlock Documentation.
-* [x] Fix attribute.domain translation key in frontend.
 * [ ] Fix/Check support for different response types.
-* [x] Fix CORS Allowance for well-known endpoint.
 
 ### Medium Priority
 * [ ] Add logging to all Application Security Group model operations.
 * [ ] Add logging to all TOTP operations.
 * [ ] Add all relevant endpoints for oidc to home view.
-* [ ] Fix issues with consent reject redirection and UserConsent creation.
-* [ ] Add Reject URI to SSO Applications.
 
 ### Low Priority (Post Release)
 * [ ] Implement Server-side pagination.
