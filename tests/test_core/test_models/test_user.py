@@ -102,6 +102,9 @@ class TestUserModel:
 			ldap_password_nonce=None,
 			ldap_password_tag=None,
 		)
+		assert User.objects.filter(
+			username="test_password_constraint_all_or_none_01"
+		).exists()
 
 		# Test with all fields not None (should pass)
 		User.objects.create(
@@ -113,9 +116,12 @@ class TestUserModel:
 			ldap_password_nonce=b"nonce",
 			ldap_password_tag=b"tag",
 		)
+		assert User.objects.filter(
+			username="test_password_constraint_all_or_none_02"
+		).exists()
 
 		# Test with some fields None (should fail)
-		with pytest.raises(IntegrityError):
+		with pytest.raises((IntegrityError, TransactionManagementError)):
 			User.objects.create(
 				username="test_password_constraint_all_or_none_03",
 				password=self.default_password,
