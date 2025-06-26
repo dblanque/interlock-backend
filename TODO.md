@@ -30,19 +30,12 @@
 
 ## Issues
 ### High Priority
-* [x] Fix install documentation GPG key link.
 * [ ] Update all Interlock Documentation.
-* [x] Add email exists check to ldap user update/bulk update.
+* [ ] Fix attribute.domain translation key in frontend.
 * [ ] Fix support for different response types.
-* [x] Allow CORS Any for well-known endpoint.
-* [x] Add Encryption to Front-end passthrough Redirection URI
-  		when requiring consent.
-* [x] Fix HTML Title (Front).
-* [x] Finish French Localization.
-* [x] Update Contributors in front-end AboutDialog.
+* [ ] Fix CORS Allowance for well-known endpoint.
 
 ### Medium Priority
-* [x] Add logging to all Application model operations.
 * [ ] Add logging to all Application Security Group model operations.
 * [ ] Add logging to all TOTP operations.
 * [ ] Add all relevant endpoints for oidc to home view.
