@@ -35,6 +35,8 @@
 * [x] Add email exists check to ldap user update/bulk update.
 * [ ] Fix support for different response types.
 * [x] Allow CORS Any for well-known endpoint.
+* [x] Add Encryption to Front-end passthrough Redirection URI
+  		when requiring consent.
 * [x] Fix HTML Title (Front).
 * [x] Finish French Localization.
 * [x] Update Contributors in front-end AboutDialog.
@@ -43,7 +45,6 @@
 * [x] Add logging to all Application model operations.
 * [ ] Add logging to all Application Security Group model operations.
 * [ ] Add logging to all TOTP operations.
-* [ ] Add display name to oidc scopes
 * [ ] Add all relevant endpoints for oidc to home view
 
 ### Low Priority (Post Release)
@@ -81,3 +82,4 @@
 * [ ] Allow samba password policy change from Interlock (GPO Involved).
 * [ ] Test LDAP Server IPv6 Support.
 * [ ] Add *copy ldap dn* button in ldap dirtree section.
+* [ ] Add GUID and Display Name User fields in OpenID Connect?
