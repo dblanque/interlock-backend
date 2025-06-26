@@ -31,9 +31,9 @@
 ## Issues
 ### High Priority
 * [ ] Update all Interlock Documentation.
-* [ ] Fix attribute.domain translation key in frontend.
-* [ ] Fix support for different response types.
-* [ ] Fix CORS Allowance for well-known endpoint.
+* [x] Fix attribute.domain translation key in frontend.
+* [ ] Fix/Check support for different response types.
+* [x] Fix CORS Allowance for well-known endpoint.
 
 ### Medium Priority
 * [ ] Add logging to all Application Security Group model operations.
