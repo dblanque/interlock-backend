@@ -171,10 +171,7 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 			# User Exists check
 			self.ldap_user_exists(
 				username=username,
-				email=data.get(
-					RuntimeSettings.LDAP_FIELD_MAP[LOCAL_ATTR_EMAIL],
-					None,
-				),
+				email=data.get(LOCAL_ATTR_EMAIL, None),
 			)
 			self.ldap_user_insert(data=data)
 
