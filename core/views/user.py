@@ -127,13 +127,26 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 		serializer = self.serializer_class(data=data)
 
 		if not serializer.is_valid():
-			raise BadRequest(data={"errors": serializer.errors})
+			serializer_exc = BadRequest(data={"errors": serializer.errors})
+			_username = serializer.errors.get(LOCAL_ATTR_USERNAME, "")
+			_email = serializer.errors.get(LOCAL_ATTR_EMAIL, "")
+			if "already exists" in str(_username):
+				raise exc_user.UserExists
+			if "already exists" in str(_email):
+				raise exc_user.UserWithEmailExists
+			raise serializer_exc
 
 		validated_data = serializer.validated_data
 		if LOCAL_ATTR_USERTYPE in validated_data:
 			del validated_data[LOCAL_ATTR_USERTYPE]
 
-		self.check_user_exists(username=validated_data.get(LOCAL_ATTR_USERNAME))
+		# If LDAP Back-end is enabled, this will do crosschecks.
+		self.check_user_exists(
+			# Should always have username on creation
+			username=validated_data.get(LOCAL_ATTR_USERNAME),
+			email=validated_data.get(LOCAL_ATTR_EMAIL, None),
+			ignore_local=True, # This is already checked in the serializer
+		)
 		with transaction.atomic():
 			user_instance: User = User(**validated_data)
 			password = serializer.validated_data.get(LOCAL_ATTR_PASSWORD, None)
@@ -203,7 +216,11 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 
 		# Validate Data
 		if not serializer.is_valid():
-			raise BadRequest(data={"errors": serializer.errors})
+			serializer_exc = BadRequest(data={"errors": serializer.errors})
+			_email = serializer.errors.get(LOCAL_ATTR_EMAIL, "")
+			if "already exists" in str(_email):
+				raise exc_user.UserWithEmailExists
+			raise serializer_exc
 
 		try:
 			user_instance: User = User.objects.get(id=pk)
@@ -213,6 +230,16 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 		if user_instance.user_type != USER_TYPE_LOCAL:
 			raise exc_user.UserNotLocalType
 
+		# If LDAP Back-end is enabled, this will do crosschecks.
+		# May or may not have either or both of the fields on partial updates.
+		username = serializer.validated_data.get(LOCAL_ATTR_USERNAME, None)
+		email = serializer.validated_data.get(LOCAL_ATTR_EMAIL, None)
+		if username or email:
+			self.check_user_exists(
+				username=username,
+				email=email,
+				ignore_local=True, # This is already checked in the serializer
+			)
 		# Set data
 		for key in serializer.validated_data:
 			setattr(user_instance, key, serializer.validated_data[key])

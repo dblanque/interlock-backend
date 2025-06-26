@@ -135,7 +135,9 @@ class TestCreate(BaseViewTestClass):
 		user: User = User.objects.get(username=m_data[LOCAL_ATTR_USERNAME])
 		assert user.email == m_data[LOCAL_ATTR_EMAIL]
 		m_check_user_exists.assert_called_once_with(
-			username=m_data[LOCAL_ATTR_USERNAME]
+			username=m_data[LOCAL_ATTR_USERNAME],
+			email=m_data.get(LOCAL_ATTR_EMAIL, None),
+			ignore_local=True
 		)
 		if with_password:
 			assert user.check_password(m_data[LOCAL_ATTR_PASSWORD])
@@ -219,7 +221,9 @@ class TestCreate(BaseViewTestClass):
 
 		assert response.status_code == status.HTTP_409_CONFLICT
 		m_check_user_exists.assert_called_once_with(
-			username=user_data[LOCAL_ATTR_USERNAME]
+			username=user_data[LOCAL_ATTR_USERNAME],
+			email=user_data[LOCAL_ATTR_EMAIL],
+			ignore_local=True
 		)
 		assert "already exists" in response.data.get("detail")
 
@@ -273,21 +277,27 @@ class TestUpdate(BaseViewTestClass):
 
 	def test_success(
 		self,
+		mocker: MockerFixture,
 		admin_user_client: APIClient,
 		admin_user: User,
 		f_user_test: User,
 		f_log: MockType,
 	):
 		m_password = "newpassword123"
+		m_check_user_exists = mocker.patch.object(
+			UserViewSet,
+			"check_user_exists",
+		)
 
+		m_data = {
+			LOCAL_ATTR_DN: "some_dn",
+			LOCAL_ATTR_EMAIL: "new.email@example.com",
+			LOCAL_ATTR_PASSWORD: m_password,
+			LOCAL_ATTR_PASSWORD_CONFIRM: m_password,
+		}
 		response: Response = admin_user_client.put(
 			self.endpoint + f"{f_user_test.id}/",
-			data={
-				LOCAL_ATTR_DN: "some_dn",
-				LOCAL_ATTR_EMAIL: "new.email@example.com",
-				LOCAL_ATTR_PASSWORD: m_password,
-				LOCAL_ATTR_PASSWORD_CONFIRM: m_password,
-			},
+			data=m_data,
 			format="json",
 		)
 
@@ -296,6 +306,11 @@ class TestUpdate(BaseViewTestClass):
 		f_user_test.refresh_from_db()
 		assert f_user_test.email == "new.email@example.com"
 		assert f_user_test.check_password(m_password)
+		m_check_user_exists.assert_called_once_with(
+			username=m_data.get(LOCAL_ATTR_USERNAME, None),
+			email=m_data.get(LOCAL_ATTR_EMAIL, None),
+			ignore_local=True
+		)
 		f_log.assert_called_once_with(
 			user=admin_user.id,
 			operation_type=LOG_ACTION_UPDATE,
@@ -311,6 +326,10 @@ class TestUpdate(BaseViewTestClass):
 		f_log: MockType,
 	):
 		m_save = mocker.patch.object(User, "save")
+		m_check_user_exists = mocker.patch.object(
+			UserViewSet,
+			"check_user_exists",
+		)
 		response: Response = admin_user_client.put(
 			self.endpoint + "999/",
 			data={LOCAL_ATTR_EMAIL: "new.email@example.com"},
@@ -321,6 +340,7 @@ class TestUpdate(BaseViewTestClass):
 
 		f_user_test.refresh_from_db()
 		assert f_user_test.email != "new.email@example.com"
+		m_check_user_exists.assert_not_called()
 		m_save.assert_not_called()
 		f_log.assert_not_called()
 
@@ -332,6 +352,10 @@ class TestUpdate(BaseViewTestClass):
 		f_log: MockType,
 	):
 		m_save = mocker.patch.object(User, "save")
+		m_check_user_exists = mocker.patch.object(
+			UserViewSet,
+			"check_user_exists",
+		)
 		response: Response = admin_user_client.put(
 			self.endpoint + f"{f_user_ldap.id}/",
 			data={LOCAL_ATTR_EMAIL: "new.email@example.com"},
@@ -342,6 +366,7 @@ class TestUpdate(BaseViewTestClass):
 
 		f_user_ldap.refresh_from_db()
 		assert f_user_ldap.email != "new.email@example.com"
+		m_check_user_exists.assert_not_called()
 		m_save.assert_not_called()
 		f_log.assert_not_called()
 
@@ -353,6 +378,10 @@ class TestUpdate(BaseViewTestClass):
 		f_log: MockType,
 	):
 		m_save = mocker.patch.object(User, "save")
+		m_check_user_exists = mocker.patch.object(
+			UserViewSet,
+			"check_user_exists",
+		)
 		m_password = "newpassword123"
 
 		response: Response = admin_user_client.put(
@@ -367,6 +396,7 @@ class TestUpdate(BaseViewTestClass):
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
 
 		f_user_test.refresh_from_db()
+		m_check_user_exists.assert_not_called()
 		m_save.assert_not_called()
 		f_log.assert_not_called()
 		assert LOCAL_ATTR_EMAIL in response_errors
