@@ -232,6 +232,13 @@ class OidcAuthorizeMixin:
 			return True
 		return False
 
+	def get_reject_url(self, redirect_uri: str) -> str:
+		"""Returns only the base domain of the Redirection URL."""
+		v = redirect_uri.lower()
+		scheme, uri = v.split("://")
+		uri = uri.split("/")[0]
+		return f"{scheme}://{uri}"
+
 	def get_login_url(self) -> str:
 		self.authorize: OidcAuthorizeEndpoint
 		original_url = self.request.get_full_path()
@@ -242,6 +249,14 @@ class OidcAuthorizeMixin:
 		# These parameters need to be added because we're encrypting the
 		# original redirection url for integrity and security purposes.
 		# But the front-end needs some data.
+
+		# Make rejection uri from base domain.
+		# TODO - Change this to be a model setting for Applications.
+		redirect_uri = self.client.redirect_uris[0]
+		try:
+			reject_uri = self.get_reject_url(redirect_uri)
+		except:
+			reject_uri = redirect_uri
 		replace_params = {
 			"next": str(True).lower(),
 			"application": self.application.name,
@@ -250,7 +265,8 @@ class OidcAuthorizeMixin:
 			"require_consent": self.user_requires_consent(
 				user=self.request.user
 			),
-			"redirect_uri": self.client.redirect_uris[0],
+			"redirect_uri": redirect_uri,
+			"reject_uri": reject_uri,
 		}
 
 		# Set all non-replaced query params as well, they won't be used anyways

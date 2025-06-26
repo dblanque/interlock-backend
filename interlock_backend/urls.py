@@ -211,6 +211,11 @@ urlpatterns = [
 		CustomOidcViewSet.as_view({"post": "consent"}),
 		name="oidc-consent",
 	),
+	re_path(
+		r"openid/reject/?$",
+		CustomOidcViewSet.as_view({"post": "reject"}),
+		name="oidc-reject",
+	),
 	# OIDC Default Endpoints
 	path("openid/", include("oidc_provider.urls", namespace="oidc_provider")),
 ]

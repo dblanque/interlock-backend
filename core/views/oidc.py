@@ -82,10 +82,46 @@ def login_redirect_bad_request(error_detail: str | int = 400) -> HttpResponse:
 
 
 class CustomOidcViewSet(BaseViewSet):
-	@action(detail=False, methods=["post"], url_name="oidc-consent")
+	@auth_required
+	@request_intercept
+	def reject(self, request: HttpRequest, pk=None):
+		"""Endpoint for OIDC Consent Rejection."""
+		user: User = request.user
+		data: dict = request.data
+		user_consent = None
+
+		# Get client to delete consent after rejection.
+		try:
+			client = Client.objects.get(client_id=data["client_id"])
+		except ObjectDoesNotExist:
+			return login_redirect_bad_request("oidc_no_client")
+
+		# Get Consent
+		try:
+			user_consent = UserConsent.objects.get(
+				client_id=client.id, user_id=user.id
+			)
+			user_consent.delete()
+		except ObjectDoesNotExist:
+			pass
+		except Exception as e:
+			logger.exception(e)
+			return login_redirect_bad_request("oidc_consent_get")
+
+		response = Response(
+			data={
+				"code": 0,
+				"code_msg": "ok",
+			}
+		)
+		response.delete_cookie(OIDC_INTERLOCK_LOGIN_COOKIE)
+		response.delete_cookie(OIDC_INTERLOCK_NEXT_COOKIE)
+		return response
+
 	@auth_required
 	@request_intercept
 	def consent(self, request: HttpRequest, pk=None):
+		"""Endpoint for OIDC Consent."""
 		user: User = request.user
 		data: dict = request.data
 		user_consent = None
