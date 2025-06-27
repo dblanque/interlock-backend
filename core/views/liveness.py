@@ -11,7 +11,6 @@ from core.views.base import BaseViewSet
 
 ### REST Framework
 from rest_framework.response import Response
-from rest_framework.decorators import action
 
 ### Others
 import logging
@@ -21,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 
 class LivenessViewSet(BaseViewSet):  # pragma: no cover
-	@action(detail=False, methods=["get"])
-	def check(self, request, pk=None):
+	def list(self, request, pk=None):
 		code = 0
 		return Response(data={"code": code, "code_msg": "ok"})
