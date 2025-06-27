@@ -8,14 +8,14 @@
 * Create new pgp/gpg for apt repo (with expiry).
 * Create .deb for apt repo key installation and updating.
 * Update and fix .deb package installer.
+* Fully fledged API Documentation
 * Update Public site with new screenshots.
-* Add use-cases table to public site.
+* Add use-cases table to public site?
 * Create general video summary.
 * Create video summary of features as LDAP Manager.
 * Create video summary of features as IdP.
 
 # Post-release roadmap
-* Fully fledged API Documentation
 * OpenLDAP Support
 * Add session management for OIDC (if possible)
 
