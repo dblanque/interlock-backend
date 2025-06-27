@@ -56,7 +56,7 @@ named_view_sets = {
 	r"application": ApplicationViewSet,
 }
 
-if DEBUG == True:
+if DEBUG:
 	named_view_sets.update(
 		{r"ldap/gpo": GPOViewSet, r"test": TestViewSet, r"debug": DebugViewSet}
 	)
