@@ -32,6 +32,8 @@
 
 ## Issues
 ### High Priority
+* [x] Fix Email Login with TOTP.
+* [x] Check that Prompt Consent/Select Account effectively work.
 * [ ] Update all Interlock Documentation.
 * [ ] Fix/Check support for different response types.
 
