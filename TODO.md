@@ -32,12 +32,14 @@
 
 ## Issues
 ### High Priority
-* [x] Fix Email Login with TOTP.
-* [x] Check that Prompt Consent/Select Account effectively work.
+* [x] Fix Theming issue in Consent Screen.
+* [x] Add timer to check if user has logged in through another tab in LoginView (only when not in TOTP or OIDC mode)
+* [x] Fix issue where "LDAP Server Unreachable" might be incorrectly shown when using TOTP.
 * [ ] Update all Interlock Documentation.
 * [ ] Fix/Check support for different response types.
 
 ### Medium Priority
+* [ ] Document Integrations with Gitlab, Proxmox, Grafana.
 * [ ] Add logging to all Application Security Group model operations.
 * [ ] Add logging to all TOTP operations.
 * [ ] Add all relevant endpoints for oidc to home view.
