@@ -183,7 +183,7 @@ class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
 		prompt = request.GET.get("prompt", None)
 		if not prompt or (isinstance(prompt, str) and prompt.lower() == "none"):
 			prompt = None
-		elif not prompt in OIDC_ALLOWED_PROMPTS:
+		elif prompt not in OIDC_ALLOWED_PROMPTS:
 			return login_redirect_bad_request("oidc_prompt_unsupported")
 
 		# Validate OIDC Parameters
@@ -213,7 +213,6 @@ class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
 			user.is_anonymous
 			or not user.is_authenticated
 			or not user.is_enabled
-			or prompt == OIDC_PROMPT_LOGIN
 			or require_consent
 		)
 
