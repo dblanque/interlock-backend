@@ -1,33 +1,38 @@
 # Target Mid-June release
-* Finish High-Medium Priority items.
-* Finish all automated tests.
-* Do manual testing of all systems with the following installations.
-	* Standalone
-	* Samba LDAP
-	* Microsoft ADDS
-* Create new pgp/gpg for apt repo (with expiry).
-* Create .deb for apt repo key installation and updating.
-* Update and fix .deb package installer.
-* Fully fledged API Documentation
-* Update Public site with new screenshots.
-* Add use-cases table to public site?
-* Create general video summary.
-* Create video summary of features as LDAP Manager.
-* Create video summary of features as IdP.
+* [x] Finish High-Medium Priority items.
+* [x] Finish all automated tests.
+* [x] Do manual testing of all systems with the following installations.
+	* [x] Standalone
+	* [x] Samba LDAP
+	* [x] Microsoft ADDS
+* [x] Create new pgp/gpg for apt repo (with expiry).
+* [x] Create .deb for apt repo key installation and updating.
+* [x] Update and fix .deb package installer.
+* [ ] Update Public site with new screenshots. <-
+* [ ] Create Integration with PVE/GITLAB/GRAFANA documentation.
+* [x] Add use-cases table to public site?
+* [ ] Create general video summary.
+* [ ] Create Installation Tutorial Video.
+* [ ] Create Proxmox VE Integration Video.
+* [ ] Create GitLab CE Integration Video.
+* [ ] Create Grafana Integration Video.
+* [ ] Create video summary of features as LDAP Manager.
+* [ ] Create video summary of features as IdP.
 
 # Post-release roadmap
-* OpenLDAP Support
-* Add session management for OIDC (if possible)
+* [ ] Fully fledged API Documentation.
+* [ ] OpenLDAP Support.
+* [ ] Add session management for OIDC (if possible).
 
 # Tests
-* core.views.oidc.CustomOidcViewSet.reject
-* core.mixins.oidc.OidcAuthorizeMixin.get_reject_url
-* core.views.mixins.SettingsViewMixin
-	* set_value_fields - mock test
-	* parse_local_setting_data - mock test
-	* parse_ldap_setting_value - mock test
-	* parse_ldap_setting_data - mock test
-* tests for local user import with password
+* [ ] core.views.oidc.CustomOidcViewSet.reject
+* [ ] core.mixins.oidc.OidcAuthorizeMixin.get_reject_url
+* [ ] core.views.mixins.SettingsViewMixin
+	* [ ] set_value_fields - mock test
+	* [ ] parse_local_setting_data - mock test
+	* [ ] parse_ldap_setting_value - mock test
+	* [ ] parse_ldap_setting_data - mock test
+* [ ] tests for local user import with password
 
 
 ## Issues
