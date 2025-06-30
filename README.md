@@ -42,6 +42,10 @@ Both LDAP Back-ends support the following features.
 ### Would you like to support me?
 <a href='https://ko-fi.com/E1E2YQ4TG' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi2.png?v=3' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
 
+For official support feel free to contact us through either of these websites:
+* <https://brconsulting.info/>
+* <https://cloudship.net/>
+
 # Installation from Source
 
 1. Install the following dependencies
@@ -52,7 +56,8 @@ apt-get install git python3 python3-venv python3-pip postgresql
 2. Once you’ve installed all the requirements, you can pull the latest repo.
 
 ```bash
-git clone https://github.com/dblanque/interlock-backend.git
+mkdir -p /var/lib/interlock/
+git clone https://github.com/dblanque/interlock-backend.git /var/lib/interlock/interlock_backend/
 ```
 
 3. Add the basic schema to the database
@@ -92,7 +97,7 @@ DATABASES = {
 		'HOST': '127.0.0.1',  # Or an IP Address that your DB is hosted on
 		'PORT': '5432',
 	}
-}" >> /opt/interlock-backend/interlock_backend/local_settings.py
+}" >> /var/lib/interlock/interlock_backend/interlock_backend/local_settings.py
 ```
 
 5. Create the Log Directory and file
@@ -108,7 +113,7 @@ Now we must install the requirements in a virtual environment with pip.
 
 ```bash
 # Create the Virtual Environment
-cd /opt/interlock-backend/
+cd /var/lib/interlock/interlock_backend/
 python3 -m venv venv --upgrade
 
 # Activate it and Install the Requirements
@@ -123,20 +128,26 @@ python3 ./manage.py creatersakey
 
 # OPTIONAL
 ## Create Default Superuser
-## (It will auto-create on first login if not done like this)
-### With django script
 python3 ./manage.py shell < install/create_default_superuser.py
-### Manually
-python3 ./manage.py createsuperuser
 
 ## Create RSA Encryption Key Pair for LDAP Connections 
-## (It will auto-create on first login if not done like this)
 python3 ./manage.py shell < install/create_rsa_key.py
 
 ## Create RSA Encryption Key Pair for OIDC
-## (It will auto-create on first login if not done like this)
 python manage.py creatersakey
 ```
+
+# FAQ - Frequently Asked Questions
+
+* Why does the repository not have any tags related to versioning?
+> Even though we upload the same commits to both Github and our own Gitlab,
+we control that internally in our private Gitlab repositories to avoid
+redundancies and MR/PR conflicts.
+
+* Will support for RPM using distros exist?
+> Not planned at the moment, maybe if the project gains traction and support,
+and demand for that specific case.
+
 # PROJECT LICENSE
 
 *Interlock Copyright (C) 2022-2025 | Dylan Blanqué, BR Consulting S.R.L.*
