@@ -8,16 +8,16 @@
 * [x] Create new pgp/gpg for apt repo (with expiry).
 * [x] Create .deb for apt repo key installation and updating.
 * [x] Update and fix .deb package installer.
-* [ ] Update Public site with new screenshots. <-
-* [ ] Create Integration with PVE/GITLAB/GRAFANA documentation.
+* [x] Update Public site with new screenshots.
+* [x] Create Integration with PVE/GITLAB/GRAFANA documentation.
 * [x] Add use-cases table to public site?
 * [ ] Create general video summary.
 * [ ] Create Installation Tutorial Video.
+* [ ] Create video summary of features as LDAP Manager.
+* [ ] Create video summary of features as IdP.
 * [ ] Create Proxmox VE Integration Video.
 * [ ] Create GitLab CE Integration Video.
 * [ ] Create Grafana Integration Video.
-* [ ] Create video summary of features as LDAP Manager.
-* [ ] Create video summary of features as IdP.
 
 # Post-release roadmap
 * [ ] Fully fledged API Documentation.
@@ -37,14 +37,10 @@
 
 ## Issues
 ### High Priority
-* [x] Fix Theming issue in Consent Screen.
-* [x] Add timer to check if user has logged in through another tab in LoginView (only when not in TOTP or OIDC mode)
-* [x] Fix issue where "LDAP Server Unreachable" might be incorrectly shown when using TOTP.
 * [ ] Update all Interlock Documentation.
 * [ ] Fix/Check support for different response types.
 
 ### Medium Priority
-* [ ] Document Integrations with Gitlab, Proxmox, Grafana.
 * [ ] Add logging to all Application Security Group model operations.
 * [ ] Add logging to all TOTP operations.
 * [ ] Add all relevant endpoints for oidc to home view.

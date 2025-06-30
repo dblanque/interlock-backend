@@ -1,5 +1,9 @@
 # Interlock Documentation
 
+* Beware: If you have installed a version of Interlock <= 1.1.0 you will have
+to re-install and re-configure the LDAP Back-end settings in your installation
+due to major re-factors and package version changes.
+
 # What is Interlock?
 
 Interlock is an **Open-Source Project** powered by *VueJS/Vuetify* and
