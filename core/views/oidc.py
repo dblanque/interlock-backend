@@ -18,7 +18,6 @@ from core.constants.oidc import (
 	OIDC_COOKIE_VUE_REDIRECT,
 	OIDC_COOKIE_CHOICES,
 	OIDC_PROMPT_CONSENT,
-	OIDC_PROMPT_LOGIN,
 )
 
 # Mixins
@@ -38,7 +37,6 @@ from django.shortcuts import redirect
 from urllib.parse import quote
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.decorators import action
 from urllib.parse import urlparse, parse_qs
 
 # Exceptions
@@ -126,7 +124,7 @@ class CustomOidcViewSet(BaseViewSet):
 		data: dict = request.data
 		user_consent = None
 		client = None
-		if not QK_NEXT in data or not request.COOKIES.get(OIDC_INTERLOCK_NEXT_COOKIE, None):
+		if QK_NEXT not in data or not request.COOKIES.get(OIDC_INTERLOCK_NEXT_COOKIE, None):
 			return login_redirect_bad_request("oidc_no_next_uri")
 		try:
 			client = Client.objects.get(client_id=data["client_id"])
