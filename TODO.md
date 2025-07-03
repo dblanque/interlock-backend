@@ -11,8 +11,8 @@
 * [x] Update Public site with new screenshots.
 * [x] Create Integration with PVE/GITLAB/GRAFANA documentation.
 * [x] Add use-cases table to public site?
-* [ ] Create general video summary.
-* [ ] Create Installation Tutorial Video.
+* [x] Create general video summary.
+* [x] Create Installation Tutorial Video.
 * [ ] Create video summary of features as LDAP Manager.
 * [ ] Create video summary of features as IdP.
 * [ ] Create Proxmox VE Integration Video.
@@ -38,6 +38,7 @@
 ## Issues
 ### High Priority
 * [ ] Update all Interlock Documentation.
+* [ ] Check postinst script skip service startup if pip install is skipped.
 * [ ] Fix/Check support for different response types.
 
 ### Medium Priority
