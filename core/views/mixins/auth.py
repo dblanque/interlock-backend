@@ -24,6 +24,7 @@ from core.models.user import User
 from core.exceptions.base import AccessTokenInvalid, RefreshTokenExpired
 
 ### Rest Framework
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.authentication import JWTAuthentication
@@ -32,6 +33,7 @@ from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 from rest_framework.renderers import BrowsableAPIRenderer
 
 ### Others
+from typing import Literal
 from django.http.request import HttpRequest
 import logging
 ################################################################################
@@ -43,7 +45,7 @@ DATE_FMT_COOKIE = "%a, %d %b %Y %H:%M:%S GMT"
 BAD_LOGIN_LIMIT = 5
 
 
-def is_axios_request(request: HttpRequest):
+def is_axios_request(request: HttpRequest | Request):
 	"""Determine if the request comes from Front-end"""
 	headers = request.headers
 	# Check for Axios-specific headers
@@ -64,7 +66,7 @@ def is_axios_request(request: HttpRequest):
 class RemoveTokenResponse:
 	def __new__(
 		cls,
-		request: HttpRequest,
+		request: HttpRequest | Request,
 		remove_refresh: bool = False,
 		bad_login_count: bool = False,
 	) -> Response:
@@ -121,7 +123,7 @@ class RemoveTokenResponse:
 
 
 class CookieJWTAuthentication(JWTAuthentication):
-	def authenticate(self, request: HttpRequest) -> tuple[User, AccessToken]:
+	def authenticate(self, request: HttpRequest) -> tuple[User | AnonymousUser, AccessToken | Literal[""]]:
 		"""Authenticates request user.
 
 		Args:
@@ -143,7 +145,7 @@ class CookieJWTAuthentication(JWTAuthentication):
 				or len(AUTH_TOKEN) == 0
 			):
 				return AnonymousUser(), EMPTY_TOKEN
-			validated_token = AccessToken(AUTH_TOKEN)
+			validated_token = AccessToken(AUTH_TOKEN) # type: ignore
 		except TokenError:
 			raise AccessTokenInvalid()
 		except Exception as generic_e:

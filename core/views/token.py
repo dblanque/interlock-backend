@@ -64,7 +64,7 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 				return RemoveTokenResponse(request, bad_login_count=True)
 			raise e
 
-		validated_data = serializer.validated_data
+		validated_data: dict = serializer.validated_data # type: ignore
 		tokens = {}
 		for k in ["access", "refresh"]:
 			tokens[k] = validated_data.pop(k)
@@ -83,10 +83,20 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 		# Send expiry date to backend on data as well.
 		refresh = serializer.refresh
 		access = refresh.access_token
+		if not access.lifetime:
+			raise Exception("access.lifetime is None")
+		if not refresh.lifetime:
+			raise Exception("refresh.lifetime is None")
 		access_expire_time = access.current_time + access.lifetime
 		refresh_expire_time = refresh.current_time + refresh.lifetime
 
-		response = Response(validated_data, status=status.HTTP_200_OK)
+		response = Response(
+			validated_data | {
+				"access_expire": int(access_expire_time.timestamp() * 1000),
+				"refresh_expire": int(refresh_expire_time.timestamp() * 1000),
+			},
+			status=status.HTTP_200_OK,
+		)
 		response.set_cookie(
 			key=JWT_SETTINGS["AUTH_COOKIE_NAME"],
 			value=tokens["access"],
