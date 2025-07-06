@@ -259,10 +259,10 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 
 	def get_user_object(
 		self,
-		username: str = None,
-		email: str = None,
-		attributes: list = None,
-		object_class_filter=None,
+		username: str | None = None,
+		email: str | None = None,
+		attributes: list | None = None,
+		object_class_filter = None,
 	):
 		"""Default: Do an LDAP Search for the requested object using username, email,
 			or both.
