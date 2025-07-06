@@ -375,6 +375,9 @@ REST_FRAMEWORK = {
 DATE_INPUT_FORMATS = ["%Y-%m-%d"]
 
 BAD_LOGIN_COOKIE_NAME = "X_BAD_LOGIN_COUNT"
+
+# To override individual keys you may create a dict named OVERRIDES_JWT
+# in your local settings file.
 SIMPLE_JWT = {
 	# Change for development (default is minutes=5)
 	"ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
@@ -411,6 +414,12 @@ SIMPLE_JWT = {
 	"SLIDING_TOKEN_LIFETIME": timedelta(minutes=5),
 	"SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
 }
+try:
+	from interlock_backend.local_django_settings import OVERRIDES_JWT
+	for k in OVERRIDES_JWT:
+		SIMPLE_JWT[k] = OVERRIDES_JWT[k]
+except ImportError:
+	pass
 
 ############################# Internationalization #############################
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
