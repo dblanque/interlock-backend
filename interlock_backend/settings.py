@@ -171,12 +171,13 @@ MIDDLEWARE = [
 	"django.middleware.common.CommonMiddleware",
 	"django.middleware.csrf.CsrfViewMiddleware",
 	############### ↓ Must be before Authentication Middleware ↓ ###############
-	"interlock_backend.middleware.AccountStatusMiddleware",  #
+	"interlock_backend.middleware.AccountStatusMiddleware",  # ←
 	"django.contrib.auth.middleware.AuthenticationMiddleware",
 	############### ↓ Must be after Authentication Middleware  ↓ ###############
 	"django_otp.middleware.OTPMiddleware",  #
 	"django.contrib.messages.middleware.MessageMiddleware",
 	"django.middleware.clickjacking.XFrameOptionsMiddleware",
+	# "oidc_provider.middleware.SessionManagementMiddleware",
 ]
 
 ROOT_URLCONF = "interlock_backend.urls"
@@ -220,7 +221,12 @@ OIDC_USERINFO = "core.views.mixins.oidc.userinfo"
 OIDC_SKIP_CUSTOM_CONSENT = False
 OIDC_SKIP_CONSENT_EXPIRE = timedelta(days=1)
 OIDC_EXTRA_SCOPE_CLAIMS = "core.views.mixins.oidc.CustomScopeClaims"
-OIDC_TOKEN_EXPIRE = 86400  # Default is 1 day
+
+# OIDC TOKEN CONFIG
+OIDC_CODE_EXPIRE = 600		# default: 10 mins
+OIDC_IDTOKEN_EXPIRE = 600	# default: 10 mins
+OIDC_TOKEN_EXPIRE = 3600	# default: 1 hour
+OIDC_SESSION_MANAGEMENT_ENABLE = False
 
 ################################################################################
 #################################### LOGGING ###################################
