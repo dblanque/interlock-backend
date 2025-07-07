@@ -191,23 +191,26 @@ urlpatterns = [
 	# JWT / Token Endpoints
 	path(
 		"api/token/check/",
-		AuthViewSet.as_view({"get": "check_session"}),
+		AuthViewSet.as_view({"get": AuthViewSet.check_session.__name__}),
 		name="token-check",
 	),
 	path("api/token/", TokenObtainPairView.as_view(), name="token-obtain"),
 	path(
 		"api/token/refresh/",
-		AuthViewSet.as_view({"post": "refresh"}),
+		AuthViewSet.as_view({"post": AuthViewSet.refresh.__name__}),
 		name="token-refresh",
 	),
 	path(
 		"api/token/revoke/",
-		AuthViewSet.as_view({"post": "logout"}),
+		AuthViewSet.as_view({
+			k: AuthViewSet.logout.__name__
+			for k in ("get", "post")
+		}),
 		name="token-revoke",
 	),
 	path(
 		"api/auth/linux-pam/",
-		AuthViewSet.as_view({"post": "linux_pam"}),
+		AuthViewSet.as_view({"post": AuthViewSet.linux_pam.__name__}),
 		name="auth-linux-pam",
 	),
 	# OIDC Endpoint overrides
@@ -218,12 +221,12 @@ urlpatterns = [
 	),
 	re_path(
 		r"openid/consent/?$",
-		CustomOidcViewSet.as_view({"post": "consent"}),
+		CustomOidcViewSet.as_view({"post": CustomOidcViewSet.consent.__name__}),
 		name="oidc-consent",
 	),
 	re_path(
 		r"openid/reject/?$",
-		CustomOidcViewSet.as_view({"post": "reject"}),
+		CustomOidcViewSet.as_view({"post": CustomOidcViewSet.reject.__name__}),
 		name="oidc-reject",
 	),
 	# OIDC Default Endpoints
