@@ -8,9 +8,19 @@
 
 # ---------------------------------- IMPORTS --------------------------------- #
 ### Core
-from core.views.mixins.auth import CookieJWTAuthentication
+from core.decorators.login import auth_required
+from core.views.mixins.auth import CookieJWTAuthentication, DATE_FMT_COOKIE
 from core.views.mixins.logs import LogMixin
 from core.models.choices.log import LOG_ACTION_LOGOUT, LOG_CLASS_USER
+from core.models.user import User, USER_TYPE_LOCAL
+from core.constants.attrs.local import LOCAL_ATTR_USERNAME, LOCAL_ATTR_PASSWORD
+from core.ldap.connector import LDAPConnector
+from core.views.mixins.totp import validate_user_otp
+from interlock_backend.encrypt import fernet_decrypt
+
+### Exceptions
+from core.exceptions.base import BadRequest, InternalServerError, Unauthorized
+from core.exceptions.otp import OTPRequired
 
 ### ViewSets
 from .base import BaseViewSet
@@ -20,8 +30,10 @@ from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework import status
 
 ### Django
+from django.core.exceptions import ObjectDoesNotExist
 from django.http.request import HttpRequest
 
 ### Interlock
@@ -31,11 +43,9 @@ from interlock_backend.settings import (
 )
 
 ### Others
-from core.exceptions.base import BadRequest, InternalServerError
+from django_otp import user_has_device
 from typing import Union
 import logging
-from core.views.mixins.auth import DATE_FMT_COOKIE
-from core.decorators.login import auth_required
 ################################################################################
 
 DBLogMixin = LogMixin()
@@ -69,6 +79,95 @@ def set_expired_jwt_cookies(response: Response):
 
 
 class AuthViewSet(BaseViewSet):
+	def linux_pam(self, request: Request):
+		"""Endpoint to verify authentication for Linux PAM."""
+		# Some of this can probably be put into a mixin if more non token
+		# providing auth endpoints are required.
+		data = request.data
+		errors = {}
+
+		# Validation
+		if not isinstance(data, dict):
+			raise BadRequest(data={
+				"detail":"A json data dictionary is required."
+			})
+
+		# String Values Validation
+		str_err = "is required and must be of type str."
+		## Username data type validation
+		username = data.get(LOCAL_ATTR_USERNAME, None)
+		if not isinstance(username, str) or not username:
+			errors[LOCAL_ATTR_USERNAME] = f"Username {str_err}"
+		## Password data type validation
+		password = data.get(LOCAL_ATTR_PASSWORD, None)
+		if not isinstance(password, str) or not password:
+			errors[LOCAL_ATTR_USERNAME] = f"Password {str_err}"
+		
+		# TOTP Code data type validation
+		totp_code = data.get("totp_code", None)
+		if totp_code is not None:
+			if (
+				not isinstance(totp_code, int) or
+				isinstance(totp_code, str) and not totp_code.isnumeric()
+			):
+				errors["totp_code"] = "TOTP Code must be a numeric str or int."
+
+		# Cross Check Key Verification
+		unsafe_mode = data.get("unsafe", False)
+		if not unsafe_mode:
+			auth_key = data.get("cross_check_key", None)
+			if not auth_key:
+				errors["cross_check_key"] = "Client cross-check key required."
+			try:
+				cross_check_key = fernet_decrypt(auth_key)
+			except:
+				cross_check_key = None
+				errors["cross_check_key"] = "Client cross-check key could not be decrypted."
+
+		if errors:
+			raise BadRequest(data={"errors": errors})
+
+		# Check User Auth.
+		user = None
+		authenticated = False
+
+		# Try getting Local User and checking if password is OK
+		try:
+			user = User.objects.get(
+				username=username,
+				user_type=USER_TYPE_LOCAL,
+			)
+			if isinstance(user, User):
+				authenticated = user.check_password(password)
+		except (ObjectDoesNotExist, User.DoesNotExist):
+			pass
+
+		# Try with LDAP User if no Local User was found
+		if not isinstance(user, User):
+			with LDAPConnector(force_admin=True, is_authenticating=True) as ldc:
+				user = ldc.get_user(username=username)
+				if isinstance(user, User):
+					if ldc.rebind(
+						user_dn=user.distinguished_name,
+						password=password
+					):
+						authenticated = True
+
+		if not user or not authenticated:
+			raise Unauthorized
+
+		if user_has_device(user=user):
+			if not totp_code:
+				raise OTPRequired
+			else:
+				validate_user_otp(user=user, data=data)
+		return Response(
+			data={
+				"cross_check_key": cross_check_key
+			},
+			status=status.HTTP_200_OK
+		)
+
 	def refresh(self, request: Request):
 		cookieauth = CookieJWTAuthentication()
 		access, refresh = cookieauth.refresh(request)

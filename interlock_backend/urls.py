@@ -200,6 +200,11 @@ urlpatterns = [
 		AuthViewSet.as_view({"post": "logout"}),
 		name="token-revoke",
 	),
+	path(
+		"api/auth/linux-pam/",
+		AuthViewSet.as_view({"post": "linux_pam"}),
+		name="auth-linux-pam",
+	),
 	# OIDC Endpoint overrides
 	re_path(
 		r"openid/authorize/?$",
