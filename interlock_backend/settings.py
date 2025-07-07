@@ -81,7 +81,7 @@ load_override(globals(), "DEBUG")
 ################################################################################
 ################################# URLs and CORS ################################
 ################################################################################
-FRONT_URL: str = None
+FRONT_URL: str | None = None
 URLS: list[str] = []
 DEV_URL = "127.0.0.1:3000"
 ALLOWED_HOSTS = []
@@ -122,7 +122,7 @@ else:
 		"127.0.0.1",
 		FRONT_URL,
 	):
-		if not v in ALLOWED_HOSTS:
+		if v not in ALLOWED_HOSTS:
 			ALLOWED_HOSTS.append(v)
 
 ############################ Reverse Proxy-ing support #########################
@@ -421,7 +421,9 @@ SIMPLE_JWT = {
 	"SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
 }
 try:
-	from interlock_backend.local_django_settings import OVERRIDES_JWT
+	from interlock_backend.local_django_settings import (
+		OVERRIDES_JWT # type: ignore
+	)
 	for k in OVERRIDES_JWT:
 		SIMPLE_JWT[k] = OVERRIDES_JWT[k]
 except ImportError:
@@ -445,6 +447,6 @@ STATIC_URL = "/static/"
 ################################################################################
 
 try:
-	from interlock_backend.local_django_settings import *
+	from interlock_backend.local_django_settings import *  # noqa: F403
 except ImportError:
 	pass
