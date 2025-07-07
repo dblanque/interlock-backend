@@ -41,18 +41,11 @@
 
 ## Issues
 ### High Priority
-* [x] Check postinst script skip service startup if pip install is skipped.
-* [x] Test fix for token expiry time in token endpoint.
-* [x] Fix minor visual bug on consent screen.
-* [x] Do small Re-factor on LoginView.
-* [x] Create endpoint for Linux PAM Auth that does not generate a JWT Token.
-* [x] Create command for PAM Auth Key Pair Request.
-* [x] Create endpoint for PAM Auth (do not emit token) with relevant info.
+N/A
 
 ### Medium Priority
 * [ ] Add logging to all Application Security Group model operations.
 * [ ] Add logging to all TOTP operations.
-* [x] Add all relevant endpoints for oidc to home view.
 * [ ] Add tests for Linux PAM Auth Endpoint.
 * [ ] Fix/Check support for different response types.
 
