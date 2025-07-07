@@ -35,6 +35,7 @@ from rest_framework import status
 ### Django
 from django.core.exceptions import ObjectDoesNotExist
 from django.http.request import HttpRequest
+from django.http.response import JsonResponse
 
 ### Interlock
 from interlock_backend.settings import (
@@ -79,6 +80,13 @@ def set_expired_jwt_cookies(response: Response):
 
 
 class AuthViewSet(BaseViewSet):
+	@auth_required
+	def check_session(self, request: Request):
+		return JsonResponse(data={
+			"code": 200,
+			"code_msg": "ok",
+		})
+
 	def linux_pam(self, request: Request):
 		"""Endpoint to verify authentication for Linux PAM."""
 		# Some of this can probably be put into a mixin if more non token
