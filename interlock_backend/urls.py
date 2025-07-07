@@ -189,6 +189,11 @@ urlpatterns = [
 	# Admin Endpoints
 	path("admin/", admin.site.urls),
 	# JWT / Token Endpoints
+	path(
+		"api/token/check/",
+		AuthViewSet.as_view({"get": "check_session"}),
+		name="token-check",
+	),
 	path("api/token/", TokenObtainPairView.as_view(), name="token-obtain"),
 	path(
 		"api/token/refresh/",
