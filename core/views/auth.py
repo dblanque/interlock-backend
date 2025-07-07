@@ -92,6 +92,22 @@ class AuthViewSet(BaseViewSet):
 				"detail":"A json data dictionary is required."
 			})
 
+		# Cross Check Key Verification
+		unsafe_mode = data.get("unsafe", False)
+		if not unsafe_mode:
+			auth_key = data.get("cross_check_key", None)
+			if not auth_key:
+				errors["cross_check_key"] = "Client cross-check key required."
+			try:
+				cross_check_key = fernet_decrypt(auth_key)
+			except:
+				cross_check_key = None
+				errors["cross_check_key"] = "Client cross-check key could not be decrypted."
+
+			# If we have errors at this stage ignore all other validation.
+			if errors:
+				raise BadRequest(data={"errors": errors})
+
 		# String Values Validation
 		str_err = "is required and must be of type str."
 		## Username data type validation
@@ -111,18 +127,6 @@ class AuthViewSet(BaseViewSet):
 				isinstance(totp_code, str) and not totp_code.isnumeric()
 			):
 				errors["totp_code"] = "TOTP Code must be a numeric str or int."
-
-		# Cross Check Key Verification
-		unsafe_mode = data.get("unsafe", False)
-		if not unsafe_mode:
-			auth_key = data.get("cross_check_key", None)
-			if not auth_key:
-				errors["cross_check_key"] = "Client cross-check key required."
-			try:
-				cross_check_key = fernet_decrypt(auth_key)
-			except:
-				cross_check_key = None
-				errors["cross_check_key"] = "Client cross-check key could not be decrypted."
 
 		if errors:
 			raise BadRequest(data={"errors": errors})
