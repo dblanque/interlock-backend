@@ -239,11 +239,7 @@ class TestInsert(BaseViewTestClass):
 		assert response.status_code == status.HTTP_200_OK
 		m_ldap_user_exists.assert_called_once_with(
 			username="testuser",
-			email=None
-			if not use_email
-			else m_data.get(
-				f_runtime_settings.LDAP_FIELD_MAP[LOCAL_ATTR_EMAIL]
-			),
+			email=m_data[LOCAL_ATTR_EMAIL] if use_email else None,
 		)
 		m_ldap_user_insert.assert_called_once_with(data=expected_m_data_call)
 
@@ -292,9 +288,7 @@ class TestInsert(BaseViewTestClass):
 		assert response.status_code == status.HTTP_409_CONFLICT
 		m_ldap_user_exists.assert_called_once_with(
 			username="testuser",
-			email=None
-			if not use_email
-			else m_data.get(f_runtime_settings.LDAP_FIELD_MAP["email"]),
+			email=m_data[LOCAL_ATTR_EMAIL] if use_email else None,
 		)
 		m_ldap_user_insert.assert_not_called()
 		m_ldap_set_password.assert_not_called()
