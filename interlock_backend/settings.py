@@ -364,7 +364,9 @@ if ENABLE_THROTTLING:
 			"user": "1000/hour",
 		},
 	}
+LINUX_PAM_AUTH_THROTTLE = "15/min"
 load_override(globals(), "THROTTLE_OPTS")
+
 
 REST_FRAMEWORK = {
 	"COERCE_DECIMAL_TO_STRING": False,
