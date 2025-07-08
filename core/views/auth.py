@@ -102,6 +102,7 @@ class AuthViewSet(BaseViewSet):
 
 		# Cross Check Key Verification
 		unsafe_mode = data.get("unsafe", False)
+		cross_check_key = None
 		if not unsafe_mode:
 			auth_key = data.get("cross_check_key", None)
 			if not auth_key:
@@ -109,7 +110,6 @@ class AuthViewSet(BaseViewSet):
 			try:
 				cross_check_key = fernet_decrypt(auth_key)
 			except:
-				cross_check_key = None
 				errors["cross_check_key"] = "Client cross-check key could not be decrypted."
 
 			# If we have errors at this stage ignore all other validation.
