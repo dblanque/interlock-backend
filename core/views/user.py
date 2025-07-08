@@ -145,7 +145,7 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 			# Should always have username on creation
 			username=validated_data.get(LOCAL_ATTR_USERNAME),
 			email=validated_data.get(LOCAL_ATTR_EMAIL, None),
-			ignore_local=True, # This is already checked in the serializer
+			ignore_local=True,  # This is already checked in the serializer
 		)
 		with transaction.atomic():
 			user_instance: User = User(**validated_data)
@@ -238,7 +238,7 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 			self.check_user_exists(
 				username=username,
 				email=email,
-				ignore_local=True, # This is already checked in the serializer
+				ignore_local=True,  # This is already checked in the serializer
 			)
 		# Set data
 		for key in serializer.validated_data:

@@ -13,6 +13,7 @@ _REFRESH_NAME = SIMPLE_JWT["REFRESH_COOKIE_NAME"]
 _JWT_SAMESITE = SIMPLE_JWT["AUTH_COOKIE_SAME_SITE"]
 _JWT_SECURE = SIMPLE_JWT["AUTH_COOKIE_SECURE"]
 
+
 @pytest.fixture
 def mock_request(mocker):
 	user = User(

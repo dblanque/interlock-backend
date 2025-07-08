@@ -805,7 +805,10 @@ class TestInsert:
 class TestUpdate:
 	@pytest.mark.parametrize(
 		"user_with_email_exists",
-		(True, False,),
+		(
+			True,
+			False,
+		),
 	)
 	def test_success(
 		self,
@@ -827,7 +830,9 @@ class TestUpdate:
 			return_value=False if not user_with_email_exists else None,
 			side_effect=exc_ldap.LDAPObjectExists(
 				data={"code": "user_ldap_email_exists"}
-			) if user_with_email_exists else None
+			)
+			if user_with_email_exists
+			else None,
 		)
 		m_data = {
 			LOCAL_ATTR_USERNAME: normal_user.username,

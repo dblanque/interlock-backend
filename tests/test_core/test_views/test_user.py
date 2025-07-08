@@ -137,7 +137,7 @@ class TestCreate(BaseViewTestClass):
 		m_check_user_exists.assert_called_once_with(
 			username=m_data[LOCAL_ATTR_USERNAME],
 			email=m_data.get(LOCAL_ATTR_EMAIL, None),
-			ignore_local=True
+			ignore_local=True,
 		)
 		if with_password:
 			assert user.check_password(m_data[LOCAL_ATTR_PASSWORD])
@@ -223,7 +223,7 @@ class TestCreate(BaseViewTestClass):
 		m_check_user_exists.assert_called_once_with(
 			username=user_data[LOCAL_ATTR_USERNAME],
 			email=user_data[LOCAL_ATTR_EMAIL],
-			ignore_local=True
+			ignore_local=True,
 		)
 		assert "already exists" in response.data.get("detail")
 
@@ -309,7 +309,7 @@ class TestUpdate(BaseViewTestClass):
 		m_check_user_exists.assert_called_once_with(
 			username=m_data.get(LOCAL_ATTR_USERNAME, None),
 			email=m_data.get(LOCAL_ATTR_EMAIL, None),
-			ignore_local=True
+			ignore_local=True,
 		)
 		f_log.assert_called_once_with(
 			user=admin_user.id,

@@ -18,6 +18,7 @@ from functools import wraps
 from logging import getLogger
 from core.views.mixins.auth import CookieJWTAuthentication
 from core.exceptions.base import AccessTokenInvalid
+
 ################################################################################
 logger = getLogger()
 

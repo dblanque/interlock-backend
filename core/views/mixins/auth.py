@@ -123,7 +123,9 @@ class RemoveTokenResponse:
 
 
 class CookieJWTAuthentication(JWTAuthentication):
-	def authenticate(self, request: HttpRequest) -> tuple[User | AnonymousUser, AccessToken | Literal[""]]:
+	def authenticate(
+		self, request: HttpRequest
+	) -> tuple[User | AnonymousUser, AccessToken | Literal[""]]:
 		"""Authenticates request user.
 
 		Args:
@@ -145,7 +147,7 @@ class CookieJWTAuthentication(JWTAuthentication):
 				or len(AUTH_TOKEN) == 0
 			):
 				return AnonymousUser(), EMPTY_TOKEN
-			validated_token = AccessToken(AUTH_TOKEN) # type: ignore
+			validated_token = AccessToken(AUTH_TOKEN)  # type: ignore
 		except TokenError:
 			raise AccessTokenInvalid()
 		except Exception as generic_e:

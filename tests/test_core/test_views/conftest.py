@@ -165,11 +165,9 @@ ldap_endpoints = (
 	("/api/ldap/users/bulk/unlock/", HTTPMethod.POST),
 	("/api/ldap/users/self/change-password/", HTTPMethod.POST),
 	("/api/ldap/users/self/update/", HTTPMethod.POST),
-
 	# This is not LDAP Only, should be moved to another viewset later
 	# ("/api/ldap/users/self/info/", HTTPMethod.GET),
 	# ("/api/ldap/users/self/fetch/", HTTPMethod.GET),
-
 	# LDAP Directory Tree and OUs
 	("/api/ldap/dirtree/", HTTPMethod.GET),  # Retrieve Dirtree
 	("/api/ldap/dirtree/", HTTPMethod.POST),  # Create
@@ -193,6 +191,7 @@ ldap_endpoints = (
 )
 def g_ldap_domain_endpoints(request: FixtureRequest):
 	return request.param
+
 
 @pytest.fixture(
 	params=[
@@ -343,6 +342,7 @@ def f_api_client(api_client: APIClient):
 			api_client.cookies[key]["httponly"] = True
 			api_client.cookies[key]["samesite"] = _JWT_SAMESITE
 			api_client.cookies[key]["secure"] = _JWT_SECURE
+
 		api_client.set_cookie = set_cookie
 
 		refresh = kwargs.pop("refresh_token", None)

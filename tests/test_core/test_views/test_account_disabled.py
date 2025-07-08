@@ -3,6 +3,7 @@ from pytest_mock import MockerFixture
 from rest_framework import status
 from .endpoint_utils import endpoint_test_fn
 
+
 def test_disabled_user_unauthorized(
 	mocker: MockerFixture,
 	g_all_endpoints: tuple[str, str],

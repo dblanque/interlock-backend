@@ -124,7 +124,9 @@ class CustomOidcViewSet(BaseViewSet):
 		data: dict = request.data
 		user_consent = None
 		client = None
-		if QK_NEXT not in data or not request.COOKIES.get(OIDC_INTERLOCK_NEXT_COOKIE, None):
+		if QK_NEXT not in data or not request.COOKIES.get(
+			OIDC_INTERLOCK_NEXT_COOKIE, None
+		):
 			return login_redirect_bad_request("oidc_no_next_uri")
 		try:
 			client = Client.objects.get(client_id=data["client_id"])
@@ -158,7 +160,9 @@ class CustomOidcViewSet(BaseViewSet):
 				)
 				user_consent.date_given = timezone.make_aware(datetime.now())
 				user_consent.save()
-		decrypted_next_uri = fernet_decrypt(request.COOKIES[OIDC_INTERLOCK_NEXT_COOKIE])
+		decrypted_next_uri = fernet_decrypt(
+			request.COOKIES[OIDC_INTERLOCK_NEXT_COOKIE]
+		)
 		return Response(
 			data={
 				"code": 0,

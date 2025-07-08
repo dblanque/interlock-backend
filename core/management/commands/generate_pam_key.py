@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand, CommandError
 from interlock_backend.encrypt import fernet_encrypt
 from django.utils.crypto import get_random_string
 
+
 class Command(BaseCommand):
 	help = "Generates Linux PAM API Client Key Pair"
 

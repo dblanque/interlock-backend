@@ -223,9 +223,9 @@ OIDC_SKIP_CONSENT_EXPIRE = timedelta(days=1)
 OIDC_EXTRA_SCOPE_CLAIMS = "core.views.mixins.oidc.CustomScopeClaims"
 
 # OIDC TOKEN CONFIG
-OIDC_CODE_EXPIRE = 600		# default: 10 mins
-OIDC_IDTOKEN_EXPIRE = 600	# default: 10 mins
-OIDC_TOKEN_EXPIRE = 3600	# default: 1 hour
+OIDC_CODE_EXPIRE = 600  # default: 10 mins
+OIDC_IDTOKEN_EXPIRE = 600  # default: 10 mins
+OIDC_TOKEN_EXPIRE = 3600  # default: 1 hour
 OIDC_SESSION_MANAGEMENT_ENABLE = True
 
 ################################################################################
@@ -422,8 +422,9 @@ SIMPLE_JWT = {
 }
 try:
 	from interlock_backend.local_django_settings import (
-		OVERRIDES_JWT # type: ignore
+		OVERRIDES_JWT,  # type: ignore
 	)
+
 	for k in OVERRIDES_JWT:
 		SIMPLE_JWT[k] = OVERRIDES_JWT[k]
 except ImportError:

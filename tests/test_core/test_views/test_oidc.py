@@ -132,7 +132,9 @@ class TestCustomOidcViewSet(BaseViewTestClass):
 			"client_id": f_client.client_id,
 			"next": "true",
 		}
-		admin_user_client.set_cookie(OIDC_INTERLOCK_NEXT_COOKIE, "mock_next_encrypted")
+		admin_user_client.set_cookie(
+			OIDC_INTERLOCK_NEXT_COOKIE, "mock_next_encrypted"
+		)
 		response: Response = admin_user_client.post(
 			self.endpoint,
 			data=data,
@@ -159,7 +161,9 @@ class TestCustomOidcViewSet(BaseViewTestClass):
 			"client_id": user_consent.client.client_id,
 			"next": "true",
 		}
-		admin_user_client.set_cookie(OIDC_INTERLOCK_NEXT_COOKIE, "mock_next_encrypted")
+		admin_user_client.set_cookie(
+			OIDC_INTERLOCK_NEXT_COOKIE, "mock_next_encrypted"
+		)
 		old_expiry = user_consent.expires_at
 
 		response: Response = admin_user_client.post(
@@ -174,9 +178,18 @@ class TestCustomOidcViewSet(BaseViewTestClass):
 	@pytest.mark.parametrize(
 		"remove_cookie, remove_data_key",
 		(
-			(True, False,),
-			(False, True,),
-			(True, True,),
+			(
+				True,
+				False,
+			),
+			(
+				False,
+				True,
+			),
+			(
+				True,
+				True,
+			),
 		),
 	)
 	def test_consent_missing_next(
@@ -191,7 +204,9 @@ class TestCustomOidcViewSet(BaseViewTestClass):
 			data.pop("next")
 
 		if not remove_cookie:
-			admin_user_client.set_cookie(OIDC_INTERLOCK_NEXT_COOKIE, "mock_next_encrypted")
+			admin_user_client.set_cookie(
+				OIDC_INTERLOCK_NEXT_COOKIE, "mock_next_encrypted"
+			)
 
 		response: Response = admin_user_client.post(
 			self.endpoint, data=data, format="json"
@@ -210,7 +225,9 @@ class TestCustomOidcViewSet(BaseViewTestClass):
 			"client_id": "invalid-client",
 			"next": f_client.redirect_uris[0],
 		}
-		admin_user_client.set_cookie(OIDC_INTERLOCK_NEXT_COOKIE, "mock_next_encrypted")
+		admin_user_client.set_cookie(
+			OIDC_INTERLOCK_NEXT_COOKIE, "mock_next_encrypted"
+		)
 		response: Response = admin_user_client.post(
 			self.endpoint, data=data, format="json"
 		)
@@ -234,7 +251,9 @@ class TestCustomOidcViewSet(BaseViewTestClass):
 			"client_id": f_client.client_id,
 			"next": "true",
 		}
-		admin_user_client.set_cookie(OIDC_INTERLOCK_NEXT_COOKIE, "mock_next_encrypted")
+		admin_user_client.set_cookie(
+			OIDC_INTERLOCK_NEXT_COOKIE, "mock_next_encrypted"
+		)
 		response: Response = admin_user_client.post(
 			self.endpoint, data=data, format="json"
 		)

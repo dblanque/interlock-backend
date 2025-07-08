@@ -64,7 +64,7 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 				return RemoveTokenResponse(request, bad_login_count=True)
 			raise e
 
-		validated_data: dict = serializer.validated_data # type: ignore
+		validated_data: dict = serializer.validated_data  # type: ignore
 		tokens = {}
 		for k in ["access", "refresh"]:
 			tokens[k] = validated_data.pop(k)
@@ -91,7 +91,8 @@ class TokenObtainPairView(jwt_views.TokenViewBase):
 		refresh_expire_time = refresh.current_time + refresh.lifetime
 
 		response = Response(
-			validated_data | {
+			validated_data
+			| {
 				"access_expire": int(access_expire_time.timestamp() * 1000),
 				"refresh_expire": int(refresh_expire_time.timestamp() * 1000),
 			},

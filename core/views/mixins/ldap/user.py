@@ -262,7 +262,7 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 		username: str | None = None,
 		email: str | None = None,
 		attributes: list | None = None,
-		object_class_filter = None,
+		object_class_filter=None,
 	):
 		"""Default: Do an LDAP Search for the requested object using username, email,
 			or both.

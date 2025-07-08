@@ -596,7 +596,7 @@ class TestGetLoginUrl:
 	) -> None:
 		m_fernet_encrypt = mocker.patch(
 			"core.views.mixins.oidc.fernet_encrypt",
-			return_value="encrypted_url"
+			return_value="encrypted_url",
 		)
 		f_authorize_mixin.application = f_application
 		f_authorize_mixin.client = f_client
@@ -635,7 +635,7 @@ class TestGetLoginUrl:
 	) -> None:
 		m_fernet_encrypt = mocker.patch(
 			"core.views.mixins.oidc.fernet_encrypt",
-			return_value="encrypted_url"
+			return_value="encrypted_url",
 		)
 		m_oidc_uri = f_oidc_uri(prompt=prompt_value)
 		m_oidc_uri_qs = parse_qs(urlparse(m_oidc_uri).query)
@@ -670,7 +670,7 @@ class TestGetLoginUrl:
 	) -> None:
 		m_fernet_encrypt = mocker.patch(
 			"core.views.mixins.oidc.fernet_encrypt",
-			return_value="encrypted_url"
+			return_value="encrypted_url",
 		)
 		f_authorize_mixin.application = f_application
 		f_authorize_mixin.client = f_client

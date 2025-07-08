@@ -34,7 +34,11 @@ def AccountStatusMiddleware(get_response):
 	return middleware
 
 
-OPENID_WELLKNOWN_PATTERN = re.compile(r"^(/openid/)?\.well-known/openid-configuration/?$")
+OPENID_WELLKNOWN_PATTERN = re.compile(
+	r"^(/openid/)?\.well-known/openid-configuration/?$"
+)
+
+
 class OpenIDCorsMiddleware(CorsMiddleware):
 	def add_response_headers(
 		self, request: HttpRequest, response: HttpResponseBase
