@@ -226,7 +226,7 @@ OIDC_EXTRA_SCOPE_CLAIMS = "core.views.mixins.oidc.CustomScopeClaims"
 OIDC_CODE_EXPIRE = 600		# default: 10 mins
 OIDC_IDTOKEN_EXPIRE = 600	# default: 10 mins
 OIDC_TOKEN_EXPIRE = 3600	# default: 1 hour
-OIDC_SESSION_MANAGEMENT_ENABLE = False
+OIDC_SESSION_MANAGEMENT_ENABLE = True
 
 ################################################################################
 #################################### LOGGING ###################################
