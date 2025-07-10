@@ -18,7 +18,7 @@ from rest_framework import routers
 from core.views.home import HomeViewSet
 from core.views.token import TokenObtainPairView
 from core.views.totp import TOTPViewSet
-from core.views.auth import AuthViewSet
+from core.views.auth import AuthViewSet, LinuxPamView
 from core.views.user import UserViewSet
 from core.views.ldap.user import LDAPUserViewSet
 from core.views.ldap.organizational_unit import LdapDirtreeViewSet
@@ -34,8 +34,8 @@ from core.views.debug import DebugViewSet
 from core.views.application_group import ApplicationGroupViewSet
 from core.views.application import ApplicationViewSet
 from core.views.oidc import OidcAuthorizeView, CustomOidcViewSet
-from interlock_backend.settings import DEBUG
 from django.urls import re_path
+from django.conf import settings
 ################################################################################
 
 # Initalizes Router
@@ -56,7 +56,7 @@ named_view_sets = {
 	r"application": ApplicationViewSet,
 }
 
-if DEBUG:
+if getattr(settings, "DEBUG", False):
 	named_view_sets.update(
 		{r"ldap/gpo": GPOViewSet, r"test": TestViewSet, r"debug": DebugViewSet}
 	)
@@ -202,16 +202,10 @@ urlpatterns = [
 	),
 	path(
 		"api/token/revoke/",
-		AuthViewSet.as_view({
-			k: AuthViewSet.logout.__name__
-			for k in ("get", "post")
-		}),
+		AuthViewSet.as_view(
+			{k: AuthViewSet.logout.__name__ for k in ("get", "post")}
+		),
 		name="token-revoke",
-	),
-	path(
-		"api/auth/linux-pam/",
-		AuthViewSet.as_view({"post": AuthViewSet.linux_pam.__name__}),
-		name="auth-linux-pam",
 	),
 	# OIDC Endpoint overrides
 	re_path(
@@ -232,3 +226,12 @@ urlpatterns = [
 	# OIDC Default Endpoints
 	path("openid/", include("oidc_provider.urls", namespace="oidc_provider")),
 ]
+
+if getattr(settings, "LINUX_PAM_AUTH_ENDPOINT_ENABLED", False):
+	urlpatterns.append(
+		path(
+			"api/auth/linux-pam/",
+			LinuxPamView.as_view(),
+			name="auth-linux-pam",
+		),
+	)
