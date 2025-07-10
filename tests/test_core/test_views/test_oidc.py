@@ -455,10 +455,7 @@ class TestOidcAuthorizeView(BaseViewTestClass):
 		assert response.status_code == status.HTTP_302_FOUND
 		parsed_url: ParseResult = urlparse(response.url)
 		parsed_qs = parse_qs(parsed_url.query)
-		expected_params = {
-			"code",
-			"state",
-		}
+		expected_params = {"code", "state", "session_state"}
 		assert set(parsed_qs.keys()) == expected_params
 		for p in expected_params:
 			assert p in parsed_qs
