@@ -9,6 +9,7 @@
 # ---------------------------------- IMPORTS --------------------------------- #
 from django.contrib.auth.backends import ModelBackend
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ObjectDoesNotExist
 ################################################################################
 
 
@@ -20,13 +21,16 @@ class EmailAuthBackend(ModelBackend):
 	supports_inactive_user = False
 
 	def authenticate(self, request, username=None, password=None):
+		if not password or not username:
+			return None
+
 		User = get_user_model()
 		try:
 			user = User.objects.get(email=username)
 			if user.check_password(password):
 				return user
 			return None
-		except User.DoesNotExist:
+		except (ObjectDoesNotExist, User.DoesNotExist):
 			return None
 
 	def get_user(self, user_id):
