@@ -35,7 +35,10 @@ class SID(object):
 	    print(sid) # S-1-0-21-2209570321-9700970-2859064192-1159
 	"""
 
-	def __init__(self, security_identifier: list | bytearray | LDAPAttribute):
+	def __init__(
+		self,
+		security_identifier: list | bytes | bytearray | LDAPAttribute
+	):
 		if not security_identifier:
 			return None
 
