@@ -364,9 +364,12 @@ if ENABLE_THROTTLING:
 			"user": "1000/hour",
 		},
 	}
-LINUX_PAM_AUTH_THROTTLE = "15/min"
-load_override(globals(), "THROTTLE_OPTS")
 
+# TODO Move these to be Front-end configurable?
+LINUX_PAM_AUTH_THROTTLE = "15/min"
+LINUX_PAM_AUTH_ENDPOINT_ENABLED = False
+LINUX_PAM_AUTH_ENDPOINT_ADMIN_ONLY = True
+load_override(globals(), "THROTTLE_OPTS")
 
 REST_FRAMEWORK = {
 	"COERCE_DECIMAL_TO_STRING": False,
