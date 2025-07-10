@@ -227,7 +227,7 @@ def authenticate(*args, **kwargs):
 	) as ldc:
 		if ldc.connection is None:
 			return None
-		user: User = ldc.get_user(**ldap_kwargs)
+		user = ldc.get_user(**ldap_kwargs)
 		ldc.connection.unbind()
 		if user is None:
 			return None
@@ -249,7 +249,7 @@ def authenticate(*args, **kwargs):
 		setattr(user, field, encrypted_data[index])
 	del password
 	user.user_type = USER_TYPE_LDAP
-	update_last_login(None, user)
+	update_last_login(None, user) # type: ignore
 	user.save()
 	return user
 
@@ -265,23 +265,20 @@ class LDAPConnectionOptions(TypedDict):
 
 
 class LDAPConnector(object):
-	connection: LDAPConnectionProtocol = None
+	connection: LDAPConnectionProtocol | None = None
 	log_debug_prefix = "[DEBUG - LDAPConnector] | "
 	_entered = False
 	_pytest = False
 
 	def __init__(
 		self,
-		user: User = None,
+		user: User | None = None,
 		force_admin=False,
 		get_ldap_info=ldap3.DSA,
 		is_authenticating=False,
 		**kwargs,
 	):
-		try:
-			self._pytest = settings.LDAP_CONNECTOR_PYTEST_MODE
-		except:
-			pass
+		self._pytest = getattr(settings, "LDAP_CONNECTOR_PYTEST_MODE", False)
 
 		if not self._pytest:
 			if RuntimeSettings.LDAP_DOMAIN in (
@@ -303,7 +300,7 @@ class LDAPConnector(object):
 					}
 				)
 
-		is_local_superuser = hasattr(user, "username") and (
+		is_local_superuser = user and hasattr(user, "username") and (
 			user.username == DEFAULT_SUPERUSER_USERNAME
 			or (user.is_superuser and user.user_type == USER_TYPE_LOCAL)
 		)
@@ -462,13 +459,11 @@ class LDAPConnector(object):
 				"check_names": True,
 			}
 
-			try:
-				DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS = (
-					settings.DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS
-				)
-			except:
-				DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS = False
-				pass
+			DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS = getattr(
+				settings,
+				"DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS",
+				False
+			)
 			# Do not use this in production or testing
 			# It can leak sensitive data such as decrypted credentials
 			if (
