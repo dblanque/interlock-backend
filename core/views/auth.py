@@ -19,13 +19,20 @@ from core.views.mixins.totp import validate_user_otp
 from interlock_backend.encrypt import fernet_decrypt
 
 ### Exceptions
-from core.exceptions.base import BadRequest, InternalServerError, Unauthorized
+from core.exceptions.base import (
+	BadRequest,
+	InternalServerError,
+	Unauthorized,
+	PermissionDenied,
+)
 from core.exceptions.otp import OTPRequired
 
 ### ViewSets
 from .base import BaseViewSet
 
 ### REST Framework
+from rest_framework.views import APIView
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -45,6 +52,7 @@ from interlock_backend.settings import (
 
 ### Others
 from django_otp import user_has_device
+from django.conf import settings
 from typing import Union
 import logging
 ################################################################################
@@ -79,26 +87,23 @@ def set_expired_jwt_cookies(response: Response):
 	return response
 
 
-class AuthViewSet(BaseViewSet):
-	@auth_required
-	def check_session(self, request: Request):
-		return JsonResponse(data={
-			"code": 200,
-			"code_msg": "ok",
-		})
+class LinuxPamAnonRateThrottle(AnonRateThrottle):
+	rate = getattr(settings, "LINUX_PAM_AUTH_THROTTLE", None) or "15/min"
 
-	def linux_pam(self, request: Request):
-		"""Endpoint to verify authentication for Linux PAM."""
-		# Some of this can probably be put into a mixin if more non token
-		# providing auth endpoints are required.
-		data = request.data
+
+class LinuxPamUserRateThrottle(UserRateThrottle):
+	rate = getattr(settings, "LINUX_PAM_AUTH_THROTTLE", None) or "15/min"
+
+
+class LinuxPamView(APIView):
+	throttle_classes = [LinuxPamAnonRateThrottle, LinuxPamUserRateThrottle]
+
+	def validate(self, data) -> dict:
 		errors = {}
-
-		# Validation
 		if not isinstance(data, dict):
-			raise BadRequest(data={
-				"detail":"A json data dictionary is required."
-			})
+			raise BadRequest(
+				data={"detail": "A json data dictionary is required."}
+			)
 
 		# Cross Check Key Verification
 		unsafe_mode = data.get("unsafe", False)
@@ -109,12 +114,17 @@ class AuthViewSet(BaseViewSet):
 				errors["cross_check_key"] = "Client cross-check key required."
 			try:
 				cross_check_key = fernet_decrypt(auth_key)
-			except:
-				errors["cross_check_key"] = "Client cross-check key could not be decrypted."
+			except Exception as e:
+				logger.error("Could not decrypt PAM Auth cross-check key.")
+				logger.exception(e)
+				errors["cross_check_key"] = (
+					"Client cross-check key could not be decrypted."
+				)
 
 			# If we have errors at this stage ignore all other validation.
 			if errors:
 				raise BadRequest(data={"errors": errors})
+		data["cross_check_key"] = cross_check_key
 
 		# String Values Validation
 		str_err = "is required and must be of type str."
@@ -126,18 +136,38 @@ class AuthViewSet(BaseViewSet):
 		password = data.get(LOCAL_ATTR_PASSWORD, None)
 		if not isinstance(password, str) or not password:
 			errors[LOCAL_ATTR_USERNAME] = f"Password {str_err}"
-		
+
 		# TOTP Code data type validation
 		totp_code = data.get("totp_code", None)
 		if totp_code is not None:
 			if (
-				not isinstance(totp_code, int) or
-				isinstance(totp_code, str) and not totp_code.isnumeric()
+				not isinstance(totp_code, int)
+				or isinstance(totp_code, str)
+				and not totp_code.strip().isnumeric()
 			):
 				errors["totp_code"] = "TOTP Code must be a numeric str or int."
 
+		if isinstance(totp_code, str):
+			data["totp_code"] = int(totp_code.strip())
+
 		if errors:
 			raise BadRequest(data={"errors": errors})
+
+		if "unsafe" in data:
+			del data["unsafe"]
+		return data
+
+	def get(self, request: Request, format=None):
+		"""Endpoint to verify authentication for Linux PAM."""
+		# Some of this can probably be put into a mixin if more non token
+		# providing auth endpoints are required.
+
+		# Validation
+		validated_data = self.validate(data=request.data)
+		username = validated_data[LOCAL_ATTR_USERNAME]
+		password = validated_data[LOCAL_ATTR_PASSWORD]
+		totp_code = validated_data.get("totp_code", None)
+		cross_check_key = validated_data.get("cross_check_key", None)
 
 		# Check User Auth.
 		user = None
@@ -157,27 +187,46 @@ class AuthViewSet(BaseViewSet):
 		# Try with LDAP User if no Local User was found
 		if not isinstance(user, User):
 			with LDAPConnector(force_admin=True, is_authenticating=True) as ldc:
+				# Syncs the user to local db then checks it
 				user = ldc.get_user(username=username)
 				if isinstance(user, User):
 					if ldc.rebind(
-						user_dn=user.distinguished_name,
-						password=password
+						user_dn=user.distinguished_name, password=password
 					):
 						authenticated = True
 
 		if not user or not authenticated:
 			raise Unauthorized
 
+		if (
+			getattr(settings, "LINUX_PAM_AUTH_ENDPOINT_ADMIN_ONLY", True) and
+			not (user.is_superuser and user.is_staff)
+		):
+			raise PermissionDenied
+
 		if user_has_device(user=user):
 			if not totp_code:
 				raise OTPRequired
 			else:
-				validate_user_otp(user=user, data=data)
+				validate_user_otp(user=user, data=validated_data)
 		return Response(
 			data={
 				"cross_check_key": cross_check_key
 			},
 			status=status.HTTP_200_OK
+		)
+	
+	def post(self, request: Request, format=None):
+		return self.get(request=request, format=format)
+
+class AuthViewSet(BaseViewSet):
+	@auth_required
+	def check_session(self, request: Request):
+		return JsonResponse(
+			data={
+				"code": 200,
+				"code_msg": "ok",
+			}
 		)
 
 	def refresh(self, request: Request):
