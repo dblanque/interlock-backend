@@ -211,6 +211,8 @@ class LinuxPamView(APIView):
 				validate_user_otp(user=user, data=validated_data)
 		return Response(
 			data={
+				"code": 0,
+				"code_msg": "ok",
 				"is_superuser": user.is_superuser,
 				"cross_check_key": cross_check_key
 			},
