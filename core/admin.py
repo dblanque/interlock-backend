@@ -81,8 +81,7 @@ class UserAdmin(DjangoUserAdmin):
 
 
 class ASGForm(forms.ModelForm):
-	ldap_objects = SimpleArrayField(forms.CharField(), delimiter="|")
-
+	pass
 
 @admin.register(models.ApplicationSecurityGroup)
 class ASGAdmin(admin.ModelAdmin):
