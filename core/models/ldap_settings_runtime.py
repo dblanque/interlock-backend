@@ -24,6 +24,7 @@ from django.core.exceptions import ObjectDoesNotExist, AppRegistryNotReady
 from django.apps import apps
 from interlock_backend.encrypt import aes_decrypt
 from core.utils.db import db_table_exists
+from core.utils.migrations import is_in_migration
 import sys
 import logging
 from uuid import uuid1, getnode as uuid_getnode
@@ -85,9 +86,14 @@ class RuntimeSettingsSingleton:
 
 	def __init__(self):
 		if self._initialized or not apps.ready:
-			if not apps.ready:
+			if is_in_migration():
 				logger.error(
-					"%s was incorrectly initialized before all apps were ready."
+					"%s in migration mode."
+					% (self.__class__.__name__)
+				)
+			elif not apps.ready:
+				logger.error(
+					"%s may not be initialized before all apps are ready."
 					% (self.__class__.__name__)
 				)
 			return
@@ -110,10 +116,11 @@ class RuntimeSettingsSingleton:
 				setattr(self, k, v)
 		except AppRegistryNotReady:
 			raise
-		except:
+		except Exception as e:
 			if raise_exc:
-				raise
+				raise e
 			else:
+				logger.exception(e)
 				return False
 		self.postsync()
 		return True
