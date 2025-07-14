@@ -9,6 +9,7 @@
 # ---------------------------------- IMPORTS --------------------------------- #
 from django.apps import AppConfig
 from core.utils.apps_ready import ensure_apps_ready
+from core.utils.migrations import is_in_migration
 from logging import getLogger
 import threading
 ################################################################################
@@ -41,10 +42,12 @@ class CoreConfig(AppConfig):
 		from core.views.mixins.ldap_settings import SettingsViewMixin
 		from core.setup.oidc import create_default_oidc_rsa_key
 
-		logger.info("Checking defaults.")
+		if not is_in_migration():
+			logger.info("Checking defaults.")
 
 		create_default_superuser()
 		create_default_interlock_settings()
 		SettingsViewMixin().create_default_preset()
 		create_default_oidc_rsa_key()
-		logger.info("Core startup complete.")
+		if not is_in_migration():
+			logger.info("Core startup complete.")
