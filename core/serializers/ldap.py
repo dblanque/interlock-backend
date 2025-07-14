@@ -89,7 +89,7 @@ def website_validator(v: str):
 
 class DistinguishedNameField(serializers.CharField):
 	def __init__(self, **kwargs):
-		if not "validators" in kwargs:
+		if "validators" not in kwargs:
 			kwargs["validators"] = [dn_validator_se]
 		else:
 			kwargs["validators"] = [dn_validator_se] + kwargs["validators"]
