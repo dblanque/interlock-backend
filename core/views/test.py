@@ -15,7 +15,6 @@ from core.exceptions.ldap import CouldNotOpenConnection
 from core.ldap.connector import LDAPConnector, LDAPInfo
 from core.models.types.ldap_dns_record import *
 from core.models import ldap_settings_runtime
-from core.models.user import User
 from interlock_backend.settings import LOG_FILE_FOLDER
 ################################################################################
 
