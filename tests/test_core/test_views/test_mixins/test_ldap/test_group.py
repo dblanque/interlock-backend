@@ -5,6 +5,7 @@ from pytest_mock import MockerFixture, MockType
 ################################################################################
 from core.views.mixins.ldap.group import GroupViewMixin
 from core.ldap.types.group import LDAPGroupTypes
+from core.models.ldap_ref import LdapRef
 from rest_framework.serializers import ValidationError
 from core.constants.attrs import (
 	LDAP_ATTR_COMMON_NAME,
@@ -141,15 +142,31 @@ def f_application():
 		scopes="openid profile",
 	)
 
+@pytest.fixture
+def f_ldap_ref_02(f_sid_2):
+	ldap_ref = LdapRef(
+		distinguished_name="CN=m_ldap_ref_02,DC=example,DC=com",
+		object_security_id_bytes=f_sid_2,
+		object_security_id=str(SID(f_sid_2)),
+	)
+	ldap_ref.save()
+	return ldap_ref
 
 @pytest.fixture
-def f_application_group(f_application, f_distinguished_name: str):
+def f_application_group(
+	f_application: Application,
+	f_distinguished_name: str,
+	f_ldap_ref: LdapRef,
+	f_ldap_ref_02: LdapRef
+):
 	"""Fixture creating a test application group in the database"""
 	group = ApplicationSecurityGroup.objects.create(
 		application=f_application,
-		ldap_objects=[f_distinguished_name, "another_group_dn"],
 		enabled=True,
 	)
+	group.ldap_refs.add(f_ldap_ref.pk)
+	group.ldap_refs.add(f_ldap_ref_02.pk)
+	group.save()
 	return group
 
 
@@ -643,7 +660,7 @@ class TestGroupMixinCRUD:
 			"core.views.mixins.ldap.group.LDAPGroup",
 			return_value=m_group_entry,
 		)
-		with pytest.raises(exc_ldap.DistinguishedNameValidationError):
+		with pytest.raises(exc_ldap.DistinguishedNameValidation>Error):
 			f_group_mixin.delete_group(
 				group_data={LDAP_ATTR_DN: f_distinguished_name}
 			)
@@ -675,6 +692,8 @@ class TestGroupMixinCRUD:
 		f_group_mixin: GroupViewMixin,
 		f_log_mixin: LogMixin,
 		f_application_group: ApplicationSecurityGroup,
+		f_ldap_ref: LdapRef,
+		f_ldap_ref_02: LdapRef,
 	):
 		# Mock LDAPGroup Class
 		m_ldap_group_instance = mocker.Mock()
@@ -709,7 +728,10 @@ class TestGroupMixinCRUD:
 		)
 		# Check that DN has been removed from ASG
 		f_application_group.refresh_from_db()
-		assert f_application_group.ldap_objects == ["another_group_dn"]
+		assert f_application_group.ldap_objects == [
+			f_ldap_ref.distinguished_name,
+			f_ldap_ref_02.distinguished_name,
+		]
 
 	@staticmethod
 	@pytest.mark.django_db
@@ -719,6 +741,8 @@ class TestGroupMixinCRUD:
 		f_group_mixin: GroupViewMixin,
 		f_log_mixin: LogMixin,
 		f_application_group: ApplicationSecurityGroup,
+		f_ldap_ref: LdapRef,
+		f_ldap_ref_02: LdapRef,
 	):
 		# Mock LDAPGroup Class
 		m_ldap_group_instance = mocker.Mock()
@@ -747,6 +771,6 @@ class TestGroupMixinCRUD:
 		# Check that DN has not been removed from ASG
 		f_application_group.refresh_from_db()
 		assert f_application_group.ldap_objects == [
-			f_distinguished_name,
-			"another_group_dn",
+			f_ldap_ref.distinguished_name,
+			f_ldap_ref_02.distinguished_name,
 		]
