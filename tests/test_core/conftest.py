@@ -86,12 +86,12 @@ def g_runtime_settings(mocker: MockerFixture) -> RuntimeSettingsFactory:
 class ConnectorFactory(Protocol):
 	def __call__(
 		self,
-		patch_path: str = "core.ldap.connector.LDAPConnector",
+		patch_path: str | tuple = "core.ldap.connector.LDAPConnector",
 		use_spec=False,
-		mock_enter: MockType = None,
-		mock_exit: MockType = None,
-		kwargs_connection: dict = None,
-		attrs_connection: dict = None,
+		mock_enter: MockType | None = None,
+		mock_exit: MockType | None = None,
+		kwargs_connection: dict | None = None,
+		attrs_connection: dict | None = None,
 		**kwargs,
 	) -> LDAPConnectorMock: ...
 
@@ -103,12 +103,12 @@ def g_ldap_connector(mocker: MockerFixture) -> ConnectorFactory:
 			raise exc_value
 
 	def maker(
-		patch_path: str | tuple[str] = "core.ldap.connector.LDAPConnector",
+		patch_path: str | tuple = "core.ldap.connector.LDAPConnector",
 		use_spec=False,
-		mock_enter: MockType = None,
-		mock_exit: MockType = None,
-		kwargs_connection: dict = None,
-		attrs_connection: dict = None,
+		mock_enter: MockType | None = None,
+		mock_exit: MockType | None = None,
+		kwargs_connection: dict | None = None,
+		attrs_connection: dict | None = None,
 		**kwargs,
 	):
 		"""Fixture to mock LDAPConnector and its context manager."""
@@ -141,10 +141,10 @@ def g_ldap_connector(mocker: MockerFixture) -> ConnectorFactory:
 
 		# Patch Connector
 		if patch_path:
-			if isinstance(patch_path, tuple):
+			if isinstance(patch_path, (tuple, list, set)):
 				for p in patch_path:
 					m_connector_cls = mocker.patch(
-						patch_path, return_value=m_cxt_manager
+						p, return_value=m_cxt_manager
 					)
 			else:
 				m_connector_cls = mocker.patch(
