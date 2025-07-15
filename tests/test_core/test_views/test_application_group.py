@@ -74,11 +74,11 @@ class TestInsert(BaseViewTestClass):
 			data={
 				"application": f_application.id,
 				"users": [],
-				"ldap_objects": ["some_group_dn"],
+				"ldap_objects": [],
 				"enabled": True,
 			},
 			format="json",
-		)
+		) # type: ignore
 		assert response.status_code == status.HTTP_409_CONFLICT
 
 	def test_success(
@@ -98,7 +98,7 @@ class TestInsert(BaseViewTestClass):
 				"enabled": True,
 			},
 			format="json",
-		)
+		) # type: ignore
 		assert response.status_code == status.HTTP_200_OK
 		assert (
 			ApplicationSecurityGroup.objects.filter(

@@ -467,7 +467,7 @@ class TestUserCanAccessApp:
 		m_recursive_search.assert_any_call(
 			user_dn=f_user_ldap.distinguished_name,
 			connection=f_ldap_connector.connection,
-			group_dn="some_group_dn",
+			group_dn=f_application_group.ldap_objects[0],
 		)
 
 	@staticmethod

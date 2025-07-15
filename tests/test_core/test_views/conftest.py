@@ -10,6 +10,7 @@ from core.ldap.defaults import LDAP_DOMAIN
 # Models
 from core.models.user import User, USER_TYPE_LDAP, USER_TYPE_LOCAL
 from core.models.application import Application, ApplicationSecurityGroup
+from core.models.ldap_ref import LdapRef
 from oidc_provider.models import Client
 
 # Other
@@ -428,22 +429,30 @@ def f_application():
 	)
 	return m_application
 
+@pytest.fixture
+def f_ldap_ref():
+	ldap_ref = LdapRef(
+		distinguished_name="CN=some_ldap_ref,DC=example,DC=com",
+		object_security_id_bytes=b"\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00\x11^\xb3\x83j\x06\x94\x00\x80\xdbi\xaa\x87\x04\x00\x00",
+		object_security_id="S-1-5-21-2209570321-9700970-2859064192-1159",
+	)
+	ldap_ref.save()
+	return ldap_ref
 
 @pytest.fixture
 def f_application_group(
 	f_application: Application,
 	f_user_local: User,
-	f_user_ldap: User,
+	f_ldap_ref: LdapRef,
 ):
 	"""Fixture creating a test application group in the database"""
 	m_asg = ApplicationSecurityGroup(
 		application=f_application,
-		ldap_objects=["some_group_dn"],
 		enabled=True,
 	)
 	m_asg.save()
 	m_asg.users.add(f_user_local)
-	m_asg.ldap_objects.append(f_user_ldap.distinguished_name)
+	m_asg.ldap_refs.add(f_ldap_ref.pk)
 	m_asg.save()
 	return m_asg
 
