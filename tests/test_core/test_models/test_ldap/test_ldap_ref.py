@@ -51,11 +51,27 @@ class TestGetEntryFromLdap:
 	def test_not_implemented(self):
 		raise NotImplementedError
 	
-	def test_no_connection_returns_none(self):
-		assert LdapRef.get_entry_from_ldap(
-			connection=None,
-			pk="",
-		) is None
+	def test_no_connection_raises(self):
+		with pytest.raises(ValueError, match="connection is"):
+			LdapRef.get_entry_from_ldap(
+				connection=None,
+				pk="",
+			)
+	
+	def test_no_pk_raises(self, f_ldap_connector: LDAPConnectorMock):
+		with pytest.raises(ValueError, match="pk is"):
+			LdapRef.get_entry_from_ldap(
+				connection=f_ldap_connector.connection, # type: ignore
+				pk="",
+			)
+	
+	def test_bad_ident_raises(self, f_ldap_connector: LDAPConnectorMock):
+		with pytest.raises(ValueError, match="must be a valid"):
+			LdapRef.get_entry_from_ldap(
+				connection=f_ldap_connector.connection, # type: ignore
+				pk="abcd",
+				pk_ident="bad_value",
+			)
 
 class TestGetInstanceFromLdap:
 	def test_not_implemented(self):
