@@ -63,8 +63,10 @@ class LdapRef(BaseModel):
 		Fetch LdapRef back-end entry from Security ID or specified primary key
 		identifier.
 		"""
-		if not connection or not pk:
-			return None
+		if not connection:
+			raise ValueError("connection is a required value.")
+		if not pk:
+			raise ValueError("pk is a required value.")
 		if not pk_ident:
 			pk_ident = cls.get_sid_field()
 		if pk_ident not in [
