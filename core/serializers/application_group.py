@@ -46,9 +46,7 @@ class ApplicationSecurityGroupSerializer(serializers.ModelSerializer):
 		if not asg or not isinstance(self.instance, ApplicationSecurityGroup):
 			raise Exception("No valid self.instance found.")
 
-		super().save(**kwargs)
 		asg.refresh_from_db()
-
 		if users:
 			self.validated_data["users"] = []
 			_users_result = set()
