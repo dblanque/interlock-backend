@@ -2,6 +2,7 @@ import pytest
 from django.db import transaction
 from core.models.user import User
 from core.models.application import Application, ApplicationSecurityGroup
+from core.models.ldap_ref import LdapRef
 from core.exceptions.application_group import (
 	ApplicationGroupExists,
 	ApplicationGroupDoesNotExist,
@@ -10,7 +11,8 @@ from core.views.mixins.application_group import (
 	ApplicationSecurityGroupViewMixin,
 )
 from core.exceptions.base import BadRequest
-
+from tests.test_core.conftest import ConnectorFactory, LDAPEntryFactoryProtocol
+from core.constants.attrs.ldap import LDAP_ATTR_SECURITY_ID, LDAP_ATTR_DN
 ################################################################################
 # Fixtures
 ################################################################################
@@ -21,6 +23,28 @@ def mixin() -> ApplicationSecurityGroupViewMixin:
 	"""Fixture providing an instance of the mixin class"""
 	return ApplicationSecurityGroupViewMixin()
 
+@pytest.fixture(autouse=True)
+def f_ldap_connector(
+	g_ldap_connector: ConnectorFactory,
+	f_ldap_ref: LdapRef,
+	fc_ldap_entry: LDAPEntryFactoryProtocol,
+):
+	connector = g_ldap_connector(
+		patch_path=(
+			"core.serializers.application_group.LDAPConnector",
+			"core.models.application.LDAPConnector",
+		)
+	)
+	connector.connection.entries = [ # type: ignore
+		fc_ldap_entry(
+			spec=False,
+			**{
+				LDAP_ATTR_DN: f_ldap_ref.distinguished_name,
+				LDAP_ATTR_SECURITY_ID: f_ldap_ref.object_security_id_bytes
+			}
+		)
+	]
+	return connector
 
 @pytest.fixture
 def test_application(db):
@@ -45,26 +69,34 @@ def test_user(db):
 		last_name="User",
 	)
 
-
 @pytest.fixture
-def test_application_group(db, test_application: Application, test_user):
+def test_application_group(
+	db,
+	test_application: Application,
+	test_user,
+	f_ldap_ref: LdapRef,
+):
 	"""Fixture creating a test application group in the database"""
 	group = ApplicationSecurityGroup.objects.create(
 		application=test_application,
-		ldap_objects=["CN=TestGroup,OU=Groups,DC=test,DC=com"],
 		enabled=True,
 	)
 	group.users.add(test_user)
+	group.ldap_refs.add(f_ldap_ref)
 	return group
 
 
 @pytest.fixture
-def application_group_data(test_application: Application, test_user):
+def application_group_data(
+	test_application: Application,
+	test_user,
+	f_ldap_ref: LdapRef,
+):
 	"""Fixture providing sample application group data"""
 	return {
 		"application": test_application.id,
 		"users": [test_user.id],
-		"ldap_objects": ["CN=TestGroup,OU=Groups,DC=test,DC=com"],
+		"ldap_objects": [f_ldap_ref.distinguished_name],
 		"enabled": True,
 	}
 
@@ -82,6 +114,7 @@ class TestApplicationSecurityGroupViewMixin:
 		test_application: Application,
 		test_user,
 		application_group_data,
+		g_interlock_ldap_enabled,
 	):
 		# Verify no groups exist initially
 		assert ApplicationSecurityGroup.objects.count() == 0
@@ -156,6 +189,8 @@ class TestApplicationSecurityGroupViewMixin:
 		mixin: ApplicationSecurityGroupViewMixin,
 		test_application_group: ApplicationSecurityGroup,
 		test_user,
+		f_ldap_ref: LdapRef,
+		g_interlock_ldap_enabled,
 	):
 		# Test the method
 		result = mixin.retrieve_application(test_application_group.id)
@@ -172,7 +207,7 @@ class TestApplicationSecurityGroupViewMixin:
 		)
 		assert result["enabled"] is True
 		assert result["users"] == [test_user.id]
-		assert result["ldap_objects"] == test_application_group.ldap_objects
+		assert result["ldap_objects"] == [f_ldap_ref.distinguished_name]
 
 	def test_retrieve_application_not_found(self, mixin):
 		# Test and verify the exception
@@ -193,6 +228,7 @@ class TestApplicationSecurityGroupViewMixin:
 		test_application_group: ApplicationSecurityGroup,
 		test_user: User,
 		test_application: Application,
+		f_ldap_ref: LdapRef,
 	):
 		# Create a second user for testing
 		new_user = User.objects.create(
@@ -204,7 +240,7 @@ class TestApplicationSecurityGroupViewMixin:
 
 		# Prepare update data
 		update_data = {
-			"ldap_objects": ["CN=NewGroup,OU=Groups,DC=test,DC=com"],
+			"ldap_objects": [f_ldap_ref.distinguished_name],
 			"enabled": False,
 			"application": test_application.id,
 		}
@@ -254,7 +290,7 @@ class TestApplicationSecurityGroupViewMixin:
 				test_application_group.id,
 				application_group_data,
 			)
-		assert "does not match" in e.value.detail.get("detail")
+		assert "does not match" in e.value.detail.get("detail") # type: ignore
 
 	def test_update_application_group_invalid_data(
 		self,
