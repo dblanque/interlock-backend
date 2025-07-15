@@ -24,6 +24,14 @@
 * [ ] Create Grafana Integration Video.
 
 # Tests
+## FIX
+* [ ] core.views.application_group
+  * [ ] insert.success
+  * [ ] retrieve.success
+  * [ ] update.success
+  * [ ] update.non_matching_id_raises
+* [ ] core.views.mixins.application_group
+## CREATE
 * [ ] core.views.oidc.CustomOidcViewSet.reject
 * [ ] core.views.oidc.LinuxPamView
   * [ ] validate
@@ -35,12 +43,12 @@
 	* [ ] parse_ldap_setting_value - mock test
 	* [ ] parse_ldap_setting_data - mock test
 * [ ] tests for local user import with password
-
+* [ ] Tests for LdapRef
 
 ## Issues
 ### High Priority
-* [ ] Make ASG LDAP Security Group Addition like Member Addition in Security Groups.
-* [ ] Add LDAP User handling to Email authentication.
+* [x] Make ASG LDAP Security Group Addition like Member Addition in Security Groups.
+* [x] Add LDAP User handling to Email authentication.
 
 ### Medium Priority
 * [ ] Add logging to all Application Security Group model operations.
