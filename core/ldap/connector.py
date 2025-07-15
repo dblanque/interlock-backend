@@ -76,7 +76,7 @@ logger = logging.getLogger(__name__)
 
 def recursive_member_search(
 	user_dn: str, connection: LDAPConnectionProtocol, group_dn: str
-):
+) -> bool:
 	# Type checks
 	if not isinstance(user_dn, str):
 		raise TypeError("user_dn must be str.")
@@ -107,6 +107,9 @@ def recursive_member_search(
 			)
 		],
 	)
+	if not connection.entries:
+		return False
+
 	for e in connection.entries:
 		e_object_classes = getldapattr(
 			e,
@@ -129,7 +132,7 @@ def recursive_member_search(
 				r = recursive_member_search(
 					user_dn=user_dn, connection=connection, group_dn=dn
 				)
-				if r == True:
+				if r is True:
 					return r
 	return False
 
