@@ -207,11 +207,15 @@ class OidcAuthorizeMixin:
 
 	def user_can_access_app(self, user: User):
 		# If no Security Group exists for App, assume no filtering.
+		if not self.application:
+			return False
+
 		try:
+			
 			application_group = ApplicationSecurityGroup.objects.get(
 				application_id=self.application.id
 			)
-		except ObjectDoesNotExist:
+		except (ApplicationSecurityGroup.DoesNotExist, ObjectDoesNotExist):
 			return True
 
 		# If Application Security Group is disabled, assume no filtering.
@@ -220,7 +224,11 @@ class OidcAuthorizeMixin:
 
 		# Else check membership of corresponding group.
 		if user.user_type == USER_TYPE_LDAP:
+			if not user.distinguished_name:
+				return False
 			with LDAPConnector(force_admin=True) as ldc:
+				if not ldc.connection:
+					return False
 				for distinguished_name in application_group.ldap_objects:
 					if recursive_member_search(
 						user_dn=user.distinguished_name,
@@ -239,11 +247,17 @@ class OidcAuthorizeMixin:
 		uri = uri.split("/")[0]
 		return f"{scheme}://{uri}"
 
-	def get_login_url(self) -> str:
+	def get_login_url(self) -> tuple[str, str]:
 		self.authorize: OidcAuthorizeEndpoint
+		if not self.request:
+			raise Exception("request instance is required.")
+		if not self.application:
+			raise Exception("application instance is required.")
+		if not self.client:
+			raise Exception("client instance is required.")
 		original_url = self.request.get_full_path()
 		# Encrypt the URL for temporary client-side storage
-		encrypted_url = fernet_encrypt(original_url)
+		encrypted_url: str = fernet_encrypt(original_url) # type: ignore
 		login_url = f"{LOGIN_URL}/?"
 
 		# These parameters need to be added because we're encrypting the
@@ -263,7 +277,7 @@ class OidcAuthorizeMixin:
 			"client_id": self.client.client_id,
 			"reuse_consent": self.client.reuse_consent,
 			"require_consent": self.user_requires_consent(
-				user=self.request.user
+				user=self.request.user # type: ignore
 			),
 			"redirect_uri": redirect_uri,
 			"reject_uri": reject_uri,
