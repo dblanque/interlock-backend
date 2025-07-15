@@ -92,16 +92,6 @@ def f_group_mixin(mocker: MockerFixture) -> GroupViewMixin:
 
 
 @pytest.fixture
-def f_sid_1():
-	return b"\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00\x11^\xb3\x83j\x06\x94\x00\x80\xdbi\xaa\x87\x04\x00\x00"
-
-
-@pytest.fixture
-def f_sid_2():
-	return b"\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00\x11^\xb3\x83j\x06\x94\x00\x80\xdbi\xaaR\x04\x00\x00"
-
-
-@pytest.fixture
 def f_ldap_connection(mocker: MockerFixture):
 	return mocker.Mock(spec=Connection)
 
