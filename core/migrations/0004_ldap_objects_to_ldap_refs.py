@@ -69,7 +69,7 @@ def ldap_objects_to_ldap_refs(apps: Apps, schema_editor):
                     )
                 if ldap_ref_instance:
                     ldap_ref_instance.save()
-                asg.ldap_refs.add(ldap_ref_instance.id) # type: ignore
+                    asg.ldap_refs.add(ldap_ref_instance.id) # type: ignore
         asg.save()
 
 def add_dn_to_objects(asg, dns_to_add: list[str]):
