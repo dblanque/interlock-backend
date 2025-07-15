@@ -17,6 +17,7 @@ from core.exceptions import dirtree as exc_dirtree, ldap as exc_ldap
 from core.config.runtime import RuntimeSettings
 
 ### Models
+from core.models.ldap_ref import LdapRef
 from core.models.user import User
 from core.views.mixins.logs import LogMixin
 from core.models.choices.log import (
@@ -27,6 +28,7 @@ from core.models.choices.log import (
 )
 
 ### Others
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework.exceptions import ValidationError
 from rest_framework import status
 from django.http.request import HttpRequest
@@ -457,4 +459,13 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 			log_target_class=LOG_CLASS_LDAP,
 			log_target=f"{distinguished_name} to {new_dn}",
 		)
+
+		# Update local reference
+		try:
+			ldap_ref = LdapRef.objects.get(
+				distinguished_name=distinguished_name)
+			ldap_ref.distinguished_name = new_dn
+			ldap_ref.save()
+		except (ObjectDoesNotExist, LdapRef.DoesNotExist):
+			pass
 		return new_dn

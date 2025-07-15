@@ -9,16 +9,17 @@
 # ---------------------------------- IMPORTS --------------------------------- #
 from core.models.base import BaseModel
 from core.models.user import User
+from core.models.ldap_ref import LdapRef
+from core.ldap.connector import LDAPConnector
 from django.db import models
 from django.utils.crypto import get_random_string
-from django.contrib.postgres.fields import ArrayField
 import secrets
 from uuid import uuid5
 from interlock_backend.settings import INTERLOCK_NAMESPACE, SECRET_KEY
 ################################################################################
 
 
-def generate_client_id() -> str:
+def generate_client_id() -> str | None:
 	"""Generates a 24 character client id, retries up to 10 times and gives up.
 	The odds of generating an existing id 10 times in a row are very low.
 	"""
@@ -54,9 +55,15 @@ class Application(BaseModel):
 class ApplicationSecurityGroup(BaseModel):
 	application = models.OneToOneField(Application, on_delete=models.CASCADE)
 	enabled = models.BooleanField(default=True)
-	users = models.ManyToManyField(User, blank=True, related_name="asg_member")
-	ldap_objects = ArrayField(
-		models.CharField(max_length=255), blank=True, null=True
+	users = models.ManyToManyField(
+		User,
+		blank=True,
+		related_name="asg_member",
+	)
+	ldap_refs = models.ManyToManyField(
+		LdapRef,
+		blank=True,
+		related_name="asg_ldap_ref",
 	)
 	uuid = models.UUIDField(default=None, editable=False)
 
@@ -69,6 +76,20 @@ class ApplicationSecurityGroup(BaseModel):
 				str(self.application.id),
 				SECRET_KEY,
 			),
+		)
+	
+	def refresh_ldap_refs(self):
+		with LDAPConnector(force_admin=True) as ldc:
+			for ldap_ref in self.ldap_refs.all():
+				if not isinstance(ldap_ref, LdapRef):
+					continue
+				ldap_ref.refresh_from_ldap(connection=ldc.connection)
+
+	@property
+	def ldap_objects(self) -> list[str]:
+		"""Returns list of related LdapRef distinguished_name fields."""
+		return list(
+			self.ldap_refs.all().values_list("distinguished_name", flat=True)
 		)
 
 	def save(self, *args, **kwargs):

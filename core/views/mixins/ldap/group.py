@@ -18,7 +18,7 @@ from core.config.runtime import RuntimeSettings
 
 ### Models
 from core.views.mixins.logs import LogMixin
-from core.models.application import ApplicationSecurityGroup
+from core.models.ldap_ref import LdapRef
 
 ### LDAP3
 import ldap3
@@ -40,6 +40,7 @@ from core.models.ldap_object import LDAPObject
 from rest_framework import serializers
 
 ### Exceptions
+from django.core.exceptions import ObjectDoesNotExist
 from core.exceptions import (
 	ldap as exc_ldap,
 	groups as exc_groups,
@@ -359,14 +360,14 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 				data={"ldap_response": self.ldap_connection.result}
 			)
 
-		with transaction.atomic():
-			asg_queryset = ApplicationSecurityGroup.objects.filter(
-				ldap_objects__contains=[distinguished_name]
+		try:
+			_ldap_ref = LdapRef.objects.get(
+				distinguished_name=distinguished_name
 			)
-			if asg_queryset.count() > 0:
-				for asg in list(asg_queryset):
-					asg.ldap_objects.remove(distinguished_name)
-					asg.save()
+			with transaction.atomic():
+				_ldap_ref.delete_permanently()
+		except (LdapRef.DoesNotExist, ObjectDoesNotExist):
+			pass
 
 		DBLogMixin.log(
 			user=self.request.user.id,
