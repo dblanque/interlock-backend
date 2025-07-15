@@ -29,7 +29,11 @@ class LdapRef(BaseModel):
 	def get_relative_id(self) -> int:
 		"""Returns SID Sub-authority Count"""
 		if not self.object_security_id:
-			return 0
+			# Fallback to bytes
+			if not self.object_security_id_bytes:
+				return 0
+			sid = SID(self.object_security_id_bytes)
+			return int(sid.subauthorities[-1])
 		rid = self.object_security_id.split("-")[-1]
 		return int(rid)
 
