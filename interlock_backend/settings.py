@@ -160,6 +160,7 @@ INSTALLED_APPS = [
 	"corsheaders",
 	"core",
 	"oidc_provider",
+	"django_apscheduler",
 ]
 
 MIDDLEWARE = [
@@ -445,12 +446,24 @@ TIME_ZONE = get_server_timezone()
 USE_I18N = True
 USE_TZ = True
 
+################################################################################
 ################################# Static Files #################################
+################################################################################
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = "/static/"
 
 ################################################################################
+############################ AP Scheduler Configuration ########################
+################################################################################
+
+# https://github.com/jcass77/django-apscheduler
+# https://apscheduler.readthedocs.io/en/latest/index.html
+SCHEDULER_LDAP_REF_INTERVAL = {
+	# "hours": 1,
+	"minutes": 30,
+	# "seconds": 60 # Not recommended
+}
 
 try:
 	from interlock_backend.local_django_settings import *  # noqa: F403
