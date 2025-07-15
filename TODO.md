@@ -25,12 +25,12 @@
 
 # Tests
 ## FIX
-* [ ] core.views.application_group
-  * [ ] insert.success
-  * [ ] retrieve.success
-  * [ ] update.success
-  * [ ] update.non_matching_id_raises
-* [ ] core.views.mixins.application_group
+* [x] core.views.application_group
+  * [x] insert.success
+  * [x] retrieve.success
+  * [x] update.success
+  * [x] update.non_matching_id_raises
+* [x] core.views.mixins.application_group
 ## CREATE
 * [ ] core.views.oidc.CustomOidcViewSet.reject
 * [ ] core.views.oidc.LinuxPamView
