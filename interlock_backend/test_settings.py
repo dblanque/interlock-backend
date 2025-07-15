@@ -1,4 +1,5 @@
 from .settings import *
+from datetime import timedelta
 
 TEST_DB_NAME = "test_interlockdb"
 DATABASES = {
@@ -24,3 +25,5 @@ ENABLE_THROTTLING = False
 for k in ("DEFAULT_THROTTLE_CLASSES", "DEFAULT_THROTTLE_RATES"):
 	if k in REST_FRAMEWORK:
 		del REST_FRAMEWORK[k]
+
+SCHEDULER_LDAP_REF_ENABLE = False

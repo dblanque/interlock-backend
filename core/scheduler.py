@@ -18,6 +18,8 @@ def check_ldap_refs():
 			ldap_ref.refresh_or_prune(connection=ldc.connection)
 
 def start_scheduler():
+	if not getattr(settings, "SCHEDULER_LDAP_REF_ENABLE", False):
+		return
 	scheduler = BackgroundScheduler()
 	scheduler.add_jobstore(DjangoJobStore(), "default")
 

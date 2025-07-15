@@ -459,6 +459,7 @@ STATIC_URL = "/static/"
 
 # https://github.com/jcass77/django-apscheduler
 # https://apscheduler.readthedocs.io/en/latest/index.html
+SCHEDULER_LDAP_REF_ENABLE = True
 SCHEDULER_LDAP_REF_INTERVAL = {
 	# "hours": 1,
 	"minutes": 30,
