@@ -58,6 +58,7 @@ from django.contrib.auth import get_user_model
 from interlock_backend.encrypt import aes_encrypt, aes_decrypt
 
 # Libs
+from core.utils.migrations import is_in_migration
 from inspect import getfullargspec
 from core.utils.main import getldapattr
 import ssl
@@ -399,7 +400,8 @@ class LDAPConnector(object):
 	def __enter__(self) -> "LDAPConnector":
 		self._entered = True
 		self.bind()
-		logger.info(f"Connection {self.uuid} opened.")
+		if not is_in_migration():
+			logger.info(f"Connection {self.uuid} opened.")
 		# LOG Open Connection Events
 		if not self.is_authenticating and self.user:
 			DBLogMixin.log(
@@ -422,7 +424,8 @@ class LDAPConnector(object):
 				log_target_class=LOG_CLASS_CONN,
 				log_target=f"{self.uuid}",
 			)
-		logger.info(f"Connection {self.uuid} closed.")
+		if not is_in_migration():
+			logger.info(f"Connection {self.uuid} closed.")
 		if exc_value:
 			if isinstance(exc_value, LDAPOperationResult):
 				logger.exception(exc_value)
