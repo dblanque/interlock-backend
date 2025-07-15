@@ -25,29 +25,42 @@ class ApplicationSecurityGroupSerializer(serializers.ModelSerializer):
 		model = ApplicationSecurityGroup
 		fields = "__all__"
 
+	def create(self) -> ApplicationSecurityGroup:
+		instance = super().create(self.validated_data)
+		self.instance = instance
+		return instance
+
 	def save(self, **kwargs):
-		asg = self.instance\
-			if isinstance(self.instance, ApplicationSecurityGroup) else None
-		if asg is None:
-			raise Exception("No valid self.instance found.")
 		if not isinstance(self.validated_data, dict):
 			raise Exception(
 				"validated_data is not of type dict, please use is_valid method"
 				"first."
 			)
-
 		ldap_objects = self.validated_data.pop("ldap_objects", [])
 		users = self.validated_data.pop("users", [])
-		self.save(**kwargs)
+
+		if not isinstance(self.instance, ApplicationSecurityGroup):
+			self.create()
+
+		asg = self.instance
+		if not asg or not isinstance(self.instance, ApplicationSecurityGroup):
+			raise Exception("No valid self.instance found.")
+
+		super().save(**kwargs)
 		asg.refresh_from_db()
 
 		if users:
-			users = User.objects\
-				.filter(pk__in=self.validated_data["users"])\
-				.values_list("id", flat=True)
-			self.validated_data["users"] = users
+			self.validated_data["users"] = []
+			_users_result = set()
+			for user in users:
+				if isinstance(user, User):
+					_users_result.add(user.pk)
+				elif isinstance(user, int):
+					_users_result.add(user)
+			self.validated_data["users"] = _users_result
 		else:
-			self.validated_data["users"] = asg.users.values_list("id", flat=True)
+			self.validated_data["users"] = asg.users\
+											.values_list("id", flat=True)
 
 		if is_ldap_backend_enabled():
 			# Update LDAP References from Distinguished Names
@@ -82,4 +95,4 @@ class ApplicationSecurityGroupSerializer(serializers.ModelSerializer):
 						refs_to_remove.add(ldap_ref.pk)
 				for ldap_ref_pk in refs_to_remove:
 					asg.ldap_refs.remove(ldap_ref_pk)
-		self.save(**kwargs)
+		super().save(**kwargs)
