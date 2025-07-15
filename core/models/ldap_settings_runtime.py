@@ -88,7 +88,8 @@ class RuntimeSettingsSingleton:
 		if self._initialized or not apps.ready:
 			if is_in_migration():
 				logger.error(
-					"%s in migration mode."
+					"%s in migration mode (must be initialized manually "
+					"within migration)."
 					% (self.__class__.__name__)
 				)
 			elif not apps.ready:
@@ -127,9 +128,10 @@ class RuntimeSettingsSingleton:
 
 	def get_settings(self, uuid, quiet=False) -> dict:
 		if not quiet:
+			add_newline = "\n  " if is_in_migration() else ""
 			logger.info(
-				"Re-synchronizing settings for %s (Configuration Instance %s)"
-				% (this_module, uuid)
+				"%sRe-synchronizing settings for %s (Configuration Instance %s)"
+				% (add_newline, this_module, uuid)
 			)
 		active_preset = None
 		r = {}
