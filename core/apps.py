@@ -16,7 +16,6 @@ import threading
 
 logger = getLogger()
 
-
 class CoreConfig(AppConfig):
 	name = "core"
 
@@ -41,6 +40,7 @@ class CoreConfig(AppConfig):
 		)
 		from core.views.mixins.ldap_settings import SettingsViewMixin
 		from core.setup.oidc import create_default_oidc_rsa_key
+		from core.config.runtime import RuntimeSettings
 
 		if not is_in_migration():
 			logger.info("Checking defaults.")
@@ -49,5 +49,12 @@ class CoreConfig(AppConfig):
 		create_default_interlock_settings()
 		SettingsViewMixin().create_default_preset()
 		create_default_oidc_rsa_key()
+
+		if not is_in_migration():
+			# Ensure RuntimeSettings is properly initialized
+			RuntimeSettings.resync()
+			from core.scheduler import start_scheduler
+			start_scheduler()
+
 		if not is_in_migration():
 			logger.info("Core startup complete.")
