@@ -1,4 +1,9 @@
 # Interlock Documentation
+[![Tests](./reports/badges/tests-badge.svg?dummy=12345678)](./reports/badges/tests-badge.svg)
+[![Coverage Status](./reports/badges/coverage-badge.svg?dummy=12345678)](./reports/badges/coverage-badge.svg)
+[![Official Website](./reports/badges/website-badge.svg?dummy=12345678)](https://interlock.brconsulting.info)
+[![Docs](./reports/badges/docs-badge.svg?dummy=12345678)](https://docs.brconsulting.info/en/docs/development/interlock/)
+[![Django Version](./reports/badges/django-version-badge.svg?dummy=12345678)](./reports/badges/django-version-badge.svg)
 
 * Beware: If you have installed a version of Interlock <= 1.1.0 you will have
 to re-install and re-configure the LDAP Back-end settings in your installation
