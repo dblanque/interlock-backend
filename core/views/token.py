@@ -24,10 +24,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 from django.utils.timezone import now as tz_aware_now
 
 ### Core
-from core.constants.attrs.local import (
-	LOCAL_ATTR_USERNAME,
-	LOCAL_ATTR_LAST_LOGIN,
-)
+from core.constants.attrs.local import LOCAL_ATTR_LAST_LOGIN
 from core.models.user import User, USER_TYPE_LDAP
 from core.serializers.token import TokenObtainPairSerializer
 from core.views.mixins.auth import RemoveTokenResponse, DATE_FMT_COOKIE
