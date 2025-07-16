@@ -9,7 +9,7 @@ dirs=(
 )
 # Ensure required directories exist
 for d in "${dirs[@]}"; do
-	if [ ! -d "$d"]; then
+	if ! [ -d "$d" ]; then
 		mkdir -p "$d" || exit 2
 	fi
 done
@@ -31,7 +31,8 @@ coverage report -m
 # Make badges
 echo "Generating badges..."
 {
-	genbadge tests && genbadge coverage;
-	mv *".svg" "reports/badges/";
+	genbadge tests &&
+	genbadge coverage &&
+	mv *".svg" "reports/badges/" &&
 	python3 generate_custom_badges.py
 } || echo "Finished report generation with errors."
