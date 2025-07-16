@@ -650,7 +650,7 @@ class TestGroupMixinCRUD:
 			"core.views.mixins.ldap.group.LDAPGroup",
 			return_value=m_group_entry,
 		)
-		with pytest.raises(exc_ldap.DistinguishedNameValidation>Error):
+		with pytest.raises(exc_ldap.DistinguishedNameValidationError):
 			f_group_mixin.delete_group(
 				group_data={LDAP_ATTR_DN: f_distinguished_name}
 			)
