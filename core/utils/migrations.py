@@ -13,7 +13,7 @@ def is_in_migration(
 	_manage_idx = 0
 
 	for _, arg in enumerate(sys.argv):
-		if "manage.py" in arg:
+		if "manage.py" in arg.lower():
 			_manage_idx = _
 	if only_make_migrations and only_migrate:
 		raise ValueError(
@@ -25,4 +25,4 @@ def is_in_migration(
 		opts.remove("makemigrations")
 	elif only_make_migrations:
 		opts.remove("migrate")
-	return any(x in sys.argv[_manage_idx+1] for x in opts)
+	return any(x.lower() in sys.argv[_manage_idx+1] for x in opts)
