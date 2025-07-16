@@ -24,18 +24,11 @@
 * [ ] Create Grafana Integration Video.
 
 # Tests
-## FIX
-* [x] core.views.application_group
-  * [x] insert.success
-  * [x] retrieve.success
-  * [x] update.success
-  * [x] update.non_matching_id_raises
-* [x] core.views.mixins.application_group
 ## CREATE
 * [ ] core.views.oidc.CustomOidcViewSet.reject
-* [ ] core.views.oidc.LinuxPamView
-  * [ ] validate
-  * [ ] get
+* [x] core.views.oidc.LinuxPamView
+  * [x] validate
+  * [-] get (totp block tbf)
 * [ ] core.mixins.oidc.OidcAuthorizeMixin.get_reject_url
 * [ ] core.views.mixins.SettingsViewMixin
 	* [ ] set_value_fields - mock test
@@ -43,12 +36,11 @@
 	* [ ] parse_ldap_setting_value - mock test
 	* [ ] parse_ldap_setting_data - mock test
 * [ ] tests for local user import with password
-* [ ] Tests for LdapRef
+* [x] Tests for LdapRef
 
 ## Issues
 ### High Priority
-* [x] Make ASG LDAP Security Group Addition like Member Addition in Security Groups.
-* [x] Add LDAP User handling to Email authentication.
+* [ ] Add message to Front-end to make explicit that Domain, Realm, Base DN are required in settings to enable the menus.
 
 ### Medium Priority
 * [ ] Add logging to all Application Security Group model operations.
