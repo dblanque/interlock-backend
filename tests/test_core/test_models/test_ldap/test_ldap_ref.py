@@ -4,9 +4,14 @@ from pytest_mock import MockerFixture
 ################################################################################
 from core.models.ldap_ref import LdapRef
 from core.constants.attrs.ldap import LDAP_ATTR_SECURITY_ID, LDAP_ATTR_DN
-from tests.test_core.conftest import ConnectorFactory, LDAPConnectorMock
+from tests.test_core.conftest import (
+	ConnectorFactory,
+	LDAPConnectorMock,
+	LDAPEntryFactoryProtocol,
+)
 from core.models.ldap_settings_runtime import RuntimeSettingsSingleton
 from core.ldap.filter import LDAPFilter
+from core.ldap.security_identifier import SID
 
 @pytest.fixture(autouse=True)
 def f_ldap_connector(g_ldap_connector: ConnectorFactory) -> LDAPConnectorMock:
@@ -77,12 +82,12 @@ class TestGetEntryFromLdap:
 		f_ldap_connector: LDAPConnectorMock,
 		f_runtime_settings: RuntimeSettingsSingleton,
 	):
-		f_ldap_connector.connection.entries = ["result"]
+		f_ldap_connector.connection.entries = ["result"] # type: ignore
 		result = LdapRef.get_entry_from_ldap(
 			connection=f_ldap_connector.connection, # type: ignore
 			pk="mock_sid",
 		)
-		f_ldap_connector.connection.search.assert_called_once_with(
+		f_ldap_connector.connection.search.assert_called_once_with( # type: ignore
 			search_base=f_runtime_settings.LDAP_AUTH_SEARCH_BASE,
 			search_filter=LDAPFilter.eq(
 				LDAP_ATTR_SECURITY_ID, "mock_sid").to_string(),
@@ -96,25 +101,22 @@ class TestGetEntryFromLdap:
 		f_ldap_connector: LDAPConnectorMock,
 		f_runtime_settings: RuntimeSettingsSingleton,
 	):
-		f_ldap_connector.connection.entries = []
+		f_ldap_connector.connection.entries = [] # type: ignore
 		result = LdapRef.get_entry_from_ldap(
 			connection=f_ldap_connector.connection, # type: ignore
 			pk="mock_sid",
 		)
-		f_ldap_connector.connection.search.assert_called_once_with(
+		f_ldap_connector.connection.search.assert_called_once_with( # type: ignore
 			search_base=f_runtime_settings.LDAP_AUTH_SEARCH_BASE,
 			search_filter=LDAPFilter.eq(
 				LDAP_ATTR_SECURITY_ID, "mock_sid").to_string(),
 			attributes=[LDAP_ATTR_DN, LDAP_ATTR_SECURITY_ID],
 			size_limit=1
 		)
-		assert result == None
+		assert result is None
 
 
 class TestGetInstanceFromLdap:
-	def test_not_implemented(self):
-		raise NotImplementedError
-
 	def test_no_connection_raises(self):
 		with pytest.raises(ValueError, match="connection is"):
 			LdapRef.get_instance_from_ldap(
@@ -129,12 +131,177 @@ class TestGetInstanceFromLdap:
 		with pytest.raises(ValueError, match="distinguished_name is"):
 			LdapRef.get_instance_from_ldap(
 				distinguished_name=None,
-				connection=f_ldap_connector.connection,
+				connection=f_ldap_connector.connection, # type: ignore
 			)
 
-class TestRefreshFromLdap:
-	def test_not_implemented(self):
-		raise NotImplementedError
+	def test_no_entry_returns_none(
+		self,
+		mocker: MockerFixture,
+		f_ldap_connector: LDAPConnectorMock,
+	):
+		m_get_entry_from_ldap = mocker.patch.object(
+			LdapRef, "get_entry_from_ldap", return_value=None)
+
+		assert LdapRef.get_instance_from_ldap(
+			distinguished_name="mock_dn",
+			connection=f_ldap_connector.connection, # type: ignore
+		) is None
+
+		m_get_entry_from_ldap.assert_called_once_with(
+			connection=f_ldap_connector.connection, # type: ignore
+			pk="mock_dn",
+			pk_ident=LDAP_ATTR_DN,
+		)
+
+	def test_no_sid_returns_none(
+		self,
+		mocker: MockerFixture,
+		f_ldap_connector: LDAPConnectorMock,
+		fc_ldap_entry: LDAPEntryFactoryProtocol,
+	):
+		m_entry = fc_ldap_entry(
+			spec=False,
+			**{
+				LDAP_ATTR_DN: "mock_dn",
+			}
+		)
+		delattr(m_entry, LDAP_ATTR_SECURITY_ID)
+		m_get_entry_from_ldap = mocker.patch.object(
+			LdapRef, "get_entry_from_ldap", return_value=m_entry)
+
+		assert LdapRef.get_instance_from_ldap(
+			distinguished_name="mock_dn",
+			connection=f_ldap_connector.connection, # type: ignore
+		) is None
+
+		m_get_entry_from_ldap.assert_called_once_with(
+			connection=f_ldap_connector.connection, # type: ignore
+			pk="mock_dn",
+			pk_ident=LDAP_ATTR_DN,
+		)
+
+	def test_success(
+		self,
+		mocker: MockerFixture,
+		f_ldap_connector: LDAPConnectorMock,
+		fc_ldap_entry: LDAPEntryFactoryProtocol,
+		f_sid_1: bytes,
+	):
+		m_entry = fc_ldap_entry(
+			spec=False,
+			**{
+				LDAP_ATTR_DN: "mock_dn",
+				LDAP_ATTR_SECURITY_ID: f_sid_1,
+			}
+		)
+		m_get_entry_from_ldap = mocker.patch.object(
+			LdapRef, "get_entry_from_ldap", return_value=m_entry)
+
+		result = LdapRef.get_instance_from_ldap(
+			distinguished_name="mock_dn",
+			connection=f_ldap_connector.connection, # type: ignore
+		)
+
+		assert isinstance(result, LdapRef)
+		assert result.distinguished_name == "mock_dn"
+		assert result.object_security_id == str(SID(f_sid_1))
+		m_get_entry_from_ldap.assert_called_once_with(
+			connection=f_ldap_connector.connection, # type: ignore
+			pk="mock_dn",
+			pk_ident=LDAP_ATTR_DN,
+		)
+
+class TestRefreshFromLdap:	
+	def test_success(
+		self,
+		mocker: MockerFixture,
+		f_ldap_ref: LdapRef,
+		f_ldap_connector: LDAPConnectorMock,
+		fc_ldap_entry: LDAPEntryFactoryProtocol,
+	):
+		conn = f_ldap_connector.connection # type: ignore
+		m_get_entry_from_ldap = mocker.patch.object(
+			f_ldap_ref,
+			"get_entry_from_ldap",
+			return_value=fc_ldap_entry(
+				spec=False,
+				**{
+					LDAP_ATTR_DN: f_ldap_ref.distinguished_name,
+					LDAP_ATTR_SECURITY_ID: f_ldap_ref.object_security_id_bytes
+				}
+			)
+		)
+
+		result = f_ldap_ref.refresh_from_ldap(connection=conn)
+		assert result is True
+		m_get_entry_from_ldap.assert_called_once_with(
+			connection=conn,
+			pk=f_ldap_ref.object_security_id,
+		)
+
+	def test_raises_on_sid_mismatch(
+		self,
+		mocker: MockerFixture,
+		f_ldap_ref: LdapRef,
+		f_ldap_connector: LDAPConnectorMock,
+		fc_ldap_entry: LDAPEntryFactoryProtocol,
+		f_sid_2: bytes
+	):
+		conn = f_ldap_connector.connection # type: ignore
+		mocker.patch.object(
+			f_ldap_ref,
+			"get_entry_from_ldap",
+			return_value=fc_ldap_entry(
+				spec=False,
+				**{
+					LDAP_ATTR_DN: f_ldap_ref.distinguished_name,
+					LDAP_ATTR_SECURITY_ID: f_sid_2
+				}
+			)
+		)
+
+		with pytest.raises(Exception, match="SID Mis-match"):
+			f_ldap_ref.refresh_from_ldap(connection=conn)
+
+	def test_raises_on_sid_parsing_exc(
+		self,
+		mocker: MockerFixture,
+		f_ldap_ref: LdapRef,
+		f_ldap_connector: LDAPConnectorMock,
+		fc_ldap_entry: LDAPEntryFactoryProtocol,
+	):
+		conn = f_ldap_connector.connection # type: ignore
+		mocker.patch.object(
+			f_ldap_ref,
+			"get_entry_from_ldap",
+			return_value=fc_ldap_entry(
+				spec=False,
+				**{
+					LDAP_ATTR_DN: f_ldap_ref.distinguished_name,
+					LDAP_ATTR_SECURITY_ID: "bad_value"
+				}
+			)
+		)
+
+		with pytest.raises(Exception, match="SID Mis-match") as e:
+			f_ldap_ref.refresh_from_ldap(connection=conn)
+		assert isinstance(e.value.__cause__, ValueError)
+
+	def test_returns_false_on_no_entry(
+		self,
+		mocker: MockerFixture,
+		f_ldap_ref: LdapRef,
+		f_ldap_connector: LDAPConnectorMock,
+	):
+		conn = f_ldap_connector.connection # type: ignore
+		mocker.patch.object(
+			f_ldap_ref,
+			"get_entry_from_ldap",
+			return_value=None
+		)
+
+		result = f_ldap_ref.refresh_from_ldap(connection=conn)
+		assert result is False
 
 class TestPrune:
 	def test_pruned(
@@ -143,7 +310,7 @@ class TestPrune:
 		f_ldap_ref: LdapRef,
 		f_ldap_connector: LDAPConnectorMock,
 	):
-		conn = f_ldap_connector.connection
+		conn = f_ldap_connector.connection # type: ignore
 		pk = f_ldap_ref.pk
 		sid = f_ldap_ref.object_security_id
 		m_get_entry_from_ldap = mocker.patch.object(
@@ -162,7 +329,7 @@ class TestPrune:
 		f_ldap_ref: LdapRef,
 		f_ldap_connector: LDAPConnectorMock,
 	):
-		conn = f_ldap_connector.connection
+		conn = f_ldap_connector.connection # type: ignore
 		m_get_entry_from_ldap = mocker.patch.object(
 			f_ldap_ref,
 			"get_entry_from_ldap",
@@ -193,7 +360,7 @@ class TestRefreshOrPrune:
 		prune_return: bool,
 		expected: bool,
 	):
-		conn = f_ldap_connector.connection
+		conn = f_ldap_connector.connection # type: ignore
 		m_refresh = mocker.patch.object(
 			f_ldap_ref, "refresh_from_ldap", return_value=refresh_return)
 		m_prune = mocker.patch.object(
