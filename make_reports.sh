@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source . venv/bin/activate || exit 1
+source ./venv/bin/activate || exit 1
 
 dirs=(
 	"reports/coverage/html"
