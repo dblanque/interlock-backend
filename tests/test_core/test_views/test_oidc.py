@@ -8,7 +8,6 @@ from tests.test_core.test_views.conftest import (
 	BaseViewTestClass,
 	APIClientFactory,
 )
-import pytest
 from django.utils import timezone
 from urllib.parse import urlparse, parse_qs, ParseResult
 from rest_framework.test import APIClient
