@@ -32,6 +32,12 @@ BADGES = [
 		"color": "orange",
 		"name": "website-badge"
 	},
+	{
+		"left_txt":"python",
+		"right_txt": ">=3.11",
+		"color": BLUE,
+		"name": "python-versions-badge"
+	},
 ]
 
 for badge_args in BADGES:
