@@ -94,10 +94,10 @@ class LdapRef(BaseModel):
 		Fetch corresponding LDAP Entry by Distinguished Name and create its
 		LdapRef Instance in local database.
 		"""
-		if not connection or not is_ldap_backend_enabled():
-			return None
+		if not connection:
+			raise ValueError("connection is a required value.")
 		if not distinguished_name:
-			return None
+			raise ValueError("distinguished_name is a required value.")
 
 		result_entry = cls.get_entry_from_ldap(
 			connection=connection,
@@ -156,5 +156,6 @@ class LdapRef(BaseModel):
 		Returns True if refreshed, False if pruned.
 		"""
 		if not self.refresh_from_ldap(connection=connection):
-			return self.prune(connection=connection)
+			if self.prune(connection=connection):
+				return False
 		return True
