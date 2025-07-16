@@ -5,7 +5,6 @@ from core.constants.attrs.local import LOCAL_ATTR_DN, LOCAL_ATTR_SECURITY_ID
 from core.type_hints.connector import LDAPConnectionProtocol
 from core.ldap.filter import LDAPFilter
 from core.config.runtime import RuntimeSettings
-from core.decorators.intercept import is_ldap_backend_enabled
 from core.utils.main import getldapattr
 from core.ldap.security_identifier import SID
 from ldap3 import Entry as LDAPEntry
@@ -126,9 +125,16 @@ class LdapRef(BaseModel):
 		if not result_entry:
 			return False
 
-		entry_sid = getldapattr(result_entry, self.get_sid_field(), None)
-		entry_sid = SID(entry_sid.value)
+		sid_exc = None
+		try:
+			entry_sid = getldapattr(result_entry, self.get_sid_field(), None)
+			entry_sid = SID(entry_sid.value)
+		except Exception as e:
+			sid_exc = e
+			pass
 		if not entry_sid or (str(entry_sid) != self.object_security_id):
+			if sid_exc:
+				raise Exception("Entry SID Mis-match.") from sid_exc
 			raise Exception("Entry SID Mis-match.")
 		self.distinguished_name = result_entry.entry_dn
 		return True
