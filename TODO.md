@@ -24,8 +24,11 @@
 * [ ] Create Grafana Integration Video.
 
 # Tests
+## FINISH
+* [ ] core.serializers.ldap_settings
 ## CREATE
 * [ ] core.views.oidc.CustomOidcViewSet.reject
+* [ ] core.serializers.application_group
 * [x] core.views.oidc.LinuxPamView
   * [x] validate
   * [-] get (totp block tbf)
