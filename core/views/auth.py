@@ -17,6 +17,7 @@ from core.constants.attrs.local import LOCAL_ATTR_USERNAME, LOCAL_ATTR_PASSWORD
 from core.ldap.connector import LDAPConnector
 from core.views.mixins.totp import validate_user_otp
 from interlock_backend.encrypt import fernet_decrypt
+from core.decorators.intercept import is_ldap_backend_enabled
 
 ### Exceptions
 from core.exceptions.base import (
@@ -112,14 +113,15 @@ class LinuxPamView(APIView):
 			auth_key = data.get("cross_check_key", None)
 			if not auth_key:
 				errors["cross_check_key"] = "Client cross-check key required."
-			try:
-				cross_check_key = fernet_decrypt(auth_key)
-			except Exception as e:
-				logger.error("Could not decrypt PAM Auth cross-check key.")
-				logger.exception(e)
-				errors["cross_check_key"] = (
-					"Client cross-check key could not be decrypted."
-				)
+			else:
+				try:
+					cross_check_key = fernet_decrypt(auth_key)
+				except Exception as e:
+					logger.error("Could not decrypt PAM Auth cross-check key.")
+					logger.exception(e)
+					errors["cross_check_key"] = (
+						"Client cross-check key could not be decrypted."
+					)
 
 			# If we have errors at this stage ignore all other validation.
 			if errors:
@@ -135,20 +137,23 @@ class LinuxPamView(APIView):
 		## Password data type validation
 		password = data.get(LOCAL_ATTR_PASSWORD, None)
 		if not isinstance(password, str) or not password:
-			errors[LOCAL_ATTR_USERNAME] = f"Password {str_err}"
+			errors[LOCAL_ATTR_PASSWORD] = f"Password {str_err}"
 
 		# TOTP Code data type validation
+		totp_exc_msg = "TOTP Code must be a numeric str or int."
 		totp_code = data.get("totp_code", None)
-		if totp_code is not None:
-			if (
-				not isinstance(totp_code, int)
-				or isinstance(totp_code, str)
-				and not totp_code.strip().isnumeric()
-			):
-				errors["totp_code"] = "TOTP Code must be a numeric str or int."
-
 		if isinstance(totp_code, str):
-			data["totp_code"] = int(totp_code.strip())
+			totp_code = totp_code.strip()
+		if totp_code:
+			if not (
+				isinstance(totp_code, int)
+				or (
+					isinstance(totp_code, str)
+					and totp_code.isnumeric()
+				)
+			):
+				errors["totp_code"] = totp_exc_msg
+		data["totp_code"] = totp_code
 
 		if errors:
 			raise BadRequest(data={"errors": errors})
@@ -185,7 +190,7 @@ class LinuxPamView(APIView):
 			pass
 
 		# Try with LDAP User if no Local User was found
-		if not isinstance(user, User):
+		if not isinstance(user, User) and is_ldap_backend_enabled():
 			with LDAPConnector(force_admin=True, is_authenticating=True) as ldc:
 				# Syncs the user to local db then checks it
 				user = ldc.get_user(username=username)
