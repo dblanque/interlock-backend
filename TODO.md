@@ -26,12 +26,13 @@
 # Tests
 ## FINISH
 * [ ] core.serializers.ldap_settings
+* [ ] core.views.mixins.organizational_unit (add LdapRef case to tests)
 ## CREATE
-* [ ] core.views.oidc.CustomOidcViewSet.reject
-* [ ] core.serializers.application_group
 * [x] core.views.oidc.LinuxPamView
   * [x] validate
   * [-] get (totp block tbf)
+* [ ] core.serializers.application_group
+* [ ] core.views.oidc.CustomOidcViewSet.reject
 * [ ] core.mixins.oidc.OidcAuthorizeMixin.get_reject_url
 * [ ] core.views.mixins.SettingsViewMixin
 	* [ ] set_value_fields - mock test
@@ -39,7 +40,6 @@
 	* [ ] parse_ldap_setting_value - mock test
 	* [ ] parse_ldap_setting_data - mock test
 * [ ] tests for local user import with password
-* [x] Tests for LdapRef
 
 ## Issues
 ### High Priority
