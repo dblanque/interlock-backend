@@ -10,7 +10,8 @@ from core.type_hints.connector import LDAPConnectionProtocol
 from core.ldap.filter import LDAPFilter
 from core.utils.main import getldapattr
 from core.ldap.security_identifier import SID
-
+from logging import getLogger
+logger = getLogger()
 APP = "core"
 
 # Repeated implementation as get_model does not get Model classmethods
@@ -58,19 +59,32 @@ def ldap_objects_to_ldap_refs(apps: Apps, schema_editor):
         return
 
     RuntimeSettings.resync()
+    errors = False
     for asg in asg_query:
-        for distinguished_name in asg.ldap_objects: # type: ignore
-            with LDAPConnector(force_admin=True) as ldc:
-                ldap_ref_instance = LdapRef\
-                    .get_instance_from_ldap( # type: ignore
-                        distinguished_name=distinguished_name,
-                        connection=ldc.connection,
-                        search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
-                    )
-                if ldap_ref_instance:
-                    ldap_ref_instance.save()
-                    asg.ldap_refs.add(ldap_ref_instance.id) # type: ignore
-        asg.save()
+        try:
+            for distinguished_name in asg.ldap_objects: # type: ignore
+                with LDAPConnector(force_admin=True) as ldc:
+                    ldap_ref_instance = LdapRef\
+                        .get_instance_from_ldap( # type: ignore
+                            distinguished_name=distinguished_name,
+                            connection=ldc.connection,
+                            search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
+                        )
+                    if ldap_ref_instance:
+                        ldap_ref_instance.save()
+                        asg.ldap_refs.add(ldap_ref_instance.id) # type: ignore
+            asg.save()
+        except Exception as e:
+            errors = True
+            logger.error(
+                "Could not convert plain LDAP Distinguished Name to LdapRef."
+            )
+            logger.exception(e)
+    if errors:
+        logger.error(
+            "Please check your Application Security Groups and re-add whatever"
+            "LDAP Security Groups may have been removed."
+        )
 
 def add_dn_to_objects(asg, dns_to_add: list[str]):
     if asg.ldap_objects is None:
