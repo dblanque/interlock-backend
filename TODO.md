@@ -31,7 +31,6 @@
 * [ ] Add logging to all Application Security Group model operations.
 * [ ] Add logging to all TOTP operations.
 * [ ] Add tests for Linux PAM Auth Endpoint.
-* [ ] Fix/Check support for different response types.
 
 ### Low Priority (Post Release)
 * [ ] Update all Interlock Documentation.
