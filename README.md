@@ -16,10 +16,12 @@ Interlock is an **Open-Source Project** powered by *VueJS/Vuetify* and
 *Django Rest Framework* made for Organization Credentials and Authorization Management,
 and can serve as an SSO Authorizer or Identity Provider (IdP).
 
-[Click here to visit the official Website for Interlock](https://interlock.brconsulting.info/)
 
-For information and official Interlock Documentation go to:
-[BR Consulting S.R.L. Documentation - Interlock](https://docs.brconsulting.info/sphinx/en/docs/Development/Interlock/00-ilck-overview.html)
+## Official Interlock Website and Documentation
+These links are also present in the badges above:
+* [Official Website for Interlock](https://interlock.brconsulting.info/)
+* [BR Consulting S.R.L. Documentation - Interlock](https://docs.brconsulting.info/sphinx/en/docs/Development/Interlock/00-ilck-overview.html)
+
 
 It also sports several bonus features such as being able to manage an LDAP
 Server's *-or Server Pool's-* **DNS Zones**, **TOTP**,
@@ -38,6 +40,9 @@ It supports several main use-cases:
 Both LDAP Back-ends support the following features.
 * All of the Stand-alone mode features.
 * LDAP User CRUD, Group Membership, and Permissions Management.
+* LDAP User Password Modification
+  * Samba LDAP (LDAP & LDAPS)
+  * Microsoft ADDS (LDAPS Only)
 * LDAP Group CRUD and Members Management.
 * DNS Zones Management.
 * Directory Tree Management
@@ -46,11 +51,20 @@ Both LDAP Back-ends support the following features.
 	* Renaming LDAP Objects.
 
 ### Would you like to support me?
-<a href='https://ko-fi.com/E1E2YQ4TG' target='_blank'><img height='36' style='border:0px;height:36px;' src='https://storage.ko-fi.com/cdn/kofi2.png?v=3' border='0' alt='Buy Me a Coffee at ko-fi.com' /></a>
+<a href='https://ko-fi.com/E1E2YQ4TG' target='_blank'>
+<img
+	height='36'
+	style='border:0px;height:36px;'
+	src='https://storage.ko-fi.com/cdn/kofi2.png?v=3'
+	border='0'
+	alt='Buy Me a Coffee at ko-fi.com'/>
+</a>
 
-For official support feel free to contact us through either of these websites:
+For official support prices contact us through either of these websites:
 * <https://brconsulting.info/>
 * <https://cloudship.net/>
+
+For other issues you may create an issue in this repository.
 
 # Installation from Source
 
