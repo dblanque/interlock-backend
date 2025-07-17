@@ -34,8 +34,9 @@ It supports several main use-cases:
 	* SSO Application Groups Management.
 	* Authentication with TOTP.
 * LDAP Back-end
-	* Samba LDAP Back-end.
-	* Microsoft Active Directory Services Back-end.
+	* [x] Samba LDAP as a Back-end is supported.
+	* [x] Microsoft Active Directory Services as Back-end are supported.
+	* [ ] OpenLDAP is not currently supported.
 
 Both LDAP Back-ends support the following features.
 * All of the Stand-alone mode features.
