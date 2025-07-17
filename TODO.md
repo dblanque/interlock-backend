@@ -43,7 +43,7 @@
 
 ## Issues
 ### High Priority
-* [ ] Add message to Front-end to make explicit that Domain, Realm, Base DN are required in settings to enable the menus.
+* [ ] Fix missing builtin check in security groups view.
 
 ### Medium Priority
 * [ ] Add logging to all Application Security Group model operations.
