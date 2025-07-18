@@ -246,7 +246,8 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 				email=email,
 				ignore_local=True,  # This is already checked in the serializer
 			)
-		serializer.save()
+		with transaction.atomic():
+			serializer.save()
 
 		DBLogMixin.log(
 			user=request.user.id,
