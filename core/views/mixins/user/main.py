@@ -56,8 +56,8 @@ class UserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 
 	def local_user_exists(
 		self,
-		username: str = None,
-		email: str = None,
+		username: str | None = None,
+		email: str | None = None,
 		raise_exception: bool = True,
 	) -> bool | exc_user.UserExists:
 		args = {}
@@ -298,8 +298,8 @@ class UserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 class AllUserMixins(LDAPUserMixin, UserMixin):
 	def check_user_exists(
 		self,
-		username: str = None,
-		email: str = None,
+		username: str | None = None,
+		email: str | None = None,
 		ignore_ldap: bool = False,
 		ignore_local: bool = False,
 		raise_exception: bool = True,
