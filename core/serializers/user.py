@@ -93,6 +93,19 @@ class UserSerializer(serializers.ModelSerializer):
 			data[LOCAL_ATTR_IS_STAFF] = True
 		return data
 
+	def create(self, validated_data: dict):
+		user: User = super().create(validated_data)
+		if validated_data.get('password', None):
+			user.set_password(validated_data['password'])
+		user.save()
+		return user
+
+	def update(self, instance, validated_data: dict):
+		user: User = super().update(instance, validated_data)
+		if validated_data.get('password', None):
+			user.set_password(validated_data['password'])
+		user.save()
+		return user
 
 class LDAPUserSerializer(serializers.Serializer):
 	name = serializers.CharField(required=False)
