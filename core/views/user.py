@@ -38,7 +38,7 @@ from core.serializers.user import UserSerializer
 # Exceptions
 from django.core.exceptions import ObjectDoesNotExist
 from core.exceptions import users as exc_user
-from core.exceptions.base import BadRequest
+from core.exceptions.base import BadRequest, InternalServerError
 
 # REST Framework
 from rest_framework.request import Request
@@ -106,7 +106,7 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 		headers = [
 			field
 			for field in LOCAL_PUBLIC_FIELDS_BASIC
-			if not field in VALUE_ONLY
+			if field not in VALUE_ONLY
 		]
 
 		return Response(
@@ -128,8 +128,8 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 
 		if not serializer.is_valid():
 			serializer_exc = BadRequest(data={"errors": serializer.errors})
-			_username = serializer.errors.get(LOCAL_ATTR_USERNAME, "")
-			_email = serializer.errors.get(LOCAL_ATTR_EMAIL, "")
+			_username = serializer.errors.get(LOCAL_ATTR_USERNAME, "") # type: ignore
+			_email = serializer.errors.get(LOCAL_ATTR_EMAIL, "") # type: ignore
 			if "already exists" in str(_username):
 				raise exc_user.UserExists
 			if "already exists" in str(_email):
@@ -137,19 +137,21 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 			raise serializer_exc
 
 		validated_data = serializer.validated_data
+		if not isinstance(validated_data, dict):
+			raise InternalServerError
 		if LOCAL_ATTR_USERTYPE in validated_data:
 			del validated_data[LOCAL_ATTR_USERTYPE]
 
 		# If LDAP Back-end is enabled, this will do crosschecks.
 		self.check_user_exists(
 			# Should always have username on creation
-			username=validated_data.get(LOCAL_ATTR_USERNAME),
-			email=validated_data.get(LOCAL_ATTR_EMAIL, None),
+			username=validated_data.get(LOCAL_ATTR_USERNAME), # type: ignore
+			email=validated_data.get(LOCAL_ATTR_EMAIL, None), # type: ignore
 			ignore_local=True,  # This is already checked in the serializer
 		)
 		with transaction.atomic():
 			user_instance: User = User(**validated_data)
-			password = serializer.validated_data.get(LOCAL_ATTR_PASSWORD, None)
+			password = serializer.validated_data.get(LOCAL_ATTR_PASSWORD, None) # type: ignore
 			if password is None:
 				user_instance.set_unusable_password()
 			else:
@@ -212,8 +214,20 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 		for key in EXCLUDE_FIELDS:
 			if key in data:
 				del data[key]
-		serializer = self.serializer_class(data=data, partial=True)
+				
+		try:
+			user_instance: User = User.objects.get(id=pk)
+		except ObjectDoesNotExist:
+			raise exc_user.UserDoesNotExist
+		
+		if user_instance.user_type != USER_TYPE_LOCAL:
+			raise exc_user.UserNotLocalType
 
+		serializer = self.serializer_class(
+			user_instance,
+			data=data,
+			partial=True,
+		)
 		# Validate Data
 		if not serializer.is_valid():
 			serializer_exc = BadRequest(data={"errors": serializer.errors})
@@ -221,14 +235,6 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 			if "already exists" in str(_email):
 				raise exc_user.UserWithEmailExists
 			raise serializer_exc
-
-		try:
-			user_instance: User = User.objects.get(id=pk)
-		except ObjectDoesNotExist:
-			raise exc_user.UserDoesNotExist
-
-		if user_instance.user_type != USER_TYPE_LOCAL:
-			raise exc_user.UserNotLocalType
 
 		# If LDAP Back-end is enabled, this will do crosschecks.
 		# May or may not have either or both of the fields on partial updates.
@@ -240,14 +246,7 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 				email=email,
 				ignore_local=True,  # This is already checked in the serializer
 			)
-		# Set data
-		for key in serializer.validated_data:
-			setattr(user_instance, key, serializer.validated_data[key])
-
-		password = serializer.validated_data.get(LOCAL_ATTR_PASSWORD, None)
-		if password:
-			user_instance.set_password(password)
-		user_instance.save()
+		serializer.save()
 
 		DBLogMixin.log(
 			user=request.user.id,
@@ -305,7 +304,7 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 		data: dict = request.data
 		pk = int(pk)
 
-		if not LOCAL_ATTR_ENABLED in data or not isinstance(
+		if LOCAL_ATTR_ENABLED not in data or not isinstance(
 			data[LOCAL_ATTR_ENABLED], bool
 		):
 			raise BadRequest(
@@ -346,7 +345,7 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 		data: dict = request.data
 		pk = int(pk)
 		for field in (LOCAL_ATTR_PASSWORD, LOCAL_ATTR_PASSWORD_CONFIRM):
-			if not field in data:
+			if field not in data:
 				raise BadRequest(
 					data={"errors": f"Must contain field {field}."}
 				)
@@ -360,14 +359,15 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 			raise exc_user.UserNotLocalType
 
 		# Validate Data
-		serializer = self.serializer_class(data=data, partial=True)
+		serializer = self.serializer_class(
+			user_instance,
+			data=data,
+			partial=True
+		)
 		if not serializer.is_valid():
 			raise BadRequest(data={"errors": serializer.errors})
 
-		user_instance.set_password(
-			serializer.validated_data[LOCAL_ATTR_PASSWORD]
-		)
-		user_instance.save()
+		serializer.save()
 
 		DBLogMixin.log(
 			user=user.id,
@@ -408,13 +408,13 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 				)
 
 		for field in (LOCAL_ATTR_PASSWORD, LOCAL_ATTR_PASSWORD_CONFIRM):
-			if not field in data:
+			if field not in data:
 				raise BadRequest(
 					data={"errors": f"Must contain field {field}."}
 				)
 
 		# Validate Data
-		serializer = self.serializer_class(data=data, partial=True)
+		serializer = self.serializer_class(user, data=data, partial=True)
 		if not serializer.is_valid():
 			raise BadRequest(data={"errors": serializer.errors})
 
@@ -454,7 +454,7 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 			LOCAL_ATTR_EMAIL,
 		)
 		for key in data:
-			if not key in ALLOWED_FIELDS:
+			if key not in ALLOWED_FIELDS:
 				del data[key]
 		serializer = self.serializer_class(data=data, partial=True)
 
