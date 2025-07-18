@@ -640,8 +640,8 @@ class LDAPUserMixin(viewsets.ViewSetMixin, UserUtilsMixin):
 
 	def ldap_user_exists(
 		self,
-		username: str = None,
-		email: str = None,
+		username: str | None = None,
+		email: str | None = None,
 		return_exception: bool = True,
 	) -> bool:
 		"""Checks if LDAP User Exists on Directory
