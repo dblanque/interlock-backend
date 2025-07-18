@@ -18,6 +18,8 @@ from core.constants.attrs import (
 	LOCAL_ATTR_EMAIL,
 	LOCAL_ATTR_PASSWORD,
 	LOCAL_ATTR_PASSWORD_CONFIRM,
+	LOCAL_ATTR_IS_SUPERUSER,
+	LOCAL_ATTR_IS_STAFF,
 )
 from core.serializers.ldap import (
 	DistinguishedNameField,
@@ -31,7 +33,7 @@ from core.serializers.ldap import (
 ################################################################################
 
 
-def validate_password_match(password: str, password_confirm: str) -> str:
+def validate_password_match(password: str | None, password_confirm: str | None) -> str:
 	"""Validates password match with confirm field, returns value if valid"""
 	# Only validate if password is being set/changed
 	if password:
@@ -45,6 +47,10 @@ def validate_password_match(password: str, password_confirm: str) -> str:
 			raise serializers.ValidationError(
 				{LOCAL_ATTR_PASSWORD_CONFIRM: "Passwords do not match"}
 			)
+	if password is not None and not isinstance(password, str):
+		raise serializers.ValidationError(
+			{LOCAL_ATTR_PASSWORD: "Passwords must be of type str"}
+		)
 	return password
 
 
@@ -69,6 +75,8 @@ class UserSerializer(serializers.ModelSerializer):
 			LOCAL_ATTR_EMAIL,
 			LOCAL_ATTR_PASSWORD,
 			LOCAL_ATTR_PASSWORD_CONFIRM,
+			LOCAL_ATTR_IS_SUPERUSER,
+			LOCAL_ATTR_IS_STAFF,
 		)
 
 	def validate(self, data: dict):
@@ -79,6 +87,10 @@ class UserSerializer(serializers.ModelSerializer):
 
 		# Remove password_confirm from data as it's not a model field
 		data.pop(LOCAL_ATTR_PASSWORD_CONFIRM, None)
+
+		# Set staff status if superuser if necessary
+		if data.get(LOCAL_ATTR_IS_SUPERUSER, False):
+			data[LOCAL_ATTR_IS_STAFF] = True
 		return data
 
 
