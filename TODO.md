@@ -27,6 +27,7 @@
 ### High Priority
 * [ ] Fix missing builtin check in security groups view.
 * [x] Add transaction.atomic usage to serializer.save in local user update
+* [ ] Add configurable consent expiry time for each SSO Application.
 
 ### Medium Priority
 * [ ] Add logging to all Application Security Group model operations.
