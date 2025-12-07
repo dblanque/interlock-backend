@@ -122,6 +122,10 @@ class LDAPUserSearchAttrBuilder(SearchAttrBuilder):
 			LOCAL_ATTR_OBJECT_CATEGORY,
 			LOCAL_ATTR_OBJECT_CLASS,
 			LOCAL_ATTR_PRIMARY_GROUP_ID,
+			# Disallow Group Modifications
+			LOCAL_ATTR_USER_ADD_GROUPS,
+			LOCAL_ATTR_USER_RM_GROUPS,
+			LOCAL_ATTR_USER_GROUPS,
 		]
 
 	def get_fetch_me_attrs(self) -> list[str]:
