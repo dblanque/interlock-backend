@@ -866,6 +866,10 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 			RuntimeSettings
 		).get_update_self_exclude_keys()
 
+		# If not a dict, fuck off.
+		if not isinstance(data, dict):
+			raise exc_base.BadRequest
+
 		for key in EXCLUDE_KEYS:
 			if key in data:
 				del data[key]
@@ -887,7 +891,7 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 
 		logger.debug(self.ldap_connection.result)
 
-		django_user: User = None
+		django_user: User | None = None
 		try:
 			django_user = User.objects.get(username=ldap_user_search)
 		except ObjectDoesNotExist:
