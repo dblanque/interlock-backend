@@ -29,6 +29,7 @@ from core.serializers.ldap import (
 	country_dcc_validator,
 	ldap_permission_validator,
 	website_validator,
+	name_validator,
 )
 ################################################################################
 
@@ -143,14 +144,14 @@ class LDAPUserSerializer(serializers.Serializer):
 		allow_blank=True,
 		allow_null=True,
 		required=False,
-		validators=[ldap_user_validator_se],
+		validators=[name_validator],
 	)
 	# Last Name
 	last_name = serializers.CharField(
 		allow_blank=True,
 		allow_null=True,
 		required=False,
-		validators=[ldap_user_validator_se],
+		validators=[name_validator],
 	)
 	# Website
 	website = serializers.CharField(

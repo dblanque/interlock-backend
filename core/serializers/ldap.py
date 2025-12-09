@@ -20,36 +20,60 @@ WEBSITE_RE = re.compile(
 )
 
 
-def validate_name_simple(name):
+def validate_name_simple(name: str) -> tuple[bool, str]:
 	"""
-	Simple validator.
+	Simple but permissive name validator using only standard library.
+	Supports multi-language names by allowing any non-control character.
+
+	Args:
+	    name (str): The name to validate
+
+	Returns:
+	    tuple: (is_valid, error_message)
 	"""
+	SPECIAL_THRESHOLD = 5
 
 	if not isinstance(name, str):
 		return False, "value must be a string"
 
-	name = name.strip()
+	# Strip whitespace for validation but keep original for checking
+	stripped_name = name.strip()
 
-	if not name:
-		return False, "value cannot be empty"
+	# Check for control characters or other problematic Unicode categories
+	# Any control character, format character, surrogate, or private use char
+	if re.search(r"[\x00-\x1F\x7F-\x9F\u200B\uFEFF\uFFF9-\uFFFF]", name):
+		return False, "value contains invalid control characters"
 
-	if len(name) > 100:
-		return False, "value cannot exceed 100 characters"
+	# Check for numbers and symbols (but allow some common name-related symbols)
+	if re.search(r"[\d@#$%^*+=_|<>\[\]{}]", name):
+		return False, "value contains invalid characters (numbers or symbols)"
 
-	# Basic pattern that catches most common issues
-	# Allows letters, spaces, hyphens, apostrophes, periods
-	# Note: This is less inclusive for non-Latin scripts
-	if re.match(r"^[^\p{C}\p{Z}\p{P}&&[^\.\-\'\s]]+$", name, flags=re.UNICODE):
-		return True, ""
+	# Check for excessive special characters that are allowed
+	allowed_special = r"'\(\)\-. "
+	special_count = sum(1 for char in name if char in allowed_special)
 
-	# More permissive: allow any character except control characters
-	if re.match(r"^\P{C}+$", name, flags=re.UNICODE):
-		return True, ""
+	if special_count > SPECIAL_THRESHOLD:
+		return False, "value contains too many special characters"
 
-	return False, "value contains invalid characters"
+	# Check for consecutive special characters (except spaces)
+	if re.search(r"['\-\.]{2,}", name):
+		return False, "value cannot have consecutive special characters"
+
+	# Check if name starts or ends with special characters (except spaces)
+	if re.match(r"^['\-\.]", stripped_name):
+		return False, "value cannot start with special character"
+
+	if re.search(r"['\-]$", stripped_name):
+		return False, "value cannot end with special character"
+
+	# Check if the name is only special characters
+	if re.fullmatch(r"['\-\. ]+", stripped_name):
+		return False, "value cannot consist only of special characters"
+
+	return True, ""
 
 
-def validate_name(v: str):
+def name_validator(v: str):
 	valid, reason = validate_name_simple(v)
 	if not valid:
 		raise ValidationError(reason.capitalize())
@@ -80,7 +104,7 @@ def dn_validator_se(v: str):
 
 
 def country_validator(v: str):
-	if not v.strip().lower() in [c.lower() for c in LDAP_COUNTRIES.keys()]:
+	if v.strip().lower() not in [c.lower() for c in LDAP_COUNTRIES.keys()]:
 		raise ValidationError("Invalid country name.")
 	return v
 

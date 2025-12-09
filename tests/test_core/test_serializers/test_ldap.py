@@ -14,6 +14,7 @@ from core.serializers.ldap import (
 	country_iso_validator,
 	ldap_permission_validator,
 	website_validator,
+	validate_name_simple,
 )
 
 
@@ -58,6 +59,45 @@ class TestLdapUserValidator:
 	def test_raises(self, username: str):
 		with pytest.raises(ValidationError):
 			ldap_user_validator_se(username)
+
+
+class TestLdapUserNamesValidator:
+	@pytest.mark.parametrize(
+		"name",
+		(
+			"",
+			"John",
+			"O'Connor",
+			"Johnny (O'Connor)",
+			"Smith-Jones",
+			"De La Cruz",
+			"J.R.",
+			"محمد",  # Arabic
+			"陈",  # Chinese
+			"जॉन",  # Hindi
+			"Αλέξανδρος",  # Greek
+			"Иван",  # Russian
+			"François",  # French with diacritic
+		),
+	)
+	def test_success(self, name: str):
+		valid, reason = validate_name_simple(name)
+		assert valid
+
+	@pytest.mark.parametrize(
+		"name",
+		(
+			# Invalid names
+			"John123",
+			"John()()()",
+			"Name@",
+			"--",  # Only special chars
+			"O''Connor",  # Consecutive special chars
+		),
+	)
+	def test_raises(self, name: str):
+		valid, reason = validate_name_simple(name)
+		assert not valid
 
 
 class TestLdapPermissionValidator:
