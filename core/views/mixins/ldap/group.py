@@ -42,6 +42,7 @@ from rest_framework import serializers
 ### Exceptions
 from django.core.exceptions import ObjectDoesNotExist
 from core.exceptions import (
+	base as exc_base,
 	ldap as exc_ldap,
 	groups as exc_groups,
 )
@@ -347,15 +348,20 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 			raise exc_ldap.DistinguishedNameValidationError
 
 		group_types = group_obj.attributes.get(LOCAL_ATTR_GROUP_TYPE)
+		if not group_types:
+			raise exc_base.InternalServerError(data={
+				"detail":"%s not found in group_obj" % (LOCAL_ATTR_GROUP_TYPE)
+			})
+
 		if (
 			LDAPGroupTypes.TYPE_SYSTEM.name in group_types
-			or group_cn.lower().startswith("domain ")
+			or self.is_built_in(distinguished_name)
 		):
 			raise exc_groups.GroupBuiltinProtect
 
 		try:
 			group_obj.delete()
-		except:
+		except Exception:
 			raise exc_groups.GroupDelete(
 				data={"ldap_response": self.ldap_connection.result}
 			)
