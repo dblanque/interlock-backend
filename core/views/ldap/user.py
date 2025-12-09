@@ -841,6 +841,11 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 		code = 0
 		code_msg = "ok"
 		data = request.data
+
+		# If not a dict, fuck off.
+		if not isinstance(data, dict):
+			raise exc_base.BadRequest(data={"detail": "'data' must be a dictionary."})
+
 		if user.user_type != USER_TYPE_LDAP:
 			raise exc_user.UserNotLDAPType
 
@@ -865,10 +870,15 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 		EXCLUDE_KEYS = self.filter_attr_builder(
 			RuntimeSettings
 		).get_update_self_exclude_keys()
+		BAD_REQ_KEYS = self.filter_attr_builder(
+			RuntimeSettings
+		).get_update_self_bad_keys()
 
-		# If not a dict, fuck off.
-		if not isinstance(data, dict):
-			raise exc_base.BadRequest
+		for key in BAD_REQ_KEYS:
+			if key in data:
+				raise exc_base.BadRequest(data={
+					"detail": f"{key} is invalid for an end-user self-update."
+				})
 
 		for key in EXCLUDE_KEYS:
 			if key in data:
@@ -877,6 +887,8 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 		serializer = self.serializer_class(data=data)
 		serializer.is_valid(raise_exception=True)
 		data = serializer.validated_data
+		if not isinstance(data, dict):
+			raise exc_base.CoreException
 
 		# Open LDAP Connection
 		# User doesn't have rights to change any data in LDAP Server

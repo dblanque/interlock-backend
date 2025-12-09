@@ -128,6 +128,26 @@ class LDAPUserSearchAttrBuilder(SearchAttrBuilder):
 			LOCAL_ATTR_USER_GROUPS,
 		]
 
+	def get_update_self_bad_keys(self):
+		"""Return local keys to return bad request on"""
+		return [
+			"can_change_pwd",
+			LOCAL_ATTR_PATH,
+			LOCAL_ATTR_DN,
+			LOCAL_ATTR_USERNAME,
+			LOCAL_ATTR_IS_ENABLED,
+			LOCAL_ATTR_ACCOUNT_TYPE,
+			LOCAL_ATTR_PERMISSIONS,
+			LOCAL_ATTR_UAC,
+			LOCAL_ATTR_OBJECT_CATEGORY,
+			LOCAL_ATTR_OBJECT_CLASS,
+			LOCAL_ATTR_PRIMARY_GROUP_ID,
+			# Disallow Group Modifications
+			LOCAL_ATTR_USER_ADD_GROUPS,
+			LOCAL_ATTR_USER_RM_GROUPS,
+			LOCAL_ATTR_USER_GROUPS,
+		]
+
 	def get_fetch_me_attrs(self) -> list[str]:
 		"""Returns local keys"""
 		_REMOVE = [
