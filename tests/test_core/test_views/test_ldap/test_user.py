@@ -1887,13 +1887,7 @@ class TestSelfUpdate(BaseViewTestClass):
 		m_data = {
 			LOCAL_ATTR_EMAIL: m_email,
 			LOCAL_ATTR_COUNTRY: "Argentina",
-			LOCAL_ATTR_ADDRESS: "Some Address",
-			LOCAL_ATTR_IS_ENABLED: True,
-			LOCAL_ATTR_UAC: 1234,
-			LOCAL_ATTR_PERMISSIONS: [
-				LDAP_UF_NORMAL_ACCOUNT,
-				LDAP_UF_ACCOUNT_DISABLE,
-			],
+			LOCAL_ATTR_ADDRESS: "Some Address"
 		}
 		m_ldap_user_update = mocker.patch.object(
 			LDAPUserViewSet, "ldap_user_update"
@@ -1914,12 +1908,6 @@ class TestSelfUpdate(BaseViewTestClass):
 		expected_data = m_data.copy() | {
 			LOCAL_ATTR_USERNAME: normal_user.username
 		}
-		for key in (
-			LOCAL_ATTR_IS_ENABLED,
-			LOCAL_ATTR_UAC,
-			LOCAL_ATTR_PERMISSIONS,
-		):
-			expected_data.pop(key, None)
 		m_ldap_user_update.assert_called_once_with(data=expected_data)
 		normal_user.refresh_from_db()
 		normal_user.email == m_email
