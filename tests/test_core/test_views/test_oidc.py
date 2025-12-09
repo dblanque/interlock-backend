@@ -131,9 +131,8 @@ class TestCustomOidcViewSet(BaseViewTestClass):
 			"client_id": f_client.client_id,
 			"next": "true",
 		}
-		admin_user_client.set_cookie(
-			OIDC_INTERLOCK_NEXT_COOKIE, "mock_next_encrypted"
-		)
+		CLIENT_COOKIE_KEY = f"{OIDC_INTERLOCK_NEXT_COOKIE}_{f_client.client_id}"
+		admin_user_client.set_cookie(CLIENT_COOKIE_KEY, "mock_next_encrypted")
 		response: Response = admin_user_client.post(
 			self.endpoint,
 			data=data,
@@ -160,9 +159,8 @@ class TestCustomOidcViewSet(BaseViewTestClass):
 			"client_id": user_consent.client.client_id,
 			"next": "true",
 		}
-		admin_user_client.set_cookie(
-			OIDC_INTERLOCK_NEXT_COOKIE, "mock_next_encrypted"
-		)
+		CLIENT_COOKIE_KEY = f"{OIDC_INTERLOCK_NEXT_COOKIE}_{user_consent.client.client_id}"
+		admin_user_client.set_cookie(CLIENT_COOKIE_KEY, "mock_next_encrypted")
 		old_expiry = user_consent.expires_at
 
 		response: Response = admin_user_client.post(
@@ -250,9 +248,8 @@ class TestCustomOidcViewSet(BaseViewTestClass):
 			"client_id": f_client.client_id,
 			"next": "true",
 		}
-		admin_user_client.set_cookie(
-			OIDC_INTERLOCK_NEXT_COOKIE, "mock_next_encrypted"
-		)
+		CLIENT_COOKIE_KEY = f"{OIDC_INTERLOCK_NEXT_COOKIE}_{f_client.client_id}"
+		admin_user_client.set_cookie(CLIENT_COOKIE_KEY, "mock_next_encrypted")
 		response: Response = admin_user_client.post(
 			self.endpoint, data=data, format="json"
 		)

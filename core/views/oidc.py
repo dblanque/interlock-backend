@@ -70,11 +70,17 @@ from interlock_backend.settings import (
 logger = logging.getLogger(__name__)
 
 
-def login_redirect_bad_request(error_detail: str | int = 400) -> HttpResponse:
+def login_redirect_bad_request(
+		error_detail: str | int = 400,
+		next_key: str | None = None
+	) -> HttpResponse:
 	response = redirect(
 		f"{LOGIN_URL}/?{QK_ERROR}=true&{QK_ERROR_DETAIL}={error_detail}"
 	)
 	response.delete_cookie(OIDC_INTERLOCK_LOGIN_COOKIE)
+	if next_key:
+		response.delete_cookie(next_key)
+	# Also delete legacy encrypted next cookie
 	response.delete_cookie(OIDC_INTERLOCK_NEXT_COOKIE)
 	return response
 
@@ -93,6 +99,7 @@ class CustomOidcViewSet(BaseViewSet):
 			client = Client.objects.get(client_id=data["client_id"])
 		except ObjectDoesNotExist:
 			return login_redirect_bad_request("oidc_no_client")
+		CLIENT_COOKIE_KEY = f"{OIDC_INTERLOCK_NEXT_COOKIE}_{client.client_id}"
 
 		# Get Consent
 		try:
@@ -104,7 +111,10 @@ class CustomOidcViewSet(BaseViewSet):
 			pass
 		except Exception as e:
 			logger.exception(e)
-			return login_redirect_bad_request("oidc_consent_get")
+			return login_redirect_bad_request(
+				"oidc_consent_get",
+				next_key=CLIENT_COOKIE_KEY
+			)
 
 		response = Response(
 			data={
@@ -113,7 +123,7 @@ class CustomOidcViewSet(BaseViewSet):
 			}
 		)
 		response.delete_cookie(OIDC_INTERLOCK_LOGIN_COOKIE)
-		response.delete_cookie(OIDC_INTERLOCK_NEXT_COOKIE)
+		response.delete_cookie(CLIENT_COOKIE_KEY)
 		return response
 
 	@auth_required
@@ -124,14 +134,20 @@ class CustomOidcViewSet(BaseViewSet):
 		data: dict = request.data
 		user_consent = None
 		client = None
-		if QK_NEXT not in data or not request.COOKIES.get(
-			OIDC_INTERLOCK_NEXT_COOKIE, None
-		):
-			return login_redirect_bad_request("oidc_no_next_uri")
 		try:
 			client = Client.objects.get(client_id=data["client_id"])
 		except ObjectDoesNotExist:
 			return login_redirect_bad_request("oidc_no_client")
+		CLIENT_COOKIE_KEY = f"{OIDC_INTERLOCK_NEXT_COOKIE}_{client.client_id}"
+
+		if QK_NEXT not in data or not request.COOKIES.get(
+			CLIENT_COOKIE_KEY, None
+		):
+			return login_redirect_bad_request(
+				"oidc_no_next_uri",
+				next_key=CLIENT_COOKIE_KEY
+			)
+
 		try:
 			user_consent = UserConsent.objects.get(
 				client_id=client.id, user_id=user.id
@@ -140,7 +156,10 @@ class CustomOidcViewSet(BaseViewSet):
 			pass
 		except Exception as e:
 			logger.exception(e)
-			return login_redirect_bad_request("oidc_consent_get")
+			return login_redirect_bad_request(
+				"oidc_consent_get",
+				next_key=CLIENT_COOKIE_KEY
+			)
 
 		with transaction.atomic():
 			if not user_consent:
@@ -160,9 +179,7 @@ class CustomOidcViewSet(BaseViewSet):
 				)
 				user_consent.date_given = timezone.make_aware(datetime.now())
 				user_consent.save()
-		decrypted_next_uri = fernet_decrypt(
-			request.COOKIES[OIDC_INTERLOCK_NEXT_COOKIE]
-		)
+		decrypted_next_uri = fernet_decrypt(request.COOKIES[CLIENT_COOKIE_KEY])
 		return Response(
 			data={
 				"code": 0,
@@ -206,6 +223,7 @@ class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
 
 		# Retrieve required data
 		self.get_relevant_objects(request=request)
+		CLIENT_COOKIE_KEY = f"{OIDC_INTERLOCK_NEXT_COOKIE}_{self.client_id}"
 		require_consent = (
 			prompt == OIDC_PROMPT_CONSENT
 			or self.user_requires_consent(user=user)
@@ -223,13 +241,15 @@ class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
 			if OIDC_COOKIE == OIDC_COOKIE_VUE_ABORT:
 				redirect_response = redirect(f"{LOGIN_URL}/?{QK_ERROR}=true")
 				redirect_response.delete_cookie(OIDC_INTERLOCK_LOGIN_COOKIE)
+				redirect_response.delete_cookie(CLIENT_COOKIE_KEY)
+				# Also delete legacy encrypted next cookie
 				redirect_response.delete_cookie(OIDC_INTERLOCK_NEXT_COOKIE)
 				return redirect_response
 			elif OIDC_COOKIE in (
 				OIDC_COOKIE_VUE_REDIRECT,
 				OIDC_COOKIE_VUE_LOGIN,
 			):
-				return self.login_redirect()
+				return self.login_redirect(next_key=CLIENT_COOKIE_KEY)
 
 		# Redirect to login with success or failure code
 		else:
@@ -237,6 +257,7 @@ class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
 			if not self.user_can_access_app(user=user):
 				return login_redirect_bad_request(
 					error_detail=status.HTTP_403_FORBIDDEN,
+					next_key=CLIENT_COOKIE_KEY
 				)
 			redirect_response: HttpResponse = redirect(
 				self.authorize.create_response_uri()
@@ -244,6 +265,8 @@ class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
 
 			# Remove redirection and next uri cookie
 			redirect_response.delete_cookie(OIDC_INTERLOCK_LOGIN_COOKIE)
+			redirect_response.delete_cookie(CLIENT_COOKIE_KEY)
+			# Also delete legacy encrypted next cookie
 			redirect_response.delete_cookie(OIDC_INTERLOCK_NEXT_COOKIE)
 
 			# Check if OIDC Library Response has any errors.
