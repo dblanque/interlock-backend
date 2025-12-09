@@ -21,6 +21,7 @@ from interlock_backend.settings import (
 	OIDC_SKIP_CUSTOM_CONSENT,
 	SIMPLE_JWT as JWT_SETTINGS,
 )
+from core.views.mixins.auth import DATE_FMT_COOKIE
 
 # Http
 from django.http import HttpResponse, HttpRequest
@@ -53,7 +54,6 @@ from interlock_backend.settings import LOGIN_URL
 from oidc_provider.lib.endpoints.authorize import AuthorizeEndpoint
 from core.ldap.connector import LDAPConnector, recursive_member_search
 from core.config.runtime import RuntimeSettings
-
 ################################################################################
 logger = logging.getLogger()
 
@@ -269,7 +269,7 @@ class OidcAuthorizeMixin:
 		redirect_uri = self.client.redirect_uris[0]
 		try:
 			reject_uri = self.get_reject_url(redirect_uri)
-		except:
+		except Exception:
 			reject_uri = redirect_uri
 		replace_params = {
 			"next": str(True).lower(),
@@ -300,8 +300,11 @@ class OidcAuthorizeMixin:
 		)
 		return login_url, encrypted_url
 
-	def login_redirect(self) -> HttpResponse:
+	def login_redirect(self, next_key=OIDC_INTERLOCK_NEXT_COOKIE) -> HttpResponse:
 		login_url, encrypted_next = self.get_login_url()
+		expiry_date = (
+			timezone.now() + timedelta(seconds=90)
+		).strftime(DATE_FMT_COOKIE)
 		response = redirect(login_url)
 		response.set_cookie(
 			key=OIDC_INTERLOCK_LOGIN_COOKIE,
@@ -310,14 +313,16 @@ class OidcAuthorizeMixin:
 			samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
 			secure=JWT_SETTINGS["AUTH_COOKIE_SECURE"],
 			domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
+			expires=expiry_date
 		)
 		response.set_cookie(
-			key=OIDC_INTERLOCK_NEXT_COOKIE,
+			key=next_key,
 			value=encrypted_next,
 			httponly=True,
 			samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
 			secure=JWT_SETTINGS["AUTH_COOKIE_SECURE"],
 			domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
+			expires=expiry_date
 		)
 		return response
 
