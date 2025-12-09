@@ -232,6 +232,7 @@ def f_default_ldap_path(g_runtime_settings: RuntimeSettingsFactory):
 		LOCAL_ATTR_PATH: f"CN=Users,{m_runtime_settings.LDAP_AUTH_SEARCH_BASE}"
 	}
 
+
 @pytest.fixture
 def f_sid_1():
 	return b"\x01\x05\x00\x00\x00\x00\x00\x05\x15\x00\x00\x00\x11^\xb3\x83j\x06\x94\x00\x80\xdbi\xaa\x87\x04\x00\x00"

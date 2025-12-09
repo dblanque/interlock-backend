@@ -89,8 +89,7 @@ class RuntimeSettingsSingleton:
 			if is_in_migration(only_migrate=True):
 				logger.error(
 					"%s in migration mode (must be initialized manually "
-					"within migration)."
-					% (self.__class__.__name__)
+					"within migration)." % (self.__class__.__name__)
 				)
 			elif not apps.ready and not is_in_migration():
 				logger.error(

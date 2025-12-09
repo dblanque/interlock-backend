@@ -83,6 +83,7 @@ class UserAdmin(DjangoUserAdmin):
 class ASGForm(forms.ModelForm):
 	pass
 
+
 @admin.register(models.ApplicationSecurityGroup)
 class ASGAdmin(admin.ModelAdmin):
 	form = ASGForm

@@ -132,6 +132,7 @@ def f_application():
 		scopes="openid profile",
 	)
 
+
 @pytest.fixture
 def f_ldap_ref_02(f_sid_2):
 	ldap_ref = LdapRef(
@@ -142,12 +143,13 @@ def f_ldap_ref_02(f_sid_2):
 	ldap_ref.save()
 	return ldap_ref
 
+
 @pytest.fixture
 def f_application_group(
 	f_application: Application,
 	f_distinguished_name: str,
 	f_ldap_ref: LdapRef,
-	f_ldap_ref_02: LdapRef
+	f_ldap_ref_02: LdapRef,
 ):
 	"""Fixture creating a test application group in the database"""
 	group = ApplicationSecurityGroup.objects.create(

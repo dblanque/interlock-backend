@@ -349,13 +349,15 @@ class GroupViewMixin(viewsets.ViewSetMixin):
 
 		group_types = group_obj.attributes.get(LOCAL_ATTR_GROUP_TYPE)
 		if not group_types:
-			raise exc_base.InternalServerError(data={
-				"detail":"%s not found in group_obj" % (LOCAL_ATTR_GROUP_TYPE)
-			})
+			raise exc_base.InternalServerError(
+				data={
+					"detail": "%s not found in group_obj"
+					% (LOCAL_ATTR_GROUP_TYPE)
+				}
+			)
 
-		if (
-			LDAPGroupTypes.TYPE_SYSTEM.name in group_types
-			or self.is_built_in(distinguished_name)
+		if LDAPGroupTypes.TYPE_SYSTEM.name in group_types or self.is_built_in(
+			distinguished_name
 		):
 			raise exc_groups.GroupBuiltinProtect
 

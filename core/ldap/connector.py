@@ -253,7 +253,7 @@ def authenticate(*args, **kwargs):
 		setattr(user, field, encrypted_data[index])
 	del password
 	user.user_type = USER_TYPE_LDAP
-	update_last_login(None, user) # type: ignore
+	update_last_login(None, user)  # type: ignore
 	user.save()
 	return user
 
@@ -304,9 +304,13 @@ class LDAPConnector(object):
 					}
 				)
 
-		is_local_superuser = user and hasattr(user, "username") and (
-			user.username == DEFAULT_SUPERUSER_USERNAME
-			or (user.is_superuser and user.user_type == USER_TYPE_LOCAL)
+		is_local_superuser = (
+			user
+			and hasattr(user, "username")
+			and (
+				user.username == DEFAULT_SUPERUSER_USERNAME
+				or (user.is_superuser and user.user_type == USER_TYPE_LOCAL)
+			)
 		)
 		self.default_user_dn = RuntimeSettings.LDAP_AUTH_CONNECTION_USER_DN
 		self.default_user_pwd = RuntimeSettings.LDAP_AUTH_CONNECTION_PASSWORD
@@ -466,9 +470,7 @@ class LDAPConnector(object):
 			}
 
 			DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS = getattr(
-				settings,
-				"DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS",
-				False
+				settings, "DEVELOPMENT_LOG_LDAP_BIND_CREDENTIALS", False
 			)
 			# Do not use this in production or testing
 			# It can leak sensitive data such as decrypted credentials

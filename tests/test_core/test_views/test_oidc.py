@@ -159,7 +159,9 @@ class TestCustomOidcViewSet(BaseViewTestClass):
 			"client_id": user_consent.client.client_id,
 			"next": "true",
 		}
-		CLIENT_COOKIE_KEY = f"{OIDC_INTERLOCK_NEXT_COOKIE}_{user_consent.client.client_id}"
+		CLIENT_COOKIE_KEY = (
+			f"{OIDC_INTERLOCK_NEXT_COOKIE}_{user_consent.client.client_id}"
+		)
 		admin_user_client.set_cookie(CLIENT_COOKIE_KEY, "mock_next_encrypted")
 		old_expiry = user_consent.expires_at
 

@@ -57,8 +57,9 @@ class ApplicationSecurityGroupSerializer(serializers.ModelSerializer):
 					_users_result.add(user)
 			self.validated_data["users"] = _users_result
 		else:
-			self.validated_data["users"] = asg.users\
-											.values_list("id", flat=True)
+			self.validated_data["users"] = asg.users.values_list(
+				"id", flat=True
+			)
 
 		if is_ldap_backend_enabled():
 			# Update LDAP References from Distinguished Names
@@ -77,7 +78,7 @@ class ApplicationSecurityGroupSerializer(serializers.ModelSerializer):
 					with LDAPConnector(force_admin=True) as ldc:
 						ldap_ref = LdapRef.get_instance_from_ldap(
 							distinguished_name=distinguished_name,
-							connection=ldc.connection
+							connection=ldc.connection,
 						)
 						if ldap_ref:
 							ldap_ref.save()

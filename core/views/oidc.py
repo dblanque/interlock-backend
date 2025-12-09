@@ -71,9 +71,8 @@ logger = logging.getLogger(__name__)
 
 
 def login_redirect_bad_request(
-		error_detail: str | int = 400,
-		next_key: str | None = None
-	) -> HttpResponse:
+	error_detail: str | int = 400, next_key: str | None = None
+) -> HttpResponse:
 	response = redirect(
 		f"{LOGIN_URL}/?{QK_ERROR}=true&{QK_ERROR_DETAIL}={error_detail}"
 	)
@@ -112,8 +111,7 @@ class CustomOidcViewSet(BaseViewSet):
 		except Exception as e:
 			logger.exception(e)
 			return login_redirect_bad_request(
-				"oidc_consent_get",
-				next_key=CLIENT_COOKIE_KEY
+				"oidc_consent_get", next_key=CLIENT_COOKIE_KEY
 			)
 
 		response = Response(
@@ -144,8 +142,7 @@ class CustomOidcViewSet(BaseViewSet):
 			CLIENT_COOKIE_KEY, None
 		):
 			return login_redirect_bad_request(
-				"oidc_no_next_uri",
-				next_key=CLIENT_COOKIE_KEY
+				"oidc_no_next_uri", next_key=CLIENT_COOKIE_KEY
 			)
 
 		try:
@@ -157,8 +154,7 @@ class CustomOidcViewSet(BaseViewSet):
 		except Exception as e:
 			logger.exception(e)
 			return login_redirect_bad_request(
-				"oidc_consent_get",
-				next_key=CLIENT_COOKIE_KEY
+				"oidc_consent_get", next_key=CLIENT_COOKIE_KEY
 			)
 
 		with transaction.atomic():
@@ -257,7 +253,7 @@ class OidcAuthorizeView(AuthorizeView, OidcAuthorizeMixin):
 			if not self.user_can_access_app(user=user):
 				return login_redirect_bad_request(
 					error_detail=status.HTTP_403_FORBIDDEN,
-					next_key=CLIENT_COOKIE_KEY
+					next_key=CLIENT_COOKIE_KEY,
 				)
 			redirect_response: HttpResponse = redirect(
 				self.authorize.create_response_uri()

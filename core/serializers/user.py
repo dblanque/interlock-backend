@@ -33,7 +33,9 @@ from core.serializers.ldap import (
 ################################################################################
 
 
-def validate_password_match(password: str | None, password_confirm: str | None) -> str:
+def validate_password_match(
+	password: str | None, password_confirm: str | None
+) -> str:
 	"""Validates password match with confirm field, returns value if valid"""
 	# Only validate if password is being set/changed
 	if password:
@@ -95,17 +97,18 @@ class UserSerializer(serializers.ModelSerializer):
 
 	def create(self, validated_data: dict):
 		user: User = super().create(validated_data)
-		if validated_data.get('password', None):
-			user.set_password(validated_data['password'])
+		if validated_data.get("password", None):
+			user.set_password(validated_data["password"])
 		user.save()
 		return user
 
 	def update(self, instance, validated_data: dict):
 		user: User = super().update(instance, validated_data)
-		if validated_data.get('password', None):
-			user.set_password(validated_data['password'])
+		if validated_data.get("password", None):
+			user.set_password(validated_data["password"])
 		user.save()
 		return user
+
 
 class LDAPUserSerializer(serializers.Serializer):
 	name = serializers.CharField(required=False)

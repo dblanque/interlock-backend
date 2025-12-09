@@ -94,8 +94,9 @@ class ApplicationSecurityGroupViewMixin(viewsets.ViewSetMixin):
 			},
 			"enabled": application_group.enabled,
 			"users": data_users,
-			"ldap_objects": application_group.ldap_objects\
-				if is_ldap_backend_enabled() else [],
+			"ldap_objects": application_group.ldap_objects
+			if is_ldap_backend_enabled()
+			else [],
 		}
 
 	def update_application_group(self, pk: int, data: dict) -> None:

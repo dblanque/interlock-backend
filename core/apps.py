@@ -16,6 +16,7 @@ import threading
 
 logger = getLogger()
 
+
 class CoreConfig(AppConfig):
 	name = "core"
 
@@ -54,6 +55,7 @@ class CoreConfig(AppConfig):
 			# Ensure RuntimeSettings is properly initialized
 			RuntimeSettings.resync()
 			from core.scheduler import start_scheduler
+
 			start_scheduler()
 
 		if not is_in_migration():

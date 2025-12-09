@@ -77,7 +77,7 @@ class ApplicationSecurityGroup(BaseModel):
 				SECRET_KEY,
 			),
 		)
-	
+
 	def refresh_ldap_refs(self):
 		with LDAPConnector(force_admin=True) as ldc:
 			for ldap_ref in self.ldap_refs.all():

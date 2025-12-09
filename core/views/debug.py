@@ -10,9 +10,6 @@
 ### ViewSets
 from .base import BaseViewSet
 
-### Models
-from core.models.user import User
-
 ### Decorators
 from core.decorators.login import auth_required, admin_required
 
@@ -22,7 +19,11 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 ### LDAP
+from core.constants.attrs.ldap import LDAP_ATTR_SECURITY_ID
 from core.ldap.defaults import LDAP_OPERATIONS
+from core.ldap.connector import LDAPConnector
+from core.config.runtime import RuntimeSettings
+from core.ldap.filter import LDAPFilter
 
 ### Others
 import logging
@@ -42,6 +43,20 @@ class DebugViewSet(BaseViewSet):  # pragma: no cover
 				valid_debug_operations.remove(op)
 		code = 0
 		code_msg = "ok"
+
+		m_object_sid = "S-1-5-21-2209570321-9700970-2859064192-1105"  # samba
+		m_object_sid = "S-1-5-21-998508399-3078841688-3447918036-500"  # adds
+		with LDAPConnector(force_admin=True) as ldc:
+			connection = ldc.connection
+			if connection:
+				connection.search(
+					search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
+					search_filter=LDAPFilter.eq(
+						LDAP_ATTR_SECURITY_ID, m_object_sid
+					).to_string(),
+				)
+				if connection.entries:
+					print(connection.entries[0].entry_dn)
 		return Response(
 			data={
 				"code": code,

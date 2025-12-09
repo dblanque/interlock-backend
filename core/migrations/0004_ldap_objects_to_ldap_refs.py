@@ -11,111 +11,117 @@ from core.ldap.filter import LDAPFilter
 from core.utils.main import getldapattr
 from core.ldap.security_identifier import SID
 from logging import getLogger
+
 logger = getLogger()
 APP = "core"
 
+
 # Repeated implementation as get_model does not get Model classmethods
 def get_ldap_ref(
-    cls,
-    distinguished_name: str | None,
-    connection: LDAPConnectionProtocol | None,
-    search_base: str | None = None,
+	cls,
+	distinguished_name: str | None,
+	connection: LDAPConnectionProtocol | None,
+	search_base: str | None = None,
 ):
-    if not connection or not is_ldap_backend_enabled():
-        return None
-    if not distinguished_name:
-        return None
-    dn_field = RuntimeSettings.LDAP_FIELD_MAP.get(LOCAL_ATTR_DN, LDAP_ATTR_DN)
-    sid_field = RuntimeSettings.LDAP_FIELD_MAP.get(
-        LOCAL_ATTR_SECURITY_ID,
-        LDAP_ATTR_SECURITY_ID,
-    )
-    connection.search(
-        search_base=search_base if search_base\
-            else RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
-        search_filter=LDAPFilter.eq(dn_field, distinguished_name).to_string(),
-        attributes=[dn_field, sid_field],
-        size_limit=1
-    )
-    if not connection.entries:
-        return None
-    result_entry = connection.entries[0]
+	if not connection or not is_ldap_backend_enabled():
+		return None
+	if not distinguished_name:
+		return None
+	dn_field = RuntimeSettings.LDAP_FIELD_MAP.get(LOCAL_ATTR_DN, LDAP_ATTR_DN)
+	sid_field = RuntimeSettings.LDAP_FIELD_MAP.get(
+		LOCAL_ATTR_SECURITY_ID,
+		LDAP_ATTR_SECURITY_ID,
+	)
+	connection.search(
+		search_base=search_base
+		if search_base
+		else RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
+		search_filter=LDAPFilter.eq(dn_field, distinguished_name).to_string(),
+		attributes=[dn_field, sid_field],
+		size_limit=1,
+	)
+	if not connection.entries:
+		return None
+	result_entry = connection.entries[0]
 
-    entry_sid = getldapattr(result_entry, sid_field, None)
-    if not entry_sid:
-        return None
-    return cls(
-        distinguished_name=distinguished_name,
-        object_security_id_bytes=entry_sid.value,
-        object_security_id=str(SID(entry_sid.value))
-    )
+	entry_sid = getldapattr(result_entry, sid_field, None)
+	if not entry_sid:
+		return None
+	return cls(
+		distinguished_name=distinguished_name,
+		object_security_id_bytes=entry_sid.value,
+		object_security_id=str(SID(entry_sid.value)),
+	)
+
 
 def ldap_objects_to_ldap_refs(apps: Apps, schema_editor):
-    ApplicationSecurityGroup = apps.get_model(APP, "ApplicationSecurityGroup")
-    LdapRef = apps.get_model(APP, "LdapRef")
-    setattr(LdapRef, "get_instance_from_ldap", classmethod(get_ldap_ref))
-    asg_query = list(ApplicationSecurityGroup.objects.all())
-    if not asg_query or not is_ldap_backend_enabled():
-        return
+	ApplicationSecurityGroup = apps.get_model(APP, "ApplicationSecurityGroup")
+	LdapRef = apps.get_model(APP, "LdapRef")
+	setattr(LdapRef, "get_instance_from_ldap", classmethod(get_ldap_ref))
+	asg_query = list(ApplicationSecurityGroup.objects.all())
+	if not asg_query or not is_ldap_backend_enabled():
+		return
 
-    RuntimeSettings.resync()
-    errors = False
-    for asg in asg_query:
-        try:
-            for distinguished_name in asg.ldap_objects: # type: ignore
-                with LDAPConnector(force_admin=True) as ldc:
-                    ldap_ref_instance = LdapRef\
-                        .get_instance_from_ldap( # type: ignore
-                            distinguished_name=distinguished_name,
-                            connection=ldc.connection,
-                            search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
-                        )
-                    if ldap_ref_instance:
-                        ldap_ref_instance.save()
-                        asg.ldap_refs.add(ldap_ref_instance.id) # type: ignore
-            asg.save()
-        except Exception as e:
-            errors = True
-            logger.error(
-                "Could not convert plain LDAP Distinguished Name to LdapRef."
-            )
-            logger.exception(e)
-    if errors:
-        logger.error(
-            "Please check your Application Security Groups and re-add whatever"
-            "LDAP Security Groups may have been removed."
-        )
+	RuntimeSettings.resync()
+	errors = False
+	for asg in asg_query:
+		try:
+			for distinguished_name in asg.ldap_objects:  # type: ignore
+				with LDAPConnector(force_admin=True) as ldc:
+					ldap_ref_instance = LdapRef.get_instance_from_ldap(  # type: ignore
+						distinguished_name=distinguished_name,
+						connection=ldc.connection,
+						search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
+					)
+					if ldap_ref_instance:
+						ldap_ref_instance.save()
+						asg.ldap_refs.add(ldap_ref_instance.id)  # type: ignore
+			asg.save()
+		except Exception as e:
+			errors = True
+			logger.error(
+				"Could not convert plain LDAP Distinguished Name to LdapRef."
+			)
+			logger.exception(e)
+	if errors:
+		logger.error(
+			"Please check your Application Security Groups and re-add whatever"
+			"LDAP Security Groups may have been removed."
+		)
+
 
 def add_dn_to_objects(asg, dns_to_add: list[str]):
-    if asg.ldap_objects is None:
-        asg.ldap_objects = []
-    for entry_dn in list(dns_to_add):
-        if entry_dn in asg.ldap_objects:
-            continue
-        asg.ldap_objects.append(entry_dn)
-    return asg
+	if asg.ldap_objects is None:
+		asg.ldap_objects = []
+	for entry_dn in list(dns_to_add):
+		if entry_dn in asg.ldap_objects:
+			continue
+		asg.ldap_objects.append(entry_dn)
+	return asg
+
 
 def ldap_refs_to_ldap_objects(apps: Apps, schema_editor):
-    # Revert LdapRef instances to list[str]
-    ApplicationSecurityGroup = apps.get_model(APP, "ApplicationSecurityGroup")
-    LdapRef = apps.get_model(APP, "LdapRef")
-    asg_query = list(ApplicationSecurityGroup.objects.all())
-    for asg in asg_query:
-        ldap_ref_query = LdapRef.objects.filter(
-            asg_ldap_ref=asg.id # type: ignore
-        ).values_list("distinguished_name", flat=True)
-        asg = add_dn_to_objects(asg, list(ldap_ref_query))
-        asg.save()
+	# Revert LdapRef instances to list[str]
+	ApplicationSecurityGroup = apps.get_model(APP, "ApplicationSecurityGroup")
+	LdapRef = apps.get_model(APP, "LdapRef")
+	asg_query = list(ApplicationSecurityGroup.objects.all())
+	for asg in asg_query:
+		ldap_ref_query = LdapRef.objects.filter(
+			asg_ldap_ref=asg.id  # type: ignore
+		).values_list("distinguished_name", flat=True)
+		asg = add_dn_to_objects(asg, list(ldap_ref_query))
+		asg.save()
+
 
 class Migration(migrations.Migration):
-    dependencies = [
-        ("core", "0003_ldap_ref"),
-    ]
+	dependencies = [
+		("core", "0003_ldap_ref"),
+	]
 
-    operations = [
-        migrations.RunPython(
-            code=ldap_objects_to_ldap_refs,
-            reverse_code=ldap_refs_to_ldap_objects,
-            atomic=True,
-        )
-    ]
+	operations = [
+		migrations.RunPython(
+			code=ldap_objects_to_ldap_refs,
+			reverse_code=ldap_refs_to_ldap_objects,
+			atomic=True,
+		)
+	]

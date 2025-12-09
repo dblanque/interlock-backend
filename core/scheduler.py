@@ -5,6 +5,7 @@ from core.ldap.connector import LDAPConnector
 from core.decorators.intercept import is_ldap_backend_enabled
 from django.conf import settings
 
+
 def check_ldap_refs():
 	if not is_ldap_backend_enabled():
 		return
@@ -17,17 +18,14 @@ def check_ldap_refs():
 				continue
 			ldap_ref.refresh_or_prune(connection=ldc.connection)
 
+
 def start_scheduler():
 	if not getattr(settings, "SCHEDULER_LDAP_REF_ENABLE", False):
 		return
 	scheduler = BackgroundScheduler()
 	scheduler.add_jobstore(DjangoJobStore(), "default")
 
-	interval = getattr(
-		settings,
-		"SCHEDULER_LDAP_REF_INTERVAL",
-		{"minutes": 30}
-	)
+	interval = getattr(settings, "SCHEDULER_LDAP_REF_INTERVAL", {"minutes": 30})
 	scheduler.add_job(
 		check_ldap_refs,
 		"interval",
@@ -35,6 +33,6 @@ def start_scheduler():
 		id="LdapRefConsistencyJob",
 		max_instances=1,
 		replace_existing=True,
-		**interval
+		**interval,
 	)
 	scheduler.start()

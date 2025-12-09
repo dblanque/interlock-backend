@@ -9,6 +9,7 @@ from core.utils.main import getldapattr
 from core.ldap.security_identifier import SID
 from ldap3 import Entry as LDAPEntry
 
+
 class LdapRef(BaseModel):
 	distinguished_name = models.CharField(null=False, blank=False, unique=True)
 	object_security_id_bytes = models.BinaryField(
@@ -79,7 +80,7 @@ class LdapRef(BaseModel):
 			search_base=RuntimeSettings.LDAP_AUTH_SEARCH_BASE,
 			search_filter=LDAPFilter.eq(pk_ident, pk).to_string(),
 			attributes=[cls.get_dn_field(), cls.get_sid_field()],
-			size_limit=1
+			size_limit=1,
 		)
 		return connection.entries[0] if connection.entries else None
 
@@ -111,7 +112,7 @@ class LdapRef(BaseModel):
 		return cls(
 			distinguished_name=distinguished_name,
 			object_security_id_bytes=entry_sid.value,
-			object_security_id=str(SID(entry_sid.value))
+			object_security_id=str(SID(entry_sid.value)),
 		)
 
 	def refresh_from_ldap(
@@ -119,8 +120,7 @@ class LdapRef(BaseModel):
 		connection: LDAPConnectionProtocol | None,
 	) -> bool:
 		result_entry = self.get_entry_from_ldap(
-			connection=connection,
-			pk=self.object_security_id
+			connection=connection, pk=self.object_security_id
 		)
 		if not result_entry:
 			return False

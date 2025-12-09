@@ -54,6 +54,7 @@ from interlock_backend.settings import LOGIN_URL
 from oidc_provider.lib.endpoints.authorize import AuthorizeEndpoint
 from core.ldap.connector import LDAPConnector, recursive_member_search
 from core.config.runtime import RuntimeSettings
+
 ################################################################################
 logger = logging.getLogger()
 
@@ -211,7 +212,6 @@ class OidcAuthorizeMixin:
 			return False
 
 		try:
-			
 			application_group = ApplicationSecurityGroup.objects.get(
 				application_id=self.application.id
 			)
@@ -257,7 +257,7 @@ class OidcAuthorizeMixin:
 			raise Exception("client instance is required.")
 		original_url = self.request.get_full_path()
 		# Encrypt the URL for temporary client-side storage
-		encrypted_url: str = fernet_encrypt(original_url) # type: ignore
+		encrypted_url: str = fernet_encrypt(original_url)  # type: ignore
 		login_url = f"{LOGIN_URL}/?"
 
 		# These parameters need to be added because we're encrypting the
@@ -277,7 +277,7 @@ class OidcAuthorizeMixin:
 			"client_id": self.client.client_id,
 			"reuse_consent": self.client.reuse_consent,
 			"require_consent": self.user_requires_consent(
-				user=self.request.user # type: ignore
+				user=self.request.user  # type: ignore
 			),
 			"redirect_uri": redirect_uri,
 			"reject_uri": reject_uri,
@@ -300,11 +300,13 @@ class OidcAuthorizeMixin:
 		)
 		return login_url, encrypted_url
 
-	def login_redirect(self, next_key=OIDC_INTERLOCK_NEXT_COOKIE) -> HttpResponse:
+	def login_redirect(
+		self, next_key=OIDC_INTERLOCK_NEXT_COOKIE
+	) -> HttpResponse:
 		login_url, encrypted_next = self.get_login_url()
-		expiry_date = (
-			timezone.now() + timedelta(seconds=90)
-		).strftime(DATE_FMT_COOKIE)
+		expiry_date = (timezone.now() + timedelta(seconds=90)).strftime(
+			DATE_FMT_COOKIE
+		)
 		response = redirect(login_url)
 		response.set_cookie(
 			key=OIDC_INTERLOCK_LOGIN_COOKIE,
@@ -313,7 +315,7 @@ class OidcAuthorizeMixin:
 			samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
 			secure=JWT_SETTINGS["AUTH_COOKIE_SECURE"],
 			domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
-			expires=expiry_date
+			expires=expiry_date,
 		)
 		response.set_cookie(
 			key=next_key,
@@ -322,7 +324,7 @@ class OidcAuthorizeMixin:
 			samesite=JWT_SETTINGS["AUTH_COOKIE_SAME_SITE"],
 			secure=JWT_SETTINGS["AUTH_COOKIE_SECURE"],
 			domain=JWT_SETTINGS["AUTH_COOKIE_DOMAIN"],
-			expires=expiry_date
+			expires=expiry_date,
 		)
 		return response
 

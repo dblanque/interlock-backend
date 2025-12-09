@@ -20,6 +20,42 @@ WEBSITE_RE = re.compile(
 )
 
 
+def validate_name_simple(name):
+	"""
+	Simple validator.
+	"""
+
+	if not isinstance(name, str):
+		return False, "value must be a string"
+
+	name = name.strip()
+
+	if not name:
+		return False, "value cannot be empty"
+
+	if len(name) > 100:
+		return False, "value cannot exceed 100 characters"
+
+	# Basic pattern that catches most common issues
+	# Allows letters, spaces, hyphens, apostrophes, periods
+	# Note: This is less inclusive for non-Latin scripts
+	if re.match(r"^[^\p{C}\p{Z}\p{P}&&[^\.\-\'\s]]+$", name, flags=re.UNICODE):
+		return True, ""
+
+	# More permissive: allow any character except control characters
+	if re.match(r"^\P{C}+$", name, flags=re.UNICODE):
+		return True, ""
+
+	return False, "value contains invalid characters"
+
+
+def validate_name(v: str):
+	valid, reason = validate_name_simple(v)
+	if not valid:
+		raise ValidationError(reason.capitalize())
+	return v
+
+
 def ldap_user_validator(v: str):
 	def has_invalid_chars(s: str):
 		return (

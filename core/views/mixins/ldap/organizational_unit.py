@@ -463,7 +463,8 @@ class OrganizationalUnitMixin(viewsets.ViewSetMixin):
 		# Update local reference
 		try:
 			ldap_ref = LdapRef.objects.get(
-				distinguished_name=distinguished_name)
+				distinguished_name=distinguished_name
+			)
 			ldap_ref.distinguished_name = new_dn
 			ldap_ref.save()
 		except (ObjectDoesNotExist, LdapRef.DoesNotExist):

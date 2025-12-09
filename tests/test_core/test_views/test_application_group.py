@@ -21,6 +21,7 @@ from tests.test_core.conftest import ConnectorFactory, LDAPEntryFactoryProtocol
 from core.constants.attrs.ldap import LDAP_ATTR_SECURITY_ID, LDAP_ATTR_DN
 from core.models.ldap_ref import LdapRef
 
+
 @pytest.fixture(autouse=True)
 def f_ldap_connector(
 	g_ldap_connector: ConnectorFactory,
@@ -33,16 +34,17 @@ def f_ldap_connector(
 			"core.models.application.LDAPConnector",
 		)
 	)
-	connector.connection.entries = [ # type: ignore
+	connector.connection.entries = [  # type: ignore
 		fc_ldap_entry(
 			spec=False,
 			**{
 				LDAP_ATTR_DN: f_ldap_ref.distinguished_name,
-				LDAP_ATTR_SECURITY_ID: f_ldap_ref.object_security_id_bytes
-			}
+				LDAP_ATTR_SECURITY_ID: f_ldap_ref.object_security_id_bytes,
+			},
 		)
 	]
 	return connector
+
 
 class TestCreateInfo(BaseViewTestClass):
 	_endpoint = "application/group-create-info"
@@ -103,7 +105,7 @@ class TestInsert(BaseViewTestClass):
 				"enabled": True,
 			},
 			format="json",
-		) # type: ignore
+		)  # type: ignore
 		assert response.status_code == status.HTTP_409_CONFLICT
 
 	def test_success(
@@ -125,15 +127,17 @@ class TestInsert(BaseViewTestClass):
 				"enabled": True,
 			},
 			format="json",
-		) # type: ignore
+		)  # type: ignore
 		asg = ApplicationSecurityGroup.objects.get(
-			application_id=f_application.id)
+			application_id=f_application.id
+		)
 		assert response.status_code == status.HTTP_200_OK
 		assert asg.ldap_objects == [f_ldap_ref.distinguished_name]
 		assert (
 			ApplicationSecurityGroup.objects.filter(
 				application=f_application.id
-			).count() == 1
+			).count()
+			== 1
 		)
 
 
@@ -190,7 +194,7 @@ class TestUpdate(BaseViewTestClassWithPk):
 		f_application_group: ApplicationSecurityGroup,
 		f_client: Client,
 		f_ldap_ref: LdapRef,
-		g_interlock_ldap_enabled
+		g_interlock_ldap_enabled,
 	):
 		self._pk = f_application_group.id
 		assert f_application_group.users.count() == 1

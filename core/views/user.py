@@ -128,8 +128,8 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 
 		if not serializer.is_valid():
 			serializer_exc = BadRequest(data={"errors": serializer.errors})
-			_username = serializer.errors.get(LOCAL_ATTR_USERNAME, "") # type: ignore
-			_email = serializer.errors.get(LOCAL_ATTR_EMAIL, "") # type: ignore
+			_username = serializer.errors.get(LOCAL_ATTR_USERNAME, "")  # type: ignore
+			_email = serializer.errors.get(LOCAL_ATTR_EMAIL, "")  # type: ignore
 			if "already exists" in str(_username):
 				raise exc_user.UserExists
 			if "already exists" in str(_email):
@@ -145,13 +145,13 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 		# If LDAP Back-end is enabled, this will do crosschecks.
 		self.check_user_exists(
 			# Should always have username on creation
-			username=validated_data.get(LOCAL_ATTR_USERNAME), # type: ignore
-			email=validated_data.get(LOCAL_ATTR_EMAIL, None), # type: ignore
+			username=validated_data.get(LOCAL_ATTR_USERNAME),  # type: ignore
+			email=validated_data.get(LOCAL_ATTR_EMAIL, None),  # type: ignore
 			ignore_local=True,  # This is already checked in the serializer
 		)
 		with transaction.atomic():
 			user_instance: User = User(**validated_data)
-			password = serializer.validated_data.get(LOCAL_ATTR_PASSWORD, None) # type: ignore
+			password = serializer.validated_data.get(LOCAL_ATTR_PASSWORD, None)  # type: ignore
 			if password is None:
 				user_instance.set_unusable_password()
 			else:
@@ -214,12 +214,12 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 		for key in EXCLUDE_FIELDS:
 			if key in data:
 				del data[key]
-				
+
 		try:
 			user_instance: User = User.objects.get(id=pk)
 		except ObjectDoesNotExist:
 			raise exc_user.UserDoesNotExist
-		
+
 		if user_instance.user_type != USER_TYPE_LOCAL:
 			raise exc_user.UserNotLocalType
 
@@ -361,9 +361,7 @@ class UserViewSet(BaseViewSet, AllUserMixins):
 
 		# Validate Data
 		serializer = self.serializer_class(
-			user_instance,
-			data=data,
-			partial=True
+			user_instance, data=data, partial=True
 		)
 		if not serializer.is_valid():
 			raise BadRequest(data={"errors": serializer.errors})

@@ -23,23 +23,28 @@ from core.exceptions.base import BadRequest, Unauthorized, PermissionDenied
 from core.constants.attrs.local import LOCAL_ATTR_USERNAME, LOCAL_ATTR_PASSWORD
 from typing import Protocol
 
+
 @pytest.fixture
 def f_ldap_connector(g_ldap_connector: ConnectorFactory):
 	return g_ldap_connector(patch_path="core.views.auth.LDAPConnector")
 
+
 class IsLdapBackendEnabledProtocol(Protocol):
 	def __call__(self, enabled=False, **kwargs): ...
 
+
 @pytest.fixture
 def f_mock_ldap_backend_enabled(
-	mocker: MockerFixture
+	mocker: MockerFixture,
 ) -> IsLdapBackendEnabledProtocol:
 	def maker(enabled=False, **kwargs):
 		return mocker.patch(
 			"core.views.auth.is_ldap_backend_enabled",
 			return_value=enabled,
 		)
+
 	return maker
+
 
 class TestLinuxPamViewValidate:
 	instance = LinuxPamView()
@@ -54,13 +59,11 @@ class TestLinuxPamViewValidate:
 	):
 		m_fernet_decrypt = mocker.patch(
 			"core.views.auth.fernet_decrypt",
-			side_effect=Exception("Some Decrypt Error.")
+			side_effect=Exception("Some Decrypt Error."),
 		)
 
 		with pytest.raises(BadRequest) as e:
-			self.instance.validate(data={
-				"cross_check_key":"bad_value"
-			})
+			self.instance.validate(data={"cross_check_key": "bad_value"})
 
 		m_fernet_decrypt.assert_called_once_with("bad_value")
 		errors = e.value.detail.get("errors")
@@ -74,7 +77,7 @@ class TestLinuxPamViewValidate:
 	):
 		m_fernet_decrypt = mocker.patch(
 			"core.views.auth.fernet_decrypt",
-			side_effect=Exception("Some Decrypt Error.")
+			side_effect=Exception("Some Decrypt Error."),
 		)
 
 		with pytest.raises(BadRequest) as e:
@@ -99,8 +102,7 @@ class TestLinuxPamViewValidate:
 		remove_field: str,
 	):
 		m_fernet_decrypt = mocker.patch(
-			"core.views.auth.fernet_decrypt",
-			return_value="mock_result_check"
+			"core.views.auth.fernet_decrypt", return_value="mock_result_check"
 		)
 		m_data = {
 			LOCAL_ATTR_USERNAME: "testuser",
@@ -124,7 +126,7 @@ class TestLinuxPamViewValidate:
 			"abcdef",
 			"12345a",
 			"123456-",
-		)
+		),
 	)
 	def test_totp_validation(
 		self,
@@ -132,8 +134,7 @@ class TestLinuxPamViewValidate:
 		totp_code: str | int,
 	):
 		m_fernet_decrypt = mocker.patch(
-			"core.views.auth.fernet_decrypt",
-			return_value="mock_result_check"
+			"core.views.auth.fernet_decrypt", return_value="mock_result_check"
 		)
 		m_data = {
 			LOCAL_ATTR_USERNAME: "testuser",
@@ -156,7 +157,7 @@ class TestLinuxPamViewValidate:
 			"012345",
 			"123456",
 			123456,
-		)
+		),
 	)
 	def test_success(
 		self,
@@ -164,8 +165,7 @@ class TestLinuxPamViewValidate:
 		totp_code: str | int,
 	):
 		m_fernet_decrypt = mocker.patch(
-			"core.views.auth.fernet_decrypt",
-			return_value="mock_result_check"
+			"core.views.auth.fernet_decrypt", return_value="mock_result_check"
 		)
 		m_data = {
 			LOCAL_ATTR_USERNAME: "testuser",
@@ -187,6 +187,7 @@ class TestLinuxPamViewValidate:
 			assert k in result
 		m_fernet_decrypt.assert_called_once_with("mock_key")
 
+
 class TestLinuxPamViewGet:
 	def test_success_local(
 		self,
@@ -201,14 +202,15 @@ class TestLinuxPamViewGet:
 		)
 		m_data = {
 			LOCAL_ATTR_USERNAME: f_user_local.username,
-			LOCAL_ATTR_PASSWORD: f_user_local.raw_password, # type: ignore
+			LOCAL_ATTR_PASSWORD: f_user_local.raw_password,  # type: ignore
 			"cross_check_key": "mock_key",
 		}
 		m_request = mocker.Mock()
 		m_request.data = m_data
 		m_view = LinuxPamView()
 		m_validate = mocker.patch.object(
-			m_view, "validate", return_value=m_data)
+			m_view, "validate", return_value=m_data
+		)
 
 		# Execution
 		response: Response = m_view.get(request=m_request)
@@ -230,14 +232,15 @@ class TestLinuxPamViewGet:
 		)
 		m_data = {
 			LOCAL_ATTR_USERNAME: f_user_local.username,
-			LOCAL_ATTR_PASSWORD: f_user_local.raw_password, # type: ignore
+			LOCAL_ATTR_PASSWORD: f_user_local.raw_password,  # type: ignore
 			"cross_check_key": "mock_key",
 		}
 		m_request = mocker.Mock()
 		m_request.data = m_data
 		m_view = LinuxPamView()
 		m_validate = mocker.patch.object(
-			m_view, "validate", return_value=m_data)
+			m_view, "validate", return_value=m_data
+		)
 
 		# Execution
 		response: Response = m_view.get(request=m_request)
@@ -259,14 +262,15 @@ class TestLinuxPamViewGet:
 		)
 		m_data = {
 			LOCAL_ATTR_USERNAME: f_user_local.username,
-			LOCAL_ATTR_PASSWORD: f_user_local.raw_password, # type: ignore
+			LOCAL_ATTR_PASSWORD: f_user_local.raw_password,  # type: ignore
 			"cross_check_key": "mock_key",
 		}
 		m_request = mocker.Mock()
 		m_request.data = m_data
 		m_view = LinuxPamView()
 		m_validate = mocker.patch.object(
-			m_view, "validate", return_value=m_data)
+			m_view, "validate", return_value=m_data
+		)
 
 		# Execution
 		with pytest.raises(PermissionDenied) as e:
@@ -296,14 +300,15 @@ class TestLinuxPamViewGet:
 		)
 		m_data = {
 			LOCAL_ATTR_USERNAME: f_user_ldap.username,
-			LOCAL_ATTR_PASSWORD: f_user_ldap.raw_password, # type: ignore
+			LOCAL_ATTR_PASSWORD: f_user_ldap.raw_password,  # type: ignore
 			"cross_check_key": "mock_key",
 		}
 		m_request = mocker.Mock()
 		m_request.data = m_data
 		m_view = LinuxPamView()
 		m_validate = mocker.patch.object(
-			m_view, "validate", return_value=m_data)
+			m_view, "validate", return_value=m_data
+		)
 
 		# Execution
 		response: Response = m_view.get(request=m_request)
@@ -311,9 +316,9 @@ class TestLinuxPamViewGet:
 		# Assertion
 		m_validate.assert_called_once_with(data=m_data)
 		m_get_user.assert_called_once_with(username=f_user_ldap.username)
-		f_ldap_connector.rebind.assert_called_once_with( # type: ignore
+		f_ldap_connector.rebind.assert_called_once_with(  # type: ignore
 			user_dn=f_user_ldap.distinguished_name,
-			password=f_user_ldap.raw_password, # type: ignore
+			password=f_user_ldap.raw_password,  # type: ignore
 		)
 		assert response.status_code == status.HTTP_200_OK
 
@@ -334,17 +339,18 @@ class TestLinuxPamViewGet:
 			"get_user",
 			return_value=f_user_ldap,
 		)
-		f_ldap_connector.rebind.return_value = None # type: ignore
+		f_ldap_connector.rebind.return_value = None  # type: ignore
 		m_data = {
 			LOCAL_ATTR_USERNAME: f_user_ldap.username,
-			LOCAL_ATTR_PASSWORD: f_user_ldap.raw_password, # type: ignore
+			LOCAL_ATTR_PASSWORD: f_user_ldap.raw_password,  # type: ignore
 			"cross_check_key": "mock_key",
 		}
 		m_request = mocker.Mock()
 		m_request.data = m_data
 		m_view = LinuxPamView()
 		m_validate = mocker.patch.object(
-			m_view, "validate", return_value=m_data)
+			m_view, "validate", return_value=m_data
+		)
 
 		# Execution
 		with pytest.raises(Unauthorized) as e:
@@ -354,9 +360,9 @@ class TestLinuxPamViewGet:
 		# Assertion
 		m_validate.assert_called_once_with(data=m_data)
 		m_get_user.assert_called_once_with(username=f_user_ldap.username)
-		f_ldap_connector.rebind.assert_called_once_with( # type: ignore
+		f_ldap_connector.rebind.assert_called_once_with(  # type: ignore
 			user_dn=f_user_ldap.distinguished_name,
-			password=f_user_ldap.raw_password, # type: ignore
+			password=f_user_ldap.raw_password,  # type: ignore
 		)
 		assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
@@ -374,7 +380,7 @@ class TestLinuxPamViewGet:
 		)
 		m_data = {
 			LOCAL_ATTR_USERNAME: f_user_ldap.username,
-			LOCAL_ATTR_PASSWORD: f_user_ldap.raw_password, # type: ignore
+			LOCAL_ATTR_PASSWORD: f_user_ldap.raw_password,  # type: ignore
 			"cross_check_key": "mock_key",
 		}
 		m_get_user = mocker.patch.object(
@@ -382,16 +388,13 @@ class TestLinuxPamViewGet:
 			"get_user",
 			return_value=f_user_ldap,
 		)
-		mocker.patch.object(
-			f_ldap_connector,
-			"rebind",
-			return_value=True
-		)
+		mocker.patch.object(f_ldap_connector, "rebind", return_value=True)
 		m_request = mocker.Mock()
 		m_request.data = m_data
 		m_view = LinuxPamView()
 		m_validate = mocker.patch.object(
-			m_view, "validate", return_value=m_data)
+			m_view, "validate", return_value=m_data
+		)
 
 		# Execution
 		with pytest.raises(PermissionDenied) as e:
@@ -401,11 +404,12 @@ class TestLinuxPamViewGet:
 		# Assertion
 		m_validate.assert_called_once_with(data=m_data)
 		m_get_user.assert_called_once_with(username=f_user_ldap.username)
-		f_ldap_connector.rebind.assert_called_once_with( # type: ignore
+		f_ldap_connector.rebind.assert_called_once_with(  # type: ignore
 			user_dn=f_user_ldap.distinguished_name,
-			password=f_user_ldap.raw_password, # type: ignore
+			password=f_user_ldap.raw_password,  # type: ignore
 		)
 		assert response.status_code == status.HTTP_403_FORBIDDEN
+
 
 class TestLinuxPamViewPost:
 	def test_success(self, mocker: MockerFixture):
@@ -413,10 +417,8 @@ class TestLinuxPamViewPost:
 		m_get = mocker.patch.object(LinuxPamView, "get")
 		m_view = LinuxPamView()
 		m_view.post(request=m_request)
-		m_get.assert_called_once_with(
-			request=m_request,
-			format=None
-		)
+		m_get.assert_called_once_with(request=m_request, format=None)
+
 
 class TestRefresh:
 	endpoint = reverse("token-refresh")

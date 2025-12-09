@@ -147,10 +147,7 @@ class LinuxPamView(APIView):
 		if totp_code:
 			if not (
 				isinstance(totp_code, int)
-				or (
-					isinstance(totp_code, str)
-					and totp_code.isnumeric()
-				)
+				or (isinstance(totp_code, str) and totp_code.isnumeric())
 			):
 				errors["totp_code"] = totp_exc_msg
 		data["totp_code"] = totp_code
@@ -203,10 +200,9 @@ class LinuxPamView(APIView):
 		if not user or not authenticated:
 			raise Unauthorized
 
-		if (
-			getattr(settings, "LINUX_PAM_AUTH_ENDPOINT_ADMIN_ONLY", True) and
-			not (user.is_superuser and user.is_staff)
-		):
+		if getattr(
+			settings, "LINUX_PAM_AUTH_ENDPOINT_ADMIN_ONLY", True
+		) and not (user.is_superuser and user.is_staff):
 			raise PermissionDenied
 
 		if user_has_device(user=user):
@@ -219,13 +215,14 @@ class LinuxPamView(APIView):
 				"code": 0,
 				"code_msg": "ok",
 				"is_superuser": user.is_superuser,
-				"cross_check_key": cross_check_key
+				"cross_check_key": cross_check_key,
 			},
-			status=status.HTTP_200_OK
+			status=status.HTTP_200_OK,
 		)
-	
+
 	def post(self, request: Request, format=None):
 		return self.get(request=request, format=format)
+
 
 class AuthViewSet(BaseViewSet):
 	@auth_required

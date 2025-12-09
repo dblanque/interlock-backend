@@ -1,7 +1,9 @@
 import sys
 
+
 def ignore_reverse(apps, schema_editor):  # pragma: no cover
 	return
+
 
 def is_in_migration(
 	only_migrate: bool = False,
@@ -25,4 +27,4 @@ def is_in_migration(
 		opts.remove("makemigrations")
 	elif only_make_migrations:
 		opts.remove("migrate")
-	return any(x.lower() in sys.argv[_manage_idx+1] for x in opts)
+	return any(x.lower() in sys.argv[_manage_idx + 1] for x in opts)

@@ -1818,38 +1818,35 @@ class TestSelfUpdate(BaseViewTestClass):
 		(
 			(
 				{
-				LOCAL_ATTR_USERNAME: "some_other_username",
-				LOCAL_ATTR_COUNTRY: "Some Country",
+					LOCAL_ATTR_USERNAME: "some_other_username",
+					LOCAL_ATTR_COUNTRY: "Some Country",
 				},
-				True
+				True,
+			),
+			(
+				{LOCAL_ATTR_DN: "some_dn", LOCAL_ATTR_COUNTRY: "Some Country"},
+				True,
 			),
 			(
 				{
-				LOCAL_ATTR_DN: "some_dn",
-				LOCAL_ATTR_COUNTRY: "Some Country"
+					LOCAL_ATTR_FIRST_NAME: "pepe",
+					LOCAL_ATTR_USER_ADD_GROUPS: "some_value",
 				},
-				True
+				False,
 			),
 			(
 				{
-				LOCAL_ATTR_FIRST_NAME: "pepe",
-				LOCAL_ATTR_USER_ADD_GROUPS: "some_value",
+					LOCAL_ATTR_FIRST_NAME: "pepe",
+					LOCAL_ATTR_USER_RM_GROUPS: "some_value",
 				},
-				False
+				False,
 			),
 			(
 				{
-				LOCAL_ATTR_FIRST_NAME: "pepe",
-				LOCAL_ATTR_USER_RM_GROUPS: "some_value",
+					LOCAL_ATTR_FIRST_NAME: "pepe",
+					LOCAL_ATTR_USER_GROUPS: "some_value",
 				},
-				False
-			),
-			(
-				{
-				LOCAL_ATTR_FIRST_NAME: "pepe",
-				LOCAL_ATTR_USER_GROUPS: "some_value",
-				},
-				False
+				False,
 			),
 		),
 	)
@@ -1859,7 +1856,7 @@ class TestSelfUpdate(BaseViewTestClass):
 		f_logger: Logger,
 		normal_user: User,
 		normal_user_client: APIClient,
-		logger_called: bool
+		logger_called: bool,
 	):
 		# Mock local django user data
 		normal_user.user_type = USER_TYPE_LDAP
@@ -1887,7 +1884,7 @@ class TestSelfUpdate(BaseViewTestClass):
 		m_data = {
 			LOCAL_ATTR_EMAIL: m_email,
 			LOCAL_ATTR_COUNTRY: "Argentina",
-			LOCAL_ATTR_ADDRESS: "Some Address"
+			LOCAL_ATTR_ADDRESS: "Some Address",
 		}
 		m_ldap_user_update = mocker.patch.object(
 			LDAPUserViewSet, "ldap_user_update"

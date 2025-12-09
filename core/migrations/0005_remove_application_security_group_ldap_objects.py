@@ -4,14 +4,14 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-    dependencies = [
-        ("core", "0003_ldap_ref"),
-        ("core", "0004_ldap_objects_to_ldap_refs"),
-    ]
+	dependencies = [
+		("core", "0003_ldap_ref"),
+		("core", "0004_ldap_objects_to_ldap_refs"),
+	]
 
-    operations = [
-        migrations.RemoveField(
-            model_name="applicationsecuritygroup",
-            name="ldap_objects",
-        ),
-    ]
+	operations = [
+		migrations.RemoveField(
+			model_name="applicationsecuritygroup",
+			name="ldap_objects",
+		),
+	]

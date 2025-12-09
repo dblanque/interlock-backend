@@ -36,8 +36,7 @@ class SID(object):
 	"""
 
 	def __init__(
-		self,
-		security_identifier: list | bytes | bytearray | LDAPAttribute
+		self, security_identifier: list | bytes | bytearray | LDAPAttribute
 	):
 		if not security_identifier:
 			return None

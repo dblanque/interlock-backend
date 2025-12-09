@@ -429,6 +429,7 @@ def f_application():
 	)
 	return m_application
 
+
 @pytest.fixture
 def f_ldap_ref():
 	ldap_ref = LdapRef(
@@ -438,6 +439,7 @@ def f_ldap_ref():
 	)
 	ldap_ref.save()
 	return ldap_ref
+
 
 @pytest.fixture
 def f_application_group(

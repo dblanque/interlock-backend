@@ -844,7 +844,9 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 
 		# If not a dict, fuck off.
 		if not isinstance(data, dict):
-			raise exc_base.BadRequest(data={"detail": "'data' must be a dictionary."})
+			raise exc_base.BadRequest(
+				data={"detail": "'data' must be a dictionary."}
+			)
 
 		if user.user_type != USER_TYPE_LDAP:
 			raise exc_user.UserNotLDAPType
@@ -876,9 +878,11 @@ class LDAPUserViewSet(BaseViewSet, AllUserMixins):
 
 		for key in BAD_REQ_KEYS:
 			if key in data:
-				raise exc_base.BadRequest(data={
-					"detail": f"{key} is invalid for an end-user self-update."
-				})
+				raise exc_base.BadRequest(
+					data={
+						"detail": f"{key} is invalid for an end-user self-update."
+					}
+				)
 
 		for key in EXCLUDE_KEYS:
 			if key in data:

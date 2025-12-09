@@ -23,6 +23,7 @@ def mixin() -> ApplicationSecurityGroupViewMixin:
 	"""Fixture providing an instance of the mixin class"""
 	return ApplicationSecurityGroupViewMixin()
 
+
 @pytest.fixture(autouse=True)
 def f_ldap_connector(
 	g_ldap_connector: ConnectorFactory,
@@ -35,16 +36,17 @@ def f_ldap_connector(
 			"core.models.application.LDAPConnector",
 		)
 	)
-	connector.connection.entries = [ # type: ignore
+	connector.connection.entries = [  # type: ignore
 		fc_ldap_entry(
 			spec=False,
 			**{
 				LDAP_ATTR_DN: f_ldap_ref.distinguished_name,
-				LDAP_ATTR_SECURITY_ID: f_ldap_ref.object_security_id_bytes
-			}
+				LDAP_ATTR_SECURITY_ID: f_ldap_ref.object_security_id_bytes,
+			},
 		)
 	]
 	return connector
+
 
 @pytest.fixture
 def test_application(db):
@@ -68,6 +70,7 @@ def test_user(db):
 		first_name="Test",
 		last_name="User",
 	)
+
 
 @pytest.fixture
 def test_application_group(
@@ -290,7 +293,7 @@ class TestApplicationSecurityGroupViewMixin:
 				test_application_group.id,
 				application_group_data,
 			)
-		assert "does not match" in e.value.detail.get("detail") # type: ignore
+		assert "does not match" in e.value.detail.get("detail")  # type: ignore
 
 	def test_update_application_group_invalid_data(
 		self,
