@@ -1814,13 +1814,43 @@ class TestSelfUpdate(BaseViewTestClass):
 		assert response.data.get("code") == "user_not_ldap_type"
 
 	@pytest.mark.parametrize(
-		"bad_data",
+		"bad_data, logger_called",
 		(
-			{
+			(
+				{
 				LOCAL_ATTR_USERNAME: "some_other_username",
 				LOCAL_ATTR_COUNTRY: "Some Country",
-			},
-			{LOCAL_ATTR_DN: "some_dn", LOCAL_ATTR_COUNTRY: "Some Country"},
+				},
+				True
+			),
+			(
+				{
+				LOCAL_ATTR_DN: "some_dn",
+				LOCAL_ATTR_COUNTRY: "Some Country"
+				},
+				True
+			),
+			(
+				{
+				LOCAL_ATTR_FIRST_NAME: "pepe",
+				LOCAL_ATTR_USER_ADD_GROUPS: "some_value",
+				},
+				False
+			),
+			(
+				{
+				LOCAL_ATTR_FIRST_NAME: "pepe",
+				LOCAL_ATTR_USER_RM_GROUPS: "some_value",
+				},
+				False
+			),
+			(
+				{
+				LOCAL_ATTR_FIRST_NAME: "pepe",
+				LOCAL_ATTR_USER_GROUPS: "some_value",
+				},
+				False
+			),
 		),
 	)
 	def test_raises_bad_request(
@@ -1829,6 +1859,7 @@ class TestSelfUpdate(BaseViewTestClass):
 		f_logger: Logger,
 		normal_user: User,
 		normal_user_client: APIClient,
+		logger_called: bool
 	):
 		# Mock local django user data
 		normal_user.user_type = USER_TYPE_LDAP
@@ -1840,7 +1871,10 @@ class TestSelfUpdate(BaseViewTestClass):
 			format="json",
 		)
 		assert response.status_code == status.HTTP_400_BAD_REQUEST
-		f_logger.warning.assert_called_once()
+		if logger_called:
+			f_logger.warning.assert_called_once()
+		else:
+			f_logger.warning.assert_not_called()
 
 	def test_success(
 		self,
