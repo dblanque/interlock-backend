@@ -140,12 +140,14 @@ class LDAPUserSerializer(serializers.Serializer):
 		allow_blank=True,
 		allow_null=True,
 		required=False,
+		validators=[ldap_user_validator_se],
 	)
 	# Last Name
 	last_name = serializers.CharField(
 		allow_blank=True,
 		allow_null=True,
 		required=False,
+		validators=[ldap_user_validator_se],
 	)
 	# Website
 	website = serializers.CharField(
